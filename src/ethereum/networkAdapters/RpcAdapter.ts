@@ -1,5 +1,5 @@
 import { add } from 'biggystring'
-import { EdgeTransaction } from 'edge-core-js/types'
+import { EdgeTokenId, EdgeTransaction } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import parse from 'url-parse'
 
@@ -252,7 +252,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   }
 
   fetchTokenBalance = async (
-    currencyCode: string
+    tokenId: EdgeTokenId
   ): Promise<EthereumNetworkUpdate> => {
     const {
       chainParams: { chainId }
@@ -264,7 +264,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
     let server
     const address = this.ethEngine.walletLocalData.publicKey
     try {
-      if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
+      if (tokenId == null) {
         response = await this.serialServers(async baseUrl => {
           const result = await this.fetchPostRPC(
             'eth_getBalance',
@@ -297,14 +297,14 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
         jsonObj = response.result
         server = response.server
       } else {
-        const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
+        const tokenInfo = this.ethEngine.getTokenInfo(tokenId)
         if (
           tokenInfo != null &&
-          typeof tokenInfo.contractAddress === 'string'
+          typeof tokenInfo.networkLocation?.contractAddress === 'string'
         ) {
           const params = {
             data: `0x70a08231${padHex(removeHexPrefix(address), 32)}`,
-            to: tokenInfo.contractAddress
+            to: tokenInfo.networkLocation?.contractAddress
           }
 
           const response = await this.ethEngine.ethNetwork.multicastRpc(
@@ -325,20 +325,18 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
-        `checkTokenBalRpc token ${currencyCode} response ${String(
-          response ?? ''
-        )} `,
+        `checkTokenBalRpc token ${tokenId} response ${String(response ?? '')} `,
         e
       )
       throw new Error(
-        `checkTokenBalRpc invalid ${currencyCode} response ${JSON.stringify(
+        `checkTokenBalRpc invalid ${tokenId} response ${JSON.stringify(
           jsonObj
         )}`
       )
     }
 
     return {
-      tokenBal: { [currencyCode]: cleanedResponseObj.result },
+      tokenBal: new Map([[tokenId, cleanedResponseObj.result]]),
       server
     }
   }
@@ -351,14 +349,13 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
     this.config.ethBalCheckerContract == null
       ? null
       : async (): Promise<EthereumNetworkUpdate> => {
-          const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
-            this.ethEngine
+          const { allTokensMap, networkInfo, walletLocalData } = this.ethEngine
           const { chainParams } = networkInfo
 
-          const tokenBal: EthereumNetworkUpdate['tokenBal'] = {}
+          const tokenBal: EthereumNetworkUpdate['tokenBal'] = new Map()
           const detectedTokenIds: string[] = []
           const ethBalCheckerContract = this.config.ethBalCheckerContract
-          if (ethBalCheckerContract == null) return tokenBal
+          if (ethBalCheckerContract == null) return {}
 
           // Address for querying ETH balance on ETH network, POL on POL, etc.
           const mainnetAssetAddr = '0x0000000000000000000000000000000000000000'
@@ -399,12 +396,11 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
             const tokenAddr = balanceQueryAddrs[i].toLowerCase()
             const balanceBn = ethers.BigNumber.from(balances[i])
 
-            let balanceCurrencyCode
+            let tokenId: EdgeTokenId
             if (tokenAddr === mainnetAssetAddr) {
-              const { currencyCode } = currencyInfo
-              balanceCurrencyCode = currencyCode
+              tokenId = null
             } else {
-              const tokenId = tokenAddr.replace('0x', '')
+              tokenId = tokenAddr.replace('0x', '')
 
               // Notify the core that activity was detected on this token
               if (balanceBn.gt(ethers.constants.Zero))
@@ -420,11 +416,9 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
                 )
                 continue
               }
-              const { currencyCode } = token
-              balanceCurrencyCode = currencyCode
             }
 
-            tokenBal[balanceCurrencyCode] = balanceBn.toString()
+            tokenBal.set(tokenId, balanceBn.toString())
           }
 
           return { tokenBal, detectedTokenIds, server: 'ethBalChecker' }

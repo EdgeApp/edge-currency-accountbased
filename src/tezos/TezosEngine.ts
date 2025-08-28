@@ -186,7 +186,7 @@ export class TezosEngine extends CurrencyEngine<
       walletId: this.walletId
     }
     if (!failedOperation) {
-      this.addTransaction(currencyCode, edgeTransaction)
+      this.addTransaction(null, edgeTransaction)
     }
   }
 

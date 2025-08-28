@@ -553,7 +553,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           walletId: this.walletId
         }
 
-        this.addTransaction(currencyCode, edgeTransaction)
+        this.addTransaction(null, edgeTransaction)
         return out
       }
 
@@ -594,7 +594,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           walletId: this.walletId
         }
 
-        this.addTransaction(currencyCode, edgeTransaction)
+        this.addTransaction(null, edgeTransaction)
         return out
       }
 
@@ -634,7 +634,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           walletId: this.walletId
         }
 
-        this.addTransaction(currencyCode, edgeTransaction)
+        this.addTransaction(null, edgeTransaction)
         return out
       }
 
@@ -675,7 +675,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           walletId: this.walletId
         }
 
-        this.addTransaction(currencyCode, edgeTransaction)
+        this.addTransaction(null, edgeTransaction)
         return out
       }
 
@@ -713,7 +713,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           walletId: this.walletId
         }
 
-        this.addTransaction(currencyCode, edgeTransaction)
+        this.addTransaction(null, edgeTransaction)
         return out
       }
 
@@ -758,7 +758,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           walletId: this.walletId
         }
 
-        this.addTransaction(currencyCode, edgeTransaction)
+        this.addTransaction(null, edgeTransaction)
         return out
       }
 
@@ -798,7 +798,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           walletId: this.walletId
         }
 
-        this.addTransaction(currencyCode, edgeTransaction)
+        this.addTransaction(null, edgeTransaction)
         return out
       }
     }
@@ -880,7 +880,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       edgeTransaction.parentNetworkFee = parentNetworkFee
     }
 
-    this.addTransaction(token.currencyCode, edgeTransaction)
+    this.addTransaction(contractAddress, edgeTransaction)
     return out
   }
 

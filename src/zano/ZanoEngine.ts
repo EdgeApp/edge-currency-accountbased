@@ -296,7 +296,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
         walletId: this.walletId
       }
 
-      this.addTransaction(currencyCode, edgeTransaction)
+      this.addTransaction(tokenId, edgeTransaction)
     }
   }
 

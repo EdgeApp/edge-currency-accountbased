@@ -387,7 +387,7 @@ export class AlgorandEngine extends CurrencyEngine<
       walletId: this.walletId
     }
 
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
   }
 
   async queryTransactions(): Promise<void> {

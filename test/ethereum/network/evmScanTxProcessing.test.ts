@@ -30,7 +30,7 @@ export const testCases: TestCase[] = [
         allTokensMap: builtinTokens,
         currencyInfo: currencyInfo,
         forWhichAddress: '0x036639F209f2Ebcde65a3f7896d05a4941d20373',
-        forWhichCurrencyCode: 'ETH',
+        forWhichTokenId: null,
         forWhichWalletId: 'VWJmHu/i8kqi6Ru6/B0UQlTEy38jZJsgIp670NkeoxI='
       },
       rawTx: {
@@ -95,7 +95,7 @@ export const testCases: TestCase[] = [
         allTokensMap: builtinTokens,
         currencyInfo: currencyInfo,
         forWhichAddress: '0x036639F209f2Ebcde65a3f7896d05a4941d20373',
-        forWhichCurrencyCode: 'ETH',
+        forWhichTokenId: null,
         forWhichWalletId: 'VWJmHu/i8kqi6Ru6/B0UQlTEy38jZJsgIp670NkeoxI='
       },
       rawTx: {
@@ -160,7 +160,7 @@ export const testCases: TestCase[] = [
         allTokensMap: builtinTokens,
         currencyInfo: currencyInfo,
         forWhichAddress: '0x036639F209f2Ebcde65a3f7896d05a4941d20373',
-        forWhichCurrencyCode: 'ETH',
+        forWhichTokenId: null,
         forWhichWalletId: 'VWJmHu/i8kqi6Ru6/B0UQlTEy38jZJsgIp670NkeoxI='
       },
       rawTx: {
@@ -225,7 +225,7 @@ export const testCases: TestCase[] = [
         allTokensMap: builtinTokens,
         currencyInfo: currencyInfo,
         forWhichAddress: '0x036639F209f2Ebcde65a3f7896d05a4941d20373',
-        forWhichCurrencyCode: 'ETH',
+        forWhichTokenId: null,
         forWhichWalletId: 'VWJmHu/i8kqi6Ru6/B0UQlTEy38jZJsgIp670NkeoxI='
       },
       rawTx: {

@@ -1,7 +1,7 @@
 import { Address } from '@zondax/izari-filecoin'
 import { add, sub } from 'biggystring'
 import {
-  EdgeMetaToken,
+  EdgeToken,
   EdgeTokenId,
   EdgeTransaction,
   EdgeTxAmount
@@ -60,7 +60,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   private async checkTransactions(
     params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> {
-    const { startBlock, currencyCode } = params
+    const { startBlock, tokenId } = params
     const { publicAddress: addressString } =
       await this.ethEngine.getFreshAddress()
 
@@ -99,8 +99,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       tokenId: EdgeTokenId
     }): void => {
       if (tx != null) {
-        const targetCurrencyCode = tx.currencyCode
-        this.ethEngine.addTransaction(targetCurrencyCode, tx)
+        this.ethEngine.addTransaction(tokenId, tx)
         this.onUpdateTransactions()
 
         // Track the highest block height processed
@@ -146,14 +145,17 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     handleScanProgress(1, null)
 
     return {
-      tokenTxs: {
-        [currencyCode]: {
-          blockHeight: highestProcessedBlockHeight,
-          // This adapter manages transaction processing, so return an empty set
-          // each time the query finishes.
-          edgeTransactions: []
-        }
-      },
+      tokenTxs: new Map([
+        [
+          tokenId,
+          {
+            blockHeight: highestProcessedBlockHeight,
+            // This adapter manages transaction processing, so return an empty set
+            // each time the query finishes.
+            edgeTransactions: []
+          }
+        ]
+      ]),
       server: this.config.servers.join(',')
     }
   }
@@ -510,7 +512,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   private readonly filfoxTokenTransferToEdgeTransaction = async (
     addressString: string,
     tokenTransfer: FilfoxTokenTransfer,
-    tokenInfo: EdgeMetaToken
+    tokenInfo: EdgeToken
   ): Promise<EdgeTransaction> => {
     const ourReceiveAddresses = []
 
@@ -606,7 +608,9 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       ourReceiveAddresses,
       signedTx: '',
       tokenId:
-        tokenInfo.contractAddress?.toLowerCase().replace(/^0x/, '') ?? null,
+        tokenInfo.networkLocation?.contractAddress
+          ?.toLowerCase()
+          .replace(/^0x/, '') ?? null,
       txid: ethTransactionHash, // Use ethTransactionHash for consistency with native FIL transactions
       walletId: this.ethEngine.walletId
     }
@@ -627,13 +631,16 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
    */
   private findTokenByContractAddress(
     contractAddress: string
-  ): EdgeMetaToken | null {
+  ): EdgeToken | null {
     // Search through all enabled tokens to find one with matching contract address
-    for (const currencyCode of this.ethEngine.enabledTokens) {
-      const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
-      if (tokenInfo != null && typeof tokenInfo.contractAddress === 'string') {
+    for (const tokenId of this.ethEngine.enabledTokenIds) {
+      const tokenInfo = this.ethEngine.allTokensMap[tokenId]
+      if (
+        tokenInfo != null &&
+        typeof tokenInfo.networkLocation?.contractAddress === 'string'
+      ) {
         if (
-          tokenInfo.contractAddress.toLowerCase() ===
+          tokenInfo.networkLocation.contractAddress.toLowerCase() ===
           contractAddress.toLowerCase()
         ) {
           return tokenInfo

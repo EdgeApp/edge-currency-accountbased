@@ -239,7 +239,7 @@ export class PolkadotEngine extends CurrencyEngine<
       txid: hash,
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(null, edgeTransaction)
   }
 
   async queryLiberlandTransactions(): Promise<void> {
@@ -331,17 +331,16 @@ export class PolkadotEngine extends CurrencyEngine<
             tx
           )
           if (edgeTransaction != null) {
+            const safeLldTokenId = ''
             if (
-              this.otherData.newestTxid[this.currencyInfo.currencyCode] ===
-              edgeTransaction.txid
+              this.otherData.newestTxid[safeLldTokenId] === edgeTransaction.txid
             ) {
               hasNextPage = false
               break
             }
 
-            this.otherData.newestTxid[this.currencyInfo.currencyCode] =
-              edgeTransaction.txid
-            this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+            this.otherData.newestTxid[safeLldTokenId] = edgeTransaction.txid
+            this.addTransaction(null, edgeTransaction)
           }
         }
 
@@ -366,8 +365,7 @@ export class PolkadotEngine extends CurrencyEngine<
     // LLM Transfers. Endpoint only handles specifically the LLM token
     hasNextPage = true
     endCursor = null
-    const tokenId = '1'
-    const currencyCode = this.allTokensMap[tokenId].currencyCode
+    const llmTokenId = '1'
 
     while (hasNextPage) {
       const meritsOperationName = 'Merits'
@@ -435,20 +433,20 @@ export class PolkadotEngine extends CurrencyEngine<
               walletInfo: this.walletInfo,
               currencyInfo: this.currencyInfo,
               allTokensMap: this.allTokensMap,
-              tokenId
+              tokenId: llmTokenId
             },
             tx
           )
           if (edgeTransaction != null) {
             if (
-              this.otherData.newestTxid[currencyCode] === edgeTransaction.txid
+              this.otherData.newestTxid[llmTokenId] === edgeTransaction.txid
             ) {
               hasNextPage = false
               break
             }
 
-            this.otherData.newestTxid[currencyCode] = edgeTransaction.txid
-            this.addTransaction(currencyCode, edgeTransaction)
+            this.otherData.newestTxid[llmTokenId] = edgeTransaction.txid
+            this.addTransaction(llmTokenId, edgeTransaction)
           }
         }
 
@@ -456,7 +454,7 @@ export class PolkadotEngine extends CurrencyEngine<
         processedCount += meritTransfers.length
 
         this.tokenCheckTransactionsStatus.set(
-          tokenId,
+          llmTokenId,
           totalCount === 0 ? 1 : processedCount / totalCount
         )
         this.updateOnAddressesChecked()
@@ -466,7 +464,7 @@ export class PolkadotEngine extends CurrencyEngine<
       }
     }
 
-    this.tokenCheckTransactionsStatus.set(tokenId, 1)
+    this.tokenCheckTransactionsStatus.set(llmTokenId, 1)
     this.updateOnAddressesChecked()
     this.sendTransactionEvents()
   }

@@ -16,6 +16,7 @@ import {
   EdgeMetaToken,
   EdgeSpendInfo,
   EdgeSubscribedAddress,
+  EdgeToken,
   EdgeTokenId,
   EdgeTokenIdOptions,
   EdgeTokenMap,
@@ -53,13 +54,13 @@ const MAX_TRANSACTIONS = 2500
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
 interface TxidList {
-  [currencyCode: string]: string[]
+  [tokenId: string]: string[]
 }
 interface TxidMap {
-  [currencyCode: string]: { [txid: string]: number }
+  [tokenId: string]: { [txid: string]: number }
 }
 interface TransactionList {
-  [currencyCode: string]: EdgeTransaction[]
+  [tokenId: string]: EdgeTransaction[]
 }
 
 export class CurrencyEngine<
@@ -166,10 +167,10 @@ export class CurrencyEngine<
     this.otherData = undefined
     this.minimumAddressBalance = '0'
 
-    const { currencyCode } = currencyInfo
-    this.transactionList[currencyCode] = []
-    this.txIdMap[currencyCode] = {}
-    this.txIdList[currencyCode] = []
+    // Use empty string null tokenId
+    this.transactionList[''] = []
+    this.txIdMap[''] = {}
+    this.txIdList[''] = []
 
     // Configure tokens:
     this.builtinTokens = builtinTokens
@@ -337,10 +338,10 @@ export class CurrencyEngine<
     }
 
     let isEmptyTransactions = true
-    for (const cc of Object.keys(this.transactionList)) {
+    for (const tid of Object.keys(this.transactionList)) {
       if (
-        this.transactionList[cc] != null &&
-        this.transactionList[cc].length > 0
+        this.transactionList[tid] != null &&
+        this.transactionList[tid].length > 0
       ) {
         isEmptyTransactions = false
         break
@@ -354,8 +355,8 @@ export class CurrencyEngine<
       this.txIdMap = txIdMap ?? this.txIdMap
 
       // But we do need to update our checkpoints:
-      for (const cc of Object.keys(this.transactionList)) {
-        for (const tx of this.transactionList[cc]) {
+      for (const tid of Object.keys(this.transactionList)) {
+        for (const tx of this.transactionList[tid]) {
           this.highestSeenCheckpoint = this.selectSeenTxCheckpoint(
             this.highestSeenCheckpoint,
             this.getTxCheckpoint(tx)
@@ -364,15 +365,15 @@ export class CurrencyEngine<
       }
     } else if (transactionList != null) {
       // Manually add transactions via addTransaction()
-      for (const cc of Object.keys(transactionList)) {
-        for (const edgeTransaction of transactionList[cc]) {
-          this.addTransaction(cc, edgeTransaction)
+      for (const tokenId of Object.keys(transactionList)) {
+        for (const edgeTransaction of transactionList[tokenId]) {
+          this.addTransaction(tokenId, edgeTransaction)
         }
       }
     }
-    for (const currencyCode in this.transactionList) {
-      this.walletLocalData.numTransactions[currencyCode] =
-        this.transactionList[currencyCode].length
+    for (const tokenId of Object.keys(this.transactionList)) {
+      this.walletLocalData.numTransactions[tokenId] =
+        this.transactionList[tokenId].length
     }
   }
 
@@ -429,9 +430,10 @@ export class CurrencyEngine<
     }
   }
 
-  protected findTransaction(currencyCode: string, txid: string): number {
-    if (this.txIdMap[currencyCode] != null) {
-      const index = this.txIdMap[currencyCode][txid]
+  protected findTransaction(tokenId: EdgeTokenId, txid: string): number {
+    const safeTokenId = tokenId ?? ''
+    if (this.txIdMap[safeTokenId] != null) {
+      const index = this.txIdMap[safeTokenId][txid]
       if (typeof index === 'number') {
         return index
       }
@@ -446,7 +448,7 @@ export class CurrencyEngine<
   // Add or update tx in transactionList
   // Called by EthereumNetwork
   addTransaction(
-    currencyCode: string,
+    tokenId: EdgeTokenId,
     edgeTransaction: EdgeTransaction,
     lastSeenTime?: number
   ): void {
@@ -461,8 +463,9 @@ export class CurrencyEngine<
         lastSeenTime ?? Math.round(Date.now() / 1000)
     }
     const txid = normalizeAddress(edgeTransaction.txid)
-    const idx = this.findTransaction(currencyCode, txid)
+    const idx = this.findTransaction(tokenId, txid)
 
+    const safeTokenId = tokenId ?? ''
     let needsReSort = false
     // if transaction doesn't exist in database
     if (idx === -1) {
@@ -477,17 +480,15 @@ export class CurrencyEngine<
 
       needsReSort = true
       // if currency's transactionList is uninitialized then initialize
-      if (typeof this.transactionList[currencyCode] === 'undefined') {
-        this.transactionList[currencyCode] = []
-      } else if (
-        this.transactionList[currencyCode].length >= MAX_TRANSACTIONS
-      ) {
+      if (typeof this.transactionList[safeTokenId] === 'undefined') {
+        this.transactionList[safeTokenId] = []
+      } else if (this.transactionList[safeTokenId].length >= MAX_TRANSACTIONS) {
         return
       }
       // add transaction to list of tx's, and array of changed transactions
-      this.transactionList[currencyCode].push(edgeTransaction)
-      this.walletLocalData.numTransactions[currencyCode] =
-        this.transactionList[currencyCode].length
+      this.transactionList[safeTokenId].push(edgeTransaction)
+      this.walletLocalData.numTransactions[safeTokenId] =
+        this.transactionList[safeTokenId].length
       this.walletLocalDataDirty = true
 
       this.transactionListDirty = true
@@ -500,7 +501,7 @@ export class CurrencyEngine<
       this.warn(`addTransaction new tx: ${edgeTransaction.txid}`)
     } else {
       // Already have this tx in the database. See if anything changed
-      const transactionsArray = this.transactionList[currencyCode]
+      const transactionsArray = this.transactionList[safeTokenId]
       const edgeTx = transactionsArray[idx]
 
       const { otherParams: otherParamsOld = {} } = edgeTx
@@ -531,31 +532,32 @@ export class CurrencyEngine<
           `addTransaction: update ${edgeTransaction.txid} height:${edgeTransaction.blockHeight}`
         )
         this.walletLocalDataDirty = true
-        this.updateTransaction(currencyCode, edgeTransaction, idx)
+        this.updateTransaction(safeTokenId, edgeTransaction, idx)
       } else {
         // this.log(sprintf('Old transaction. No Update: %s', tx.hash))
       }
     }
     if (needsReSort) {
-      this.sortTransactions(currencyCode)
+      this.sortTransactions(safeTokenId)
     }
   }
 
-  protected sortTransactions(currencyCode: string): void {
+  protected sortTransactions(tokenId: EdgeTokenId): void {
+    const safeTokenId = tokenId ?? ''
     // Sort
-    this.transactionList[currencyCode].sort(this.sortTxByDate)
+    this.transactionList[safeTokenId].sort(this.sortTxByDate)
     // Add to txidMap
     const txIdList: string[] = []
     let i = 0
-    for (const tx of this.transactionList[currencyCode]) {
-      if (this.txIdMap[currencyCode] == null) {
-        this.txIdMap[currencyCode] = {}
+    for (const tx of this.transactionList[safeTokenId]) {
+      if (this.txIdMap[safeTokenId] == null) {
+        this.txIdMap[safeTokenId] = {}
       }
-      this.txIdMap[currencyCode][normalizeAddress(tx.txid)] = i
+      this.txIdMap[safeTokenId][normalizeAddress(tx.txid)] = i
       txIdList.push(normalizeAddress(tx.txid))
       i++
     }
-    this.txIdList[currencyCode] = txIdList
+    this.txIdList[safeTokenId] = txIdList
   }
 
   // Called by EthereumNetwork
@@ -574,10 +576,10 @@ export class CurrencyEngine<
 
   protected checkDroppedTransactions(dateNow: number): void {
     let numUnconfirmedSpendTxs = 0
-    for (const currencyCode in this.transactionList) {
+    for (const tokenId of Object.keys(this.transactionList)) {
       // const droppedTxIndices: Array<number> = []
-      for (let i = 0; i < this.transactionList[currencyCode].length; i++) {
-        const tx = this.transactionList[currencyCode][i]
+      for (let i = 0; i < this.transactionList[tokenId].length; i++) {
+        const tx = this.transactionList[tokenId][i]
         if (tx.blockHeight === 0) {
           const { otherParams = {} } = tx
           const lastSeen = otherParams.lastSeenTime
@@ -608,8 +610,8 @@ export class CurrencyEngine<
 
   protected getUnconfirmedTxs(): EdgeTransaction[] {
     const transactions: EdgeTransaction[] = []
-    for (const currencyCode in this.transactionList) {
-      for (const tx of this.transactionList[currencyCode]) {
+    for (const tokenId of Object.keys(this.transactionList)) {
+      for (const tx of this.transactionList[tokenId]) {
         if (tx.blockHeight === 0) {
           transactions.push(tx)
         }
@@ -637,12 +639,13 @@ export class CurrencyEngine<
   }
 
   protected updateTransaction(
-    currencyCode: string,
+    tokenId: EdgeTokenId,
     edgeTransaction: EdgeTransaction,
     idx: number
   ): void {
+    const safeTokenId = tokenId ?? ''
     // Update the transaction
-    this.transactionList[currencyCode][idx] = edgeTransaction
+    this.transactionList[safeTokenId][idx] = edgeTransaction
     this.transactionListDirty = true
     this.transactionEvents.push({ isNew: false, transaction: edgeTransaction })
     this.warn(`updateTransaction: ${edgeTransaction.txid}`)
@@ -751,10 +754,9 @@ export class CurrencyEngine<
   }
 
   // Called by EthereumNetwork
-  getTokenInfo(currencyCode: string): EdgeMetaToken | undefined {
-    return this.allTokens.find(element => {
-      return element.currencyCode === currencyCode
-    })
+  getTokenInfo(tokenId: EdgeTokenId): EdgeToken | undefined {
+    if (tokenId == null) return undefined
+    return this.allTokensMap[tokenId]
   }
 
   /**
@@ -951,14 +953,11 @@ export class CurrencyEngine<
   }
 
   getNumTransactions(options: EdgeTokenIdOptions): number {
-    const { tokenId } = options
-    const { currencyCode } =
-      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
-
-    if (this.walletLocalData.numTransactions[currencyCode] == null) {
+    const safeTokenId = options.tokenId ?? ''
+    if (this.walletLocalData.numTransactions[safeTokenId] == null) {
       return 0
     } else {
-      return this.walletLocalData.numTransactions[currencyCode]
+      return this.walletLocalData.numTransactions[safeTokenId]
     }
   }
 
@@ -966,17 +965,15 @@ export class CurrencyEngine<
     options: EdgeGetTransactionsOptions
   ): Promise<EdgeTransaction[]> {
     const { startDate, endDate, tokenId } = options
-
-    const { currencyCode } =
-      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
+    const safeTokenId = tokenId ?? ''
 
     await this.loadTransactions()
 
-    if (this.transactionList[currencyCode] == null) {
+    if (this.transactionList[safeTokenId] == null) {
       return []
     }
 
-    const returnArray = this.transactionList[currencyCode].filter(tx => {
+    const returnArray = this.transactionList[safeTokenId].filter(tx => {
       return (
         new Date(tx.date) >= (startDate ?? new Date(0)) &&
         new Date(tx.date) <= (endDate ?? new Date())
@@ -1089,7 +1086,7 @@ export class CurrencyEngine<
   // called by GUI after sliding to confirm
   async saveTx(edgeTransaction: EdgeTransaction): Promise<void> {
     // add the transaction to disk and fire off callback (alert in GUI)
-    this.addTransaction(edgeTransaction.currencyCode, edgeTransaction)
+    this.addTransaction(edgeTransaction.tokenId, edgeTransaction)
     this.transactionEvents.forEach(txEvent =>
       this.warn(
         `executing back in saveTx and this.transactionsChangedArray is: ${cleanTxLogs(

@@ -907,13 +907,13 @@ export class CosmosEngine extends CurrencyEngine<
       txid: txidHex,
       walletId: this.walletId
     }
-    this.addTransaction(currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
   }
 
-  addTransaction(currencyCode: string, edgeTransaction: EdgeTransaction): void {
+  addTransaction(tokenId: EdgeTokenId, edgeTransaction: EdgeTransaction): void {
     // update unconfirmed cache
     this.removeFromUnconfirmedCache(edgeTransaction.txid)
-    super.addTransaction(currencyCode, edgeTransaction)
+    super.addTransaction(tokenId, edgeTransaction)
   }
 
   private createUnsignedTxHex(messages: EncodeObject[], memo?: string): string {

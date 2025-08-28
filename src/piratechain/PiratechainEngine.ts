@@ -280,7 +280,7 @@ export class PiratechainEngine extends CurrencyEngine<
       txid: tx.rawTransactionId,
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(null, edgeTransaction)
   }
 
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {

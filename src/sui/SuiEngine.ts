@@ -294,7 +294,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         tokenId,
         walletId: this.walletId
       }
-      this.addTransaction(currencyCode, edgeTx)
+      this.addTransaction(tokenId, edgeTx)
     }
   }
 

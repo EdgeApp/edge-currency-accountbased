@@ -1,5 +1,5 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
-import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
+import { EdgeTokenId, EdgeTransaction, JsonObject } from 'edge-core-js/types'
 import { FetchResponse } from 'serverlet'
 
 import {
@@ -28,7 +28,7 @@ import { RpcAdapterConfig } from './RpcAdapter'
 export interface GetTxsParams {
   startBlock: number
   startDate: number
-  currencyCode: string
+  tokenId: EdgeTokenId
 }
 
 export type NetworkAdapterConfig =

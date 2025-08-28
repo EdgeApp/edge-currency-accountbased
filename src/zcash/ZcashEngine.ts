@@ -297,7 +297,7 @@ export class ZcashEngine extends CurrencyEngine<
       txid: rawTransactionId,
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(null, edgeTransaction)
   }
 
   async checkAutoshielding(): Promise<void> {

@@ -181,7 +181,7 @@ export class HederaEngine extends CurrencyEngine<
       }
 
       for (const tx of txs) {
-        this.addTransaction(this.currencyInfo.currencyCode, tx)
+        this.addTransaction(null, tx)
       }
       this.sendTransactionEvents()
     }

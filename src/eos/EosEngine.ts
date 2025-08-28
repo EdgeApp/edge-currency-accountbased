@@ -29,6 +29,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall } from '../common/promiseUtils'
+import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
   getDenomination,
@@ -290,7 +291,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       walletId: this.walletId
     }
 
-    this.addTransaction(currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
     return edgeTransaction.blockHeight
   }
 
@@ -383,7 +384,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         walletId: this.walletId
       }
 
-      this.addTransaction(currencyCode, edgeTransaction)
+      this.addTransaction(tokenId, edgeTransaction)
     }
     return blockHeight
   }
@@ -971,9 +972,17 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 
-    const tokenInfo = this.getTokenInfo(currencyCode)
-    if (tokenInfo == null) throw new Error('Unable to find token info')
-    const { contractAddress = 'eosio.token' } = tokenInfo
+    let contractAddress: string
+    if (tokenId == null) {
+      contractAddress = 'eosio.token'
+    } else {
+      const tokenInfo = this.getTokenInfo(tokenId)
+      if (tokenInfo == null) throw new Error('Unable to find token info')
+      const cleanLocation = asMaybeContractLocation(tokenInfo.networkLocation)
+      if (cleanLocation == null) throw new Error('Unable to find token info')
+      contractAddress = cleanLocation.contractAddress
+    }
+
     const nativeDenomination = getDenomination(
       currencyCode,
       this.currencyInfo,

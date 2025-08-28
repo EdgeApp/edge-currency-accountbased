@@ -145,7 +145,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
   }
 
   fetchTokenBalance = async (
-    currencyCode: string
+    tokenId: EdgeTokenId
   ): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
     let response
@@ -153,7 +153,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     let server
     let cleanedResponseObj: RpcResultString
     try {
-      if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
+      if (tokenId == null) {
         const url = `?module=account&action=balance&address=${address}&tag=latest`
         response = await this.serialServers(async server => {
           const response = await this.fetchGetEtherscan(server, url)
@@ -167,12 +167,12 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         jsonObj = response.result
         server = response.server
       } else {
-        const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
+        const tokenInfo = this.ethEngine.getTokenInfo(tokenId)
         if (
           tokenInfo != null &&
-          typeof tokenInfo.contractAddress === 'string'
+          typeof tokenInfo.networkLocation?.contractAddress === 'string'
         ) {
-          const contractAddress = tokenInfo.contractAddress
+          const contractAddress = tokenInfo.networkLocation?.contractAddress
 
           const url = `?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${address}&tag=latest`
           const response = await this.serialServers(async server => {
@@ -194,36 +194,36 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
-        `checkTokenBalEthscan token ${currencyCode} response ${String(
+        `checkTokenBalEthscan token ${tokenId} response ${String(
           response ?? ''
         )} `,
         e
       )
       throw new Error(
-        `checkTokenBalEthscan invalid ${currencyCode} response ${JSON.stringify(
+        `checkTokenBalEthscan invalid ${tokenId} response ${JSON.stringify(
           jsonObj
         )}`
       )
     }
     if (/^\d+$/.test(cleanedResponseObj.result)) {
       const balance = cleanedResponseObj.result
-      return { tokenBal: { [currencyCode]: balance }, server }
+      return { tokenBal: new Map([[tokenId, balance]]), server }
     } else {
       throw new Error(
-        `checkTokenBalEthscan returned invalid JSON for ${currencyCode}`
+        `checkTokenBalEthscan returned invalid JSON for ${tokenId}`
       )
     }
   }
 
   fetchTxs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
-    const { startBlock, currencyCode } = params
+    const { startBlock, tokenId } = params
     let server: string
     let allTransactions
 
-    if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
+    if (tokenId === null) {
       const txsRegularResp = await this.getAllTxsEthscan(
         startBlock,
-        currencyCode,
+        tokenId,
         asEvmScanTransaction,
         { searchRegularTxs: true }
       )
@@ -234,7 +234,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       if (this.ethEngine.networkInfo.disableEvmScanInternal !== true) {
         txsInternalResp = await this.getAllTxsEthscan(
           startBlock,
-          currencyCode,
+          tokenId,
           asEvmScanInternalTransaction,
           { searchRegularTxs: false }
         )
@@ -245,12 +245,15 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         ...txsInternalResp.allTransactions
       ])
     } else {
-      const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
-      if (tokenInfo != null && typeof tokenInfo.contractAddress === 'string') {
-        const contractAddress = tokenInfo.contractAddress
+      const tokenInfo = this.ethEngine.allTokensMap[tokenId]
+      if (
+        tokenInfo != null &&
+        typeof tokenInfo?.networkLocation?.contractAddress === 'string'
+      ) {
+        const contractAddress = tokenInfo.networkLocation.contractAddress
         const resp = await this.getAllTxsEthscan(
           startBlock,
-          currencyCode,
+          tokenId,
           asEvmScanTokenTransaction,
           { contractAddress }
         )
@@ -269,7 +272,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       return Math.max(max, tx.blockHeight)
     }, 0)
     return {
-      tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple },
+      tokenTxs: new Map([[tokenId, edgeTransactionsBlockHeightTuple]]),
       blockHeight: maxBlockHeight,
       server
     }
@@ -333,7 +336,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
   private async getAllTxsEthscan(
     startBlock: number,
-    currencyCode: string,
+    tokenId: EdgeTokenId,
     asTransaction: Cleaner<
       EvmScanTransaction | EvmScanInternalTransaction | EvmScanTokenTransaction
     >,
@@ -349,7 +352,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       const offset = NUM_TRANSACTIONS_TO_QUERY
 
       let startUrl
-      if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
+      if (tokenId === null) {
         startUrl = `?action=${
           searchRegularTxs ? 'txlist' : 'txlistinternal'
         }&module=account`
@@ -393,7 +396,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
               allTokensMap: this.ethEngine.allTokensMap,
               currencyInfo: this.ethEngine.currencyInfo,
               forWhichAddress: this.ethEngine.walletLocalData.publicKey,
-              forWhichCurrencyCode: currencyCode,
+              forWhichTokenId: tokenId,
               forWhichWalletId: this.ethEngine.walletId
             },
             cleanedTx,
@@ -480,8 +483,8 @@ export interface TransactionProcessingContext {
   currencyInfo: EdgeCurrencyInfo
   /** Which wallet address which the transaction is being processed for */
   forWhichAddress: string
-  /** Which currencyCode is the transaction being processed for */
-  forWhichCurrencyCode: string
+  /** Which tokenId is the transaction being processed for */
+  forWhichTokenId: EdgeTokenId
   /** Which walletId is the transaction being processed for */
   forWhichWalletId: string
 }
@@ -500,21 +503,17 @@ export function processEvmScanTransaction(
 
   const isSpend =
     tx.from.toLowerCase() === context.forWhichAddress.toLowerCase()
-  const tokenTx =
-    context.forWhichCurrencyCode !== context.currencyInfo.currencyCode
-  let tokenId: EdgeTokenId = null
+  const tokenTx = context.forWhichTokenId != null
+  let currencyCode: string = context.currencyInfo.currencyCode
   if (tokenTx) {
-    const knownTokenId = Object.keys(context.allTokensMap).find(
-      tokenId =>
-        context.allTokensMap[tokenId].currencyCode ===
-        context.forWhichCurrencyCode
-    )
-    if (knownTokenId === undefined) {
+    const knownToken = context.allTokensMap[context.forWhichTokenId ?? '']
+    if (knownToken === undefined) {
       throw new Error(
-        `Unknown token ${tokenId} for ${context.forWhichCurrencyCode}`
+        `Unknown token ${context.forWhichTokenId} for ${context.forWhichAddress}`
       )
     }
-    tokenId = knownTokenId
+    currencyCode =
+      context.allTokensMap[context.forWhichTokenId ?? ''].currencyCode
   }
   const gasPrice = 'gasPrice' in tx ? tx.gasPrice : undefined
   const nativeNetworkFee: string =
@@ -566,7 +565,7 @@ export function processEvmScanTransaction(
 
   const edgeTransaction: EdgeTransaction = {
     blockHeight,
-    currencyCode: context.forWhichCurrencyCode,
+    currencyCode,
     confirmations,
     date: parseInt(tx.timeStamp),
     feeRateUsed:
@@ -582,13 +581,13 @@ export function processEvmScanTransaction(
     ourReceiveAddresses,
     parentNetworkFee,
     signedTx: '',
-    tokenId,
+    tokenId: context.forWhichTokenId,
     txid,
     walletId: context.forWhichWalletId
   }
 
   return edgeTransaction
-  // or should be this.addTransaction(currencyCode, edgeTransaction)?
+  // or should be this.addTransaction(4, tokenId, edgeTransaction)?
 }
 
 export function mergeEdgeTransactions(
