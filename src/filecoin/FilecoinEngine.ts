@@ -336,7 +336,7 @@ export class FilecoinEngine extends CurrencyEngine<
     const addressString = this.address.toString()
     const response = await this.filfoxApi.getAccount(addressString)
     this.availableAttoFil = response.balance
-    this.updateBalance(this.currencyInfo.currencyCode, response.balance)
+    this.updateBalance(null, response.balance)
     this.tokenCheckBalanceStatus.set(null, 1)
     this.updateOnAddressesChecked()
     this.walletLocalDataDirty = true

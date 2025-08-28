@@ -596,10 +596,7 @@ export class CosmosEngine extends CurrencyEngine<
       const mainnetBal = balances.find(
         bal => bal.denom === this.networkInfo.nativeDenom
       )
-      this.updateBalance(
-        this.currencyInfo.currencyCode,
-        mainnetBal?.amount ?? '0'
-      )
+      this.updateBalance(null, mainnetBal?.amount ?? '0')
 
       const detectedTokenIds: string[] = []
       Object.keys(this.allTokensMap).forEach(tokenId => {
@@ -608,7 +605,7 @@ export class CosmosEngine extends CurrencyEngine<
           bal => bal.denom === token.networkLocation?.contractAddress
         )
         const balance = tokenBal?.amount ?? '0'
-        this.updateBalance(token.currencyCode, balance)
+        this.updateBalance(tokenId, balance)
 
         if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
           detectedTokenIds.push(tokenId)
@@ -655,7 +652,7 @@ export class CosmosEngine extends CurrencyEngine<
       this.sequence = sequence
     } catch (e) {
       if (String(e).includes('does not exist on chain')) {
-        this.updateBalance(this.currencyInfo.currencyCode, '0')
+        this.updateBalance(null, '0')
       } else {
         this.log.warn('queryBalance error:', e)
       }

@@ -222,17 +222,11 @@ export class TezosEngine extends CurrencyEngine<
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
-    const currencyCode = this.currencyInfo.currencyCode
-    if (
-      typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
-    ) {
-      this.walletLocalData.totalBalances[currencyCode] = '0'
-    }
     const funcs = this.getRpcToolkits().map(toolkit => async () => {
       return await toolkit.rpc.getBalance(this.walletLocalData.publicKey)
     })
     const balance: BalanceResponse = await asyncWaterfall(funcs)
-    this.updateBalance(currencyCode, balance.toString())
+    this.updateBalance(null, balance.toString())
   }
 
   async checkBlockchainInnerLoop(): Promise<void> {

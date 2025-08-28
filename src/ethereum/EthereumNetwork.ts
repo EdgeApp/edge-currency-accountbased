@@ -479,7 +479,13 @@ export class EthereumNetwork {
         } won`
       )
       for (const currencyCode of Object.keys(tokenBal)) {
-        this.ethEngine.updateBalance(currencyCode, tokenBal[currencyCode])
+        const tokenId = getTokenIdFromCurrencyCode(
+          currencyCode,
+          this.ethEngine.currencyInfo.currencyCode,
+          this.ethEngine.allTokensMap
+        )
+        if (tokenId === undefined) continue
+        this.ethEngine.updateBalance(tokenId, tokenBal[currencyCode])
       }
       this.ethEngine.currencyEngineCallbacks.onNewTokens(
         ethereumNetworkUpdate.detectedTokenIds ?? []

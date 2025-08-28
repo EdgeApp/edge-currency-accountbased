@@ -441,7 +441,8 @@ export class StellarEngine extends CurrencyEngine<
           currencyCode = this.currencyInfo.currencyCode
           this.log('--Got balances--')
         } else {
-          currencyCode = bal.asset_type
+          // No token support yet
+          continue
         }
         const denom = getDenomination(
           currencyCode,
@@ -451,7 +452,7 @@ export class StellarEngine extends CurrencyEngine<
         // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
         if (denom != null && denom.multiplier) {
           const nativeAmount = mul(bal.balance, denom.multiplier)
-          this.updateBalance(currencyCode, nativeAmount)
+          this.updateBalance(null, nativeAmount)
         }
       }
     } catch (e: any) {

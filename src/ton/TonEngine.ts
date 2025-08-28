@@ -93,10 +93,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       const contractState: Awaited<ReturnType<TonClient['getContractState']>> =
         await promiseAny(funcs)
 
-      this.updateBalance(
-        this.currencyInfo.currencyCode,
-        contractState.balance.toString()
-      )
+      this.updateBalance(null, contractState.balance.toString())
 
       if (contractState.state !== this.otherData.contractState) {
         this.otherData.contractState = contractState.state

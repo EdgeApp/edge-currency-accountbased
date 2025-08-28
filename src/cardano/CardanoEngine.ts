@@ -245,7 +245,7 @@ export class CardanoEngine extends CurrencyEngine<
       }
 
       // Network balance may be out of date, so we'll calculate it from utxos:
-      this.updateBalanceFromUtxos(this.currencyInfo.currencyCode)
+      this.updateBalanceFromUtxos(null)
     } catch (e) {
       this.log.warn('queryBalance error: ', e)
     }
@@ -528,7 +528,7 @@ export class CardanoEngine extends CurrencyEngine<
     })
 
     // Update balance incase the UTXO set changed:
-    this.updateBalanceFromUtxos(this.currencyInfo.currencyCode)
+    this.updateBalanceFromUtxos(null)
   }
 
   async signTx(
@@ -626,9 +626,9 @@ export class CardanoEngine extends CurrencyEngine<
     )
   }
 
-  private updateBalanceFromUtxos(currencyCode: string): void {
+  private updateBalanceFromUtxos(tokenId: EdgeTokenId): void {
     const balance = this.utxos.reduce((acc, utxo) => add(acc, utxo.value), '0')
-    this.updateBalance(currencyCode, balance)
+    this.updateBalance(tokenId, balance)
   }
 
   getStakeAddress = async (): Promise<string> => {

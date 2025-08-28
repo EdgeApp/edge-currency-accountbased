@@ -186,7 +186,7 @@ export class SolanaEngine extends CurrencyEngine<
       ] = balances
 
       const balance = asAccountBalance(mainnetBal)
-      this.updateBalance(this.chainCode, balance.result.value.toString())
+      this.updateBalance(null, balance.result.value.toString())
       this.usedTokenIdSet.add(null)
 
       const tokenBalances = [
@@ -209,7 +209,7 @@ export class SolanaEngine extends CurrencyEngine<
           this.usedTokenIdSet.add(tokenId)
           balance = tokenBalMap[tokenId] ?? '0'
         }
-        this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
+        this.updateBalance(tokenId, balance)
 
         if (gt(balance, '0')) {
           detectedTokenIds.push(tokenId)
@@ -649,7 +649,7 @@ export class SolanaEngine extends CurrencyEngine<
     let totalTxAmount = '0'
     let nativeNetworkFee = this.feePerSignature
     let parentNetworkFee: string | undefined
-    const balance = this.walletLocalData.totalBalances[currencyCode] ?? '0'
+    const balance = this.getBalance({ tokenId })
 
     // pubkeys
     const payer = new PublicKey(this.base58PublicKey)
@@ -750,8 +750,7 @@ export class SolanaEngine extends CurrencyEngine<
         throw new InsufficientFundsError({ tokenId })
       }
 
-      const balanceSol =
-        this.walletLocalData.totalBalances[this.chainCode] ?? '0'
+      const balanceSol = this.getBalance({ tokenId: null })
       if (gt(add(parentNetworkFee, minimumAddressBalance), balanceSol)) {
         throw new InsufficientFundsError({
           networkFee: parentNetworkFee,

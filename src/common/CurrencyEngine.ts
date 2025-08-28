@@ -28,11 +28,7 @@ import {
 
 import { PluginEnvironment } from './innerPlugin'
 import { makePeriodicTask, PeriodicTask } from './periodicTask'
-import {
-  getTokenIdFromCurrencyCode,
-  makeMetaTokens,
-  validateToken
-} from './tokenHelpers'
+import { makeMetaTokens, validateToken } from './tokenHelpers'
 import {
   asWalletLocalData,
   DATA_STORE_FILE,
@@ -216,14 +212,8 @@ export class CurrencyEngine<
       tokenId: EdgeTokenId
     ): void => {
       const { nativeAmount, parentNetworkFee } = amounts
-      const mainnetCode = this.currencyInfo.currencyCode
-      const sendCurrencyCode =
-        tokenId != null ? this.allTokensMap[tokenId].currencyCode : mainnetCode
-      const sendBalance =
-        this.walletLocalData.totalBalances[sendCurrencyCode] ?? '0'
-      const feeCurrencyCode = mainnetCode
-      const feeBalance =
-        this.walletLocalData.totalBalances[feeCurrencyCode] ?? '0'
+      const sendBalance = this.getBalance({ tokenId })
+      const feeBalance = this.getBalance({ tokenId: null })
 
       if (gt(abs(nativeAmount), sendBalance)) {
         throw new InsufficientFundsError({ tokenId })
@@ -628,22 +618,18 @@ export class CurrencyEngine<
     return transactions
   }
 
-  // Called by EthereumNetwork
-  updateBalance(currencyCode: string, balance: string): void {
-    const currentBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (this.walletLocalData.totalBalances[currencyCode] == null) {
-      this.walletLocalData.totalBalances[currencyCode] = '0'
-    }
-    const tokenId = getTokenIdFromCurrencyCode(
-      currencyCode,
-      this.currencyInfo.currencyCode,
-      this.allTokensMap
-    )
-    if (tokenId === undefined) return
-    if (currentBalance == null || !eq(balance, currentBalance)) {
-      this.walletLocalData.totalBalances[currencyCode] = balance
+  // null tokenId to be stored as empty string to maintain JSON compatibility
+  getBalance(opts: EdgeTokenIdOptions): string {
+    return this.walletLocalData.totalBalances[opts.tokenId ?? ''] ?? '0'
+  }
+
+  updateBalance(tokenId: EdgeTokenId, balance: string): void {
+    const currentBalance = this.getBalance({ tokenId })
+
+    if (!eq(balance, currentBalance)) {
+      this.walletLocalData.totalBalances[tokenId ?? ''] = balance
       this.walletLocalDataDirty = true
-      this.warn(`${currencyCode}: token Address balance: ${balance}`)
+      this.warn(`${tokenId}: token Address balance: ${balance}`)
       this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
     }
     this.tokenCheckBalanceStatus.set(tokenId, 1)
@@ -708,23 +694,14 @@ export class CurrencyEngine<
   }
 
   protected doInitialBalanceCallback(): void {
-    for (const currencyCode of this.enabledTokens) {
+    for (const tokenId of [null, ...this.enabledTokenIds]) {
       try {
-        const tokenId = getTokenIdFromCurrencyCode(
-          currencyCode,
-          this.currencyInfo.currencyCode,
-          this.allTokensMap
-        )
-        if (tokenId === undefined) continue
         this.currencyEngineCallbacks.onTokenBalanceChanged(
           tokenId,
-          this.walletLocalData.totalBalances[currencyCode] ?? '0'
+          this.getBalance({ tokenId })
         )
       } catch (e: any) {
-        this.error(
-          `doInitialBalanceCallback Error for currencyCode ${currencyCode}`,
-          e
-        )
+        this.error(`doInitialBalanceCallback Error for tokenId ${tokenId}`, e)
       }
     }
   }
@@ -973,18 +950,6 @@ export class CurrencyEngine<
     this.changeEnabledTokenIdsSync(tokenIds)
   }
 
-  getBalance(options: EdgeTokenIdOptions): string {
-    const { tokenId } = options
-    const { currencyCode } =
-      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
-
-    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (nativeBalance == null) {
-      return '0'
-    }
-    return nativeBalance
-  }
-
   getNumTransactions(options: EdgeTokenIdOptions): number {
     const { tokenId } = options
     const { currencyCode } =
@@ -1066,25 +1031,20 @@ export class CurrencyEngine<
     const { currencyCode } =
       tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
 
-    const nativeBalance =
-      this.walletLocalData.totalBalances[currencyCode] ?? '0'
+    const nativeBalance = this.getBalance({ tokenId })
 
     // Bucket all spendTarget nativeAmounts by currencyCode
-    const spendAmountMap: { [currencyCode: string]: string } = {}
+    const spendAmountMap = new Map<EdgeTokenId, string>()
     for (const spendTarget of edgeSpendInfo.spendTargets) {
       const { nativeAmount } = spendTarget
       if (nativeAmount == null) continue
-      spendAmountMap[currencyCode] = spendAmountMap[currencyCode] ?? '0'
-      spendAmountMap[currencyCode] = add(
-        spendAmountMap[currencyCode],
-        nativeAmount
-      )
+      const currentSpendAmount = spendAmountMap.get(tokenId) ?? '0'
+      spendAmountMap.set(tokenId, add(currentSpendAmount, nativeAmount))
     }
 
     // Check each spend amount against relevant balance
-    for (const [currencyCode, nativeAmount] of Object.entries(spendAmountMap)) {
-      const nativeBalance =
-        this.walletLocalData.totalBalances[currencyCode] ?? '0'
+    for (const [tokenId, nativeAmount] of spendAmountMap) {
+      const nativeBalance = this.getBalance({ tokenId })
       if (!skipChecks && lt(nativeBalance, nativeAmount)) {
         throw new InsufficientFundsError({ tokenId })
       }
