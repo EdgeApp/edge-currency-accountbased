@@ -395,7 +395,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         this.walletLocalDataDirty = true
       }
       await this.fetchTrxTransactions()
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+      this.tokenCheckTransactionsStatus.set(null, 1)
       this.updateOnAddressesChecked()
       await this.fetchTrc20Transactions()
     } catch (e: any) {
@@ -405,8 +405,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
     this.sendTransactionEvents()
 
-    for (const token of this.enabledTokens) {
-      this.tokenCheckTransactionsStatus[token] = 1
+    for (const tokenId of this.enabledTokenIds) {
+      this.tokenCheckTransactionsStatus.set(tokenId, 1)
     }
     this.updateOnAddressesChecked()
   }

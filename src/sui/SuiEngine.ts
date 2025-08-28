@@ -156,11 +156,8 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
       }
 
-      for (const cc of [
-        this.currencyInfo.currencyCode,
-        ...this.enabledTokens
-      ]) {
-        this.tokenCheckBalanceStatus[cc] = 1
+      for (const tokenId of [null, ...this.enabledTokenIds]) {
+        this.tokenCheckBalanceStatus.set(tokenId, 1)
       }
       this.updateOnAddressesChecked()
     } catch (e) {
@@ -180,8 +177,9 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
       this.log.warn('queryTransactions from error:', e)
     }
 
-    for (const token of this.enabledTokens) {
-      this.tokenCheckTransactionsStatus[token] = 0.5
+    this.tokenCheckTransactionsStatus.set(null, 0.5)
+    for (const tokenId of this.enabledTokenIds) {
+      this.tokenCheckTransactionsStatus.set(tokenId, 0.5)
     }
 
     const cursorTo = this.otherData.latestTxidTo
@@ -197,8 +195,9 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
 
     this.sendTransactionEvents()
 
-    for (const token of this.enabledTokens) {
-      this.tokenCheckTransactionsStatus[token] = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
+    for (const tokenId of this.enabledTokenIds) {
+      this.tokenCheckTransactionsStatus.set(tokenId, 1)
     }
     this.updateOnAddressesChecked()
   }

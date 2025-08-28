@@ -312,12 +312,14 @@ export class CardanoEngine extends CurrencyEngine<
       }
 
       this.walletLocalDataDirty = true
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+      this.tokenCheckTransactionsStatus.set(
+        null,
         progressCurrent / progressTotal
+      )
       this.updateOnAddressesChecked()
     }
 
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
     this.updateOnAddressesChecked()
     this.sendTransactionEvents()
   }

@@ -200,7 +200,7 @@ export class TezosEngine extends CurrencyEngine<
       let txs: XtzGetTransaction[] = []
       let page = 0
       let transactions
-      this.tokenCheckTransactionsStatus.XTZ = 0.5
+      this.tokenCheckTransactionsStatus.set(null, 0.5)
       do {
         transactions = await this.multicastServers(
           'getTransactions',
@@ -216,7 +216,7 @@ export class TezosEngine extends CurrencyEngine<
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
     }
-    this.tokenCheckTransactionsStatus.XTZ = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
     this.updateOnAddressesChecked()
   }
 

@@ -668,10 +668,10 @@ export class XrpEngine extends CurrencyEngine<
       }
       this.sendTransactionEvents()
       this.walletLocalData.lastAddressQueryHeight = blockHeight
-      this.tokenCheckTransactionsStatus.XRP = 1
-      this.enabledTokens.forEach(tokenCurrencyCode => {
-        this.tokenCheckTransactionsStatus[tokenCurrencyCode] = 1
-      })
+      this.tokenCheckTransactionsStatus.set(null, 1)
+      for (const tokenId of this.enabledTokenIds) {
+        this.tokenCheckTransactionsStatus.set(tokenId, 1)
+      }
       this.updateOnAddressesChecked()
     } catch (e: any) {
       this.error(`Error fetching transactions: `, e)
@@ -718,9 +718,9 @@ export class XrpEngine extends CurrencyEngine<
 
       // If get here, we've checked balances for all possible tokens the user
       // could have enabled. Mark all assets as checked
-      this.enabledTokens.forEach(tokenCurrencyCode => {
-        this.tokenCheckBalanceStatus[tokenCurrencyCode] = 1
-      })
+      for (const tokenId of this.enabledTokenIds) {
+        this.tokenCheckBalanceStatus.set(tokenId, 1)
+      }
       this.updateOnAddressesChecked()
 
       if (this.enabledTokens.length > 1) {

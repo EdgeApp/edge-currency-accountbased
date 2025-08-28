@@ -680,12 +680,6 @@ export class CosmosEngine extends CurrencyEngine<
 
   async queryTransactions(): Promise<void> {
     let progress = 0
-    const allCurrencyCodes = [
-      this.currencyInfo.currencyCode,
-      ...this.enabledTokenIds.map(
-        tokenId => this.allTokensMap[tokenId].currencyCode
-      )
-    ]
     const clientsList: CosmosClients[] = []
     if (
       this.networkInfo.archiveNodes != null &&
@@ -734,9 +728,9 @@ export class CosmosEngine extends CurrencyEngine<
           )
         }
         progress += 0.5 / clientsList.length
-        allCurrencyCodes.forEach(
-          code => (this.tokenCheckTransactionsStatus[code] = progress)
-        )
+        for (const tokenId of [null, ...this.enabledTokenIds]) {
+          this.tokenCheckTransactionsStatus.set(tokenId, progress)
+        }
         this.updateOnAddressesChecked()
       }
       this.otherData.archivedTxLastCheckTime = archivedTxLastCheckTime

@@ -417,12 +417,9 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     const mainPubkey = new PublicKey(this.base58PublicKey)
-    await this.queryTransactionsInner(
-      this.currencyInfo.currencyCode,
-      mainPubkey
-    )
+    await this.queryTransactionsInner(null, mainPubkey)
     this.sendTransactionEvents()
-    this.updateTxStatus(this.currencyInfo.currencyCode, 1)
+    this.updateTxStatus(null, 1)
 
     for (const tokenId of this.enabledTokenIds) {
       const token = this.allTokensMap[tokenId]
@@ -436,17 +433,19 @@ export class SolanaEngine extends CurrencyEngine<
           tokenOwnerPubkey,
           new PublicKey(this.networkInfo.associatedTokenPublicKey)
         )
-        await this.queryTransactionsInner(token.currencyCode, pk)
+        await this.queryTransactionsInner(tokenId, pk)
         this.sendTransactionEvents()
       }
-      this.updateTxStatus(token.currencyCode, 1)
+      this.updateTxStatus(tokenId, 1)
     }
   }
 
   async queryTransactionsInner(
-    currencyCode: string,
+    tokenId: EdgeTokenId,
     pubkey: PublicKey
   ): Promise<void> {
+    const currencyCode =
+      tokenId != null ? this.allTokensMap[tokenId].currencyCode : this.chainCode
     let before: string | undefined
     const until =
       this.otherData.newestTxid[currencyCode] !== ''
@@ -478,7 +477,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (txids.length === 0) {
-      this.updateTxStatus(currencyCode, 1)
+      this.updateTxStatus(tokenId, 1)
       return
     }
 
@@ -545,7 +544,7 @@ export class SolanaEngine extends CurrencyEngine<
         if (percent !== this.progressRatio) {
           if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
             this.progressRatio = percent
-            this.updateTxStatus(currencyCode, this.progressRatio)
+            this.updateTxStatus(tokenId, this.progressRatio)
           }
         }
       }
@@ -555,8 +554,8 @@ export class SolanaEngine extends CurrencyEngine<
     this.sendTransactionEvents()
   }
 
-  updateTxStatus(currencyCode: string, progress: number): void {
-    this.tokenCheckTransactionsStatus[currencyCode] = progress
+  updateTxStatus(tokenId: EdgeTokenId, progress: number): void {
+    this.tokenCheckTransactionsStatus.set(tokenId, progress)
     this.updateOnAddressesChecked()
   }
 
@@ -569,9 +568,9 @@ export class SolanaEngine extends CurrencyEngine<
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     if (this.lightMode) {
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-      for (const edgeToken of Object.values(this.allTokensMap)) {
-        this.tokenCheckTransactionsStatus[edgeToken.currencyCode] = 1
+      this.tokenCheckTransactionsStatus.set(null, 1)
+      for (const tokenId of Object.keys(this.allTokensMap)) {
+        this.tokenCheckTransactionsStatus.set(tokenId, 1)
       }
     } else {
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)

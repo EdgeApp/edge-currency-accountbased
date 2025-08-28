@@ -444,8 +444,7 @@ export class AlgorandEngine extends CurrencyEngine<
 
       latestRound = latestRound ?? this.walletLocalData.blockHeight
       const progress = (latestRound - progressRound) / (latestRound - minRound)
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        progress
+      this.tokenCheckTransactionsStatus.set(null, progress)
       this.updateOnAddressesChecked()
 
       nextQueryToken = nextToken
@@ -457,8 +456,8 @@ export class AlgorandEngine extends CurrencyEngine<
       this.walletLocalDataDirty = true
     }
 
-    for (const cc of this.enabledTokens) {
-      this.tokenCheckTransactionsStatus[cc] = 1
+    for (const tokenId of [null, ...this.enabledTokenIds]) {
+      this.tokenCheckTransactionsStatus.set(tokenId, 1)
     }
     this.updateOnAddressesChecked()
     this.sendTransactionEvents()
