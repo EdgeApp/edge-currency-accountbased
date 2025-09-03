@@ -1,3 +1,5 @@
+// Force asm.js crypto on RN to avoid WASM crash paths
+import '@polkadot/wasm-crypto/initOnlyAsm'
 import '@polkadot/api-augment/polkadot'
 
 import { ApiPromise, Keyring } from '@polkadot/api'
@@ -848,8 +850,10 @@ export class PolkadotEngine extends CurrencyEngine<
       if (polkadotPrivateKeys.mnemonic != null) {
         this.keypair.addFromUri(polkadotPrivateKeys.mnemonic)
       } else {
-        const uint8Array = base16.parse(polkadotPrivateKeys.privateKey)
-        this.keypair.addFromSeed(uint8Array)
+        const hex = polkadotPrivateKeys.privateKey.replace(/^0x/i, '')
+        const bytes = base16.parse(hex)
+        const seed = bytes.length === 32 ? bytes : bytes.subarray(0, 32)
+        this.keypair.addFromSeed(seed)
       }
     }
 

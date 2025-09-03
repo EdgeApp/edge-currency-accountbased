@@ -97,20 +97,36 @@ export class SolanaTools implements EdgeCurrencyTools {
         base16.stringify(buffer)
       ).key
       const keypair = Keypair.fromSeed(Uint8Array.from(deriveSeed))
-
+      // Some fixup
       return {
         [`${pluginId}Mnemonic`]: input,
         [`${pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
         publicKey: keypair.publicKey.toBase58()
       }
-    } else {
-      const bytes = bs58.decode(input)
-      const keypair = await Keypair.fromSecretKey(bytes)
+    } else if (/^[0-9a-fA-F]{128}$/.test(input)) {
+      // Handle 64-byte hex private key (128 hex characters)
+      const keyBuffer = Buffer.from(input, 'hex')
+      const keypair = Keypair.fromSecretKey(keyBuffer)
 
       return {
-        [`${pluginId}Base58Key`]: input,
-        [`${pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
+        [`${pluginId}Key`]: input,
         publicKey: keypair.publicKey.toBase58()
+      }
+    } else {
+      // Try base58 format
+      try {
+        const bytes = bs58.decode(input)
+        const keypair = Keypair.fromSecretKey(bytes)
+
+        return {
+          [`${pluginId}Base58Key`]: input,
+          [`${pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
+          publicKey: keypair.publicKey.toBase58()
+        }
+      } catch (e) {
+        throw new Error(
+          'Invalid private key format. Expected mnemonic, base58, or hex format.'
+        )
       }
     }
   }
@@ -131,10 +147,16 @@ export class SolanaTools implements EdgeCurrencyTools {
       throw new Error('InvalidWalletType')
     }
 
-    const keys = await this.importPrivateKey(
+    const privateKeyInput =
       walletInfo.keys[`${pluginId}Mnemonic`] ??
-        walletInfo.keys[`${pluginId}Base58Key`]
-    )
+      walletInfo.keys[`${pluginId}Base58Key`] ??
+      walletInfo.keys[`${pluginId}Key`]
+
+    if (privateKeyInput == null) {
+      throw new Error('SOL: No private key found in wallet')
+    }
+
+    const keys = await this.importPrivateKey(privateKeyInput)
     return { publicKey: keys.publicKey.toString() }
   }
 

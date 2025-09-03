@@ -163,8 +163,14 @@ export class FioTools implements EdgeCurrencyTools {
       uri,
       networks: { fio: true },
       builtinTokens: this.builtinTokens,
-      currencyCode: FIO_CURRENCY_CODE
+      currencyCode: FIO_CURRENCY_CODE,
+      testPrivateKeys: this.importPrivateKey.bind(this)
     })
+
+    if (edgeParsedUri.privateKeys != null) {
+      return edgeParsedUri
+    }
+
     const valid = checkAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
