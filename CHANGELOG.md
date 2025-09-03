@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.59.0 (2025-09-03)
+
 - added: (Sui) Support Bech32 `suiprivkey1...` private key import and ASCII‑hex Bech32 inputs; normalize derive/sign to accept mnemonic or hex
 - added: (Solana) Add 64‑byte hex private key import; unify public key derivation across mnemonic/base58/hex
 - added: (FIO) Detect private keys in `parseUri` and return early to support sweeping
