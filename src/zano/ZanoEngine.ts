@@ -1,4 +1,5 @@
 import { abs, add, eq, gt, lt, mul, sub } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -23,11 +24,13 @@ import {
   LifecycleManager,
   makeLifecycleManager
 } from '../common/lifecycleManager'
+import { MakeTxParams } from '../common/types'
 import { cleanTxLogs, createWeightedAverageCalculator } from '../common/utils'
 import { ZanoTools } from './ZanoTools'
 import {
   asGetAliasDetailsResponse,
   asSafeZanoWalletInfo,
+  asZanoBurnAssetParams,
   asZanoPrivateKeys,
   asZanoTransferParams,
   asZanoWalletOtherData,
@@ -537,20 +540,26 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     const nativeId = await this.nativeId.get()
     if (nativeId == null) throw new Error('Wallet is not running')
 
-    const otherParams: TransferParams = asZanoTransferParams(
-      edgeTransaction.otherParams
-    )
-
+    let txid: string | undefined
     try {
-      const txid = await this.tools.zano.transfer(nativeId, otherParams)
+      const burnAssetParams = asMaybe(asZanoBurnAssetParams)(
+        edgeTransaction.otherParams
+      )
+      if (burnAssetParams != null) {
+        txid = await this.tools.zano.burnAsset(nativeId, burnAssetParams)
+      } else {
+        const transferParams = asZanoTransferParams(edgeTransaction.otherParams)
+        txid = await this.tools.zano.transfer(nativeId, transferParams)
+      }
+
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      return edgeTransaction
     } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
       throw e
     }
-    return edgeTransaction
   }
 
   /**
@@ -586,7 +595,61 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   }
 
   otherMethods: ZanoOtherMethods = {
-    resolveName: this.resolveName.bind(this)
+    resolveName: this.resolveName.bind(this),
+    makeTx: async (makeTxParams: MakeTxParams): Promise<EdgeTransaction> => {
+      if (makeTxParams.type === 'MakeTx') {
+        const { unsignedTx, metadata } = makeTxParams
+
+        const decoder = new TextDecoder()
+        const transaction = JSON.parse(decoder.decode(unsignedTx))
+
+        const burnAssetParams = asMaybe(asZanoBurnAssetParams)(transaction)
+        if (burnAssetParams == null) {
+          throw new Error('Invalid transaction')
+        }
+
+        const tokenId = burnAssetParams.assetId
+        const currencyCode = this.allTokensMap[tokenId].currencyCode
+
+        const nativeAmount = burnAssetParams.burnAmount.toString()
+
+        const networkFee = '0'
+        const feeNumber = await this.tools.zano.getCurrentTxFee(2)
+        const parentNetworkFee = feeNumber.toFixed()
+
+        const availableBalance = this.unlockedBalanceMap.get(tokenId) ?? '0'
+        const availableZanoBalance = this.unlockedBalanceMap.get(null) ?? '0'
+
+        if (gt(nativeAmount, availableBalance)) {
+          throw new InsufficientFundsError({ tokenId })
+        }
+        if (gt(parentNetworkFee, availableZanoBalance)) {
+          throw new InsufficientFundsError({ tokenId: null })
+        }
+
+        const out: EdgeTransaction = {
+          assetAction: metadata?.assetAction,
+          savedAction: metadata?.savedAction,
+          blockHeight: 0,
+          currencyCode,
+          date: Date.now() / 1000,
+          isSend: true,
+          memos: [],
+          nativeAmount: `-${nativeAmount}`,
+          networkFee,
+          networkFees: [{ tokenId: null, nativeAmount: parentNetworkFee }],
+          otherParams: burnAssetParams,
+          ourReceiveAddresses: [],
+          signedTx: '',
+          tokenId,
+          txid: '',
+          walletId: this.walletId
+        }
+        return out
+      } else {
+        throw new Error('Unrecognized makeTx type')
+      }
+    }
   }
 }
 

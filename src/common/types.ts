@@ -12,12 +12,14 @@ import {
   Cleaner
 } from 'cleaners'
 import {
+  EdgeAssetAction,
   EdgeDenomination,
   EdgeMetadata,
   EdgeToken,
   EdgeTokenId,
   EdgeTokenInfo,
   EdgeTransaction,
+  EdgeTxAction,
   EdgeTxSwap
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
@@ -151,8 +153,22 @@ export type MakeTxParams =
       metadata?: EdgeMetadata
     }
   | {
-      type: 'MakeTxDummyType'
+      type: 'MakeTx'
+      unsignedTx: Uint8Array
+      metadata?: MakeTxMetadata
     }
+
+export interface MakeTxMetadata {
+  assetAction?: EdgeAssetAction
+  savedAction?: EdgeTxAction
+  metadata?: EdgeMetadata
+  swapData?: EdgeTxSwap
+  memos?: Array<{
+    type: 'text' | 'number' | 'hex'
+    value: string
+    hidden?: boolean
+  }>
+}
 
 export interface EdgeTransactionHelperAmounts {
   nativeAmount: string

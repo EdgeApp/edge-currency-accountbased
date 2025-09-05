@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Zano) Add burn asset support
+
 ## 4.59.0 (2025-09-03)
 
 - added: (Sui) Support Bech32 `suiprivkey1...` private key import and ASCII‑hex Bech32 inputs; normalize derive/sign to accept mnemonic or hex
