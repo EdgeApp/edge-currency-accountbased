@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Added exponential backoff for syncNetwork "retriable" errors.
+
 ## 4.59.0 (2025-09-03)
 
 - added: (Sui) Support Bech32 `suiprivkey1...` private key import and ASCII‑hex Bech32 inputs; normalize derive/sign to accept mnemonic or hex
