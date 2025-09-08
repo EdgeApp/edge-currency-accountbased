@@ -170,7 +170,15 @@ export class SuiTools implements EdgeCurrencyTools {
       builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens,
-      testPrivateKeys: this.importPrivateKey.bind(this)
+      testPrivateKeys: async (input: string) => {
+        // Accept mnemonic and Bech32 suiprivkey for sweep during URI parsing.
+        if (validateMnemonic(input)) return await this.importPrivateKey(input)
+        if (input.startsWith('suiprivkey1'))
+          return await this.importPrivateKey(input)
+        // Do NOT accept raw 32-byte hex here, because it's ambiguous with a
+        // public address.
+        throw new Error('NotPrivateKey')
+      }
     })
 
     if (edgeParsedUri.privateKeys != null) {
