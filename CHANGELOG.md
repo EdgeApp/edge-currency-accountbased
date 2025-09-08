@@ -3,6 +3,7 @@
 ## Unreleased
 
 - fixed: (Thorchain) Correctly parse incoming TCY transactions.
+- fixed: (Sui) Disallow 32-byte hex private key import from `parseUri`
 
 ## 4.59.0 (2025-09-03)
 
