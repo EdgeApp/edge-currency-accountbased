@@ -126,8 +126,11 @@ export class ThorchainEngine extends CosmosEngine {
               for (const coin of action.coins) {
                 const typeValue =
                   type === 'coin_received' ? 'receiver' : 'spender'
-                const asset = coin.asset.split('.')[1]
-                if (asset == null) continue
+
+                // The coin might have a prefix like "RUNE.RUNE",
+                // or it might be a plain currency code like "TCY":
+                const assetParts = coin.asset.split('.')
+                const asset = assetParts[1] ?? assetParts[0]
 
                 events.push({
                   type,
