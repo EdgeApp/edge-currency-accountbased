@@ -178,7 +178,7 @@
     "process": "^0.11.10",
     "querystring": "^0.2.1",
     "react-native-piratechain": "0.5.0",
-    "react-native-zano": "0.2.0",
+    "react-native-zano": "0.2.2",
     "react-native-zcash": "0.9.0",
     "rimraf": "^3.0.2",
     "shell-quote": "^1.8.1",

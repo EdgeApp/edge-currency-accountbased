@@ -7,11 +7,11 @@ import {
   asString,
   Cleaner
 } from 'cleaners'
-import { EdgeToken } from 'edge-core-js/types'
+import { EdgeToken, EdgeTransaction } from 'edge-core-js/types'
 import type { TransferParams } from 'react-native-zano'
 
 import { createTokenIdFromContractAddress } from '../common/tokenHelpers'
-import { asSafeCommonWalletInfo } from '../common/types'
+import { asSafeCommonWalletInfo, MakeTxParams } from '../common/types'
 
 export interface ZanoNetworkInfo {
   nativeAssetId: string
@@ -122,4 +122,23 @@ export const asGetAliasDetailsResponse = asObject({
 
 export interface ZanoOtherMethods {
   resolveName: (alias: string) => Promise<string>
+  makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>
 }
+
+export const asZanoBurnAssetParams = asObject({
+  assetId: asString,
+  burnAmount: asNumber,
+  nativeAmount: asOptional(asNumber),
+  pointTxToAddress: asOptional(asString),
+  serviceEntries: asOptional(
+    asArray(
+      asObject({
+        body: asString,
+        flags: asNumber,
+        instruction: asString,
+        security: asString,
+        service_id: asString
+      })
+    )
+  )
+})

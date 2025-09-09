@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Zano) Add burn asset support
+
 ## 4.59.1 (2025-09-08)
 
 - fixed: (Thorchain) Correctly parse incoming TCY transactions.
