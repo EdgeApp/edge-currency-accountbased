@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.59.2 (2025-09-09)
+
 - added: (Zano) Add burn asset support
 
 ## 4.59.1 (2025-09-08)
