@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Added exponential backoff for syncNetwork "retriable" errors.
+
 ## 4.59.2 (2025-09-09)
 
 - added: (Zano) Add burn asset support
