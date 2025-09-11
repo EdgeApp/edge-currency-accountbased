@@ -1,5 +1,13 @@
 import type { SignatureWithBytes } from '@mysten/sui/cryptography'
 import { asCodec, asObject, asOptional, asString, Cleaner } from 'cleaners'
+import type {
+  EdgeAssetAction,
+  EdgeMemo,
+  EdgeMetadata,
+  EdgeTransaction,
+  EdgeTxAction,
+  EdgeTxSwap
+} from 'edge-core-js/types'
 
 export interface SuiNetworkInfo {
   network: 'mainnet' | 'testnet'
@@ -66,3 +74,22 @@ export const asSuiSignedTx = asObject<SignatureWithBytes>({
   bytes: asString,
   signature: asString
 })
+
+//
+// Other Methods Types:
+//
+
+export interface MakeTxMetadata {
+  assetAction?: EdgeAssetAction
+  savedAction?: EdgeTxAction
+  metadata?: EdgeMetadata
+  swapData?: EdgeTxSwap
+  memos?: EdgeMemo[]
+}
+
+export interface SuiOtherMethods {
+  makeTx: (
+    unsignedTx: Uint8Array,
+    metadata?: MakeTxMetadata
+  ) => Promise<EdgeTransaction>
+}
