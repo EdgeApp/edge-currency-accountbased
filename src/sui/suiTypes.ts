@@ -2,6 +2,7 @@ import type { SignatureWithBytes } from '@mysten/sui/cryptography'
 import { asCodec, asObject, asOptional, asString, Cleaner } from 'cleaners'
 import type {
   EdgeAssetAction,
+  EdgeMemo,
   EdgeMetadata,
   EdgeTransaction,
   EdgeTxAction,
@@ -83,11 +84,7 @@ export interface MakeTxMetadata {
   savedAction?: EdgeTxAction
   metadata?: EdgeMetadata
   swapData?: EdgeTxSwap
-  memos?: Array<{
-    type: 'text' | 'number' | 'hex'
-    value: string
-    hidden?: boolean
-  }>
+  memos?: EdgeMemo[]
 }
 
 export interface SuiOtherMethods {

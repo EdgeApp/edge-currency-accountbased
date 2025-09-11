@@ -92,7 +92,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
           currencyCode,
           isSend: true,
           memos: metadata?.memos ?? [],
-          nativeAmount: `-${nativeAmount}`,
+          nativeAmount,
           networkFee,
           networkFees: [{ tokenId: null, nativeAmount: networkFee }],
           ourReceiveAddresses: [this.suiAddress],
