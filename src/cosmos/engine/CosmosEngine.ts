@@ -89,6 +89,7 @@ import {
   assetFromString,
   checkAndValidateADR36AminoSignDoc,
   createCosmosClients,
+  coerceToBytes,
   getIbcChannelAndPort,
   reduceCoinEventsForAddress,
   rpcWithApiKey,
@@ -1288,20 +1289,17 @@ export class CosmosEngine extends CurrencyEngine<
         const rawMessages = swapTxData.protoMsgs ?? swapTxData.msgs
 
         const messages = rawMessages.map((msg: any, index: number) => {
-          // Rango provides messages with type_url and value (as byte array)
-          if (msg.type_url != null && Array.isArray(msg.value)) {
+          // Preferred shape from providers: { type_url, value: number[] }
+          if (msg?.type_url != null && Array.isArray(msg?.value)) {
             const anyMsg = Any.fromPartial({
-              typeUrl: msg.type_url, // Convert type_url to typeUrl
+              typeUrl: msg.type_url,
               value: new Uint8Array(msg.value)
             })
             this.log(
               `DEX swap message[${index}]: typeUrl=${anyMsg.typeUrl}, valueLength=${anyMsg.value.length}`
             )
-
-            // Try to decode MsgSend to see recipient
             if (anyMsg.typeUrl === '/cosmos.bank.v1beta1.MsgSend') {
               try {
-                // Decode the MsgSend to inspect recipient
                 const msgSend = MsgSend.decode(anyMsg.value)
                 this.log(
                   `DEX swap MsgSend: from=${msgSend.fromAddress}, to=${
@@ -1316,12 +1314,66 @@ export class CosmosEngine extends CurrencyEngine<
                 )
               }
             }
-
             return anyMsg
           }
-          // Fallback for other message formats
-          this.warn(`DEX swap message[${index}] in unexpected format:`, msg)
-          return msg
+
+          // Generalized coercion for other shapes such as:
+          // { typeUrl, value: base64|string|number[] }, { '@type', value }, or nested value wrappers
+          const typeUrl: string | undefined =
+            msg?.type_url ?? msg?.typeUrl ?? msg?.['@type']
+          const rawVal = msg?.value ?? msg?.val ?? msg
+          const valueBytes = coerceToBytes(rawVal)
+
+          if (typeUrl != null && valueBytes != null) {
+            const anyMsg = Any.fromPartial({ typeUrl, value: valueBytes })
+            this.log(
+              `DEX swap message[${index}]: typeUrl=${anyMsg.typeUrl}, valueLength=${anyMsg.value.length}`
+            )
+            if (anyMsg.typeUrl === '/cosmos.bank.v1beta1.MsgSend') {
+              try {
+                const msgSend = MsgSend.decode(anyMsg.value)
+                this.log(
+                  `DEX swap MsgSend: from=${msgSend.fromAddress}, to=${
+                    msgSend.toAddress
+                  }, amount=${JSON.stringify(msgSend.amount)}`
+                )
+              } catch (e) {
+                this.warn(
+                  `Failed to decode MsgSend: ${
+                    e instanceof Error ? e.message : String(e)
+                  }`
+                )
+              }
+            }
+            return anyMsg
+          }
+
+          // If value is an object and we have a typeUrl, try Registry.encodeAsAny with EncodeObject
+          if (typeUrl != null && rawVal != null && typeof rawVal === 'object') {
+            try {
+              const anyMsg = this.tools.registry.encodeAsAny({
+                typeUrl,
+                value: rawVal
+              })
+              this.log(
+                `DEX swap message[${index}]: encoded via registry.encodeAsAny, typeUrl=${anyMsg.typeUrl}, valueLength=${anyMsg.value.length}`
+              )
+              return anyMsg
+            } catch (e) {
+              this.warn(
+                `Failed registry.encodeAsAny for message[${index}] ${typeUrl}: ${
+                  e instanceof Error ? e.message : String(e)
+                }`
+              )
+            }
+          }
+
+          // If we cannot coerce into Any, throw to prevent producing an invalid TxBody
+          this.warn(
+            `DEX swap message[${index}] has unsupported format; missing typeUrl or binary value:`,
+            msg
+          )
+          throw new Error('Unsupported DEX swap message format')
         })
 
         // Convert messages to bodyBytes using the same pattern as createUnsignedTxHex
