@@ -25,7 +25,11 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
-import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
+import {
+  asSafeCommonWalletInfo,
+  MakeTxParams,
+  SafeCommonWalletInfo
+} from '../common/types'
 import { cleanTxLogs, getOtherParams } from '../common/utils'
 import { SuiTools } from './SuiTools'
 import {
@@ -34,6 +38,7 @@ import {
   asSuiUnsignedTx,
   asSuiWalletOtherData,
   SuiNetworkInfo,
+  SuiOtherMethods,
   SuiWalletOtherData
 } from './suiTypes'
 
@@ -44,6 +49,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
 
   otherData!: SuiWalletOtherData
   suiAddress: string
+  otherMethods: SuiOtherMethods
 
   constructor(
     env: PluginEnvironment<SuiNetworkInfo>,
@@ -55,6 +61,65 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
     this.networkInfo = env.networkInfo
     const publicKey = new Ed25519PublicKey(walletInfo.keys.publicKey)
     this.suiAddress = publicKey.toSuiAddress()
+
+    this.otherMethods = {
+      makeTx: async (makeTxParams: MakeTxParams): Promise<EdgeTransaction> => {
+        if (makeTxParams.type !== 'MakeTx') {
+          throw new Error('Unrecognized makeTx type')
+        }
+        const { unsignedTx, metadata } = makeTxParams
+        // Deserialize and validate the transaction
+        const tx = Transaction.from(unsignedTx)
+        const serialized = await tx.build({ client: this.tools.suiClient })
+
+        // Calculate fees using dry run
+        const dryRun = await this.tools.suiClient.dryRunTransactionBlock({
+          transactionBlock: serialized
+        })
+        const networkFee = this.feeSum(dryRun.effects.gasUsed)
+
+        // For pre-built transactions, we can't determine the exact amount being sent
+        // from the transaction data alone, so we set nativeAmount to '0'
+        const nativeAmount = '0'
+
+        // Check balance for fees
+        const mainnetBalance = this.getBalance({ tokenId: null })
+        if (gt(networkFee, mainnetBalance)) {
+          throw new InsufficientFundsError({ tokenId: null, networkFee })
+        }
+
+        // Create the EdgeTransaction
+        const currencyCode = this.currencyInfo.currencyCode
+        const edgeTx: EdgeTransaction = {
+          blockHeight: 0,
+          date: 0,
+          currencyCode,
+          isSend: true,
+          memos: metadata?.memos ?? [],
+          nativeAmount,
+          networkFee,
+          networkFees: [{ tokenId: null, nativeAmount: networkFee }],
+          ourReceiveAddresses: [this.suiAddress],
+          otherParams: {
+            unsignedBase64: base64.stringify(serialized)
+          },
+          tokenId: null,
+          txid: '',
+          signedTx: '',
+          walletId: this.walletId,
+          // Add metadata fields if provided
+          ...(metadata?.assetAction != null && {
+            assetAction: metadata.assetAction
+          }),
+          ...(metadata?.savedAction != null && {
+            savedAction: metadata.savedAction
+          }),
+          ...(metadata?.metadata != null && { metadata: metadata.metadata }),
+          ...(metadata?.swapData != null && { swapData: metadata.swapData })
+        }
+        return edgeTx
+      }
+    }
   }
 
   setOtherData(raw: any): void {
