@@ -137,6 +137,8 @@ export type MakeTxParams =
       toTokenId?: string
       toNativeAmount: string
 
+      txData?: string
+
       /**
        * UNIX time (seconds) to expire the DEX swap if it hasn't executed
        */

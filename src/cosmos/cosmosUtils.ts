@@ -2,28 +2,28 @@ import { getIBCData, getTransferChannel } from '@chain-registry/utils'
 import { addCoins, StdSignDoc } from '@cosmjs/amino'
 import { fromBech32 } from '@cosmjs/encoding'
 import {
-  isJsonRpcErrorResponse,
-  JsonRpcRequest,
-  JsonRpcSuccessResponse
+    isJsonRpcErrorResponse,
+    JsonRpcRequest,
+    JsonRpcSuccessResponse
 } from '@cosmjs/json-rpc'
 import {
-  Coin,
-  Event,
-  HttpEndpoint,
-  QueryClient,
-  setupAuthExtension,
-  setupBankExtension,
-  setupIbcExtension,
-  setupStakingExtension,
-  setupTxExtension,
-  StargateClient
+    Coin,
+    Event,
+    HttpEndpoint,
+    QueryClient,
+    setupAuthExtension,
+    setupBankExtension,
+    setupIbcExtension,
+    setupStakingExtension,
+    setupTxExtension,
+    StargateClient
 } from '@cosmjs/stargate'
 import {
-  Comet38Client,
-  CometClient,
-  RpcClient,
-  Tendermint34Client,
-  Tendermint37Client
+    Comet38Client,
+    CometClient,
+    RpcClient,
+    Tendermint34Client,
+    Tendermint37Client
 } from '@cosmjs/tendermint-rpc'
 import { add } from 'biggystring'
 import { chains, ibcData } from 'chain-registry'
@@ -32,11 +32,11 @@ import { EdgeFetchFunction } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
 
 import {
-  asCosmosInitOptions,
-  CosmosClients,
-  CosmosCoin,
-  CosmosInitOptions,
-  IbcChannel
+    asCosmosInitOptions,
+    CosmosClients,
+    CosmosCoin,
+    CosmosInitOptions,
+    IbcChannel
 } from './cosmosTypes'
 import { Asset } from './info/proto/thorchainrune/thorchain/v1/common/common'
 
@@ -241,6 +241,32 @@ export const safeParse = (input: string): Uint8Array => {
     const parsed = base64.parse(input)
     return parsed
   }
+}
+
+/**
+ * Attempts to coerce a variety of input value shapes into bytes.
+ * - Uint8Array: returned as-is
+ * - number[]: converted to Uint8Array
+ * - string: hex (with/without 0x) or base64, parsed via safeParse
+ * - objects: recursively checks `.value` or `.bytes` fields
+ */
+export const coerceToBytes = (val: any): Uint8Array | undefined => {
+  if (val == null) return undefined
+  if (val instanceof Uint8Array) return val
+  if (Array.isArray(val)) return new Uint8Array(val)
+  if (typeof val === 'string') {
+    try {
+      const trimmed = val.startsWith('0x') ? val.slice(2) : val
+      return safeParse(trimmed)
+    } catch (e) {
+      return undefined
+    }
+  }
+  if (typeof val === 'object') {
+    const nested = (val as any).value ?? (val as any).bytes
+    if (nested != null) return coerceToBytes(nested)
+  }
+  return undefined
 }
 
 // The helper function parseCoins from the @cosmjs sdk doesn't handle denoms with hyphens.
