@@ -28,10 +28,6 @@ import ethWallet from 'ethereumjs-wallet'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import {
-  RetryCancelledError,
-  retryWithBackoff
-} from '../common/retryWithBackoff'
-import {
   biggyRoundToNearestInt,
   cleanTxLogs,
   decimalToHex,
@@ -43,6 +39,7 @@ import {
   mergeDeeply,
   normalizeAddress,
   removeHexPrefix,
+  snooze,
   toHex,
   uint8ArrayToHex
 } from '../common/utils'
@@ -51,7 +48,6 @@ import {
   ROLLUP_FEE_PARAMS,
   WEI_MULTIPLIER
 } from './ethereumConsts'
-import { isKnownRetriableError, RetriableError } from './ethereumErrors'
 import { EthereumNetwork, getFeeRateUsed } from './EthereumNetwork'
 import { asEIP712TypedData } from './ethereumSchema'
 import { EthereumTools } from './EthereumTools'
@@ -97,7 +93,9 @@ import {
 } from './fees/feeProviders'
 import { RpcAdapter } from './networkAdapters/RpcAdapter'
 
-// How long to wait before the next scheduled sync
+// How long to wait before retrying a network sync if the blockheight from
+// our querying hasn't exceeded the blockheight from the core:
+const RETRY_SYNC_NETWORK_INTERVAL = 2000
 const SYNC_NETWORK_INTERVAL = 20000
 
 export class EthereumEngine extends CurrencyEngine<
@@ -115,7 +113,6 @@ export class EthereumEngine extends CurrencyEngine<
   infoFeeProvider: () => Promise<EthereumFees>
   externalFeeProviders: FeeProviderFunction[]
   optimismRollupParams?: OptimismRollupParams
-  private syncNetworkAbortController?: AbortController
   constructor(
     env: PluginEnvironment<EthereumNetworkInfo>,
     tools: EthereumTools,
@@ -784,12 +781,6 @@ export class EthereumEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
-    // Cancel any ongoing sync operation
-    if (this.syncNetworkAbortController != null) {
-      this.syncNetworkAbortController.abort()
-      this.syncNetworkAbortController = undefined
-    }
-
     await super.killEngine()
     this.ethNetwork.stop()
   }
@@ -803,41 +794,13 @@ export class EthereumEngine extends CurrencyEngine<
   async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
     const { subscribeParam } = opts
 
-    // Cancel any existing sync operation
-    if (this.syncNetworkAbortController != null) {
-      this.syncNetworkAbortController.abort()
-    }
-
-    // Create new AbortController for this sync
-    this.syncNetworkAbortController = new AbortController()
-
     // Initial sync routine:
     if (subscribeParam == null) {
-      try {
-        // Use infinite retry logic with cancellation for initial sync
-        await retryWithBackoff(
-          async () => await this.ethNetwork.acquireUpdates(),
-          {
-            initialDelay: 1000,
-            maxDelay: 60000, // Cap at 60 seconds
-            backoffFactor: 2,
-            jitter: 0.25, // Add 25% jitter to prevent thundering herd
-            // No maxRetries - will retry indefinitely until cancelled
-            signal: this.syncNetworkAbortController.signal,
-            isRetriableError: isKnownRetriableError
-          }
-        )
-      } catch (error: any) {
-        // Check if the error is due to cancellation
-        if (error instanceof RetryCancelledError) {
-          return SYNC_NETWORK_INTERVAL
-        }
-        // Log the error but don't fail completely for initial sync
-        this.error('syncNetwork initial acquireUpdates failed', error)
-      }
+      await this.ethNetwork.acquireUpdates().catch(error => {
+        this.error('syncNetwork acquireUpdates', error)
+      })
       return SYNC_NETWORK_INTERVAL
     }
-
     // The blockheight from the network (change server)
     const theirBlockheight =
       subscribeParam.checkpoint != null
@@ -871,37 +834,23 @@ export class EthereumEngine extends CurrencyEngine<
       return SYNC_NETWORK_INTERVAL
     }
 
-    // Sync the network with exponential backoff retry logic
-    try {
-      const retryResult = await retryWithBackoff(
-        async () => {
-          await this.ethNetwork.acquireUpdates()
-
-          // Check if we've caught up to the expected block height
-          if (theirBlockheight > this.walletLocalData.highestTxBlockHeight) {
-            // We haven't caught up yet, this is a retriable condition
-            throw new RetriableError(
-              `Blockheight not synced yet. Expected: ${theirBlockheight}, Current: ${this.walletLocalData.highestTxBlockHeight}`
-            )
-          }
-        },
-        {
-          maxRetries: 10, // Allow more retries for sync operations
-          isRetriableError: isKnownRetriableError
+    // Sync the network on a loop until the engine blockheight matches the
+    // checkpoint: e.g. waiting on Etherscan or some other adapter to reflect
+    // the new block
+    while (true) {
+      const success = await this.ethNetwork.acquireUpdates().then(
+        () => true,
+        error => {
+          this.error('syncNetwork acquireUpdates failed:', error)
+          return false
         }
       )
-
-      // Log successful sync with retry info
-      if (retryResult.attempts > 1) {
-        this.log(
-          `syncNetwork succeeded after ${retryResult.attempts} attempts (total delay: ${retryResult.totalDelay}ms)`
-        )
+      if (!success) break
+      if (theirBlockheight > this.walletLocalData.highestTxBlockHeight) {
+        await snooze(RETRY_SYNC_NETWORK_INTERVAL)
+        continue
       }
-    } catch (error: any) {
-      if (!(error instanceof RetryCancelledError)) {
-        this.error('syncNetwork failed with unknown error:', error)
-      }
-      throw error
+      break
     }
 
     return SYNC_NETWORK_INTERVAL
