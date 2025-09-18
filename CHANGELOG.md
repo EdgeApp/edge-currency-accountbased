@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+## 4.60.0 (2025-09-18)
+
 - added: Added exponential backoff for syncNetwork "retriable" errors.
+- added: Add `makeTx` support to `SuiEngine`
+- changed: Update rnzano burn asset types
 
 ## 4.59.2 (2025-09-09)
 
