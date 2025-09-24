@@ -40,6 +40,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import {
+  asyncStaggeredRace,
   asyncWaterfall,
   formatAggregateError,
   promiseAny,
@@ -464,7 +465,9 @@ export class SolanaEngine extends CurrencyEngine<
             })
           }
         )
-        const response: ConfirmedSignatureInfo[] = await asyncWaterfall(funcs)
+        const response: ConfirmedSignatureInfo[] = await asyncStaggeredRace(
+          funcs
+        )
         txids = txids.concat(response)
         if (response.length < this.networkInfo.txQueryLimit) break // RPC limit
         before = response[this.networkInfo.txQueryLimit - 1].signature
@@ -496,7 +499,7 @@ export class SolanaEngine extends CurrencyEngine<
       )
       const txResponse: Array<
         TransactionResponse | VersionedTransactionResponse
-      > = await asyncWaterfall(funcs)
+      > = await asyncStaggeredRace(funcs)
 
       // Process the transactions from oldest to newest
       for (let i = 0; i < txResponse.length; i++) {
@@ -514,7 +517,7 @@ export class SolanaEngine extends CurrencyEngine<
               return await connection.getBlockTime(txResponse[i].slot)
             }
           )
-          const blocktimeRaw = await asyncWaterfall(funcs)
+          const blocktimeRaw = await asyncStaggeredRace(funcs)
           const blocktimeClean = asMaybe(asBlocktime)(blocktimeRaw)
           if (blocktimeClean == null) continue
 
