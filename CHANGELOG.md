@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update Axelar node list
+
 ## 4.60.1 (2025-09-18)
 
 - fixed: Remove unintentional addition to 4.60.0: Added exponential backoff for syncNetwork "retriable" errors.
