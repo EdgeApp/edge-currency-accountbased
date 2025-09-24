@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Add `asyncStaggeredRace` promise util
+- changed: Update Axelar node list
 
 ## 4.61.3 (2025-10-12)
 
