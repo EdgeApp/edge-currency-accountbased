@@ -19,7 +19,7 @@ const networkInfo: CosmosNetworkInfo = {
   nativeDenom: 'uaxl',
   pluginMnemonicKeyName: 'axelarMnemonic',
   rpcNode: {
-    url: 'https://axelar-rpc.publicnode.com:443',
+    url: 'https://axelar.tendermintrpc.lava.build',
     headers: {}
   },
   archiveNodes: [
@@ -28,7 +28,7 @@ const networkInfo: CosmosNetworkInfo = {
         start: 0
       },
       endpoint: {
-        url: 'https://axelararchive-rpc.quickapi.com:443',
+        url: 'https://axelar-archrpc.chainode.tech',
         headers: {}
       }
     }
