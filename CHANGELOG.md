@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add `asyncStaggeredRace` promise util
+
 ## 4.61.3 (2025-10-12)
 
 - fixed: (OSMOSIS) Fix syncing
