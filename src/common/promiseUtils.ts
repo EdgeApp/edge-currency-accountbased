@@ -193,6 +193,9 @@ export async function asyncStaggeredRace(
   asyncFuncs: AsyncFunction[],
   intervalMs: number = 2000
 ): Promise<any> {
+  if (asyncFuncs.length === 0) {
+    throw new Error('No functions to run')
+  }
   return await new Promise((resolve, reject) => {
     let timers: Array<ReturnType<typeof setTimeout>> = []
     const invoked: boolean[] = new Array(asyncFuncs.length).fill(false)
@@ -239,6 +242,7 @@ export async function asyncStaggeredRace(
 
         if (failed.every(Boolean)) {
           reject(lastError ?? new Error('Unknown error'))
+          return
         }
         if (!isRescheduling && mostRecentTaskIndex === i) {
           isRescheduling = true
