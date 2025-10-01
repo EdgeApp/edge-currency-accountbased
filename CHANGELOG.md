@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (XLM) Properly store only memo text or ID in a transaction, not both
+- fixed: (XRP) Parsing of on-chain memos
+
 ## 4.61.0 (2025-10-03)
 
 - added: (COSMOS) Add DEX tx support
