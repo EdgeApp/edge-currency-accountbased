@@ -24,6 +24,22 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5'
     }
+  },
+  '3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37': {
+    currencyCode: 'USDRIF',
+    displayName: 'RIF US Dollar',
+    denominations: [{ name: 'USDRIF', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37'
+    }
+  },
+  e700691da7b9851f2f35f8b8182c69c53ccad9db: {
+    currencyCode: 'DOC',
+    displayName: 'Dollar On Chain',
+    denominations: [{ name: 'DOC', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xe700691da7b9851f2f35f8b8182c69c53ccad9db'
+    }
   }
 }
 
