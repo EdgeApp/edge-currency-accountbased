@@ -45,7 +45,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
     // We also support a transaction ID for returned funds
   ],
-  multipleMemos: true,
+  multipleMemos: false,
 
   // Deprecated:
   displayName: 'Stellar'

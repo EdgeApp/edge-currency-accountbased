@@ -39,7 +39,11 @@ export function validateMemos(
 
   // Validate the number of memos:
   if (!multipleMemos && memos.length > 1) {
-    throw new Error(`${displayName} only supports one ${memoName}`)
+    // TODO: Localize. Also, if we expand this to other chains that don't call
+    // them memos, we need to make this more generic.
+    // For now, Stellar is the only chain that would throw here, so just
+    // hard-coding "memo" language.
+    throw new Error(`${displayName} only supports one memo type at a time.`)
   }
 }
 

@@ -3,6 +3,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -10,6 +11,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16, base64 } from 'rfc4648'
 import stellarApi, { Transaction } from 'stellar-sdk'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
@@ -233,7 +235,11 @@ export class StellarEngine extends CurrencyEngine<
       throw new Error('ErrorDenomNotFound')
     }
 
-    let rawTx: StellarTransaction
+    let rawTx: StellarTransaction & {
+      memo_type?: string
+      memo?: string
+      memo_bytes?: string
+    }
     try {
       rawTx = await tx.transaction()
       // @ts-expect-error
@@ -241,6 +247,63 @@ export class StellarEngine extends CurrencyEngine<
     } catch (e: any) {
       this.error(`processTransaction rawTx Error `, e)
       throw e
+    }
+
+    // Parse memos from the raw transaction if available
+    const edgeMemos: EdgeMemo[] = []
+    try {
+      const memoType: string | undefined = rawTx.memo_type
+      const memo: string | undefined = rawTx.memo
+      const memoBytesB64: string | undefined = rawTx.memo_bytes
+
+      switch (memoType) {
+        case 'text': {
+          if (memo != null && memo !== '') {
+            edgeMemos.push({
+              type: 'text',
+              memoName: 'memo_text',
+              value: memo
+            })
+          }
+          break
+        }
+        case 'id': {
+          if (memo != null && memo !== '') {
+            edgeMemos.push({
+              type: 'number',
+              memoName: 'memo_id',
+              value: memo
+            })
+          }
+          break
+        }
+        case 'hash':
+        case 'return': {
+          // Horizon provides memo_bytes as base64 for hash/return types
+          let hexValue: string | undefined
+          try {
+            if (memoBytesB64 != null) {
+              const bytes = base64.parse(memoBytesB64)
+              hexValue = base16.stringify(bytes).toLowerCase()
+            } else if (memo != null && memo !== '') {
+              const bytes = base64.parse(memo)
+              hexValue = base16.stringify(bytes).toLowerCase()
+            }
+          } catch (e) {}
+          if (hexValue != null && hexValue !== '') {
+            // Align to defined memoOptions: only 'memo_hash' exists; store 'return' as memo_hash too
+            edgeMemos.push({
+              type: 'hex',
+              memoName: 'memo_hash', // TODO: `memoName` needs to be passed to the GUI as an enum instead, so we can localize the memo name
+              value: hexValue,
+              hidden: true
+            })
+          }
+          break
+        }
+      }
+    } catch (e) {
+      this.log.warn('XLM: processTransaction memo parsing error', e)
     }
 
     if (toAddress === this.walletLocalData.publicKey) {
@@ -260,7 +323,7 @@ export class StellarEngine extends CurrencyEngine<
       currencyCode,
       date,
       isSend: nativeAmount.startsWith('-'),
-      memos: [],
+      memos: edgeMemos,
       nativeAmount,
       networkFee,
       networkFees: [],
