@@ -18,6 +18,15 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: 'uion'
     }
+  },
+  ibc27394fb092d2eccd56123c74f36e4c1f926001ceada9ca97ea622b25f41e5eb2: {
+    currencyCode: 'ATOM',
+    displayName: 'Cosmos Hub',
+    denominations: [{ name: 'ATOM', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress:
+        'ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2'
+    }
   }
 }
 
