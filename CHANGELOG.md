@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.61.0 (2025-10-03)
+
 - added: (COSMOS) Add DEX tx support
 - added: (OSMOSIS) Add ATOM to default tokens
 
