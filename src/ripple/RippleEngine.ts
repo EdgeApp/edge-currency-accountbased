@@ -482,6 +482,58 @@ export class XrpEngine extends CurrencyEngine<
       })
     }
 
+    // Parse XRPL Memos array for text memos
+    try {
+      const txAny: any = tx
+      const Memos: any[] | undefined = txAny?.Memos
+      if (Array.isArray(Memos)) {
+        for (const entry of Memos) {
+          const memoObj = entry?.Memo
+          if (memoObj == null) continue
+          const memoDataHex: string | undefined = memoObj.MemoData
+          const memoFormatHex: string | undefined = memoObj.MemoFormat
+
+          // Decode MemoFormat to determine content type, if present
+          let memoFormatText: string | undefined
+          if (memoFormatHex != null) {
+            try {
+              memoFormatText = utf8
+                .stringify(base16.parse(memoFormatHex))
+                .toLowerCase()
+            } catch (e) {}
+          }
+
+          if (memoDataHex != null) {
+            const hexValue = memoDataHex.toLowerCase()
+            // Only decode to UTF-8 text when MemoFormat indicates text
+            if (
+              memoFormatText === 'text/plain' ||
+              memoFormatText?.startsWith('text/') === true
+            ) {
+              try {
+                const bytes = base16.parse(hexValue)
+                const text = utf8.stringify(bytes)
+                memos.push({ type: 'text', memoName: 'memo', value: text })
+                continue
+              } catch (e) {
+                // Fall through to storing hex if decoding fails
+              }
+            }
+
+            // Default: store as hex without attempting text decode, and hide from UI
+            memos.push({
+              type: 'hex',
+              memoName: 'memo',
+              value: hexValue,
+              hidden: true
+            })
+          }
+        }
+      }
+    } catch (e) {
+      this.log.warn('XRP: processTransaction memo parsing error', e)
+    }
+
     for (const balance of balances) {
       const { account } = balance
       if (account !== publicAddress) {
@@ -930,7 +982,7 @@ export class XrpEngine extends CurrencyEngine<
 
     for (const memo of memos) {
       if (memo.type === 'number') {
-        payment.DestinationTag = parseInt(memos[0].value)
+        payment.DestinationTag = parseInt(memo.value)
       } else if (memo.type === 'text') {
         if (payment.Memos == null) payment.Memos = []
         payment.Memos.push({
