@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.61.1 (2025-10-03)
+
 - fixed: (XLM) Properly store only memo text or ID in a transaction, not both
 - fixed: (XRP) Parsing of on-chain memos
 
