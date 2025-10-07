@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade chain-registry package.
+
 ## 4.61.1 (2025-10-03)
 
 - fixed: (XLM) Properly store only memo text or ID in a transaction, not both
@@ -62,6 +64,7 @@
 ## 4.55.7 (2025-08-01)
 
 - fixed: Fix Botanix display name and chain name.
+
 ## 4.55.6 (2025-07-31)
 
 - fixed: (EVM) Fix missing rate-limit error detection

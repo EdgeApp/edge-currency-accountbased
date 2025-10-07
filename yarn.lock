@@ -232,10 +232,10 @@
   resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.28.tgz#c8be322cdcbc5c573443c6e71da64eb31a8aa195"
   integrity sha512-o8SKdXEj40HtjF6erOikpn8nj7lOO7/peU5tKK62JjCv2BtMnlxuCeU5q/GmjLZwhRQ93u3/AHtU892DPIA3IA==
 
-"@chain-registry/types@^2.0.37":
-  version "2.0.37"
-  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.37.tgz#7dd4910bada9180ba526213bed7b6af670ac3d64"
-  integrity sha512-WQAhjBb/ANX/FCtO7hdk2H+h5OKcLOyAAD63I4BBunSFCfAH2SdKRv/GvLL0P1XYgo44jZNoRqOE6OQ7MwID9w==
+"@chain-registry/types@^2.0.75":
+  version "2.0.75"
+  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.75.tgz#2573ed5711703e090945bce9638e8db698a223cc"
+  integrity sha512-AGRd4Py7zKvW9advSeG4F9XqUVOev57SD/FBNu4aOgKoMaA/wUIzODSSm29RvgrmWpddrmrsKH0tw7kjHesIoA==
 
 "@chain-registry/utils@^2.0.28":
   version "2.0.28"
@@ -3289,12 +3289,12 @@ chain-registry@^2.0.28:
   dependencies:
     "@chain-registry/types" "^2.0.28"
 
-chain-registry@^2.0.37:
-  version "2.0.37"
-  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.37.tgz#1d4cacf729b6fdbb7f6b5b56571f32f270f8191e"
-  integrity sha512-TP/crv0ueT84+JY92y9t9BWs4M2WjC7/Pq0SJ6BxpCMFLV6VUdmv/v5cfMTG+fh20lhinG9b09KnB5A8R5ykWg==
+chain-registry@^2.0.75:
+  version "2.0.75"
+  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.75.tgz#fe6825c7b81e1882f7b0bb18af7b3c7617702ee6"
+  integrity sha512-DCW/687UBlIaXD75KVRChrKqu8O94g1JzBsO/hisgC6KeUExOJMePQEhwvqXHuuGew6J7ILAzMRDhkE4Mrv5jw==
   dependencies:
-    "@chain-registry/types" "^2.0.37"
+    "@chain-registry/types" "^2.0.75"
 
 chalk@^2.4.1, chalk@^2.4.2:
   version "2.4.2"
