@@ -700,11 +700,16 @@ export class CosmosEngine extends CurrencyEngine<
           node.blockTimeRangeSeconds.end >
             this.otherData.archivedTxLastCheckTime
         ) {
-          const archiveClients = await createCosmosClients(
-            this.fetchCors,
-            rpcWithApiKey(node.endpoint, this.tools.initOptions)
-          )
-          clientsList.push(archiveClients)
+          try {
+            const archiveClients = await createCosmosClients(
+              this.fetchCors,
+              rpcWithApiKey(node.endpoint, this.tools.initOptions)
+            )
+            clientsList.push(archiveClients)
+          } catch (e) {
+            this.log.warn('Skipping archive node due to error:', e)
+            continue
+          }
         }
       }
     }
