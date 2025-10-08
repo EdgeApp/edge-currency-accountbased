@@ -45,16 +45,21 @@ export const rpcWithApiKey = (
   initOptions: CosmosInitOptions
 ): HttpEndpoint => {
   const apiKeys = asCosmosInitOptions(initOptions) as { [key: string]: string }
-  const headers: { [key: string]: string } = {}
-  const regex = /{{(.*?)}}/g
-  for (const [key, value] of Object.entries(endpoint.headers)) {
-    const match = regex.exec(value)
-    if (match != null) {
-      headers[key] = apiKeys[match[1]]
-    }
+
+  const replacePlaceholders = (input: string): string => {
+    return input.replace(/\{\{(\w+)\}\}/g, (_m, k) => apiKeys[k] ?? '')
   }
 
-  return { url: endpoint.url, headers }
+  const headers: { [key: string]: string } = {}
+  for (const [key, value] of Object.entries(endpoint.headers)) {
+    headers[key] = replacePlaceholders(value)
+  }
+  if (headers['Content-Type'] == null)
+    headers['Content-Type'] = 'application/json'
+
+  const replaced = replacePlaceholders(endpoint.url)
+  const url = replaced
+  return { url, headers }
 }
 
 const createRpcClient = (
@@ -84,14 +89,34 @@ const createRpcClient = (
 }
 
 const createCometClient = async (rpc: RpcClient): Promise<CometClient> => {
-  const cometClient = await Comet38Client.create(rpc)
-  const version = (await cometClient.status()).nodeInfo.version
-  if (version.startsWith('0.38.')) {
-    return cometClient
+  // Probe version using a raw JSON-RPC call to avoid client-specific parsing
+  let version: string | undefined
+  try {
+    const resp: any = await rpc.execute({
+      jsonrpc: '2.0',
+      id: 'edge',
+      method: 'status',
+      params: []
+    })
+    version =
+      resp?.result?.node_info?.version ?? resp?.result?.nodeInfo?.version
+  } catch (e) {
+    // Ignore and fall back to broadest compatibility
   }
-  if (version.startsWith('0.37.')) {
+
+  if (typeof version === 'string') {
+    if (version.startsWith('0.38.')) return await Comet38Client.create(rpc)
+    if (version.startsWith('0.37.')) return await Tendermint37Client.create(rpc)
+    return await Tendermint34Client.create(rpc)
+  }
+
+  // If probing fails, try latest first, then fall back progressively
+  try {
+    return await Comet38Client.create(rpc)
+  } catch (e) {}
+  try {
     return await Tendermint37Client.create(rpc)
-  }
+  } catch (e) {}
   return await Tendermint34Client.create(rpc)
 }
 
