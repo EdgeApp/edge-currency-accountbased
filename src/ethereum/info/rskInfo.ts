@@ -24,6 +24,38 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5'
     }
+  },
+  '3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37': {
+    currencyCode: 'USDRIF',
+    displayName: 'RIF US Dollar',
+    denominations: [{ name: 'USDRIF', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37'
+    }
+  },
+  e700691da7b9851f2f35f8b8182c69c53ccad9db: {
+    currencyCode: 'DOC',
+    displayName: 'Dollar On Chain',
+    denominations: [{ name: 'DOC', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xe700691da7b9851f2f35f8b8182c69c53ccad9db'
+    }
+  },
+  '779ded0c9e1022225f8e0630b35a9b54be713736': {
+    currencyCode: 'USD₮0',
+    displayName: 'USD₮0',
+    denominations: [{ name: 'USD₮0', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x779ded0c9e1022225f8e0630b35a9b54be713736'
+    }
+  },
+  '74c9f2b00581f1b11aa7ff05aa9f608b7389de67': {
+    currencyCode: 'USDC.e',
+    displayName: 'Bridged USDC (Stargate)',
+    denominations: [{ name: 'USDC.e', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67'
+    }
   }
 }
 
