@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.61.3 (2025-10-12)
+
 - fixed: (OSMOSIS) Fix syncing
 
 ## 4.61.2 (2025-10-07)
