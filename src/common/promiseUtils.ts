@@ -182,3 +182,77 @@ export async function formatAggregateError<T>(
     throw new AggregateError(errors, message)
   })
 }
+
+/**
+ * This fires off async functions sequentially at intervalMs. It allows any
+ * invoked function to resolve the entire promise. Errors thrown by the most
+ * recently run task will reschedule the remaining pending tasks to avoid
+ * waiting unnecessarily
+ */
+export async function asyncStaggeredRace(
+  asyncFuncs: AsyncFunction[],
+  intervalMs: number = 2000
+): Promise<any> {
+  if (asyncFuncs.length === 0) {
+    throw new Error('No functions to run')
+  }
+  return await new Promise((resolve, reject) => {
+    let timers: Array<ReturnType<typeof setTimeout>> = []
+    const invoked: boolean[] = new Array(asyncFuncs.length).fill(false)
+    const failed: boolean[] = new Array(asyncFuncs.length).fill(false)
+
+    const setTimers = (): void => {
+      let queuedCount = 0
+      for (let i = 0; i < asyncFuncs.length; i++) {
+        if (invoked[i] || failed[i]) continue
+
+        const delay = queuedCount * intervalMs
+        queuedCount++
+
+        const timerId = setTimeout(() => {
+          runTask(i).catch(() => {})
+        }, delay)
+
+        timers.push(timerId)
+      }
+    }
+
+    const clearTimers = (): void => {
+      for (const timer of timers.values()) {
+        clearTimeout(timer)
+      }
+      timers = []
+    }
+
+    let lastError: Error | undefined
+    let isRescheduling = false
+    let mostRecentTaskIndex: number | null = null
+    const runTask = async (i: number): Promise<void> => {
+      try {
+        invoked[i] = true
+        mostRecentTaskIndex = i
+        const result = await asyncFuncs[i]()
+        clearTimers()
+        resolve(result)
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          lastError = error
+        }
+        failed[i] = true
+
+        if (failed.every(Boolean)) {
+          reject(lastError ?? new Error('Unknown error'))
+          return
+        }
+        if (!isRescheduling && mostRecentTaskIndex === i) {
+          isRescheduling = true
+          clearTimers()
+          setTimers()
+          isRescheduling = false
+        }
+      }
+    }
+
+    setTimers()
+  })
+}
