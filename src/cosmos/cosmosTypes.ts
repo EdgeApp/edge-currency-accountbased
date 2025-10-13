@@ -154,10 +154,12 @@ export const asCosmosPrivateKeys = (
 
 export interface CosmosInitOptions {
   ninerealmsClientId?: string
+  quiknodeApiKey?: string
 }
 
 export const asCosmosInitOptions = asObject({
-  ninerealmsClientId: asOptional(asString)
+  ninerealmsClientId: asOptional(asString),
+  quiknodeApiKey: asOptional(asString)
 })
 
 export interface CosmosOtherMethods {

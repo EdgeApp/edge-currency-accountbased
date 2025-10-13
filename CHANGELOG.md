@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (OSMOSIS) Fix syncing
+
 ## 4.61.2 (2025-10-07)
 
 - changed: Upgrade chain-registry package.

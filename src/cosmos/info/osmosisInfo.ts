@@ -50,7 +50,7 @@ const networkInfo: CosmosNetworkInfo = {
         start: 0
       },
       endpoint: {
-        url: 'https://skilled-neat-forest.osmosis-mainnet.quiknode.pro/{quiknodeApiKey}',
+        url: 'https://skilled-neat-forest.osmosis-mainnet.quiknode.pro/{{quiknodeApiKey}}',
         headers: {}
       }
     }
