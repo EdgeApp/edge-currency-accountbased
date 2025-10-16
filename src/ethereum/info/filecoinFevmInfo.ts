@@ -89,6 +89,7 @@ const networkInfo: EthereumNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIL',
+  evmChainId: 314,
   customFeeTemplate: evmCustomFeeTemplate,
   // customTokenTemplate: evmCustomTokenTemplate,
   assetDisplayName: 'Filecoin FEVM',

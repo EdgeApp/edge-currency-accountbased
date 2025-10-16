@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: evmChainId values for all EVM chains
+
 ## 4.61.4 (2025-10-14)
 
 - added: Add `asyncStaggeredRace` promise util
