@@ -1217,6 +1217,7 @@ const networkInfo: EthereumNetworkInfo = {
 export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
+  evmChainId: 1,
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   assetDisplayName: 'Ethereum',

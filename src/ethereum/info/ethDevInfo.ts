@@ -126,6 +126,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
+  evmChainId: 42,
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   assetDisplayName: 'Dev Ethereum',

@@ -95,6 +95,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
+  evmChainId: 11155111,
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   chainDisplayName: 'Sepolia Testnet',
