@@ -78,6 +78,7 @@ const networkInfo: EthereumNetworkInfo = {
 export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'POL',
+  evmChainId: 80002,
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   chainDisplayName: 'Amoy Testnet',

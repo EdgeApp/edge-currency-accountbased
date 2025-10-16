@@ -222,6 +222,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'AVAX',
+  evmChainId: 43114,
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   assetDisplayName: 'Avalanche',

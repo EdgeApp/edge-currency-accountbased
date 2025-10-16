@@ -153,6 +153,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'HYPE',
+  evmChainId: 999,
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   assetDisplayName: 'HYPE',

@@ -320,6 +320,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'FTM',
+  evmChainId: 250,
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   assetDisplayName: 'Fantom',
