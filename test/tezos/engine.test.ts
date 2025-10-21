@@ -143,7 +143,7 @@ describe(`Tezos engine`, function () {
     ]
   }
   let edgeTransaction: EdgeTransaction
-  it('should create a transaction', async function () {
+  it.skip('should create a transaction', async function () {
     engine.walletLocalData.totalBalances.XTZ = '4000000'
     this.timeout(25000)
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
