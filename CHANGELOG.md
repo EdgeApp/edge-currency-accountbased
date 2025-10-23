@@ -4,6 +4,7 @@
 
 - changed: Replace eztz.js with @taquito
 - fixed: Added exponential backoff for syncNetwork "retriable" errors.
+- changed: (EVM) Use new `needsSync` API from core to fix syncing correctness issues.
 
 ## 4.62.0 (2025-10-31)
 
