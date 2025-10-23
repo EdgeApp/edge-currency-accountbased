@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: evmChainId values for all EVM chains
+- changed: (EVM) Use new `needsSync` API from core to fix syncing correctness issues.
 
 ## 4.61.4 (2025-10-14)
 
