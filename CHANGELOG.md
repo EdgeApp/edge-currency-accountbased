@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Added exponential backoff for syncNetwork "retriable" errors.
+
 ## 4.62.0 (2025-10-31)
 
 - added: evmChainId values for all EVM chains
