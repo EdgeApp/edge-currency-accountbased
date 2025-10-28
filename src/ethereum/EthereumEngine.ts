@@ -833,7 +833,7 @@ export class EthereumEngine extends CurrencyEngine<
           return SYNC_NETWORK_INTERVAL
         }
         // Log the error but don't fail completely for initial sync
-        this.error('syncNetwork initial acquireUpdates failed', error)
+        this.error('syncNetwork initial acquireUpdates failed: ', error)
       }
       return SYNC_NETWORK_INTERVAL
     }
@@ -899,9 +899,8 @@ export class EthereumEngine extends CurrencyEngine<
       }
     } catch (error: any) {
       if (!(error instanceof RetryCancelledError)) {
-        this.error('syncNetwork failed with unknown error:', error)
+        this.error('syncNetwork failed with unknown error: ', error)
       }
-      throw error
     }
 
     return SYNC_NETWORK_INTERVAL
