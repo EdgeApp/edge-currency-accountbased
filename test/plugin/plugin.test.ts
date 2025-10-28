@@ -284,10 +284,12 @@ for (const fixture of fixtures) {
       'uri eip681 payment address',
       'uri eip681 payment address with pay prefix',
       'uri eip681 payment address with chainId',
+      'uri eip681 payment address with decimal chainId',
       'uri eip681 payment address with pay prefix and chainId',
       'uri eip681 payment address with pay prefix, chainId, and amount',
       'uri eip681 payment address using scientific notation',
       'uri eip681 transfer contract invocation',
+      'uri eip681 transfer contract invocation with decimal chainId',
       'RenBrige Gateway uri address with amount, label & message',
       'RenBrige Gateway uri address'
     ].forEach(function (caseName) {

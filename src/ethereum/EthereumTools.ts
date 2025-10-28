@@ -226,13 +226,16 @@ export class EthereumTools implements EdgeCurrencyTools {
 
     // Split the address to get the chainId according to EIP-681
     const [address2, chainId] = address.split('@')
-    if (
-      chainId != null &&
-      hexToDecimal(chainId) !== this.networkInfo.chainParams.chainId.toString()
-    ) {
-      throw new Error(
-        `chainId '${chainId}' mismatch with pluginId ${this.currencyInfo.pluginId}.`
-      )
+    if (chainId != null) {
+      const isDecimal = /^[0-9]+$/.test(chainId)
+      const parsedId = isDecimal
+        ? parseInt(chainId, 10)
+        : parseInt(hexToDecimal(chainId), 10)
+      if (parsedId !== this.networkInfo.chainParams.chainId) {
+        throw new Error(
+          `chainId '${chainId}' mismatch with pluginId ${this.currencyInfo.pluginId}.`
+        )
+      }
     }
     address = address2
 
