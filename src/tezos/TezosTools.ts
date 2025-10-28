@@ -1,3 +1,4 @@
+import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -63,14 +64,8 @@ export class TezosTools implements EdgeCurrencyTools {
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
-    // check for existence of numbers
-    if (/\d/.test(userInput)) {
-      throw new Error('Input must be mnemonic phrase')
-    }
-    const wordList = userInput.split(' ')
-    const wordCount = wordList.length
-    if (wordCount !== 24) {
-      throw new Error('Mnemonic phrase must be 24 words long')
+    if (!validateMnemonic(userInput)) {
+      throw new Error('Invalid mnemonic')
     }
     const keys = eztz.crypto.generateKeys(userInput, '')
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -90,9 +85,8 @@ export class TezosTools implements EdgeCurrencyTools {
     if (type === 'tezos') {
       // Use 256 bits entropy
       const entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const mnemonic = eztz.library.bip39.entropyToMnemonic(entropy)
-      const privateKey = eztz.crypto.generateKeys(mnemonic, '').sk
-      return { mnemonic, privateKey }
+      const mnemonic = entropyToMnemonic(entropy)
+      return await this.importPrivateKey(mnemonic)
     } else {
       throw new Error('InvalidWalletType')
     }
