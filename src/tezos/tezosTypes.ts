@@ -29,6 +29,10 @@ export const asTezosWalletOtherData = asObject({
 
 export type TezosWalletOtherData = ReturnType<typeof asTezosWalletOtherData>
 
+export const asTezosTxOtherParams = asObject({
+  unsignedTx: asString
+})
+
 export const asXtzGetTransaction = asObject({
   level: asNumber,
   timestamp: asString,
