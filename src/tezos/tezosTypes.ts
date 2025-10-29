@@ -53,23 +53,6 @@ export interface UriTransaction {
   destination: string
 }
 
-export interface HeadInfo {
-  protocol: string
-  chain_id: string
-  hash: string
-  level: number
-  proto: number
-  predecessor: string
-  timestamp: string
-  validation_pass: number
-  operation_hash: string
-  fitness: any
-  context: string
-  priority: number
-  proof_of_work_nonce: string
-  signature: string
-}
-
 export interface TezosReveal {
   kind: 'reveal'
   source: string

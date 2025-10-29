@@ -1,3 +1,5 @@
+import { BalanceResponse, BlockHeaderResponse, RpcClient } from '@taquito/rpc'
+import { Signer, TezosToolkit } from '@taquito/taquito'
 import { add, div, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngine,
@@ -26,13 +28,13 @@ import {
   getOtherParams,
   makeMutex
 } from '../common/utils'
+import { EdgeFetchHttpBackend } from './tezosHttp'
 import { TezosTools } from './TezosTools'
 import {
   asSafeTezosWalletInfo,
   asTezosPrivateKeys,
   asTezosWalletOtherData,
   asXtzGetTransaction,
-  HeadInfo,
   OperationsContainer,
   SafeTezosWalletInfo,
   TezosNetworkInfo,
@@ -48,8 +50,6 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const makeSpendMutex = makeMutex()
 
 type TezosFunction =
-  | 'getHead'
-  | 'getBalance'
   | 'getNumberOfOperations'
   | 'getTransactions'
   | 'createTransaction'
@@ -77,6 +77,35 @@ export class TezosEngine extends CurrencyEngine<
     this.fetchCors = getFetchCors(env.io)
   }
 
+  getRpcToolkits(): TezosToolkit[] {
+    return this.networkInfo.tezosRpcNodes.map(node => {
+      const rpcClient = new RpcClient(
+        node,
+        'main',
+        new EdgeFetchHttpBackend(this.tools.io.fetch)
+      )
+      const toolkit = new TezosToolkit(rpcClient)
+
+      const fakeSigner: Signer = {
+        sign: async () => {
+          throw new Error('sign method is not implemented')
+        },
+        publicKey: async (): Promise<string> => {
+          return this.walletInfo.keys.publicKeyEd
+        },
+        publicKeyHash: async (): Promise<string> => {
+          return this.walletInfo.keys.publicKey
+        },
+        secretKey: async (): Promise<string | undefined> => {
+          throw new Error('secretKey method is not implemented')
+        }
+      }
+      toolkit.setSignerProvider(fakeSigner)
+
+      return toolkit
+    })
+  }
+
   setOtherData(raw: any): void {
     this.otherData = asTezosWalletOtherData(raw)
   }
@@ -86,37 +115,6 @@ export class TezosEngine extends CurrencyEngine<
     let funcs
     switch (func) {
       // Functions that should waterfall from top to low priority servers
-      case 'getHead': {
-        // relevant nodes, disabling first node due to caching / polling issue
-        // need to re-enable once that nodes issue is fixed
-        const nonCachedNodes = this.tools.tezosRpcNodes
-        funcs = nonCachedNodes.map(server => async () => {
-          const result = await this.fetchCors(
-            server + '/chains/main/blocks/head/header'
-          )
-            .then(async function (response) {
-              return await response.json()
-            })
-            .then(function (json) {
-              return json
-            })
-          return { server, result }
-        })
-        out = await asyncWaterfall(funcs)
-        break
-      }
-
-      case 'getBalance': {
-        const usableNodes = this.tools.tezosRpcNodes
-        funcs = usableNodes.map(server => async () => {
-          eztz.node.setProvider(server)
-          const result = await eztz.rpc.getBalance(params[0])
-          return { server, result }
-        })
-        out = await asyncWaterfall(funcs)
-        break
-      }
-
       case 'getNumberOfOperations':
         funcs = this.tools.tezosApiServers.map(server => async () => {
           const result = await this.fetchCors(
@@ -337,19 +335,24 @@ export class TezosEngine extends CurrencyEngine<
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
     const currencyCode = this.currencyInfo.currencyCode
-    const pkh = this.walletLocalData.publicKey
     if (
       typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
     ) {
       this.walletLocalData.totalBalances[currencyCode] = '0'
     }
-    const balance = await this.multicastServers('getBalance', pkh)
-    this.updateBalance(currencyCode, balance)
+    const funcs = this.getRpcToolkits().map(toolkit => async () => {
+      return await toolkit.rpc.getBalance(this.walletLocalData.publicKey)
+    })
+    const balance: BalanceResponse = await asyncWaterfall(funcs)
+    this.updateBalance(currencyCode, balance.toString())
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkBlockchainInnerLoop() {
-    const head: HeadInfo = await this.multicastServers('getHead')
+    const funcs = this.getRpcToolkits().map(toolkit => async () => {
+      return await toolkit.rpc.getBlockHeader()
+    })
+    const head: BlockHeaderResponse = await asyncWaterfall(funcs)
     const blockHeight = head.level
     if (this.walletLocalData.blockHeight !== blockHeight) {
       this.walletLocalData.blockHeight = blockHeight
@@ -369,8 +372,11 @@ export class TezosEngine extends CurrencyEngine<
       return true
     }
     if (op.kind === 'transaction' && op.destination.slice(0, 2) === 'tz') {
-      const balance = await this.multicastServers('getBalance', op.destination)
-      if (balance === '0') {
+      const funcs = this.getRpcToolkits().map(toolkit => async () => {
+        return await toolkit.rpc.getBalance(op.destination)
+      })
+      const balance: BalanceResponse = await asyncWaterfall(funcs)
+      if (balance.toString() === '0') {
         return true
       }
     }
