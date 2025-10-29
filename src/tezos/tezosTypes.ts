@@ -143,8 +143,7 @@ export const asSafeTezosWalletInfo = asWalletInfo(
 
 export type TezosPrivateKeys = ReturnType<typeof asTezosPrivateKeys>
 export const asTezosPrivateKeys = asObject({
-  mnemonic: asString,
-  privateKey: asString
+  mnemonic: asString
 })
 
 //
