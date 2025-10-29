@@ -75,8 +75,7 @@ export class TezosTools implements EdgeCurrencyTools {
       keys
     })
     return {
-      mnemonic: keys.mnemonic,
-      privateKey: keys.sk
+      mnemonic: keys.mnemonic
     }
   }
 

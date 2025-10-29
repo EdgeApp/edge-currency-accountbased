@@ -495,10 +495,10 @@ export class TezosEngine extends CurrencyEngine<
     const otherParams = getOtherParams(edgeTransaction)
 
     if (edgeTransaction.signedTx === '') {
-      const sk = tezosPrivateKeys.privateKey
+      const keys = eztz.crypto.generateKeys(tezosPrivateKeys.mnemonic, '')
       const signed = eztz.crypto.sign(
         otherParams.fullOp.opbytes,
-        sk,
+        keys.sk,
         eztz.watermark.generic
       )
       otherParams.fullOp.opbytes = signed.sbytes
