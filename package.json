@@ -100,6 +100,8 @@
     "@polkadot/api": "^12.1.1",
     "@solana/spl-token": "^0.4.6",
     "@solana/web3.js": "^1.91.8",
+    "@taquito/signer": "^23.0.2",
+    "@taquito/utils": "^23.0.2",
     "@ton/core": "^0.59.0",
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^15.1.0",

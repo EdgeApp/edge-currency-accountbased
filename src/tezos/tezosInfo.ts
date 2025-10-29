@@ -79,6 +79,12 @@ export const tezos = makeOuterPlugin<
   asInfoPayload: asTezosInfoPayload,
   networkInfo,
 
+  checkEnvironment: () => {
+    if (global.BigInt == null) {
+      throw new Error('Tezos requires bigint support')
+    }
+  },
+
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "tezos" */
