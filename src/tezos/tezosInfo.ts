@@ -24,7 +24,8 @@ const networkInfo: TezosNetworkInfo = {
   tezosRpcNodes: [
     'https://prod.tcinfra.net/rpc/mainnet/',
     'https://mainnet.ecadinfra.com/',
-    'https://rpc.tzkt.io/mainnet/'
+    'https://rpc.tzkt.io/mainnet/',
+    'https://mainnet.smartpy.io/'
 
     // These nodes are broken / questionable:
     // 'https://teznode.letzbake.com',
