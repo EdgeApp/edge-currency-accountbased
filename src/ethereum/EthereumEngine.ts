@@ -12,6 +12,8 @@ import {
   EdgeSignMessageOptions,
   EdgeSpendInfo,
   EdgeSpendTarget,
+  EdgeStartEngineOptions,
+  EdgeSubscribedAddress,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -39,6 +41,7 @@ import {
   mergeDeeply,
   normalizeAddress,
   removeHexPrefix,
+  shuffleArray,
   snooze,
   toHex,
   uint8ArrayToHex
@@ -60,6 +63,7 @@ import {
   asRpcResultString,
   asSafeEthWalletInfo,
   CalcOptimismRollupFeeParams,
+  DecoyAddressConfig,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
   EthereumEstimateGasParams,
@@ -103,6 +107,7 @@ export class EthereumEngine extends CurrencyEngine<
   SafeEthWalletInfo
 > {
   otherData!: EthereumWalletOtherData
+  subscribedAddresses: EdgeSubscribedAddress[] = []
   lightMode: boolean
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
@@ -739,13 +744,34 @@ export class EthereumEngine extends CurrencyEngine<
   // Public methods
   // ****************************************************************************
 
-  async startEngine(): Promise<void> {
-    this.currencyEngineCallbacks.onSubscribeAddresses([
-      {
-        address: this.walletLocalData.publicKey,
-        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
-      }
-    ])
+  async startEngine(opts: EdgeStartEngineOptions = {}): Promise<void> {
+    const realAddress = this.walletLocalData.publicKey
+
+    // Sync in-memory decoy addresses with what core has saved
+    if (opts.subscribedAddresses != null) {
+      this.subscribedAddresses = opts.subscribedAddresses
+    }
+
+    // Ensure that the real address is in the list
+    this.subscribedAddresses.unshift({
+      address: realAddress,
+      checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+    })
+
+    // Efficient deduplication of subscribed addresses
+    const seenAddresses = new Set<string>()
+    this.subscribedAddresses = this.subscribedAddresses.filter(a => {
+      const normalized = normalizeAddress(a.address)
+      if (seenAddresses.has(normalized)) return false
+      seenAddresses.add(normalized)
+      return true
+    })
+
+    // Build addresses list for subscription (real address + decoy addresses)
+    this.currencyEngineCallbacks.onSubscribeAddresses(
+      // Shuffle array for better privacy
+      shuffleArray(this.subscribedAddresses)
+    )
 
     const feeUpdateFrequencyMs =
       this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
@@ -777,6 +803,17 @@ export class EthereumEngine extends CurrencyEngine<
     this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS)
     this.ethNetwork.start()
 
+    // Start decoy address generation background routine if needed
+    const decoyAddressConfig = this.networkInfo.decoyAddressConfig
+    if (decoyAddressConfig != null) {
+      if (this.decoyAddressCount < decoyAddressConfig.count) {
+        // Set up periodic task to generate one address at a time (every 5 seconds)
+        this.addToLoop('generateDecoyAddress', 5000, async () => {
+          await this.findDecoyAddress(decoyAddressConfig)
+        })
+      }
+    }
+
     await super.startEngine()
   }
 
@@ -793,6 +830,19 @@ export class EthereumEngine extends CurrencyEngine<
 
   async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
     const { subscribeParam } = opts
+
+    // Check if this subscription is for a decoy address and ignore it
+    if (subscribeParam?.address != null) {
+      const subscribeAddress = subscribeParam.address
+      // If the address is not the real address (walletLocalData.publicKey), it's a decoy
+      if (
+        normalizeAddress(subscribeAddress) !==
+        normalizeAddress(this.walletLocalData.publicKey)
+      ) {
+        // Ignore subscription updates for decoy addresses
+        return SYNC_NETWORK_INTERVAL
+      }
+    }
 
     // Initial sync routine:
     if (subscribeParam == null) {
@@ -1636,6 +1686,93 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     await super.saveTx(edgeTransaction)
+  }
+
+  // ****************************************************************************
+  // Private methods
+  // ****************************************************************************
+
+  /**
+   * Finds one decoy address if configured and needed.
+   * This method is called periodically by addToLoop. It finds one address
+   * per invocation and lets the loop handle repetition.
+   */
+  async findDecoyAddress(
+    decoyAddressConfig: DecoyAddressConfig
+  ): Promise<void> {
+    const currentCount = this.decoyAddressCount
+    if (currentCount >= decoyAddressConfig.count) {
+      // Already have enough decoy addresses; make this task a no-op
+      return
+    }
+
+    // Get current block height
+    const blockHeightUpdate = await this.ethNetwork.check('fetchBlockheight')
+    if (blockHeightUpdate.blockHeight == null) {
+      this.warn('Cannot generate decoy address: failed to get block height')
+      return
+    }
+    const currentBlockHeight = blockHeightUpdate.blockHeight
+
+    // Build exclude list: own address + existing decoy addresses
+    const excludeAddressesSet = new Set(
+      this.subscribedAddresses.map(sa => normalizeAddress(sa.address))
+    )
+
+    // Generate one decoy address
+    const decoyAddress = await this.ethNetwork.findOneDecoyAddress(
+      decoyAddressConfig,
+      currentBlockHeight,
+      excludeAddressesSet
+    )
+
+    if (decoyAddress != null) {
+      if (
+        this.subscribedAddresses.every(
+          a =>
+            normalizeAddress(a.address) !==
+            normalizeAddress(decoyAddress.address)
+        )
+      ) {
+        this.subscribedAddresses.push(decoyAddress)
+      }
+
+      this.log(`Generated decoy address: ${decoyAddress.address}`)
+
+      // Ensure that the real address is in the list
+      if (
+        this.subscribedAddresses.every(
+          a =>
+            normalizeAddress(a.address) !==
+            normalizeAddress(this.walletLocalData.publicKey)
+        )
+      ) {
+        this.subscribedAddresses.push({
+          address: this.walletLocalData.publicKey,
+          checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+        })
+      }
+
+      // If the number of decoy addresses meet the config requirements,
+      // then we resubscribe our addresses to the core. This means the engine
+      // has to successfully finish getting all decoy addresses before the core
+      // will persist them.
+      if (this.decoyAddressCount >= decoyAddressConfig.count) {
+        this.currencyEngineCallbacks.onSubscribeAddresses(
+          // Shuffle array for better privacy
+          shuffleArray(this.subscribedAddresses)
+        )
+      }
+    }
+  }
+
+  get decoyAddressCount(): number {
+    const decoyAddresses = this.subscribedAddresses.filter(
+      a =>
+        normalizeAddress(a.address) !==
+        normalizeAddress(this.walletLocalData.publicKey)
+    )
+    return decoyAddresses.length
   }
 }
 

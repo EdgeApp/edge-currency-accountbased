@@ -159,6 +159,61 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
     })
   }
 
+  batchMulticastRpc = async (
+    requests: Array<{ method: string; params: any[] }>
+  ): Promise<{ result: any[]; server: string }> => {
+    return await this.serialServers(async baseUrl => {
+      const body = requests.map((req, i) => ({
+        id: i + 1,
+        jsonrpc: '2.0',
+        method: req.method,
+        params: req.params
+      }))
+
+      baseUrl = this.addRpcApiKey(baseUrl)
+
+      const response = await this.ethEngine.fetchCors(baseUrl, {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        method: 'POST',
+        body: JSON.stringify(body)
+      })
+
+      const parsedUrl = parse(baseUrl, {}, true)
+      if (!response.ok) {
+        const resBody = await response.text()
+        this.throwError(
+          response,
+          'batchMulticastRpc',
+          parsedUrl.hostname,
+          resBody
+        )
+      }
+
+      const results = await response.json()
+      // Sort results by id to match request order
+      const sortedResults = (Array.isArray(results) ? results : [results]).sort(
+        (a, b) => a.id - b.id
+      )
+
+      // Check for errors
+      for (const result of sortedResults) {
+        if (result.error != null) {
+          this.ethEngine.error(
+            `Batch RPC error from ${parsedUrl.hostname}: ${JSON.stringify(
+              result.error
+            )}`
+          )
+          throw new Error(`Batch RPC error: ${result.error.message}`)
+        }
+      }
+
+      return { server: parsedUrl.hostname, result: sortedResults }
+    })
+  }
+
   fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
     const {
       chainParams: { chainId }

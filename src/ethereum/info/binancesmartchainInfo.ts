@@ -167,7 +167,13 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'binancesmartchainMnemonic',
   pluginRegularKeyName: 'binancesmartchainKey',
   evmGasStationUrl: null,
-  networkFees
+  networkFees,
+  decoyAddressConfig: {
+    count: 5,
+    lookbackBlocks: 1000000,
+    minTransactionCount: 10,
+    maxTransactionCount: 100
+  }
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

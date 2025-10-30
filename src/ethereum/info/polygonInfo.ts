@@ -212,7 +212,13 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'polygonMnemonic',
   pluginRegularKeyName: 'polygonKey',
   evmGasStationUrl: 'https://gasstation.polygon.technology/v2',
-  networkFees
+  networkFees,
+  decoyAddressConfig: {
+    count: 5,
+    lookbackBlocks: 1000000,
+    minTransactionCount: 10,
+    maxTransactionCount: 100
+  }
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

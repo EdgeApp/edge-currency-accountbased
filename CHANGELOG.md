@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: evmChainId values for all EVM chains
+- added: Decoy address subscriptions for engines that use the change-server.
 
 ## 4.61.4 (2025-10-14)
 

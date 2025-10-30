@@ -1152,6 +1152,10 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
+        'https://ethereum-mainnet.gateway.tatum.io',
+        'https://eth.llamarpc.com',
+        'https://eth.blockrazor.xyz',
+        'https://ethereum-rpc.publicnode.com',
         'https://eth-mainnet.alchemyapi.io/v2/{{alchemyApiKey}}',
         'https://mainnet.infura.io/v3/{{infuraProjectId}}',
         'https://rpc.ankr.com/eth',
@@ -1205,6 +1209,12 @@ const networkInfo: EthereumNetworkInfo = {
   chainParams: {
     chainId: 1,
     name: 'Ethereum Mainnet'
+  },
+  decoyAddressConfig: {
+    count: 5,
+    lookbackBlocks: 1000000,
+    minTransactionCount: 10,
+    maxTransactionCount: 100
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,

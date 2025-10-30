@@ -14,6 +14,7 @@ export interface BlockchairAdapterConfig {
 }
 
 export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
+  batchMulticastRpc = null
   broadcast = null
   connect = null
   disconnect = null
