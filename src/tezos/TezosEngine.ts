@@ -114,7 +114,6 @@ export class TezosEngine extends CurrencyEngine<
       case 'getNumberOfOperations':
         funcs = this.tools.tezosApiServers.map(server => async () => {
           const result = await this.fetchCors(
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `${server}/v1/accounts/${params[0]}`
           )
             .then(async function (response) {
@@ -134,7 +133,6 @@ export class TezosEngine extends CurrencyEngine<
             ? ''
             : `&p='${params[1]}&number=50`
           const result: XtzGetTransaction = await this.fetchCors(
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `${server}/v1/accounts/${params[0]}/operations?type=transaction` +
               pagination
           ).then(async function (response) {
@@ -151,8 +149,7 @@ export class TezosEngine extends CurrencyEngine<
     return out.result
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  processTezosTransaction(tx: XtzGetTransaction) {
+  processTezosTransaction(tx: XtzGetTransaction): void {
     const transaction = asXtzGetTransaction(tx)
     const pkh = this.walletLocalData.publicKey
     const ourReceiveAddresses: string[] = []
@@ -193,11 +190,9 @@ export class TezosEngine extends CurrencyEngine<
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkTransactionsInnerLoop() {
+  async checkTransactionsInnerLoop(): Promise<void> {
     const pkh = this.walletLocalData.publicKey
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!this.otherData.numberTransactions) {
+    if (this.otherData.numberTransactions == null) {
       this.otherData.numberTransactions = 0
     }
     const num = await this.multicastServers('getNumberOfOperations', pkh)
@@ -225,12 +220,8 @@ export class TezosEngine extends CurrencyEngine<
     this.updateOnAddressesChecked()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkUnconfirmedTransactionsFetch() {}
-
   // Check all account balance and other relevant info
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const currencyCode = this.currencyInfo.currencyCode
     if (
       typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
@@ -244,8 +235,7 @@ export class TezosEngine extends CurrencyEngine<
     this.updateBalance(currencyCode, balance.toString())
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkBlockchainInnerLoop() {
+  async checkBlockchainInnerLoop(): Promise<void> {
     const funcs = this.getRpcToolkits().map(toolkit => async () => {
       return await toolkit.rpc.getBlockHeader()
     })
@@ -283,8 +273,7 @@ export class TezosEngine extends CurrencyEngine<
   // Public methods
   // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)

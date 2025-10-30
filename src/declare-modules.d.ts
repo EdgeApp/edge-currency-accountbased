@@ -2,7 +2,6 @@ declare module 'eosjs-ecc'
 declare module 'ethereumjs-abi'
 declare module 'ethereumjs-wallet'
 declare module 'ethereumjs-wallet/hdkey'
-declare module 'eztz.js'
 
 declare module 'ethereumjs-util' {
   export const isValidAddress: (address: string) => boolean

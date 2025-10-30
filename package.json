@@ -124,7 +124,6 @@
     "ethereumjs-util": "^5.2.0",
     "ethereumjs-wallet": "^0.6.5",
     "ethers": "^5.6.0",
-    "eztz.js": "https://github.com/EdgeApp/eztz.git#edge-fixes",
     "isomorphic-ws": "^5.0.0",
     "rfc4648": "^1.5.0",
     "stellar-sdk": "^0.11.0",
