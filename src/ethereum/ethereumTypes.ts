@@ -77,6 +77,23 @@ export interface ChainParams {
   name: string
 }
 
+export interface DecoyAddressConfig {
+  /** The total number of decoy addresses to use. */
+  count: number
+  /** The number of blocks to look back when finding a decoy address. */
+  lookbackBlocks: number
+  /**
+   * The minimum transaction count required to accept an address as a decoy
+   * address.
+   */
+  minTransactionCount: number
+  /**
+   * The maximum transaction count required to accept an address as a decoy
+   * address.
+   */
+  maxTransactionCount: number
+}
+
 export interface EthereumNetworkInfo {
   addressQueryLookbackBlocks: number
   networkAdapterConfigs: NetworkAdapterConfig[]
@@ -96,6 +113,7 @@ export interface EthereumNetworkInfo {
   pluginMnemonicKeyName: string
   pluginRegularKeyName: string
   uriNetworks: string[]
+  decoyAddressConfig?: DecoyAddressConfig
 }
 
 const asNetworkAdaptorConfigType = asValue(

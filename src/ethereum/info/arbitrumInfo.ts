@@ -174,7 +174,13 @@ const networkInfo: EthereumNetworkInfo = {
   pluginRegularKeyName: 'arbitrumKey',
   evmGasStationUrl: null,
   networkFees,
-  supportsEIP1559: true
+  supportsEIP1559: true,
+  decoyAddressConfig: {
+    count: 5,
+    lookbackBlocks: 1000000,
+    minTransactionCount: 10,
+    maxTransactionCount: 100
+  }
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

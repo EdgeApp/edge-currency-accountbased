@@ -65,6 +65,7 @@ const BACKOFF_MAX_MS = 60000
 //
 
 export class BlockbookWsAdapter extends NetworkAdapter<BlockbookWsAdapterConfig> {
+  batchMulticastRpc = null
   broadcast = null
   fetchBlockheight = null
   fetchNonce = null

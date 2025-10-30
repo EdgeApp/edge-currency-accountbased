@@ -10,6 +10,7 @@ export interface AmberdataAdapterConfig {
 }
 
 export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
+  batchMulticastRpc = null
   broadcast = null
   connect = null
   disconnect = null
