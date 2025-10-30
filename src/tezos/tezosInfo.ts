@@ -24,7 +24,8 @@ const networkInfo: TezosNetworkInfo = {
   tezosRpcNodes: [
     'https://prod.tcinfra.net/rpc/mainnet/',
     'https://mainnet.ecadinfra.com/',
-    'https://rpc.tzkt.io/mainnet/'
+    'https://rpc.tzkt.io/mainnet/',
+    'https://mainnet.smartpy.io/'
 
     // These nodes are broken / questionable:
     // 'https://teznode.letzbake.com',
@@ -78,6 +79,12 @@ export const tezos = makeOuterPlugin<
   currencyInfo,
   asInfoPayload: asTezosInfoPayload,
   networkInfo,
+
+  checkEnvironment: () => {
+    if (global.BigInt == null) {
+      throw new Error('Tezos requires bigint support')
+    }
+  },
 
   async getInnerPlugin() {
     return await import(

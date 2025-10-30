@@ -1,4 +1,8 @@
-import { add, div, eq, gt } from 'biggystring'
+import { localForger } from '@taquito/local-forging'
+import { BalanceResponse, BlockHeaderResponse, RpcClient } from '@taquito/rpc'
+import { InMemorySigner } from '@taquito/signer'
+import { Signer, TezosToolkit } from '@taquito/taquito'
+import { add, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -10,30 +14,29 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import {
+  asyncStaggeredRace,
   asyncWaterfall,
-  formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
 import {
   cleanTxLogs,
   getFetchCors,
-  getOtherParams,
-  makeMutex
+  makeMutex,
+  shuffleArray
 } from '../common/utils'
+import { EdgeFetchHttpBackend } from './tezosHttp'
 import { TezosTools } from './TezosTools'
 import {
   asSafeTezosWalletInfo,
   asTezosPrivateKeys,
+  asTezosTxOtherParams,
   asTezosWalletOtherData,
   asXtzGetTransaction,
-  HeadInfo,
-  OperationsContainer,
   SafeTezosWalletInfo,
   TezosNetworkInfo,
   TezosOperation,
@@ -47,14 +50,7 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const makeSpendMutex = makeMutex()
 
-type TezosFunction =
-  | 'getHead'
-  | 'getBalance'
-  | 'getNumberOfOperations'
-  | 'getTransactions'
-  | 'createTransaction'
-  | 'injectOperation'
-  | 'silentInjection'
+type TezosFunction = 'getNumberOfOperations' | 'getTransactions'
 
 export class TezosEngine extends CurrencyEngine<
   TezosTools,
@@ -77,6 +73,35 @@ export class TezosEngine extends CurrencyEngine<
     this.fetchCors = getFetchCors(env.io)
   }
 
+  getRpcToolkits(): TezosToolkit[] {
+    return shuffleArray(this.networkInfo.tezosRpcNodes).map(node => {
+      const rpcClient = new RpcClient(
+        node,
+        'main',
+        new EdgeFetchHttpBackend(this.tools.io.fetch)
+      )
+      const toolkit = new TezosToolkit(rpcClient)
+
+      const fakeSigner: Signer = {
+        sign: async () => {
+          throw new Error('sign method is not implemented')
+        },
+        publicKey: async (): Promise<string> => {
+          return this.walletInfo.keys.publicKeyEd
+        },
+        publicKeyHash: async (): Promise<string> => {
+          return this.walletInfo.keys.publicKey
+        },
+        secretKey: async (): Promise<string | undefined> => {
+          throw new Error('secretKey method is not implemented')
+        }
+      }
+      toolkit.setSignerProvider(fakeSigner)
+
+      return toolkit
+    })
+  }
+
   setOtherData(raw: any): void {
     this.otherData = asTezosWalletOtherData(raw)
   }
@@ -86,41 +111,9 @@ export class TezosEngine extends CurrencyEngine<
     let funcs
     switch (func) {
       // Functions that should waterfall from top to low priority servers
-      case 'getHead': {
-        // relevant nodes, disabling first node due to caching / polling issue
-        // need to re-enable once that nodes issue is fixed
-        const nonCachedNodes = this.tools.tezosRpcNodes
-        funcs = nonCachedNodes.map(server => async () => {
-          const result = await this.fetchCors(
-            server + '/chains/main/blocks/head/header'
-          )
-            .then(async function (response) {
-              return await response.json()
-            })
-            .then(function (json) {
-              return json
-            })
-          return { server, result }
-        })
-        out = await asyncWaterfall(funcs)
-        break
-      }
-
-      case 'getBalance': {
-        const usableNodes = this.tools.tezosRpcNodes
-        funcs = usableNodes.map(server => async () => {
-          eztz.node.setProvider(server)
-          const result = await eztz.rpc.getBalance(params[0])
-          return { server, result }
-        })
-        out = await asyncWaterfall(funcs)
-        break
-      }
-
       case 'getNumberOfOperations':
         funcs = this.tools.tezosApiServers.map(server => async () => {
           const result = await this.fetchCors(
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `${server}/v1/accounts/${params[0]}`
           )
             .then(async function (response) {
@@ -140,7 +133,6 @@ export class TezosEngine extends CurrencyEngine<
             ? ''
             : `&p='${params[1]}&number=50`
           const result: XtzGetTransaction = await this.fetchCors(
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `${server}/v1/accounts/${params[0]}/operations?type=transaction` +
               pagination
           ).then(async function (response) {
@@ -150,80 +142,6 @@ export class TezosEngine extends CurrencyEngine<
         })
         out = await asyncWaterfall(funcs)
         break
-
-      case 'createTransaction':
-        funcs = this.tools.tezosRpcNodes.map(server => async () => {
-          eztz.node.setProvider(server)
-          const result = await eztz.rpc
-            .transfer(
-              params[0],
-              params[1],
-              params[2],
-              params[3],
-              params[4],
-              null,
-              this.networkInfo.limit.gas,
-              this.networkInfo.limit.storage,
-              this.networkInfo.fee.reveal
-            )
-            // @ts-expect-error
-            .then(function (response) {
-              return response
-            })
-          return { server, result }
-        })
-        out = await asyncWaterfall(funcs)
-        break
-
-      // Functions that should multicast to all servers
-      case 'injectOperation': {
-        let preApplyError = ''
-        funcs = this.tools.tezosRpcNodes.map(server => async () => {
-          eztz.node.setProvider(server)
-          const result = await eztz.rpc
-            .inject(params[0], params[1])
-            .catch((e: Error) => {
-              this.error('Error when injection operation: ', e)
-              const errorMessage = this.formatError(e)
-              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-              if (!preApplyError && errorMessage !== '') {
-                preApplyError = errorMessage
-              }
-              throw e
-            })
-          // Preapply passed -> Broadcast to all remaining nodes in the waterfall
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.multicastServers('silentInjection', server, params[1])
-          return { server, result }
-        })
-        out = await asyncWaterfall(funcs).catch((e: Error) => {
-          this.error('Error from waterfall: ', e)
-          if (preApplyError !== '') {
-            throw new Error(preApplyError)
-          } else {
-            throw e
-          }
-        })
-        break
-      }
-
-      case 'silentInjection': {
-        const index = this.tools.tezosRpcNodes.indexOf(params[0])
-        const remainingRpcNodes = this.tools.tezosRpcNodes.slice(index + 1)
-        out = await formatAggregateError(
-          promiseAny(
-            remainingRpcNodes.map(async server => {
-              eztz.node.setProvider(server)
-              const result = await eztz.rpc.silentInject(params[1])
-              // eslint-disable-next-line @typescript-eslint/no-base-to-string
-              this.warn(`Injected silently to: ${server}`)
-              return { server, result }
-            })
-          ),
-          'Broadcast failed:'
-        )
-        break
-      }
     }
     this.log(
       `XTZ multicastServers ${func} ${out.server} won with result ${out.result}`
@@ -231,33 +149,7 @@ export class TezosEngine extends CurrencyEngine<
     return out.result
   }
 
-  formatError(e: any): string {
-    if (typeof e === 'string') {
-      return e
-    }
-    try {
-      if (
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        e.error &&
-        e.error === 'Operation Failed' &&
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        e.errors &&
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        e.errors[0].id
-      ) {
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-        return 'Failed in preapply with an error code (' + e.errors[0].id + ')'
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-      } else if (e[0] && e[0].kind && e[0].kind === 'branch' && e[0].id) {
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-        return 'Failed in preapply with an error code (' + e[0].id + ')'
-      }
-    } catch (e: any) {}
-    return ''
-  }
-
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  processTezosTransaction(tx: XtzGetTransaction) {
+  processTezosTransaction(tx: XtzGetTransaction): void {
     const transaction = asXtzGetTransaction(tx)
     const pkh = this.walletLocalData.publicKey
     const ourReceiveAddresses: string[] = []
@@ -298,11 +190,9 @@ export class TezosEngine extends CurrencyEngine<
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkTransactionsInnerLoop() {
+  async checkTransactionsInnerLoop(): Promise<void> {
     const pkh = this.walletLocalData.publicKey
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!this.otherData.numberTransactions) {
+    if (this.otherData.numberTransactions == null) {
       this.otherData.numberTransactions = 0
     }
     const num = await this.multicastServers('getNumberOfOperations', pkh)
@@ -330,26 +220,26 @@ export class TezosEngine extends CurrencyEngine<
     this.updateOnAddressesChecked()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkUnconfirmedTransactionsFetch() {}
-
   // Check all account balance and other relevant info
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const currencyCode = this.currencyInfo.currencyCode
-    const pkh = this.walletLocalData.publicKey
     if (
       typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
     ) {
       this.walletLocalData.totalBalances[currencyCode] = '0'
     }
-    const balance = await this.multicastServers('getBalance', pkh)
-    this.updateBalance(currencyCode, balance)
+    const funcs = this.getRpcToolkits().map(toolkit => async () => {
+      return await toolkit.rpc.getBalance(this.walletLocalData.publicKey)
+    })
+    const balance: BalanceResponse = await asyncWaterfall(funcs)
+    this.updateBalance(currencyCode, balance.toString())
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkBlockchainInnerLoop() {
-    const head: HeadInfo = await this.multicastServers('getHead')
+  async checkBlockchainInnerLoop(): Promise<void> {
+    const funcs = this.getRpcToolkits().map(toolkit => async () => {
+      return await toolkit.rpc.getBlockHeader()
+    })
+    const head: BlockHeaderResponse = await asyncWaterfall(funcs)
     const blockHeight = head.level
     if (this.walletLocalData.blockHeight !== blockHeight) {
       this.walletLocalData.blockHeight = blockHeight
@@ -369,8 +259,11 @@ export class TezosEngine extends CurrencyEngine<
       return true
     }
     if (op.kind === 'transaction' && op.destination.slice(0, 2) === 'tz') {
-      const balance = await this.multicastServers('getBalance', op.destination)
-      if (balance === '0') {
+      const funcs = this.getRpcToolkits().map(toolkit => async () => {
+        return await toolkit.rpc.getBalance(op.destination)
+      })
+      const balance: BalanceResponse = await asyncWaterfall(funcs)
+      if (balance.toString() === '0') {
         return true
       }
     }
@@ -380,8 +273,7 @@ export class TezosEngine extends CurrencyEngine<
   // Public methods
   // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
@@ -403,7 +295,7 @@ export class TezosEngine extends CurrencyEngine<
   async makeSpendInner(
     edgeSpendInfoIn: EdgeSpendInfo
   ): Promise<EdgeTransaction> {
-    const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
+    const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 
@@ -421,47 +313,45 @@ export class TezosEngine extends CurrencyEngine<
     if (eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
-    const keys = {
-      pk: this.walletInfo.keys.publicKeyEd,
-      pkh: this.walletInfo.keys.publicKey,
-      sk: false
-    }
-    let ops: OperationsContainer | typeof undefined
-    let resendCounter = 0
-    let error
-    do {
-      try {
-        ops = await this.multicastServers(
-          'createTransaction',
-          keys.pkh,
-          keys,
-          publicAddress,
-          div(nativeAmount, denom.multiplier, 6),
-          this.networkInfo.fee.transaction
-        )
-      } catch (e: any) {
-        error = e
-      }
-    } while (
-      (typeof ops === 'undefined' || ops.opOb.contents.length > 2) &&
-      resendCounter++ < 5
-    )
-    if (typeof ops === 'undefined') {
-      throw error
-    }
+
+    const transferAmount = parseInt(nativeAmount)
+
+    const toolkits = this.getRpcToolkits()
+
+    const prepareFuncs = toolkits.map(toolkit => async () => {
+      return await toolkit.prepare.transaction({
+        to: publicAddress,
+        source: this.walletInfo.keys.publicKey,
+        amount: transferAmount,
+        fee: parseInt(this.networkInfo.fee.transaction),
+        gasLimit: parseInt(this.networkInfo.limit.gas),
+        storageLimit: parseInt(this.networkInfo.limit.storage),
+        mutez: true
+      })
+    })
+    const preparedTx = await asyncStaggeredRace(prepareFuncs, 1000)
+
+    // Calculate total fee from prepared operation
     let networkFee = '0'
-    for (const operation of ops.opOb.contents) {
-      networkFee = add(networkFee, operation.fee)
-      const burn = await this.isBurn(operation)
-      if (burn) {
+    for (const content of preparedTx.opOb.contents) {
+      if ('fee' in content && content.fee != null) {
+        networkFee = add(networkFee, content.fee.toString())
+      }
+      // Add burn fee if this is an origination
+      if (content.kind === 'origination') {
         networkFee = add(networkFee, this.networkInfo.fee.burn)
       }
     }
-    nativeAmount = add(nativeAmount, networkFee)
-    if (gt(nativeAmount, nativeBalance)) {
+
+    const totalAmount = add(nativeAmount, networkFee)
+    if (gt(totalAmount, nativeBalance)) {
       throw new InsufficientFundsError({ tokenId })
     }
-    nativeAmount = '-' + nativeAmount
+
+    const forgedParams = toolkits[0].prepare.toForge(preparedTx)
+    const unsignedTx = await localForger.forge(forgedParams)
+
+    nativeAmount = '-' + totalAmount
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
@@ -472,12 +362,7 @@ export class TezosEngine extends CurrencyEngine<
       nativeAmount,
       networkFee,
       networkFees: [],
-      otherParams: {
-        idInternal: 0,
-        fromAddress: this.walletLocalData.publicKey,
-        toAddress: publicAddress,
-        fullOp: ops
-      },
+      otherParams: { unsignedTx },
       ourReceiveAddresses: [],
       signedTx: '',
       tokenId,
@@ -492,19 +377,19 @@ export class TezosEngine extends CurrencyEngine<
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
     const tezosPrivateKeys = asTezosPrivateKeys(privateKeys)
-    const otherParams = getOtherParams(edgeTransaction)
+    const otherParams = asTezosTxOtherParams(edgeTransaction.otherParams)
 
-    if (edgeTransaction.signedTx === '') {
-      const sk = tezosPrivateKeys.privateKey
-      const signed = eztz.crypto.sign(
-        otherParams.fullOp.opbytes,
-        sk,
-        eztz.watermark.generic
-      )
-      otherParams.fullOp.opbytes = signed.sbytes
-      otherParams.fullOp.opOb.signature = signed.edsig
-      edgeTransaction.signedTx = signed.sbytes
-    }
+    const signer = InMemorySigner.fromFundraiser(
+      '',
+      '',
+      tezosPrivateKeys.mnemonic
+    )
+    const signResult = await signer.sign(
+      otherParams.unsignedTx,
+      new Uint8Array([3])
+    )
+
+    edgeTransaction.signedTx = signResult.sbytes
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
@@ -512,12 +397,12 @@ export class TezosEngine extends CurrencyEngine<
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const otherParams = getOtherParams(edgeTransaction)
+    const funcs = this.getRpcToolkits().map(async toolkit => {
+      return await toolkit.rpc.injectOperation(edgeTransaction.signedTx)
+    })
 
-    const opBytes = otherParams.fullOp.opbytes
-    const opOb = otherParams.fullOp.opOb
-    const result = await this.multicastServers('injectOperation', opOb, opBytes)
-    edgeTransaction.txid = result.hash
+    const result = await promiseAny<string>(funcs)
+    edgeTransaction.txid = result
     edgeTransaction.date = Date.now() / 1000
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction

@@ -29,6 +29,10 @@ export const asTezosWalletOtherData = asObject({
 
 export type TezosWalletOtherData = ReturnType<typeof asTezosWalletOtherData>
 
+export const asTezosTxOtherParams = asObject({
+  unsignedTx: asString
+})
+
 export const asXtzGetTransaction = asObject({
   level: asNumber,
   timestamp: asString,
@@ -51,23 +55,6 @@ export interface UriTransaction {
   kind: 'transaction'
   amount: string
   destination: string
-}
-
-export interface HeadInfo {
-  protocol: string
-  chain_id: string
-  hash: string
-  level: number
-  proto: number
-  predecessor: string
-  timestamp: string
-  validation_pass: number
-  operation_hash: string
-  fitness: any
-  context: string
-  priority: number
-  proof_of_work_nonce: string
-  signature: string
 }
 
 export interface TezosReveal {
@@ -143,8 +130,7 @@ export const asSafeTezosWalletInfo = asWalletInfo(
 
 export type TezosPrivateKeys = ReturnType<typeof asTezosPrivateKeys>
 export const asTezosPrivateKeys = asObject({
-  mnemonic: asString,
-  privateKey: asString
+  mnemonic: asString
 })
 
 //
