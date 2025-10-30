@@ -77,6 +77,21 @@ export interface ChainParams {
   name: string
 }
 
+export interface DecoyAddressConfig {
+  /** The total number of decoy addresses to use. */
+  count: number
+  /**
+   * The minimum transaction count required to accept an address as a decoy
+   * address.
+   */
+  minTransactionCount: number
+  /**
+   * The maximum transaction count required to accept an address as a decoy
+   * address.
+   */
+  maxTransactionCount: number
+}
+
 export interface EthereumNetworkInfo {
   addressQueryLookbackBlocks: number
   networkAdapterConfigs: NetworkAdapterConfig[]
@@ -96,6 +111,7 @@ export interface EthereumNetworkInfo {
   pluginMnemonicKeyName: string
   pluginRegularKeyName: string
   uriNetworks: string[]
+  decoyAddressConfig?: DecoyAddressConfig
 }
 
 const asNetworkAdaptorConfigType = asValue(
@@ -258,13 +274,21 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
   isFromMakeSpend: asOptional(asBoolean, false)
 })
 
+const asDecoyAddress = asObject({
+  address: asString,
+  checkpoint: asString
+})
+
 export const asEthereumWalletOtherData = asObject({
   nextNonce: asMaybe(asString, '0'),
   /** @deprecated use nextNonce and count the observed pending transactions instead */
   unconfirmedNextNonce: asMaybe(asString, '0'),
 
   // hacks
-  zksyncForceResyncUSDC: asMaybe(asBoolean, false)
+  zksyncForceResyncUSDC: asMaybe(asBoolean, false),
+
+  /** Decoy addresses that are pending inclusion in subscribedAddresses */
+  pendingDecoyAddresses: asMaybe(asArray(asDecoyAddress), () => [])
 })
 
 export type EthereumWalletOtherData = ReturnType<
