@@ -942,6 +942,8 @@ export class EthereumEngine extends CurrencyEngine<
       // Get the L1 fee if applicable (for some rollup chains):
       let rollupFee = '0'
       if (this.optimismRollupParams != null) {
+        // Refresh OP Stack oracle params to reduce drift before computing L1 fee
+        await this.updateOptimismRollupParams().catch(() => {})
         // We'll use this as our baseline case for the maximum spendable amount
         // when calculating the rollup fees:
         const maxSpendableBeforeRollupFee = sub(balance, primaryNetworkFee)
@@ -955,6 +957,7 @@ export class EthereumEngine extends CurrencyEngine<
           gasLimit: miningFees.gasLimit,
           to: publicAddress,
           value: decimalToHex(maxSpendableBeforeRollupFee),
+          data,
           chainParams: this.networkInfo.chainParams
         }
         rollupFee = calcOptimismRollupFees(txData)
@@ -976,10 +979,40 @@ export class EthereumEngine extends CurrencyEngine<
       }
 
       // Update total fee:
-      const totalFee = add(primaryNetworkFee, rollupFee)
+      const totalFeeInitial = add(primaryNetworkFee, rollupFee)
 
       // Calculate the max spendable amount which accounts for all fees:
-      const maxSpendable = sub(balance, totalFee)
+      let maxSpendable = sub(balance, totalFeeInitial)
+
+      // For OP-stack chains, refine once or twice by recomputing the L1 fee
+      // using the candidate amount, then subtract a small 1% margin.
+      if (this.optimismRollupParams != null) {
+        // Up to two refinement passes
+        for (let i = 0; i < 2; i++) {
+          const refinedTxData: CalcOptimismRollupFeeParams = {
+            baseFee: this.optimismRollupParams.baseFee,
+            baseFeeScalar: this.optimismRollupParams.baseFeeScalar,
+            blobBaseFee: this.optimismRollupParams.blobBaseFee,
+            blobBaseFeeScalar: this.optimismRollupParams.blobBaseFeeScalar,
+            nonce: this.otherData.unconfirmedNextNonce,
+            gasLimit: miningFees.gasLimit,
+            to: publicAddress,
+            value: decimalToHex(maxSpendable),
+            data,
+            chainParams: this.networkInfo.chainParams
+          }
+          const refinedL1 = calcOptimismRollupFees(refinedTxData)
+          const refinedTotalFee = add(primaryNetworkFee, refinedL1)
+          const refinedAmount = sub(balance, refinedTotalFee)
+          // Stop if converged or increased
+          if (lte(maxSpendable, refinedAmount)) break
+          maxSpendable = refinedAmount
+        }
+
+        // Apply a final 1% margin
+        const margin = ceil(div(mul(maxSpendable, '10'), '1000'), 0)
+        maxSpendable = sub(maxSpendable, margin)
+      }
 
       if (lte(maxSpendable, '0')) {
         throw new InsufficientFundsError({ tokenId })
