@@ -200,6 +200,7 @@ const networkInfo: EthereumNetworkInfo = {
     name: 'Optimism'
   },
   optimismRollup: true,
+  supportsEIP1559: true,
   hdPathCoinType: 60,
   pluginMnemonicKeyName: 'optimismMnemonic',
   pluginRegularKeyName: 'optimismKey',
