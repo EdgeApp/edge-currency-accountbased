@@ -68,7 +68,7 @@ export interface EthereumNetworkUpdate {
   server?: string
 }
 
-type RpcMethod =
+export type RpcMethod =
   | 'eth_call'
   | 'eth_getTransactionReceipt'
   | 'eth_estimateGas'

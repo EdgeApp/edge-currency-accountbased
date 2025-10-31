@@ -54,7 +54,7 @@ import {
   WEI_MULTIPLIER
 } from './ethereumConsts'
 import { isKnownRetriableError, RetriableError } from './ethereumErrors'
-import { EthereumNetwork, getFeeRateUsed } from './EthereumNetwork'
+import { EthereumNetwork, getFeeRateUsed, RpcMethod } from './EthereumNetwork'
 import { asEIP712TypedData } from './ethereumSchema'
 import { EthereumTools } from './EthereumTools'
 import {
@@ -109,6 +109,14 @@ export class EthereumEngine extends CurrencyEngine<
   SafeEthWalletInfo
 > {
   otherData!: EthereumWalletOtherData
+  // Cache of last max-spend computation for native sends on OP chains
+  private lastMaxSpendable?: {
+    nativeAmount: string
+    l1Fee: string
+    gasPrice: string
+    gasLimit: string
+  }
+
   lightMode: boolean
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
@@ -443,7 +451,14 @@ export class EthereumEngine extends CurrencyEngine<
       ): Promise<void> => {
         const defaultGasLimit = this.networkInfo.networkFees.default.gasLimit
         try {
-          if (defaultGasLimit != null && !sendingToContract && !hasUserMemo) {
+          // On OP-stack chains (e.g., BOB/Base/Optimism), always estimate even
+          // for plain ETH sends, since some nodes require >21000.
+          if (
+            defaultGasLimit != null &&
+            !sendingToContract &&
+            !hasUserMemo &&
+            this.optimismRollupParams == null
+          ) {
             // Easy case of sending plain mainnet token with no memo/data
             gasLimitReturn = defaultGasLimit.regularTransaction
           } else {
@@ -501,6 +516,8 @@ export class EthereumEngine extends CurrencyEngine<
         gasLimitReturn = miningFees.gasLimit
         throw new Error('Calculated gasLimit less than minimum')
       }
+
+      // BOB: Use RPC estimate as-is; amount computation will reserve extra.
     } catch (e: any) {
       this.error(`makeSpend Error determining gas limit `, e)
     }
@@ -964,6 +981,26 @@ export class EthereumEngine extends CurrencyEngine<
       tokenId
     })
 
+    // For BOB native sends, prefer RPC balance to align with node precheck
+    let balanceForMax = balance
+    if (
+      this.networkInfo.useRpcBalanceForMaxSpendNative === true &&
+      tokenId == null
+    ) {
+      try {
+        const resp = await this.ethNetwork.multicastRpc(
+          'eth_getBalance' as any,
+          [this.walletLocalData.publicKey, 'latest']
+        )
+        const rpcBalHex = asRpcResultString(resp.result).result
+        const rpcBalance = hexToDecimal(rpcBalHex)
+        // Use node-reported balance to align max-spend with broadcast precheck
+        balanceForMax = rpcBalance
+      } catch (e) {
+        this.log.warn('getMaxSpendable rpc balance fetch failed', e)
+      }
+    }
+
     const spendTarget = spendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
     if (publicAddress == null) {
@@ -979,8 +1016,8 @@ export class EthereumEngine extends CurrencyEngine<
     // an algorithm to calculate the max spendable amount which subtracts fees
     // from the balance and returns the result:
     if (tokenId == null) {
-      // Use the balance as the initial amount for the spend info before calculating the fees:
-      spendInfo.spendTargets[0].nativeAmount = balance
+      // Use the balance (or rpcBalance for BOB) as the initial amount
+      spendInfo.spendTargets[0].nativeAmount = balanceForMax
 
       // Use our calcMiningFee function to calculate the fees:
       const networkBaseFeeWeiHex = await this.ethNetwork.getBaseFeePerGas()
@@ -988,12 +1025,21 @@ export class EthereumEngine extends CurrencyEngine<
         networkBaseFeeWeiHex != null
           ? hexToDecimal(networkBaseFeeWeiHex)
           : undefined
+      // For OP-stack chains, force 'high' gas tier to create a worst-case
+      // upper bound for gas*price within the current block.
+      const spendInfoForFees: EdgeSpendInfo =
+        this.optimismRollupParams != null
+          ? { ...spendInfo, networkFeeOption: 'high' }
+          : spendInfo
       const miningFees = calcMiningFees(
         this.networkInfo,
-        spendInfo,
+        spendInfoForFees,
         null,
         currentBaseFeeWei
       )
+      // Force estimation on OP-stack chains even for plain native sends
+      if (this.optimismRollupParams != null)
+        miningFees.useEstimatedGasLimit = true
 
       // If our results require a call to the RPC server to estimate the gas limit, then we
       // need to do that now:
@@ -1001,7 +1047,7 @@ export class EthereumEngine extends CurrencyEngine<
         // Determine the preliminary fee amount and subtract that from the balance
         // in order to avoid an insufficient funds error response from the RPC call.
         const preliminaryFee = mul(miningFees.gasPrice, miningFees.gasLimit)
-        const preliminaryAmount = sub(balance, preliminaryFee)
+        const preliminaryAmount = sub(balanceForMax, preliminaryFee)
 
         // Estimate the gas limit:
         const estimatedGasLimit = await this.estimateGasLimit({
@@ -1031,9 +1077,14 @@ export class EthereumEngine extends CurrencyEngine<
       // Get the L1 fee if applicable (for some rollup chains):
       let rollupFee = '0'
       if (this.optimismRollupParams != null) {
+        // Refresh OP Stack oracle params to reduce drift before computing L1 fee
+        await this.updateOptimismRollupParams().catch(() => {})
         // We'll use this as our baseline case for the maximum spendable amount
         // when calculating the rollup fees:
-        const maxSpendableBeforeRollupFee = sub(balance, primaryNetworkFee)
+        const maxSpendableBeforeRollupFee = sub(
+          balanceForMax,
+          primaryNetworkFee
+        )
 
         const txData: CalcOptimismRollupFeeParams = {
           baseFee: this.optimismRollupParams.baseFee,
@@ -1044,6 +1095,7 @@ export class EthereumEngine extends CurrencyEngine<
           gasLimit: miningFees.gasLimit,
           to: publicAddress,
           value: decimalToHex(maxSpendableBeforeRollupFee),
+          data,
           chainParams: this.networkInfo.chainParams
         }
         rollupFee = calcOptimismRollupFees(txData)
@@ -1065,10 +1117,62 @@ export class EthereumEngine extends CurrencyEngine<
       }
 
       // Update total fee:
-      const totalFee = add(primaryNetworkFee, rollupFee)
+      let totalFeeInitial = add(primaryNetworkFee, rollupFee)
+      if (tokenId == null && this.networkInfo.nativeSendPrechargeWei != null) {
+        totalFeeInitial = add(
+          totalFeeInitial,
+          this.networkInfo.nativeSendPrechargeWei
+        )
+      }
 
       // Calculate the max spendable amount which accounts for all fees:
-      const maxSpendable = sub(balance, totalFee)
+      let maxSpendable = sub(balanceForMax, totalFeeInitial)
+
+      // For OP-stack chains, do a single refinement using the candidate amount
+      // to recompute the L1 fee.
+      if (this.optimismRollupParams != null) {
+        const refinedTxData: CalcOptimismRollupFeeParams = {
+          baseFee: this.optimismRollupParams.baseFee,
+          baseFeeScalar: this.optimismRollupParams.baseFeeScalar,
+          blobBaseFee: this.optimismRollupParams.blobBaseFee,
+          blobBaseFeeScalar: this.optimismRollupParams.blobBaseFeeScalar,
+          nonce: this.otherData.unconfirmedNextNonce,
+          gasLimit: miningFees.gasLimit,
+          to: publicAddress,
+          value: decimalToHex(maxSpendable),
+          data,
+          chainParams: this.networkInfo.chainParams
+        }
+        const refinedL1 = calcOptimismRollupFees(refinedTxData)
+        let refinedTotalFee = add(primaryNetworkFee, refinedL1)
+        if (
+          tokenId == null &&
+          this.networkInfo.nativeSendPrechargeWei != null
+        ) {
+          refinedTotalFee = add(
+            refinedTotalFee,
+            this.networkInfo.nativeSendPrechargeWei
+          )
+        }
+        maxSpendable = sub(balanceForMax, refinedTotalFee)
+
+        // Small safety epsilon for BOB node precharge quirks (1 gwei)
+        if (
+          tokenId == null &&
+          this.networkInfo.nativeSendPrechargeWei != null
+        ) {
+          const epsilon = '1000000000'
+          if (gt(maxSpendable, epsilon))
+            maxSpendable = sub(maxSpendable, epsilon)
+        }
+        // Cache for makeSpend to avoid re-pricing L1
+        this.lastMaxSpendable = {
+          nativeAmount: maxSpendable,
+          l1Fee: refinedL1,
+          gasPrice: miningFees.gasPrice,
+          gasLimit: miningFees.gasLimit
+        }
+      }
 
       if (lte(maxSpendable, '0')) {
         throw new InsufficientFundsError({ tokenId })
@@ -1183,6 +1287,10 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     const edgeToken = tokenId != null ? this.builtinTokens[tokenId] : null
+    const useCachedFees =
+      this.optimismRollupParams != null &&
+      tokenId == null &&
+      this.lastMaxSpendable?.nativeAmount === nativeAmount
     const networkBaseFeeWeiHex = await this.ethNetwork.getBaseFeePerGas()
     const currentBaseFeeWei =
       networkBaseFeeWeiHex != null
@@ -1190,10 +1298,26 @@ export class EthereumEngine extends CurrencyEngine<
         : undefined
     const miningFees = calcMiningFees(
       this.networkInfo,
-      edgeSpendInfo,
+      useCachedFees
+        ? {
+            ...edgeSpendInfo,
+            networkFeeOption: 'custom',
+            customNetworkFee: {
+              gasLimit: this.lastMaxSpendable?.gasLimit
+            }
+          }
+        : edgeSpendInfo,
       edgeToken,
       currentBaseFeeWei
     )
+    // Force estimation on OP-stack chains even for plain native sends
+    if (this.optimismRollupParams != null)
+      miningFees.useEstimatedGasLimit = true
+
+    // Lock gas price to the cached value when available
+    if (useCachedFees && this.lastMaxSpendable != null) {
+      miningFees.gasPrice = this.lastMaxSpendable.gasPrice
+    }
 
     // Translate legacy transaction types to EIP-1559 transaction type
     const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 0
@@ -1272,6 +1396,10 @@ export class EthereumEngine extends CurrencyEngine<
         miningFees,
         publicAddress
       })
+      // Ensure we never drop below cached gasLimit if present
+      if (useCachedFees && this.lastMaxSpendable?.gasLimit != null) {
+        otherParams.gas = max(otherParams.gas, this.lastMaxSpendable.gasLimit)
+      }
     }
 
     const nativeBalance =
@@ -1285,19 +1413,28 @@ export class EthereumEngine extends CurrencyEngine<
     // Optimism-style L1 fees are deducted automatically from the account.
     // Arbitrum-style L1 gas must be included in the transaction object.
     if (this.optimismRollupParams != null) {
-      const txData: CalcOptimismRollupFeeParams = {
-        baseFee: this.optimismRollupParams.baseFee,
-        baseFeeScalar: this.optimismRollupParams.baseFeeScalar,
-        blobBaseFee: this.optimismRollupParams.blobBaseFee,
-        blobBaseFeeScalar: this.optimismRollupParams.blobBaseFeeScalar,
-        nonce: otherParams.nonceUsed,
-        gasLimit: otherParams.gas,
-        to: otherParams.to[0],
-        value: value,
-        data: otherParams.data,
-        chainParams: this.networkInfo.chainParams
+      // Use cached L1 fee if this is the same max-spend amount to avoid
+      // re-pricing between getMaxSpendable and makeSpend.
+      if (tokenId == null && useCachedFees && this.lastMaxSpendable != null) {
+        l1Fee = this.lastMaxSpendable.l1Fee
+        // Use cached L1 fee matching prior max-spend calculation
+        // Clear after use
+        this.lastMaxSpendable = undefined
+      } else {
+        const txData: CalcOptimismRollupFeeParams = {
+          baseFee: this.optimismRollupParams.baseFee,
+          baseFeeScalar: this.optimismRollupParams.baseFeeScalar,
+          blobBaseFee: this.optimismRollupParams.blobBaseFee,
+          blobBaseFeeScalar: this.optimismRollupParams.blobBaseFeeScalar,
+          nonce: otherParams.nonceUsed,
+          gasLimit: otherParams.gas,
+          to: otherParams.to[0],
+          value: value,
+          data: otherParams.data,
+          chainParams: this.networkInfo.chainParams
+        }
+        l1Fee = calcOptimismRollupFees(txData)
       }
-      l1Fee = calcOptimismRollupFees(txData)
     } else if (this.networkInfo.arbitrumRollupParams != null) {
       const rpcServers = this.ethNetwork.networkAdapters
         .filter(
@@ -1321,7 +1458,51 @@ export class EthereumEngine extends CurrencyEngine<
 
     if (currencyCode === this.currencyInfo.currencyCode) {
       nativeNetworkFee = add(nativeNetworkFee, l1Fee)
+      if (tokenId == null && this.networkInfo.nativeSendPrechargeWei != null) {
+        nativeNetworkFee = add(
+          nativeNetworkFee,
+          this.networkInfo.nativeSendPrechargeWei
+        )
+      }
+      // Sanity check RPC balance for OP max-spend and adjust amount once.
+      // For some reason, the RPC balance can differ for BOB...
+      if (
+        this.optimismRollupParams != null &&
+        tokenId == null &&
+        useCachedFees
+      ) {
+        try {
+          const resp = await this.ethNetwork.multicastRpc(
+            'eth_getBalance' as RpcMethod,
+            [this.walletLocalData.publicKey, 'latest']
+          )
+          const rpcBalHex = asRpcResultString(resp.result).result
+          const rpcBal = hexToDecimal(rpcBalHex)
+          // JIT clamp against node's precheck using effective gas + l1
+          if (tokenId == null) {
+            let required = add(
+              add(mul(miningFees.gasPrice, otherParams.gas), nativeAmount),
+              l1Fee
+            )
+            if (this.networkInfo.nativeSendPrechargeWei != null) {
+              required = add(required, this.networkInfo.nativeSendPrechargeWei)
+            }
+            if (gt(required, rpcBal)) {
+              const epsilon = '1000000000' // 1 gwei buffer
+              const excess = add(sub(required, rpcBal), epsilon)
+              const adjusted = gt(excess, nativeAmount)
+                ? '0'
+                : sub(nativeAmount, excess)
+              // Final trim to satisfy node-side balance precheck
+              nativeAmount = adjusted
+            }
+          }
+        } catch (e) {
+          this.log.warn('eth_getBalance sanity check failed', e)
+        }
+      }
       totalTxAmount = add(nativeNetworkFee, nativeAmount)
+
       if (!skipChecks && gt(totalTxAmount, nativeBalance)) {
         throw new InsufficientFundsError({ tokenId })
       }
