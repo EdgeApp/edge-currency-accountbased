@@ -622,6 +622,12 @@ export default [
           publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541'
         }
       },
+      'uri eip681 payment address with decimal chainId': {
+        args: ['ethereum:0xf5d81254c269a1e984044e4d542adc07bf18c541@1'],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541'
+        }
+      },
       'uri eip681 payment address with pay prefix and chainId': {
         args: ['ethereum:pay-0xf5d81254c269a1e984044e4d542adc07bf18c541@0x1'],
         output: {
@@ -649,6 +655,17 @@ export default [
       'uri eip681 transfer contract invocation': {
         args: [
           'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
+          'USDC'
+        ],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
+          nativeAmount: '2014000',
+          currencyCode: 'USDC'
+        }
+      },
+      'uri eip681 transfer contract invocation with decimal chainId': {
+        args: [
+          'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48@1/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
           'USDC'
         ],
         output: {

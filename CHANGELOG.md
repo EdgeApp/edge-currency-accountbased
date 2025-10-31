@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: evmChainId values for all EVM chains
+- fixed: EIP-681 scientific notation amount and decimal + hex chainId handling
 
 ## 4.61.4 (2025-10-14)
 
