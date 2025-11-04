@@ -4,8 +4,9 @@
 
 - added: Decoy address subscriptions for engines that use the change-server.
 - changed: Replace eztz.js with @taquito
-- fixed: Added exponential backoff for syncNetwork "retriable" errors.
+- changed: Upgrade chain-registry package.
 - changed: (EVM) Use new `needsSync` API from core to fix syncing correctness issues.
+- fixed: Added exponential backoff for syncNetwork "retriable" errors.
 
 ## 4.62.0 (2025-10-31)
 
