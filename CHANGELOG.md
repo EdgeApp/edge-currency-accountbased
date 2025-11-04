@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: Replace eztz.js with @taquito
 - fixed: Added exponential backoff for syncNetwork "retriable" errors.
 
 ## 4.62.0 (2025-10-31)

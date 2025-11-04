@@ -1,3 +1,6 @@
+import { InMemorySigner } from '@taquito/signer'
+import { validateAddress, ValidationResult } from '@taquito/utils'
+import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -7,7 +10,6 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -54,34 +56,17 @@ export class TezosTools implements EdgeCurrencyTools {
   }
 
   checkAddress(address: string): boolean {
-    try {
-      const valid = eztz.crypto.checkAddress(address)
-      return valid
-    } catch (e: any) {
-      return false
-    }
+    return validateAddress(address) === ValidationResult.VALID
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
-    // check for existence of numbers
-    if (/\d/.test(userInput)) {
-      throw new Error('Input must be mnemonic phrase')
+    if (!validateMnemonic(userInput)) {
+      throw new Error('Invalid mnemonic')
     }
-    const wordList = userInput.split(' ')
-    const wordCount = wordList.length
-    if (wordCount !== 24) {
-      throw new Error('Mnemonic phrase must be 24 words long')
-    }
-    const keys = eztz.crypto.generateKeys(userInput, '')
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.derivePublicKey({
-      type: 'wallet:tezos',
-      id: 'fake',
-      keys
-    })
+    InMemorySigner.fromFundraiser('', '', userInput)
+
     return {
-      mnemonic: keys.mnemonic,
-      privateKey: keys.sk
+      mnemonic: userInput
     }
   }
 
@@ -90,9 +75,8 @@ export class TezosTools implements EdgeCurrencyTools {
     if (type === 'tezos') {
       // Use 256 bits entropy
       const entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const mnemonic = eztz.library.bip39.entropyToMnemonic(entropy)
-      const privateKey = eztz.crypto.generateKeys(mnemonic, '').sk
-      return { mnemonic, privateKey }
+      const mnemonic = entropyToMnemonic(entropy)
+      return await this.importPrivateKey(mnemonic)
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -101,8 +85,16 @@ export class TezosTools implements EdgeCurrencyTools {
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'tezos') {
-      const keypair = eztz.crypto.generateKeys(walletInfo.keys.mnemonic, '')
-      return { publicKey: keypair.pkh, publicKeyEd: keypair.pk }
+      const { mnemonic } = asTezosPrivateKeys(walletInfo.keys)
+      // We don't use fromMnemonic because it uses bip44 which is not compatible with the original eztz.js implementation
+      const signer = InMemorySigner.fromFundraiser('', '', mnemonic)
+
+      const publicKey = await signer.publicKeyHash()
+      const publicKeyEd = await signer.publicKey()
+      return {
+        publicKey,
+        publicKeyEd
+      }
     } else {
       throw new Error('InvalidWalletType')
     }

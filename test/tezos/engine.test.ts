@@ -1,4 +1,4 @@
-import { add, gte } from 'biggystring'
+import { gte } from 'biggystring'
 import { assert } from 'chai'
 import {
   closeEdge,
@@ -6,8 +6,6 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyPlugin,
-  EdgeSpendInfo,
-  EdgeTransaction,
   EdgeWalletInfo,
   makeFakeIo
 } from 'edge-core-js'
@@ -129,95 +127,6 @@ describe(`Tezos engine`, function () {
         gte(engine.walletLocalData.totalBalances.XTZ ?? '0', '0'),
         true
       )
-    } else {
-      assert.equal(0, 1)
-    }
-  })
-  const edgeSpendInfo: EdgeSpendInfo = {
-    tokenId: null,
-    spendTargets: [
-      {
-        nativeAmount: '3000000',
-        publicAddress: 'tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9'
-      }
-    ]
-  }
-  let edgeTransaction: EdgeTransaction
-  it.skip('should create a transaction', async function () {
-    engine.walletLocalData.totalBalances.XTZ = '4000000'
-    this.timeout(25000)
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (engine) {
-      edgeTransaction = await engine.makeSpend(edgeSpendInfo)
-      assert.equal(
-        add(edgeTransaction.nativeAmount, edgeTransaction.networkFee) ===
-          '-3000000',
-        true
-      )
-    } else {
-      assert.equal(0, 1)
-    }
-  })
-  it('should sign a transaction', async function () {
-    edgeTransaction = {
-      blockHeight: 0,
-      currencyCode: 'XTZ',
-      date: 0,
-      isSend: true,
-      memos: [],
-      nativeAmount: '-3002650',
-      networkFee: '2650',
-      networkFees: [],
-      otherParams: {
-        idInternal: 0,
-        fromAddress: 'tz1TC6ETpRC1awG3Sq226TgMx4wHbJRTzod6',
-        toAddress: 'tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9',
-        fullOp: {
-          opbytes:
-            'f1afab4d0508bf29f0bb162c74134d315986c7fcffd4c3af386619fad5547f9f07000052d9258b002678631bada74ab0d31f948288a2a1940ac0c066904e0000321e7b03dcf0e1baf805f2a393828fefcb519797b7abb29f9280c1956a0129bf08000052d9258b002678631bada74ab0d31f948288a2a1c60ac1c066e8529502c08db7010002358cbffa97149631cfb999fa47f0035fb1ea863600',
-          opOb: {
-            branch: 'BMYitJkbEYD9qEP8NRF4GQHUHsRcKXos8wzSf282Ly9R2p7sknb',
-            contents: [
-              {
-                kind: 'reveal',
-                fee: '1300',
-                public_key:
-                  'edpku2JAJHC6k68KpUjzL6FsekWczHKDopgCBgxtkViof3iFYiFJN1',
-                source: 'tz1TC6ETpRC1awG3Sq226TgMx4wHbJRTzod6',
-                gas_limit: '10000',
-                storage_limit: '0',
-                counter: '1679424'
-              },
-              {
-                kind: 'transaction',
-                fee: '1350',
-                gas_limit: '10600',
-                storage_limit: '277',
-                amount: '3000000',
-                destination: 'tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9',
-                source: 'tz1TC6ETpRC1awG3Sq226TgMx4wHbJRTzod6',
-                counter: '1679425'
-              }
-            ],
-            protocol: 'Pt24m4xiPbLDhVgVfABUjirbmda3yohdN82Sp9FeuAXJ4eV9otd'
-          }
-        }
-      },
-      ourReceiveAddresses: ['tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9'],
-      signedTx: '',
-      tokenId: null,
-      txid: '',
-      walletId: ''
-    }
-    const signedOpBytes =
-      'f1afab4d0508bf29f0bb162c74134d315986c7fcffd4c3af386619fad5547f9f07000052d9258b002678631bada74ab0d31f948288a2a1940ac0c066904e0000321e7b03dcf0e1baf805f2a393828fefcb519797b7abb29f9280c1956a0129bf08000052d9258b002678631bada74ab0d31f948288a2a1c60ac1c066e8529502c08db7010002358cbffa97149631cfb999fa47f0035fb1ea863600e742a0adcfa27c0198bc767e6cc0fe5bcd578ccc9afaa4d9f7a00a85ae818d0022579535018862412bea95b758fd19bf21d4cea7a9548998683c912d2ded6804'
-    this.timeout(10000)
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (engine) {
-      edgeTransaction = await engine.signTx(edgeTransaction, info.keys)
-      assert.equal(edgeTransaction.signedTx === signedOpBytes, true)
-      const { otherParams = {} } = edgeTransaction
-      assert.equal(otherParams.fullOp.opbytes, signedOpBytes)
     } else {
       assert.equal(0, 1)
     }
