@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.63.0 (2025-11-04)
+
 - added: Decoy address subscriptions for engines that use the change-server.
 - changed: Replace eztz.js with @taquito
 - changed: Upgrade chain-registry package.
