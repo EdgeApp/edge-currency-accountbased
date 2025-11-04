@@ -15,6 +15,7 @@ import {
   EdgeLog,
   EdgeMetaToken,
   EdgeSpendInfo,
+  EdgeSubscribedAddress,
   EdgeTokenId,
   EdgeTokenIdOptions,
   EdgeTokenMap,
@@ -86,6 +87,7 @@ export class CurrencyEngine<
 
   /** The official core new-tx checkpoint, saved to synced storage. */
   seenTxCheckpoint: string | undefined
+  subscribedAddresses: EdgeSubscribedAddress[]
 
   /**
    * The highest transaction checkpoint we have seen.
@@ -154,6 +156,8 @@ export class CurrencyEngine<
     this.tokenCheckTransactionsStatus = {}
     this.walletLocalDataDirty = false
     this.seenTxCheckpoint = opts.seenTxCheckpoint
+    // Sync in-memory decoy addresses with what core has saved
+    this.subscribedAddresses = opts.subscribedAddresses ?? []
     this.transactionEvents = []
     this.transactionList = {}
     this.transactionListDirty = false

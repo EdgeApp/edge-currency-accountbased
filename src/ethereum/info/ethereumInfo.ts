@@ -1157,7 +1157,11 @@ const networkInfo: EthereumNetworkInfo = {
         'https://rpc.ankr.com/eth',
         'https://eth-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
         'https://cloudflare-eth.com',
-        'https://lb.drpc.org/ogrpc?network=ethereum&dkey={{drpcApiKey}}'
+        'https://lb.drpc.org/ogrpc?network=ethereum&dkey={{drpcApiKey}}',
+        'https://ethereum-mainnet.gateway.tatum.io',
+        'https://eth.llamarpc.com',
+        'https://eth.blockrazor.xyz',
+        'https://ethereum-rpc.publicnode.com'
       ],
       ethBalCheckerContract: '0xb1f8e55c7f64d203c1400b9d8555d050f94adf39'
     },
@@ -1205,6 +1209,11 @@ const networkInfo: EthereumNetworkInfo = {
   chainParams: {
     chainId: 1,
     name: 'Ethereum Mainnet'
+  },
+  decoyAddressConfig: {
+    count: 5,
+    minTransactionCount: 10,
+    maxTransactionCount: 100
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,

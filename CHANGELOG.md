@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Decoy address subscriptions for engines that use the change-server.
 - changed: Replace eztz.js with @taquito
 - fixed: Added exponential backoff for syncNetwork "retriable" errors.
 - changed: (EVM) Use new `needsSync` API from core to fix syncing correctness issues.
@@ -9,7 +10,6 @@
 ## 4.62.0 (2025-10-31)
 
 - added: evmChainId values for all EVM chains
-- fixed: EIP-681 scientific notation amount and decimal + hex chainId handling
 
 ## 4.61.4 (2025-10-14)
 

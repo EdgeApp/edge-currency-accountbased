@@ -72,7 +72,12 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'amoyMnemonic',
   pluginRegularKeyName: 'amoyKey',
   evmGasStationUrl: null,
-  networkFees
+  networkFees,
+  decoyAddressConfig: {
+    count: 5,
+    minTransactionCount: 10,
+    maxTransactionCount: 100
+  }
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {

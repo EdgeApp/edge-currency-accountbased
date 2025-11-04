@@ -82,7 +82,12 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'pulsechainMnemonic',
   pluginRegularKeyName: 'pulsechainKey',
   evmGasStationUrl: null,
-  networkFees
+  networkFees,
+  decoyAddressConfig: {
+    count: 5,
+    minTransactionCount: 10,
+    maxTransactionCount: 100
+  }
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

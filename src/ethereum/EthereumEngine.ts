@@ -42,7 +42,9 @@ import {
   isHex,
   mergeDeeply,
   normalizeAddress,
+  pickRandomOne,
   removeHexPrefix,
+  shuffleArray,
   toHex,
   uint8ArrayToHex
 } from '../common/utils'
@@ -64,6 +66,7 @@ import {
   asRpcResultString,
   asSafeEthWalletInfo,
   CalcOptimismRollupFeeParams,
+  DecoyAddressConfig,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
   EthereumEstimateGasParams,
@@ -99,6 +102,7 @@ import { RpcAdapter } from './networkAdapters/RpcAdapter'
 
 // How long to wait before the next scheduled sync
 const SYNC_NETWORK_INTERVAL = 20000
+const DECOY_ADDRESS_GEN_DELAY_MS = 10000
 
 export class EthereumEngine extends CurrencyEngine<
   EthereumTools,
@@ -743,12 +747,21 @@ export class EthereumEngine extends CurrencyEngine<
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.currencyEngineCallbacks.onSubscribeAddresses([
-      {
-        address: this.walletLocalData.publicKey,
+    const realAddress = this.walletLocalData.publicKey
+
+    // Initialize the subscribed addresses list if it's empty
+    if (this.subscribedAddresses.length === 0) {
+      this.subscribedAddresses.push({
+        address: realAddress,
         checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
-      }
-    ])
+      })
+    }
+
+    // Build addresses list for subscription (real address + decoy addresses)
+    this.currencyEngineCallbacks.onSubscribeAddresses(
+      // Shuffle array for better privacy
+      shuffleArray(this.subscribedAddresses)
+    )
 
     const feeUpdateFrequencyMs =
       this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
@@ -780,6 +793,28 @@ export class EthereumEngine extends CurrencyEngine<
     this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS)
     this.ethNetwork.start()
 
+    // Start decoy address generation background routine if needed
+    const decoyAddressConfig = this.networkInfo.decoyAddressConfig
+    if (decoyAddressConfig != null) {
+      if (this.decoyAddressCount < decoyAddressConfig.count) {
+        this.addToLoop(
+          'generateDecoyAddress',
+          DECOY_ADDRESS_GEN_DELAY_MS,
+          async () => {
+            // Find a decoy address.
+            await this.findDecoyAddress(decoyAddressConfig)
+
+            if (this.decoyAddressCount >= decoyAddressConfig.count) {
+              // Merge and re-subscribe addresses.
+              await this.mergePendingDecoyAddresses()
+              // End the loop after merging pending decoy addresses.
+              this.removeFromLoop('generateDecoyAddress')
+            }
+          }
+        )
+      }
+    }
+
     await super.startEngine()
   }
 
@@ -802,6 +837,19 @@ export class EthereumEngine extends CurrencyEngine<
 
   async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
     const { subscribeParam } = opts
+
+    // Check if this subscription is for a decoy address and ignore it
+    if (subscribeParam?.address != null) {
+      const subscribeAddress = subscribeParam.address
+      // If the address is not the real address (walletLocalData.publicKey), it's a decoy
+      if (
+        normalizeAddress(subscribeAddress) !==
+        normalizeAddress(this.walletLocalData.publicKey)
+      ) {
+        // Ignore subscription updates for decoy addresses
+        return SYNC_NETWORK_INTERVAL
+      }
+    }
 
     // Cancel any existing sync operation
     if (this.syncNetworkAbortController != null) {
@@ -1677,6 +1725,111 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     await super.saveTx(edgeTransaction)
+  }
+
+  // ****************************************************************************
+  // Private methods
+  // ****************************************************************************
+
+  /**
+   * Finds one decoy address if configured and needed.
+   * This method is called periodically by addToLoop. It finds one address
+   * per invocation and lets the loop handle repetition.
+   */
+  async findDecoyAddress(
+    decoyAddressConfig: DecoyAddressConfig
+  ): Promise<void> {
+    // Get current block height
+    const blockHeightUpdate = await this.ethNetwork.check('fetchBlockheight')
+    if (blockHeightUpdate.blockHeight == null) {
+      this.warn('Cannot generate decoy address: failed to get block height')
+      return
+    }
+    const currentBlockHeight = blockHeightUpdate.blockHeight
+
+    // Get eligible addresses from network (filtered by transaction count only)
+    const eligibleAddresses = await this.ethNetwork.findDecoyAddresses(
+      decoyAddressConfig,
+      currentBlockHeight
+    )
+
+    // Build exclude list: existing subscribed addresses + pending decoy addresses
+    const excludeAddressesSet = new Set([
+      ...this.subscribedAddresses.map(addr => normalizeAddress(addr.address)),
+      ...this.otherData.pendingDecoyAddresses.map(addr =>
+        normalizeAddress(addr.address)
+      )
+    ])
+
+    // Filter out excluded addresses and pick a random one
+    const candidateAddresses = eligibleAddresses.filter(
+      addr => !excludeAddressesSet.has(normalizeAddress(addr))
+    )
+
+    if (candidateAddresses.length > 0) {
+      const selectedAddress = pickRandomOne(candidateAddresses)
+
+      // Add to pendingDecoyAddresses and persist
+      this.otherData.pendingDecoyAddresses.push({
+        address: selectedAddress,
+        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+      })
+      this.walletLocalDataDirty = true
+      this.log(`Generated decoy address: ${selectedAddress}`)
+    }
+  }
+
+  async mergePendingDecoyAddresses(): Promise<void> {
+    // Ensure real address is in subscribedAddresses
+    const realAddress = this.walletLocalData.publicKey
+    if (
+      this.subscribedAddresses.every(
+        a => normalizeAddress(a.address) !== normalizeAddress(realAddress)
+      )
+    ) {
+      this.subscribedAddresses.push({
+        address: realAddress,
+        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+      })
+    }
+
+    // Merge pending decoy addresses into subscribedAddresses
+    for (const pendingAddr of this.otherData.pendingDecoyAddresses) {
+      if (
+        this.subscribedAddresses.every(
+          a =>
+            normalizeAddress(a.address) !==
+            normalizeAddress(pendingAddr.address)
+        )
+      ) {
+        this.subscribedAddresses.push(pendingAddr)
+      }
+    }
+
+    // Subscribe to all addresses
+    this.currencyEngineCallbacks.onSubscribeAddresses(
+      // Shuffle array for better privacy
+      shuffleArray(this.subscribedAddresses)
+    )
+
+    this.log(
+      `Merged ${this.otherData.pendingDecoyAddresses.length} decoy addresses into subscribed addresses`
+    )
+
+    // Clear pending list and persist
+    this.otherData.pendingDecoyAddresses = []
+    this.walletLocalDataDirty = true
+  }
+
+  get decoyAddressCount(): number {
+    // The number of decoy addresses should be counted between both sets because
+    // the pending decoy addresses are not yet merged into the subscribed addresses
+    // and the subscribed addresses may already have decoy addresses if the
+    // currency's configuration ever changes.
+    return (
+      Math.max(0, this.subscribedAddresses.length - 1) +
+      this.otherData.pendingDecoyAddresses.length
+    )
   }
 }
 

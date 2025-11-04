@@ -65,6 +65,7 @@ export interface EvmScanAdapterConfig {
 }
 
 export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
+  batchMulticastRpc = null
   connect = null
   disconnect = null
   fetchTokenBalances = null

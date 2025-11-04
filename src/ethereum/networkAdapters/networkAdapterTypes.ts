@@ -97,6 +97,12 @@ export abstract class NetworkAdapter<
       ) => Promise<{ result: any; server: string }>)
     | null
 
+  abstract batchMulticastRpc:
+    | ((
+        requests: Array<{ method: string; params: any[] }>
+      ) => Promise<{ result: any; server: string }>)
+    | null
+
   abstract subscribeAddressSync:
     | ((address: string, callback: (txid?: string) => void) => void)
     | null

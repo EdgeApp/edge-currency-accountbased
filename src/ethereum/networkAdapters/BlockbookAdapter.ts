@@ -15,8 +15,9 @@ export interface BlockbookAdapterConfig {
 }
 
 export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
-  disconnect = null
+  batchMulticastRpc = null
   connect = null
+  disconnect = null
   fetchTokenBalances = null
   fetchTxs = null
   getBaseFeePerGas = null

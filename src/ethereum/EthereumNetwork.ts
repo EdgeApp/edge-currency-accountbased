@@ -1,4 +1,5 @@
 import { add, div } from 'biggystring'
+import { asArray, asObject, asOptional, asString } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
 
 import { getRandomDelayMs } from '../common/network'
@@ -11,7 +12,7 @@ import {
 import { normalizeAddress } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
-import { EthereumNetworkInfo } from './ethereumTypes'
+import { DecoyAddressConfig, EthereumNetworkInfo } from './ethereumTypes'
 import { AmberdataAdapter } from './networkAdapters/AmberdataAdapter'
 import { BlockbookAdapter } from './networkAdapters/BlockbookAdapter'
 import { BlockbookWsAdapter } from './networkAdapters/BlockbookWsAdapter'
@@ -71,7 +72,9 @@ type RpcMethod =
   | 'eth_call'
   | 'eth_getTransactionReceipt'
   | 'eth_estimateGas'
+  | 'eth_getBlockByNumber'
   | 'eth_getCode'
+  | 'eth_getTransactionCount'
 
 export interface BroadcastResults {
   result: {
@@ -214,6 +217,19 @@ export class EthereumNetwork {
     const funcs = this.qualifyNetworkAdapters('multicastRpc').map(
       adapter => async () => {
         return await adapter.multicastRpc(method, params)
+      }
+    )
+
+    const out: { result: any; server: string } = await asyncWaterfall(funcs)
+    return out
+  }
+
+  batchMulticastRpc = async (
+    requests: Array<{ method: RpcMethod; params: any[] }>
+  ): Promise<any> => {
+    const funcs = this.qualifyNetworkAdapters('batchMulticastRpc').map(
+      adapter => async () => {
+        return await adapter.batchMulticastRpc(requests)
       }
     )
 
@@ -587,6 +603,122 @@ export class EthereumNetwork {
     > &
       NetworkAdapter => methods.every(method => adapter[method] != null))
   }
+
+  /**
+   * Finds one decoy address by randomly selecting a block and finding
+   * an eligible EOA address with transaction count in the specified range.
+   * Returns null if no eligible address is found.
+   */
+  async findDecoyAddresses(
+    decoyAddressConfig: DecoyAddressConfig,
+    currentBlockHeight: number
+  ): Promise<string[]> {
+    try {
+      // Randomly select a block number within the lookback range
+      // Look back half the blockchain height, but cap at 1,000,000 blocks
+      const lookbackBlocks = Math.min(
+        Math.floor(currentBlockHeight / 2),
+        1_000_000
+      )
+      const minBlock = Math.max(1, currentBlockHeight - lookbackBlocks)
+      const maxBlock = currentBlockHeight - 1
+      const randomBlockNumber =
+        Math.floor(Math.random() * (maxBlock - minBlock + 1)) + minBlock
+      const randomBlockNumberHex = '0x' + randomBlockNumber.toString(16)
+
+      // Fetch block with transactions using first available RpcAdapter
+      const blockResponseRaw = await this.multicastRpc('eth_getBlockByNumber', [
+        randomBlockNumberHex,
+        true
+      ])
+      const blockResponse = asBlockResponse(blockResponseRaw)
+      const block = blockResponse.result.result
+
+      if (block == null || block.transactions == null) {
+        return []
+      }
+
+      // Extract unique addresses from transactions
+      const addressSet = new Set<string>()
+      for (const tx of block.transactions) {
+        if (tx.from != null) {
+          addressSet.add(normalizeAddress(tx.from))
+        }
+        if (tx.to != null) {
+          addressSet.add(normalizeAddress(tx.to))
+        }
+      }
+
+      const addresses = Array.from(addressSet)
+      if (addresses.length === 0) {
+        return []
+      }
+
+      // Batch all eth_getCode calls
+      const codeRequests = addresses.map(addr => ({
+        method: 'eth_getCode' as RpcMethod,
+        params: [`0x${addr}`, 'latest']
+      }))
+
+      const codeResults = await this.batchMulticastRpc(codeRequests)
+      const codeResponses = codeResults.result
+
+      // Filter to EOAs only
+      const eoaAddresses: string[] = []
+      for (let i = 0; i < addresses.length; i++) {
+        const code = codeResponses[i].result
+        if (code === '0x' || code === '0x0') {
+          eoaAddresses.push(addresses[i])
+        }
+      }
+
+      if (eoaAddresses.length === 0) {
+        return []
+      }
+
+      // Batch all eth_getTransactionCount calls for EOAs
+      const nonceRequests = eoaAddresses.map(addr => ({
+        method: 'eth_getTransactionCount' as RpcMethod,
+        params: [`0x${addr}`, 'latest']
+      }))
+
+      const nonceResultsRaw = await this.batchMulticastRpc(nonceRequests)
+      const nonceResults = asNonceResponses(nonceResultsRaw)
+      const nonceResponses = nonceResults.result
+
+      // Filter by transaction count
+      const eligibleAddresses: string[] = []
+
+      const minTxCount = decoyAddressConfig.minTransactionCount
+      const maxTxCount = decoyAddressConfig.maxTransactionCount
+
+      for (let i = 0; i < eoaAddresses.length; i++) {
+        try {
+          const nonceHex = nonceResponses[i].result
+          const transactionCount = parseInt(nonceHex, 16)
+
+          if (
+            transactionCount >= minTxCount &&
+            transactionCount <= maxTxCount
+          ) {
+            eligibleAddresses.push(`0x${eoaAddresses[i]}`)
+          }
+        } catch (e: any) {
+          this.ethEngine.warn(
+            `Error processing transaction count for address ${
+              eoaAddresses[i]
+            }: ${String(e)}`
+          )
+          continue
+        }
+      }
+
+      return eligibleAddresses
+    } catch (e: any) {
+      this.ethEngine.warn(`Error generating decoy addresses: ${String(e)}`)
+      return []
+    }
+  }
 }
 
 const makeNetworkAdapter = (
@@ -638,3 +770,26 @@ function makeThrottledFunction<Args extends any[], Rtn>(
     })
   }
 }
+
+const asBlockResponse = asObject({
+  result: asObject({
+    result: asObject({
+      transactions: asOptional(
+        asArray(
+          asObject({
+            from: asString,
+            to: asString
+          })
+        )
+      )
+    })
+  })
+})
+
+const asNonceResponses = asObject({
+  result: asArray(
+    asObject({
+      result: asString
+    })
+  )
+})
