@@ -163,8 +163,6 @@ export class ZanoTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const networks = { [pluginId]: true }
 
-    const requestCurrencyCode = currencyCode ?? this.currencyInfo.currencyCode
-
     // Handle Zano Deeplink URIs:
     if (uri.startsWith('zano:')) {
       const zanoDeeplink = parseZanoDeeplink(uri)
@@ -188,11 +186,11 @@ export class ZanoTools implements EdgeCurrencyTools {
           deeplinkCurrencyCode =
             this.builtinTokens[zanoDeeplink.asset_id]?.currencyCode
         }
-        if (deeplinkCurrencyCode !== requestCurrencyCode) {
+        if (currencyCode != null && currencyCode !== deeplinkCurrencyCode) {
           throw new Error('InvalidCurrencyCodeError')
         }
         const denom = getLegacyDenomination(
-          requestCurrencyCode,
+          deeplinkCurrencyCode,
           this.currencyInfo,
           customTokens ?? [],
           this.builtinTokens
@@ -204,7 +202,7 @@ export class ZanoTools implements EdgeCurrencyTools {
         nativeAmount = toFixed(nativeAmount, 0, 0)
 
         edgeParsedUri.nativeAmount = nativeAmount
-        edgeParsedUri.currencyCode = requestCurrencyCode
+        edgeParsedUri.currencyCode = deeplinkCurrencyCode
       }
       return edgeParsedUri
     }
@@ -215,7 +213,7 @@ export class ZanoTools implements EdgeCurrencyTools {
       uri,
       networks,
       builtinTokens: this.builtinTokens,
-      currencyCode: requestCurrencyCode,
+      currencyCode,
       customTokens
     })
 

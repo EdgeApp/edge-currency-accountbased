@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Zano `parseUri` currencyCode validation
+
 ## 4.63.0 (2025-11-04)
 
 - added: Decoy address subscriptions for engines that use the change-server.
