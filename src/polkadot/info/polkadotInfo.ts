@@ -9,7 +9,7 @@ import {
 } from '../polkadotTypes'
 
 const networkInfo: PolkadotNetworkInfo = {
-  rpcNodes: ['wss://rpc.polkadot.io'],
+  rpcNodes: ['wss://polkadot-asset-hub-rpc.polkadot.io'],
   ss58Format: 0,
   subscanBaseUrl: 'https://polkadot.api.subscan.io/api',
   subscanQueryLimit: 100,
