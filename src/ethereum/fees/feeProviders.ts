@@ -346,6 +346,8 @@ export const getEvmScanApiKey = (
   log: EdgeLog,
   serverUrl: string
 ): string | string[] | undefined => {
+  // TODO: This is total BS. We should just have a key associated with a domain name.
+  // This is getting out of hand.
   const { evmScanApiKey, etherscanApiKey, bscscanApiKey, polygonscanApiKey } =
     initOptions
 

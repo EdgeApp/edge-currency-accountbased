@@ -97,11 +97,14 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: [
-        'https://api.etherscan.io',
-        'https://block-explorer-api.mainnet.zksync.io',
-        'https://api-era.zksync.network'
-      ]
+      servers: ['https://api.etherscan.io', 'https://api-era.zksync.network'],
+      version: 2
+    },
+    {
+      type: 'evmscan',
+      gastrackerSupport: true,
+      servers: ['https://block-explorer-api.mainnet.zksync.io'],
+      version: 1
     }
   ],
   uriNetworks: ['zksync'],

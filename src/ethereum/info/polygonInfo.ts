@@ -198,7 +198,8 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.etherscan.io', 'https://api.polygonscan.com']
+      servers: ['https://api.etherscan.io', 'https://api.polygonscan.com'],
+      version: 2
     }
   ],
   uriNetworks: ['polygon'],

@@ -56,7 +56,8 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://explorer.gobob.xyz']
+      servers: ['https://explorer.gobob.xyz'],
+      version: 1
     }
   ],
   uriNetworks: [],
