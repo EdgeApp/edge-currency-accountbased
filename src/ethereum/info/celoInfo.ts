@@ -78,13 +78,13 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: false,
-      servers: ['https://api.etherscan.io'],
+      servers: ['https://api.etherscan.io/v2/api'],
       version: 2
     },
     {
       type: 'evmscan',
       gastrackerSupport: false,
-      servers: ['https://explorer.celo.org/mainnet'],
+      servers: ['https://explorer.celo.org/mainnet/api'],
       version: 1
     }
   ],
