@@ -33,7 +33,8 @@ import {
   getDenomination,
   getFetchCors,
   getOtherParams,
-  makeMutex
+  makeMutex,
+  snooze
 } from '../common/utils'
 import { PolkadotTools } from './PolkadotTools'
 import {
@@ -126,12 +127,10 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async fetchSubscan(
+    baseSubscanUrl: string,
     endpoint: string,
     body: JsonObject
   ): Promise<SubscanResponse> {
-    if (this.networkInfo.subscanBaseUrl == null) {
-      throw new Error('Missing subscan url')
-    }
     const options = {
       method: 'POST',
       headers: {
@@ -140,10 +139,7 @@ export class PolkadotEngine extends CurrencyEngine<
       },
       body: JSON.stringify(body)
     }
-    const response = await this.fetchCors(
-      this.networkInfo.subscanBaseUrl + endpoint,
-      options
-    )
+    const response = await this.fetchCors(baseSubscanUrl + endpoint, options)
     if (!response.ok || response.status === 429) {
       throw new Error(`Subscan ${endpoint} failed with ${response.status}`)
     }
@@ -195,7 +191,7 @@ export class PolkadotEngine extends CurrencyEngine<
     }
   }
 
-  processPolkadotTransaction(tx: SubscanTx): void {
+  processPolkadotTransaction(tx: SubscanTx, isActiveChain: boolean): void {
     const {
       from,
       to,
@@ -232,6 +228,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight,
+      confirmations: !isActiveChain ? 'confirmed' : undefined,
       currencyCode: this.currencyInfo.currencyCode,
       date,
       isSend: nativeAmount.startsWith('-'),
@@ -474,23 +471,55 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    /*
-    HACK: We cannot query transactions if a currency doesn't have a subscanBaseUrl
-    */
-    if (this.networkInfo.subscanBaseUrl == null) {
-      for (const currencyCode of this.enabledTokens) {
-        this.tokenCheckTransactionsStatus[currencyCode] = 1
+    return await queryTxMutex(async () => {
+      // The last subscan url in the array will be the active one where the transactions can be appropriately compared to the network blockheight.
+      // Legacy chains have different heights and their transactions will be marked confirmed
+
+      for (let i = 0; i < this.networkInfo.subscanBaseUrls.length; i++) {
+        const isActiveChain = i === this.networkInfo.subscanBaseUrls.length - 1
+        if (
+          !isActiveChain &&
+          this.otherData.subscanUrlMap[
+            this.networkInfo.subscanBaseUrls[i + 1]
+          ] != null
+        )
+          continue
+
+        const subscanBaseUrl = this.networkInfo.subscanBaseUrls[i]
+
+        if (this.otherData.subscanUrlMap[subscanBaseUrl] == null) {
+          this.otherData.subscanUrlMap[subscanBaseUrl] = {
+            txCount: 0
+          }
+          this.walletLocalDataDirty = true
+        }
+
+        // If the next subscan url has an entry, that means we can skip this one
+        if (
+          this.otherData.subscanUrlMap[
+            this.networkInfo.subscanBaseUrls[i + 1]
+          ] != null
+        ) {
+          continue
+        }
+
+        await this.queryTransactionsInner(subscanBaseUrl, isActiveChain)
       }
+
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
       this.updateOnAddressesChecked()
-      return
-    }
-    return await queryTxMutex(async () => await this.queryTransactionsInner())
+      this.sendTransactionEvents()
+    })
   }
 
-  async queryTransactionsInner(): Promise<void> {
+  async queryTransactionsInner(
+    subscanBaseUrl: string,
+    isActiveChain: boolean
+  ): Promise<void> {
     // Skip pages we don't need
     let page = Math.floor(
-      this.otherData.txCount / this.networkInfo.subscanQueryLimit
+      this.otherData.subscanUrlMap[subscanBaseUrl].txCount /
+        this.networkInfo.subscanQueryLimit
     )
 
     while (true) {
@@ -503,52 +532,55 @@ export class PolkadotEngine extends CurrencyEngine<
       let count = 0
       let transfers = []
       try {
-        const response = await this.fetchSubscan('/v2/scan/transfers', payload)
+        const response = await this.fetchSubscan(
+          subscanBaseUrl,
+          '/v2/scan/transfers',
+          payload
+        )
         const cleanResponse = asTransactions(response.data)
         count = cleanResponse.count
         transfers = cleanResponse.transfers
       } catch (e: any) {
-        if (
-          e instanceof Error &&
-          e.message.includes('Subscan /scan/transfers failed with 429')
-        ) {
-          this.log(e.message)
-          continue
-        } else {
-          throw e
-        }
+        this.log.warn('Subscan error:', String(e.message))
+        // Retry after all errors
+        await snooze(1000)
+        continue
       }
 
       // count is the total number of transactions ever for an account
       // If we've already seen all the transfers we don't need to bother processing or page through older ones
-      if (count === this.otherData.txCount) break
+      if (count === this.otherData.subscanUrlMap[subscanBaseUrl].txCount) break
 
       // Process txs (newest first)
       transfers.forEach(tx => {
         try {
-          this.processPolkadotTransaction(asTransfer(tx))
+          this.processPolkadotTransaction(asTransfer(tx), isActiveChain)
         } catch (e: any) {
           const hash = tx != null && typeof tx.hash === 'string' ? tx.hash : ''
           this.warn(`Ignoring invalid transfer ${hash}`)
         }
       })
 
+      if (count === this.otherData.subscanUrlMap[subscanBaseUrl].txCount) break
+
       // If we haven't reached the end, Update local txCount and progress and then query the next page
-      this.otherData.txCount =
+      this.otherData.subscanUrlMap[subscanBaseUrl].txCount =
         page * this.networkInfo.subscanQueryLimit + transfers.length
 
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        Math.min(1, count === 0 ? 1 : this.otherData.txCount / count)
-      this.updateOnAddressesChecked()
-
-      if (count === this.otherData.txCount) break
+      // Only update txCount and progress for the current chain
+      if (isActiveChain) {
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+          Math.min(
+            1,
+            count === 0
+              ? 1
+              : this.otherData.subscanUrlMap[subscanBaseUrl].txCount / count
+          )
+        this.updateOnAddressesChecked()
+      }
 
       page++
     }
-
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-    this.updateOnAddressesChecked()
-    this.sendTransactionEvents()
   }
 
   // // ****************************************************************************
@@ -568,8 +600,14 @@ export class PolkadotEngine extends CurrencyEngine<
         TRANSACTION_POLL_MILLISECONDS
       )
     }
-    if (this.networkInfo.subscanBaseUrl != null)
+    if (this.networkInfo.subscanBaseUrls.length > 0) {
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
+    } else {
+      for (const currencyCode of this.enabledTokens) {
+        this.tokenCheckTransactionsStatus[currencyCode] = 1
+      }
+      this.updateOnAddressesChecked()
+    }
     await super.startEngine()
   }
 

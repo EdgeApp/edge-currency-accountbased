@@ -11,7 +11,10 @@ import {
 const networkInfo: PolkadotNetworkInfo = {
   rpcNodes: ['wss://polkadot-asset-hub-rpc.polkadot.io'],
   ss58Format: 0,
-  subscanBaseUrl: 'https://polkadot.api.subscan.io/api',
+  subscanBaseUrls: [
+    'https://polkadot.api.subscan.io/api',
+    'https://assethub-polkadot.api.subscan.io/api'
+  ],
   subscanQueryLimit: 100,
   partialFeeOffsetMultiplier: '1',
   lengthFeePerByte: '1000000',

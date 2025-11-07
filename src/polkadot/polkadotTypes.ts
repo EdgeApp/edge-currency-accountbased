@@ -16,7 +16,7 @@ import { asSafeCommonWalletInfo } from '../common/types'
 export interface PolkadotNetworkInfo {
   rpcNodes: string[]
   ss58Format: number
-  subscanBaseUrl: string | undefined
+  subscanBaseUrls: string[]
   subscanQueryLimit: number
   lengthFeePerByte: string
   liberlandScanUrl: string | undefined
@@ -24,6 +24,19 @@ export interface PolkadotNetworkInfo {
 }
 
 export const asPolkadotWalletOtherData = asObject({
+  subscanUrlMap: asMaybe(
+    asObject(
+      asMaybe(
+        asObject({
+          txCount: asMaybe(asNumber, 0)
+        }),
+        () => ({
+          txCount: 0
+        })
+      )
+    ),
+    () => ({})
+  ),
   txCount: asMaybe(asNumber, 0),
   newestTxid: asMaybe(asObject(asString), () => ({}))
 })
