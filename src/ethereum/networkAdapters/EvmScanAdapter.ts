@@ -304,12 +304,12 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     let url: string
     if (this.config.version === 2) {
       // For etherscan.io API - use v2 with chainId
-      url = `${server}/v2/api?chainid=${chainId}${
+      url = `${server}?chainid=${chainId}${
         cmd.startsWith('?') ? cmd.replace('?', '&') : cmd
       }`
     } else {
       // For non-etherscan APIs like blockscout, continue using the old format
-      url = `${server}/api${cmd}`
+      url = `${server}${cmd}`
     }
 
     const response = await this.ethEngine.fetchCors(`${url}${apiKeyParam}`)
