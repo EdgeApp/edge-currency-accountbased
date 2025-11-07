@@ -18,49 +18,17 @@ import {
 
 const builtinTokens: EdgeTokenMap = {
   '511d35c52a3c244e7b8bd92c0c297755fbd89212': {
-    currencyCode: 'AVAX',
-    displayName: 'Avalanche',
-    denominations: [{ name: 'AVAX', multiplier: '1000000000000000000' }],
+    currencyCode: 'WAVAX',
+    displayName: 'Wrapped Avalanche',
+    denominations: [{ name: 'WAVAX', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x511d35c52a3c244e7b8bd92c0c297755fbd89212'
     }
   },
-  '1b6382dbdea11d97f24495c9a90b7c88469134a4': {
-    currencyCode: 'AXLUSDC',
-    displayName: 'Axelar Wrapped USDC',
-    denominations: [{ name: 'AXLUSDC', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '0x1B6382DBDEa11d97f24495C9A90b7c88469134a4'
-    }
-  },
-  d226392c23fb3476274ed6759d4a478db3197d82: {
-    currencyCode: 'AXLUSDT',
-    displayName: 'Axelar Wrapped USDT',
-    denominations: [{ name: 'AXLUSDT', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '0xd226392C23fb3476274ED6759D4a478db3197d82'
-    }
-  },
-  fe7eda5f2c56160d406869a8aa4b2f365d544c7b: {
-    currencyCode: 'AXLETH',
-    displayName: 'Axelar Wrapped ETH',
-    denominations: [{ name: 'AXLETH', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0xfe7eDa5F2c56160d406869A8aA4B2F365d544C7B'
-    }
-  },
-  '448d59b4302ab5d2dadf9611bed9457491926c8e': {
-    currencyCode: 'AXLWBTC',
-    displayName: 'Axelar Wrapped WBTC',
-    denominations: [{ name: 'AXLWBTC', multiplier: '100000000' }],
-    networkLocation: {
-      contractAddress: '0x448d59B4302aB5d2dadf9611bED9457491926c8e'
-    }
-  },
   d67de0e0a0fd7b15dc8348bb9be742f3c5850454: {
-    currencyCode: 'BNB',
-    displayName: 'Binance',
-    denominations: [{ name: 'BNB', multiplier: '1000000000000000000' }],
+    currencyCode: 'WBNB',
+    displayName: 'Wrapped Binance',
+    denominations: [{ name: 'WBNB', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0xd67de0e0a0fd7b15dc8348bb9be742f3c5850454'
     }
@@ -74,51 +42,27 @@ const builtinTokens: EdgeTokenMap = {
     }
   },
   '321162cd933e2be498cd2267a90534a804051b11': {
-    currencyCode: 'BTC',
-    displayName: 'Bitcoin',
-    denominations: [{ name: 'BTC', multiplier: '100000000' }],
+    currencyCode: 'WBTC',
+    displayName: 'Wrapped Bitcoin',
+    denominations: [{ name: 'WBTC', multiplier: '100000000' }],
     networkLocation: {
       contractAddress: '0x321162cd933e2be498cd2267a90534a804051b11'
     }
   },
-  '1e4f97b9f9f913c46f1632781732927b9019c68b': {
-    currencyCode: 'CRV',
-    displayName: 'Curve',
-    denominations: [{ name: 'CRV', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x1e4f97b9f9f913c46f1632781732927b9019c68b'
-    }
-  },
   '8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e': {
     currencyCode: 'DAI',
-    displayName: 'DAI Stablecoin',
+    displayName: 'DAI (Bridged)',
     denominations: [{ name: 'DAI', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e'
     }
   },
   '74b23882a30290451a17c44f4f05243b6b58c76d': {
-    currencyCode: 'ETH',
-    displayName: 'Ethereum',
-    denominations: [{ name: 'ETH', multiplier: '1000000000000000000' }],
+    currencyCode: 'WETH',
+    displayName: 'Wrapped Ethereum',
+    denominations: [{ name: 'WETH', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x74b23882a30290451a17c44f4f05243b6b58c76d'
-    }
-  },
-  e1146b9ac456fcbb60644c36fd3f868a9072fc6e: {
-    currencyCode: 'FBTC',
-    displayName: 'Frapped Bitcoin',
-    denominations: [{ name: 'FBTC', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0xe1146b9ac456fcbb60644c36fd3f868a9072fc6e'
-    }
-  },
-  '658b0c7613e890ee50b8c4bc6a3f41ef411208ad': {
-    currencyCode: 'FETH',
-    displayName: 'Frapped Ethereum',
-    denominations: [{ name: 'FETH', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x658b0c7613e890ee50b8c4bc6a3f41ef411208ad'
     }
   },
   ad84341756bf337f5a0164515b1f6f993d194e1f: {
@@ -129,36 +73,12 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xad84341756bf337f5a0164515b1f6f993d194e1f'
     }
   },
-  '049d68029688eabf473097a2fc38ef61633a3c7a': {
-    currencyCode: 'FUSDT',
-    displayName: 'Frapped Tether',
-    denominations: [{ name: 'FUSDT', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '0x049d68029688eabf473097a2fc38ef61633a3c7a'
-    }
-  },
-  '5f0456f728e2d59028b4f5b8ad8c604100724c6a': {
-    currencyCode: 'L3USD',
-    displayName: 'L3USD',
-    denominations: [{ name: 'L3USD', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x5f0456f728e2d59028b4f5b8ad8c604100724c6a'
-    }
-  },
   bf60e7414ef09026733c1e7de72e7393888c64da: {
     currencyCode: 'LIF3',
     displayName: 'LIF3',
     denominations: [{ name: 'LIF3', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0xbf60e7414ef09026733c1e7de72e7393888c64da'
-    }
-  },
-  b3654dc3d10ea7645f8319668e8f54d2574fbdc8: {
-    currencyCode: 'LINK',
-    displayName: 'Chainlink',
-    denominations: [{ name: 'LINK', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0xb3654dc3d10ea7645f8319668e8f54d2574fbdc8'
     }
   },
   cbe0ca46399af916784cadf5bcc3aed2052d6c45: {
@@ -183,22 +103,6 @@ const builtinTokens: EdgeTokenMap = {
     denominations: [{ name: 'MIM', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x82f0b8b456c1a451378467398982d4834b6829c1'
-    }
-  },
-  '66eed5ff1701e6ed8470dc391f05e27b1d0657eb': {
-    currencyCode: 'MPX',
-    displayName: 'MPX',
-    denominations: [{ name: 'MPX', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x66eEd5FF1701E6ed8470DC391F05e27B1d0657eb'
-    }
-  },
-  '24248cd1747348bdc971a5395f4b3cd7fee94ea0': {
-    currencyCode: 'TBOND',
-    displayName: 'Tomb Bonds',
-    denominations: [{ name: 'TBOND', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x24248CD1747348bDC971a5395f4b3cd7feE94ea0'
     }
   },
   '6c021ae822bea943b2e66552bde1d2696a53fbb7': {
