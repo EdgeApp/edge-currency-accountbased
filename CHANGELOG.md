@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: Correct token names for wrapped assets (Fantom)
+- removed: Remove depegged and untradeable FTM tokens
+
 ## 4.63.0 (2025-11-04)
 
 - added: Decoy address subscriptions for engines that use the change-server.
