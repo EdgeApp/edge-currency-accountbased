@@ -58,7 +58,8 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api-amoy.polygonscan.com/']
+      servers: ['https://api-amoy.polygonscan.com/'],
+      version: 2
     }
   ],
   uriNetworks: ['amoy'],

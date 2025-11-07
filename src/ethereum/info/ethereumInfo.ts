@@ -1173,7 +1173,8 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.etherscan.io']
+      servers: ['https://api.etherscan.io'],
+      version: 2
     },
     {
       type: 'blockbook',
