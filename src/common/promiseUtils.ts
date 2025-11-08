@@ -166,8 +166,19 @@ export async function formatAggregateError<T>(
     if (!(error instanceof Error)) throw error
     if (!Array.isArray(errors)) throw error
 
+    // Build readable messages from possibly non-Error objects (e.g. RPC JSON)
     // eslint-disable-next-line @typescript-eslint/require-array-sort-compare
-    const messages = errors.map(error => String(error)).sort()
+    const messages = errors
+      .map(err => {
+        if (err instanceof Error) return err.message
+        try {
+          const json = JSON.stringify(err)
+          return json === '{}' ? String(err) : json
+        } catch {
+          return String(err)
+        }
+      })
+      .sort()
 
     // Filter duplicate messages:
     let lastMessage = ''
