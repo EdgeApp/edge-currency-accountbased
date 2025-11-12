@@ -150,23 +150,31 @@ export class PiratechainEngine extends CurrencyEngine<
     networkBlockHeight: number
   ): void {
     if (!this.addressesChecked && !this.isSynced()) {
+      const blocksToNetworkHeight = networkBlockHeight - this.birthdayHeight
+      const blocksDownloaded = lastDownloadedHeight - this.birthdayHeight
+
+      // Protect against division by zero
+      if (blocksToNetworkHeight === 0) return
+
+      const downloadProgress = Math.max(
+        Math.min(blocksDownloaded / blocksToNetworkHeight, 1),
+        0
+      )
       // Sync status is split up between downloading and scanning blocks (89.5%),
       // getting balance (0.5%), and querying transactions (10%).
 
-      const balanceProgress = scanProgress * 0.99
-      const txProgress = scanProgress * 0.8
+      const balanceProgress = downloadProgress * 0.99
+      const txProgress = downloadProgress * 0.8
       this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-        balanceProgress / 100
+        balanceProgress
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        txProgress / 100
+        txProgress
 
       const totalProgress = (balanceProgress + txProgress) / 2
 
       if (totalProgress > this.progressRatio) {
         this.progressRatio = totalProgress
-        this.log.warn(
-          `Scan and download progress: ${Math.floor(totalProgress)}%`
-        )
+        this.log.warn(`Scan and download progress: ${totalProgress}%`)
         this.updateOnAddressesChecked()
       }
     }
