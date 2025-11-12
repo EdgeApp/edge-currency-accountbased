@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.63.1 (2025-11-12)
+
 - changed: (BSC) Lower minimum gas price to 0.05 gwei
 - changed: Report Piratechain engine syncRatio as download progress since birthday height
 - fixed: Zano `parseUri` currencyCode validation
