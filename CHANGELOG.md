@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: (BSC) Lower minimum gas price to 0.05 gwei
 - fixed: Zano `parseUri` currencyCode validation
 
 ## 4.63.0 (2025-11-04)

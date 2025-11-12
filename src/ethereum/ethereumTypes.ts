@@ -117,6 +117,7 @@ export interface EthereumNetworkInfo {
 const asNetworkAdaptorConfigType = asValue(
   'amberdata-rpc',
   'blockbook',
+  'blockbook-ws',
   'blockchair',
   'blockcypher',
   'evmscan',

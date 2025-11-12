@@ -131,7 +131,7 @@ const networkFees: EthereumFees = {
       standardFeeLowAmount: '100000000000000000',
       standardFeeHighAmount: '10000000000000000000',
       highFee: '40000000001',
-      minGasPrice: '1000000000'
+      minGasPrice: '50000000'
     },
     minPriorityFee: undefined
   }
