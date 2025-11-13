@@ -246,6 +246,11 @@ export class ZcashEngine extends CurrencyEngine<
       toAddress,
       memos
     } = tx
+    // Debug: log memos received from SDK on receiver side
+    this.warn(
+      `[ZEC rx] sdk memos tx=${rawTransactionId} count=${memos.length}` +
+        ` first=${memos.length > 0 ? memos[0] : ''}`
+    )
     let netNativeAmount = value
     const networkFee = fee ?? this.networkInfo.defaultNetworkFee
     if (toAddress != null) {
@@ -260,6 +265,10 @@ export class ZcashEngine extends CurrencyEngine<
         type: 'text',
         value: text
       }))
+    this.warn(
+      `[ZEC rx] edge memos tx=${rawTransactionId} count=${edgeMemos.length}` +
+        ` first=${edgeMemos[0]?.value ?? ''}`
+    )
 
     // Hack for missing memos on android
     if (
@@ -457,13 +466,19 @@ export class ZcashEngine extends CurrencyEngine<
 
     const synchronizer = await this.synchronizerPromise
     // If a ZIP-321 Payment URI is provided, use that flow instead:
-    const zip321Uri: string | undefined =
-      (edgeSpendInfo.otherParams as any)?.zip321Uri
+    const zip321Uri: string | undefined = (edgeSpendInfo.otherParams as any)
+      ?.zip321Uri
+    // Debug logging for ZIP-321 propose path
+    this.log.warn(
+      `[ZEC propose] using zip321Uri=${zip321Uri != null ? 'true' : 'false'}`
+    )
+    if (zip321Uri != null) {
+      this.log.warn(`[ZEC propose] zip321Uri ${zip321Uri}`)
+    }
+
     const proposal =
-      zip321Uri != null && this.synchronizer?.proposeFulfillingPaymentURI != null
-        ? await (this.synchronizer as any).proposeFulfillingPaymentURI(
-            zip321Uri
-          )
+      zip321Uri != null && synchronizer?.proposeFulfillingPaymentURI != null
+        ? await synchronizer.proposeFulfillingPaymentURI(zip321Uri)
         : await synchronizer.proposeTransfer({
             toAddress: publicAddress,
             zatoshi: nativeAmount,
@@ -471,6 +486,9 @@ export class ZcashEngine extends CurrencyEngine<
           })
 
     const networkFee = proposal.totalFee
+    this.log.warn(
+      '[ZEC propose] proposal result ' + JSON.stringify(proposal, null, 2)
+    )
 
     const totalTxAmount = add(nativeAmount, networkFee)
 

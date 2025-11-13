@@ -30,7 +30,7 @@ export interface ZcashSynchronizer {
   createTransfer: (opts: CreateTransferOpts) => Promise<string | SpendFailure>
   deriveUnifiedAddress: () => Promise<Addresses>
   proposeTransfer: (opts: ProposeTransferOpts) => Promise<ProposalSuccess>
-  proposeFulfillingPaymentURI?: (paymentUri: string) => Promise<ProposalSuccess>
+  proposeFulfillingPaymentURI: (paymentUri: string) => Promise<ProposalSuccess>
   rescan: () => Promise<void>
   shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<Transaction>
   stop: () => Promise<string>
@@ -85,10 +85,7 @@ export function makeZcashIo(): ZcashIo {
           return await realSynchronizer.proposeTransfer(proposeTransferOpts)
         },
         proposeFulfillingPaymentURI: async paymentUri => {
-          // @ts-expect-error new method on native module
-          return await (realSynchronizer as any).proposeFulfillingPaymentURI(
-            paymentUri
-          )
+          return await realSynchronizer.proposeFulfillingPaymentURI(paymentUri)
         },
         createTransfer: async transferOpts => {
           return await realSynchronizer.createTransfer(transferOpts)
