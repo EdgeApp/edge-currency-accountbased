@@ -104,6 +104,9 @@ export interface EthereumNetworkInfo {
     nodeInterfaceAddress: string
   }
   disableEvmScanInternal?: boolean
+  // Engine behavior flags (chain-specific quirks)
+  useRpcBalanceForMaxSpendNative?: boolean
+  nativeSendPrechargeWei?: string
   ercTokenStandard: string
   evmGasStationUrl: string | null
   hdPathCoinType: number

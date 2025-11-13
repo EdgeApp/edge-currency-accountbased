@@ -67,6 +67,9 @@ const networkInfo: EthereumNetworkInfo = {
   },
   optimismRollup: true,
   supportsEIP1559: true,
+  // Chain-specific engine behavior flags:
+  useRpcBalanceForMaxSpendNative: true,
+  nativeSendPrechargeWei: '16000000000000',
   hdPathCoinType: 60,
   pluginMnemonicKeyName: 'bobevmMnemonic',
   pluginRegularKeyName: 'bobevmKey',

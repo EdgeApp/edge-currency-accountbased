@@ -19,6 +19,7 @@
 ## 4.62.0 (2025-10-31)
 
 - added: evmChainId values for all EVM chains
+- fixed: Max spend amount calculations for L2 chains
 
 ## 4.61.4 (2025-10-14)
 

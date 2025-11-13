@@ -84,6 +84,7 @@ const networkInfo: EthereumNetworkInfo = {
     name: 'Base'
   },
   optimismRollup: true,
+  supportsEIP1559: true,
   hdPathCoinType: 60,
   pluginMnemonicKeyName: 'baseMnemonic',
   pluginRegularKeyName: 'baseKey',
