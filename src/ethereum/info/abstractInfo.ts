@@ -47,7 +47,7 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://api.mainnet.abs.xyz	']
+      servers: ['https://api.mainnet.abs.xyz']
     },
     {
       type: 'evmscan',
