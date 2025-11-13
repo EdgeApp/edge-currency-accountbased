@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.63.2 (2025-11-13)
+
+- fixed: Max spend amount calculations for L2 chains
+
 ## 4.63.1 (2025-11-12)
 
 - changed: (BSC) Lower minimum gas price to 0.05 gwei
@@ -19,7 +23,6 @@
 ## 4.62.0 (2025-10-31)
 
 - added: evmChainId values for all EVM chains
-- fixed: Max spend amount calculations for L2 chains
 
 ## 4.61.4 (2025-10-14)
 
