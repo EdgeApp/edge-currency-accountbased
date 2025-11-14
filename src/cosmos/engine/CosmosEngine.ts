@@ -23,7 +23,7 @@ import {
 } from '@cosmjs/stargate'
 import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
-import { add, ceil, gt, lt, mul, sub } from 'biggystring'
+import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
 import {
   asArray,
   asEither,
@@ -1083,6 +1083,93 @@ export class CosmosEngine extends CurrencyEngine<
     }
 
     throw new Error('Invalid transfer')
+  }
+
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    const { memos = [], tokenId } = spendInfo
+    const { currencyCode } =
+      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
+    const balance = this.getBalance({
+      tokenId
+    })
+
+    if (spendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+
+    const { publicAddress } = spendInfo.spendTargets[0]
+    const memo: string | undefined = memos[0]?.value
+
+    if (publicAddress == null || currencyCode == null) {
+      throw new Error('Error: need recipient address and/or currencyCode')
+    }
+
+    // For Cosmos, we need to estimate the fee for the transaction
+    // Since fee depends on transaction size/content, we use an iterative approach
+    const getMax = async (min: string, max: string): Promise<string> => {
+      const diff = sub(max, min)
+      if (lte(diff, '1')) {
+        return min
+      }
+      const mid = add(min, div(diff, '2'))
+
+      try {
+        // Create a test transaction to estimate fee
+        const denom =
+          tokenId != null
+            ? this.allTokensMap[tokenId].networkLocation?.contractAddress
+            : this.networkInfo.nativeDenom
+        if (denom == null) {
+          throw new Error('Unknown denom')
+        }
+
+        let msg: EncodeObject
+        if (
+          // check if it's an ibc transfer
+          this.networkInfo.bech32AddressPrefix !==
+          fromBech32(publicAddress).prefix
+        ) {
+          const channelInfo = getIbcChannelAndPort(
+            this.tools.chainData.chainName,
+            publicAddress
+          )
+          await this.validateTransfer(publicAddress, tokenId, channelInfo)
+
+          const { channel, port } = channelInfo
+          msg = this.tools.methods.ibcTransfer({
+            channel,
+            port,
+            memo,
+            amount: coin(mid, denom),
+            fromAddress: this.walletInfo.keys.bech32Address,
+            toAddress: publicAddress
+          })
+        } else {
+          msg = this.tools.methods.transfer({
+            amount: [coin(mid, denom)],
+            fromAddress: this.walletInfo.keys.bech32Address,
+            toAddress: publicAddress
+          })
+        }
+
+        const { networkFee } = await this.calculateFee({
+          messages: [msg],
+          memo
+        })
+
+        const totalCost = add(mid, networkFee)
+        if (gt(totalCost, balance)) {
+          return await getMax(min, mid)
+        } else {
+          return await getMax(mid, max)
+        }
+      } catch (e) {
+        // If fee calculation fails, reduce the amount
+        return await getMax(min, mid)
+      }
+    }
+
+    return await getMax('0', balance)
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
