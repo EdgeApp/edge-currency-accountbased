@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.64.0 (2025-11-14)
+
 - changed: Upgrade @polkadot/api to latest to support Asset Hub migration
 
 ## 4.63.2 (2025-11-13)
