@@ -97,7 +97,7 @@
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
     "@metaplex-foundation/umi": "^1.2.0",
     "@mysten/sui": "^1.18.0",
-    "@polkadot/api": "^12.1.1",
+    "@polkadot/api": "^16.5.1",
     "@solana/spl-token": "^0.4.6",
     "@solana/web3.js": "^1.91.8",
     "@taquito/http-utils": "^23.0.2",

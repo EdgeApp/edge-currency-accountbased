@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade @polkadot/api to latest to support Asset Hub migration
+
 ## 4.63.2 (2025-11-13)
 
 - fixed: Max spend amount calculations for L2 chains
