@@ -1,5 +1,4 @@
 import {
-  asArray,
   asBoolean,
   asCodec,
   asMaybe,
@@ -45,7 +44,6 @@ export type CachedEdgeAddresses = ReturnType<typeof asCachedEdgeAddresses>
 
 export const asZcashWalletOtherData = asObject({
   cachedAddresses: asMaybe(asCachedEdgeAddresses),
-  missingAndroidShieldedMemosHack: asMaybe(asArray(asString), () => []),
   isSdkInitializedOnDisk: asMaybe(asBoolean, false)
 })
 

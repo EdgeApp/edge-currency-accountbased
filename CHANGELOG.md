@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: Upgrade react-native-zcash to v0.10.0
 - changed: Deprecated Grove RPC endpoints updated to Pokt equivalents
 
 ## 4.64.0 (2025-11-14)
