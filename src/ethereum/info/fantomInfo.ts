@@ -288,7 +288,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://fantom-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
+        'https://fantom.api.pocket.network',
         'https://polished-empty-cloud.fantom.quiknode.pro/{{quiknodeApiKey}}/',
         'https://rpc.ankr.com/fantom',
         'https://rpc.ftm.tools',

@@ -189,7 +189,7 @@ const networkInfo: EthereumNetworkInfo = {
         'https://rpc-mainnet.maticvigil.com',
         'https://matic-mainnet.chainstacklabs.com',
         'https://rpc.ankr.com/polygon',
-        'https://poly-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
+        'https://poly.api.pocket.network',
         'https://rpc-mainnet.matic.quiknode.pro/{{quiknodeApiKey}}/',
         'https://lb.drpc.org/ogrpc?network=polygon&dkey={{drpcApiKey}}'
       ],

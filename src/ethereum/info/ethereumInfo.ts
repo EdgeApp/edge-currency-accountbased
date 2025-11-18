@@ -1155,7 +1155,7 @@ const networkInfo: EthereumNetworkInfo = {
         'https://eth-mainnet.alchemyapi.io/v2/{{alchemyApiKey}}',
         'https://mainnet.infura.io/v3/{{infuraProjectId}}',
         'https://rpc.ankr.com/eth',
-        'https://eth-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
+        'https://eth.api.pocket.network',
         'https://cloudflare-eth.com',
         'https://lb.drpc.org/ogrpc?network=ethereum&dkey={{drpcApiKey}}',
         'https://ethereum-mainnet.gateway.tatum.io',
