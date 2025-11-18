@@ -52,7 +52,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.abscan.org/v2/api'],
+      servers: ['https://api.etherscan.io/v2/api'],
       version: 2
     }
   ],

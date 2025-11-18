@@ -71,7 +71,6 @@ const networkInfo: EthereumNetworkInfo = {
       servers: [
         'https://forno.celo.org',
         'https://rpc.ankr.com/celo',
-        'https://celo-mainnet-rpc.allthatnode.com',
         'https://lb.drpc.org/ogrpc?network=celo&dkey={{drpcApiKey}}'
       ]
     },

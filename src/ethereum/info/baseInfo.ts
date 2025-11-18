@@ -62,7 +62,6 @@ const networkInfo: EthereumNetworkInfo = {
       type: 'rpc',
       servers: [
         'https://base-mainnet.public.blastapi.io',
-        'https://rpc.ankr.com/base',
         'https://lb.drpc.org/ogrpc?network=base&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0x3ba5A41eA17fd4950a641a057dC0bEb8E8ff1521'
@@ -70,10 +69,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: [
-        'https://api.etherscan.io/v2/api',
-        'https://api.basescan.org/v2/api'
-      ],
+      servers: ['https://api.etherscan.io/v2/api'],
       version: 2
     },
     {

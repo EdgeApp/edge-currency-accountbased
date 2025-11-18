@@ -145,10 +145,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: [
-        'https://api.etherscan.io/v2/api',
-        'https://api.sonicscan.org/v2/api'
-      ],
+      servers: ['https://api.etherscan.io/v2/api'],
       version: 2
     }
   ],

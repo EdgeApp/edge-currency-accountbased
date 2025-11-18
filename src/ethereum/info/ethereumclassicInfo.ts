@@ -84,12 +84,7 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: [
-        'https://etc.rivet.link',
-        'https://geth-de.etc-network.info',
-        'https://geth-at.etc-network.info',
-        'https://etc.etcdesktop.com'
-      ],
+      servers: ['https://etc.rivet.link', 'https://etc.etcdesktop.com'],
       ethBalCheckerContract: '0xfC701A6b65e1BcF59fb3BDbbe5cb41f35FC7E009'
     },
     {

@@ -125,8 +125,7 @@ const networkInfo: EthereumNetworkInfo = {
       servers: [
         'https://rpc.hyperliquid.xyz/evm',
         'https://rpc.hypurrscan.io',
-        'https://hyperliquid-json-rpc.stakely.io',
-        'https://hyperliquid-json-rpc.stakely.io'
+        'https://rpc.hyperlend.finance'
       ]
     },
     {
