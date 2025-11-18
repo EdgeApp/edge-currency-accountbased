@@ -144,7 +144,7 @@ const networkInfo: EthereumNetworkInfo = {
         'https://arb1.arbitrum.io/rpc',
         'https://arbitrum-one.public.blastapi.io',
         'https://rpc.ankr.com/arbitrum',
-        'https://arbitrum-one.rpc.grove.city/v1/lb/{{poktPortalApiKey}}',
+        'https://arb-one.api.pocket.network',
         'https://lb.drpc.org/ogrpc?network=arbitrum&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0x151E24A486D7258dd7C33Fb67E4bB01919B7B32c'
