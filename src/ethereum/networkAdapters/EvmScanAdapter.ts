@@ -325,7 +325,9 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       'status' in cleanData &&
       cleanData.status === '0' &&
       typeof cleanData.result === 'string' &&
-      cleanData.result.match(/Max calls|rate limit/) != null
+      (cleanData.result.match(/Max calls|rate limit/) != null ||
+        cleanData.result.match(/Free API access is temporarily unavailable/) !=
+          null)
     ) {
       throw new RateLimitError(`fetchGetEtherscan rate limit for ${server}`)
     }
