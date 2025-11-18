@@ -3196,7 +3196,7 @@ big.js@^5.2.2:
   resolved "https://registry.yarnpkg.com/big.js/-/big.js-5.2.2.tgz#65f0af382f578bcdc742bd9c281e9cb2d7768328"
   integrity sha512-vyL2OymJxmarO8gxMr0mhChsO9QGwhynfuu4+MHTAW6czfq9humCB7rKpUjDd9YUiDPU4mzpyupFSvOClAwbmQ==
 
-biggystring@^4.1.3, biggystring@^4.2.3:
+biggystring@^4.2.3:
   version "4.2.3"
   resolved "https://registry.yarnpkg.com/biggystring/-/biggystring-4.2.3.tgz#30486cf09657038b332e44717fe54a78ed043cf8"
   integrity sha512-VsbLBLrL5RJDjEb5j5UEs9zrLsW332BFxVMy+DPF7K+UWOHXGydG6amrl1eDE88s+DVOoal05JUy1G9BT/YSww==
@@ -7806,12 +7806,12 @@ react-native-zano@0.2.3:
   dependencies:
     cleaners "^0.3.17"
 
-react-native-zcash@0.9.0:
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/react-native-zcash/-/react-native-zcash-0.9.0.tgz#893a94b88967e4aa18bf1228f9b3e68f5204a857"
-  integrity sha512-DBLsOQ+vOTTdr6uFx08+gAeytCk3E8fm2Xo7BnC79EHHGC4yyNnOFyBS2TwV4/XukwO4gNEXfRH4z/bFM50AyA==
+react-native-zcash@0.10.0:
+  version "0.10.0"
+  resolved "https://registry.yarnpkg.com/react-native-zcash/-/react-native-zcash-0.10.0.tgz#6a4548c62275dc53d1f023521825ea025694663e"
+  integrity sha512-uyarq2Ekw3y9S5hyMc/bLDuej1Q4jPRzk9VlGep5x5YfUWWIWR2edr7cNX/ysXs+86nSeyxzulG66djmorSnXQ==
   dependencies:
-    biggystring "^4.1.3"
+    biggystring "^4.2.3"
     rfc4648 "^1.3.0"
 
 read-pkg@^3.0.0:

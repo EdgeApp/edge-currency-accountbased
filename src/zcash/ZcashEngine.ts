@@ -5,6 +5,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeEnginePrivateKeyOptions,
   EdgeMemo,
+  EdgeMetadata,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -32,8 +33,6 @@ import {
   ZcashNetworkInfo,
   ZcashWalletOtherData
 } from './zcashTypes'
-
-const AUTOSHIELD_MEMO = 'autoshield'
 
 export class ZcashEngine extends CurrencyEngine<
   ZcashTools,
@@ -244,6 +243,8 @@ export class ZcashEngine extends CurrencyEngine<
       value,
       fee,
       toAddress,
+      isShielding,
+      isExpired,
       memos
     } = tx
     let netNativeAmount = value
@@ -261,23 +262,16 @@ export class ZcashEngine extends CurrencyEngine<
         value: text
       }))
 
-    // Hack for missing memos on android
-    if (
-      this.otherData.missingAndroidShieldedMemosHack.includes(
-        rawTransactionId
-      ) &&
-      edgeMemos.length === 0
-    ) {
-      edgeMemos.push({
-        memoName: 'memo',
-        type: 'text',
-        value: AUTOSHIELD_MEMO
-      })
+    // Special case for shielding txs
+    let metadata: EdgeMetadata | undefined
+    if (isShielding) {
+      metadata = { notes: 'Shielding' }
+      netNativeAmount = `-${networkFee}`
     }
 
-    // Special case for autoshield txs
-    if (edgeMemos[0]?.value === AUTOSHIELD_MEMO) {
-      netNativeAmount = `-${networkFee}`
+    let confirmations: EdgeTransaction['confirmations'] | undefined
+    if (isExpired) {
+      confirmations = 'failed'
     }
 
     // The only pending transactions emitted from the sdk are the ones we create and it's possible
@@ -290,10 +284,12 @@ export class ZcashEngine extends CurrencyEngine<
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: minedHeight,
+      confirmations,
       currencyCode: this.currencyInfo.currencyCode,
       date,
       isSend: netNativeAmount.startsWith('-'),
       memos: edgeMemos,
+      metadata,
       nativeAmount: netNativeAmount,
       networkFee,
       networkFees: [],
@@ -352,22 +348,12 @@ export class ZcashEngine extends CurrencyEngine<
         this.synchronizer
           ?.shieldFunds({
             seed: zcashPrivateKeys.mnemonic,
-            memo: AUTOSHIELD_MEMO,
+            memo: '',
             threshold: this.autoshielding.threshold
           })
-          .then(tx => {
-            this.log.warn('Autoshield success', tx.rawTransactionId)
-            tx.blockTimeInSeconds = Date.now() / 1000
-            this.autoshielding.txid = tx.rawTransactionId
-
-            // The Android SDK can't find shielding transactions memos so we can save it locally for a slightly nicer UX
-            this.otherData.missingAndroidShieldedMemosHack.push(
-              tx.rawTransactionId
-            )
-            this.walletLocalDataDirty = true
-
-            this.processTransaction(tx)
-            this.sendTransactionEvents()
+          .then(txid => {
+            this.log.warn('Autoshield success', txid)
+            this.autoshielding.txid = txid
           })
           .catch(e => {
             this.autoshielding.createAutoshieldTx = false

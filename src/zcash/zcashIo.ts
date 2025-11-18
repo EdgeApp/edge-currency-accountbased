@@ -11,7 +11,6 @@ import type {
   StatusEvent,
   Synchronizer,
   Tools,
-  Transaction,
   TransactionEvent,
   UpdateEvent
 } from 'react-native-zcash'
@@ -31,7 +30,7 @@ export interface ZcashSynchronizer {
   deriveUnifiedAddress: () => Promise<Addresses>
   proposeTransfer: (opts: ProposeTransferOpts) => Promise<ProposalSuccess>
   rescan: () => Promise<void>
-  shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<Transaction>
+  shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<string>
   stop: () => Promise<string>
 }
 
