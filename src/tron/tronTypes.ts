@@ -12,7 +12,7 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import type { JsonObject } from 'edge-core-js/types'
+import type { EdgeTokenId, JsonObject } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -86,9 +86,8 @@ export type TronWalletOtherData = ReturnType<typeof asTronWalletOtherData>
 
 export interface TronTransferParams {
   toAddress: string
-  currencyCode: string
+  tokenId: EdgeTokenId
   nativeAmount: string
-  contractAddress?: string
   data?: string
   note?: string
 }

@@ -1178,12 +1178,12 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   }
 
   async makeTransferJson(params: TronTransferParams): Promise<TxBuilderParams> {
-    const { currencyCode, toAddress, nativeAmount, data, note } = params
+    const { tokenId, toAddress, nativeAmount, data, note } = params
 
     let feeLimit: number | undefined
     let contractJson: any
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       contractJson = {
         parameter: {
           value: {
@@ -1195,18 +1195,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         type: 'TransferContract'
       }
     } else {
-      const metaToken = this.allTokens.find(
-        token => token.currencyCode === currencyCode
-      )
-      if (metaToken?.contractAddress == null) {
-        throw new Error(`txBuilder unknown currency code ${currencyCode}`)
-      }
-
       contractJson = {
         parameter: {
           value: {
             owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
-            contract_address: base58ToHexAddress(metaToken.contractAddress),
+            contract_address: base58ToHexAddress(tokenId),
             data,
             call_value: 0
           }
@@ -1451,8 +1444,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
     const { memos = [], tokenId } = spendInfo
-    const { currencyCode } =
-      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
     const balance = this.getBalance({
       tokenId
     })
@@ -1464,11 +1455,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const { publicAddress } = spendInfo.spendTargets[0]
     const note = memos[0]?.type === 'text' ? memos[0].value : undefined
 
-    if (publicAddress == null || currencyCode == null) {
+    if (publicAddress == null) {
       throw new Error('Error: need recipient address and/or currencyCode')
     }
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       // For mainnet currency, the fee can scale with the amount sent so we should find the
       // appropriate amount by recursively calling calcMiningFee. This is adapted from the
       // same function in edge-core-js.
@@ -1482,7 +1473,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
         const txParams = {
           toAddress: publicAddress,
-          currencyCode: this.currencyInfo.currencyCode,
+          tokenId: null,
           nativeAmount: mid
         }
         const { contractJson } = await this.makeTransferJson(txParams)
@@ -1573,10 +1564,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const note = memos[0]?.type === 'text' ? memos[0].value : undefined
 
     const txTransferParams: TronTransferParams = {
-      currencyCode,
+      tokenId,
       toAddress: publicAddress,
       nativeAmount,
-      contractAddress: metaToken?.contractAddress,
       data,
       note
     }
@@ -1692,10 +1682,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     // Update local caches
     const { toAddress, contractAddress } =
       getOtherParams<TxBuilderParams>(edgeTransaction)
-    if (
-      edgeTransaction.currencyCode === this.currencyInfo.currencyCode &&
-      toAddress != null
-    ) {
+    if (edgeTransaction.tokenId == null && toAddress != null) {
       this.accountExistsCache[toAddress] = true
     }
     if (contractAddress != null) {
