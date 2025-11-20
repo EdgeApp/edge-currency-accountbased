@@ -1534,7 +1534,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     )
     const { memos = [], tokenId } = edgeSpendInfo
 
-    const isTokenTransfer = currencyCode !== this.currencyInfo.currencyCode
+    const isTokenTransfer = tokenId != null
 
     // Tron can only have one output
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -1549,12 +1549,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
     const data: string | undefined =
       otherParams?.data ??
-      (currencyCode !== this.currencyInfo.currencyCode
+      (isTokenTransfer
         ? encodeTRC20Transfer(publicAddress, nativeAmount)
         : undefined)
-    const metaToken = isTokenTransfer
-      ? this.allTokens.find(token => token.currencyCode === currencyCode)
-      : undefined
 
     const note = memos[0]?.type === 'text' ? memos[0].value : undefined
 
@@ -1575,8 +1572,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     })
 
     const tokenOpts =
-      metaToken?.contractAddress != null && data != null
-        ? { contractAddress: metaToken?.contractAddress, data }
+      isTokenTransfer && data != null
+        ? { contractAddress: tokenId, data }
         : undefined
 
     const totalFeeSUN = await this.calcTxFee({

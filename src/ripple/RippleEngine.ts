@@ -833,8 +833,6 @@ export class XrpEngine extends CurrencyEngine<
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 
-    const parentCurrencyCode = this.currencyInfo.currencyCode
-
     // Activation Transaction:
     const activateTokenParams = asMaybeActivateTokenParams(
       edgeSpendInfo.otherParams
@@ -901,7 +899,7 @@ export class XrpEngine extends CurrencyEngine<
     // Make sure amount doesn't drop the balance below the reserve amount otherwise the
     // transaction is invalid. It is not necessary to consider the fee in this
     // calculation because the transaction fee can be taken out of the reserve balance.
-    if (currencyCode === parentCurrencyCode) {
+    if (tokenId == null) {
       networkFee = this.otherData.recommendedFee
 
       const totalReserve = this.getTotalReserve()
@@ -924,7 +922,7 @@ export class XrpEngine extends CurrencyEngine<
     }
 
     let payment: PaymentJson
-    if (currencyCode === parentCurrencyCode) {
+    if (tokenId == null) {
       payment = {
         Amount: nativeAmount,
         TransactionType: 'Payment',

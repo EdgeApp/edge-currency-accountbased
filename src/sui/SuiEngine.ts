@@ -89,11 +89,10 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         }
 
         // Create the EdgeTransaction
-        const currencyCode = this.currencyInfo.currencyCode
         const edgeTx: EdgeTransaction = {
           blockHeight: 0,
           date: 0,
-          currencyCode,
+          currencyCode: this.currencyInfo.currencyCode,
           isSend: true,
           memos: metadata?.memos ?? [],
           nativeAmount,
@@ -265,18 +264,19 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
 
     for (const [coinType, bal] of coinTypeMap) {
       let tokenId = null
-      let currencyCode = this.currencyInfo.currencyCode
       let nativeAmount = bal
       if (coinType !== SUI_TYPE_ARG) {
         tokenId = this.tools.edgeTokenIdFromCoinType(coinType)
         const edgeToken = this.allTokensMap[tokenId]
         if (edgeToken == null) continue
-        currencyCode = this.allTokensMap[tokenId].currencyCode
       }
 
       if (tokenId == null && direction === 'from') {
         nativeAmount = sub(nativeAmount, networkFee)
       }
+
+      const currencyCode = this.getCurrencyCode(tokenId)
+      if (currencyCode == null) continue
 
       const edgeTx: EdgeTransaction = {
         txid: tx.digest,
