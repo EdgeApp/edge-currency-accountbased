@@ -56,7 +56,6 @@ import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
 import { MakeTxParams } from '../common/types'
 import { utf8 } from '../common/utf8'
 import {
@@ -932,14 +931,6 @@ export class XrpEngine extends CurrencyEngine<
       }
       nativeAmount = `-${add(nativeAmount, networkFee)}`
     } else {
-      const tokenId = getTokenIdFromCurrencyCode(
-        currencyCode,
-        this.currencyInfo.currencyCode,
-        this.allTokensMap
-      )
-      if (tokenId == null) {
-        throw new Error('Error: Token not supported')
-      }
       const edgeToken = this.allTokensMap[tokenId]
       const {
         networkLocation,
