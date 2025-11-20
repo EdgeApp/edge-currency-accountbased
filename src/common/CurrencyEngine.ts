@@ -42,7 +42,6 @@ import {
 } from './types'
 import {
   cleanTxLogs,
-  getDenomination,
   matchJson,
   normalizeAddress,
   safeErrorMessage
@@ -248,6 +247,37 @@ export class CurrencyEngine<
         networkFee,
         parentNetworkFee
       }
+    }
+  }
+
+  getCurrencyCode(tokenId: null): string
+  getCurrencyCode(tokenId: EdgeTokenId): string | undefined
+  getCurrencyCode(tokenId: EdgeTokenId): string | undefined {
+    if (tokenId == null) {
+      return this.currencyInfo.currencyCode
+    } else {
+      return this.allTokensMap[tokenId]?.currencyCode
+    }
+  }
+
+  getDenomination(tokenId: null): EdgeDenomination
+  getDenomination(tokenId: EdgeTokenId): EdgeDenomination | undefined
+  getDenomination(tokenId: EdgeTokenId): EdgeDenomination | undefined {
+    if (tokenId == null) {
+      const mainnetDenom = this.currencyInfo.denominations.find(
+        d => d.name === this.currencyInfo.currencyCode
+      )
+      if (mainnetDenom == null) {
+        throw new Error(
+          `Improbable case where we cannot find the mainnet denom`
+        )
+      }
+      return mainnetDenom
+    } else {
+      const tokenDenom = this.allTokensMap[tokenId]?.denominations?.find(
+        d => d.name === this.allTokensMap[tokenId]?.currencyCode
+      )
+      return tokenDenom
     }
   }
 
@@ -1021,8 +1051,8 @@ export class CurrencyEngine<
       throw new Error('Error: Token not enabled')
     }
 
-    const { currencyCode } =
-      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
+    const currencyCode = this.getCurrencyCode(tokenId)
+    if (currencyCode == null) throw new Error('Unknown tokenId')
 
     const nativeBalance = this.getBalance({ tokenId })
 
@@ -1043,11 +1073,7 @@ export class CurrencyEngine<
       }
     }
 
-    const denom = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
+    const denom = this.getDenomination(tokenId)
     if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')
     }
@@ -1064,10 +1090,7 @@ export class CurrencyEngine<
 
     const balance = await getBalance(recipient)
     if (lt(add(sendAmount, balance), this.minimumAddressBalance)) {
-      const denom = this.currencyInfo.denominations.find(
-        denom => denom.name === this.currencyInfo.currencyCode
-      )
-      if (denom == null) throw new Error('Unknown denom')
+      const denom = this.getDenomination(null)
 
       const exchangeDenomString = div(
         this.minimumAddressBalance,

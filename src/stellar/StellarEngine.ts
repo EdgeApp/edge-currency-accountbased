@@ -22,12 +22,7 @@ import {
   formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
-import {
-  cleanTxLogs,
-  getDenomination,
-  getFetchCors,
-  getOtherParams
-} from '../common/utils'
+import { cleanTxLogs, getFetchCors, getOtherParams } from '../common/utils'
 import { StellarTools } from './StellarTools'
 import {
   asFeeStats,
@@ -99,11 +94,7 @@ export class StellarEngine extends CurrencyEngine<
       )
       if (balanceObj == null) return '0'
 
-      const denom = getDenomination(
-        this.currencyInfo.currencyCode,
-        this.currencyInfo,
-        this.allTokensMap
-      )
+      const denom = this.getDenomination(null)
       if (denom == null) throw new Error('Unknown denom')
 
       return mul(balanceObj.balance, denom.multiplier)
@@ -200,40 +191,28 @@ export class StellarEngine extends CurrencyEngine<
   }
 
   async processTransaction(tx: StellarOperation): Promise<string> {
+    if (tx.asset_type !== 'native') {
+      return tx.paging_token
+    }
+
     const ourReceiveAddresses: string[] = []
 
-    let currencyCode = ''
     let exchangeAmount = ''
     let fromAddress = ''
-    let toAddress, nativeAmount, networkFee
+    let toAddress, networkFee
     if (tx.type === 'create_account') {
       fromAddress = tx.source_account
       toAddress = tx.account
       exchangeAmount = tx.starting_balance
-      currencyCode = this.currencyInfo.currencyCode
     } else if (tx.type === 'payment') {
       fromAddress = tx.from
       toAddress = tx.to
       exchangeAmount = tx.amount
-      if (tx.asset_type === 'native') {
-        currencyCode = this.currencyInfo.currencyCode
-      } else {
-        currencyCode = tx.asset_type
-      }
     }
 
     const date: number = Date.parse(tx.created_at) / 1000
-    const denom = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
-    if (denom != null && denom.multiplier) {
-      nativeAmount = mul(exchangeAmount, denom.multiplier)
-    } else {
-      throw new Error('ErrorDenomNotFound')
-    }
+    const denom = this.getDenomination(null)
+    let nativeAmount = mul(exchangeAmount, denom.multiplier)
 
     let rawTx: StellarTransaction & {
       memo_type?: string
@@ -320,7 +299,7 @@ export class StellarEngine extends CurrencyEngine<
     }
     const edgeTransaction: EdgeTransaction = {
       blockHeight: rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0, // API shows no ledger number ??
-      currencyCode,
+      currencyCode: this.currencyInfo.currencyCode,
       date,
       isSend: nativeAmount.startsWith('-'),
       memos: edgeMemos,
@@ -436,24 +415,15 @@ export class StellarEngine extends CurrencyEngine<
         this.otherData.accountSequence = account.sequence
       }
       for (const bal of account.balances) {
-        let currencyCode
         if (bal.asset_type === 'native') {
-          currencyCode = this.currencyInfo.currencyCode
           this.log('--Got balances--')
         } else {
           // No token support yet
           continue
         }
-        const denom = getDenomination(
-          currencyCode,
-          this.currencyInfo,
-          this.allTokensMap
-        )
-        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
-        if (denom != null && denom.multiplier) {
-          const nativeAmount = mul(bal.balance, denom.multiplier)
-          this.updateBalance(null, nativeAmount)
-        }
+        const denom = this.getDenomination(null)
+        const nativeAmount = mul(bal.balance, denom.multiplier)
+        this.updateBalance(null, nativeAmount)
       }
     } catch (e: any) {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions

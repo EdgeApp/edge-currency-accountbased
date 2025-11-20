@@ -252,14 +252,8 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       // Zano asset_id is analogous to Edge tokenId
       const tokenId: EdgeTokenId =
         assetId === this.networkInfo.nativeAssetId ? null : assetId
-      let currencyCode = this.currencyInfo.currencyCode
-      if (tokenId != null) {
-        const token = this.allTokensMap[assetId]
-        if (token == null) {
-          continue
-        }
-        currencyCode = token.currencyCode
-      }
+      const currencyCode = this.getCurrencyCode(tokenId)
+      if (currencyCode == null) continue
 
       const isSend = lt(nativeAmount, '0')
       const isMainnet = tokenId == null
@@ -603,7 +597,8 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
         }
 
         const tokenId = burnAssetParams.assetId
-        const currencyCode = this.allTokensMap[tokenId].currencyCode
+        const currencyCode = this.getCurrencyCode(tokenId)
+        if (currencyCode == null) throw new Error('Unknown tokenId')
 
         const nativeAmount = burnAssetParams.burnAmount.toString()
 

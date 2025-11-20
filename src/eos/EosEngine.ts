@@ -32,7 +32,6 @@ import { asyncWaterfall } from '../common/promiseUtils'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
-  getDenomination,
   getFetchCors,
   getOtherParams,
   pickRandom
@@ -244,11 +243,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         ? null
         : contractAddress?.toLowerCase()
     const ourReceiveAddresses = []
-    const denom = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
+    const denom = this.getDenomination(tokenId)
     if (denom == null) {
       this.log(
         `processIncomingTransaction Received unsupported currencyCode: ${currencyCode}`
@@ -339,11 +334,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           ? null
           : contractAddress?.toLowerCase()
 
-      const denom = getDenomination(
-        currencyCode,
-        this.currencyInfo,
-        this.allTokensMap
-      )
+      const denom = this.getDenomination(tokenId)
       // if invalid currencyCode then don't count as valid transaction
       if (denom == null) {
         this.error(
@@ -983,11 +974,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       contractAddress = cleanLocation.contractAddress
     }
 
-    const nativeDenomination = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
+    const nativeDenomination = this.getDenomination(tokenId)
     if (nativeDenomination == null) {
       throw new Error(`Error: no native denomination found for ${currencyCode}`)
     }

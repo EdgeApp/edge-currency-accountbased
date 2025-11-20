@@ -267,7 +267,6 @@ export class AlgorandEngine extends CurrencyEngine<
       sender
     } = tx
 
-    let currencyCode: string
     let tokenId: EdgeTokenId
     let nativeAmount: string
     let networkFee: string
@@ -292,7 +291,6 @@ export class AlgorandEngine extends CurrencyEngine<
           return
         }
 
-        currencyCode = this.currencyInfo.currencyCode
         tokenId = null
         break
       }
@@ -316,9 +314,6 @@ export class AlgorandEngine extends CurrencyEngine<
           return
         }
 
-        const edgeToken: EdgeToken | undefined = this.allTokensMap[assetId]
-        if (edgeToken == null) return
-        currencyCode = edgeToken.currencyCode
         tokenId = assetId.toString()
 
         break
@@ -342,7 +337,6 @@ export class AlgorandEngine extends CurrencyEngine<
           return
         }
 
-        currencyCode = this.currencyInfo.currencyCode
         tokenId = null
         break
       }
@@ -369,6 +363,9 @@ export class AlgorandEngine extends CurrencyEngine<
         })
       }
     }
+
+    const currencyCode = this.getCurrencyCode(tokenId)
+    if (currencyCode == null) return
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: confirmedRound,

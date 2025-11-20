@@ -170,10 +170,9 @@ export class XrpEngine extends CurrencyEngine<
 
           const networkFee = xrpTransaction.Fee ?? '0'
 
-          const { currencyCode } =
-            fromTokenId == null
-              ? this.currencyInfo
-              : this.allTokensMap[fromTokenId]
+          const tokenId = fromTokenId ?? null
+          const currencyCode = this.getCurrencyCode(tokenId)
+          if (currencyCode == null) throw new Error('Unknown tokenId')
 
           const out: EdgeTransaction = {
             assetAction: {
@@ -193,7 +192,7 @@ export class XrpEngine extends CurrencyEngine<
             },
             ourReceiveAddresses: [],
             signedTx: '',
-            tokenId: fromTokenId ?? null,
+            tokenId,
             txid: '',
             walletId: this.walletId
           }
@@ -592,10 +591,14 @@ export class XrpEngine extends CurrencyEngine<
             return
           }
           const tokenId = makeTokenId({ currency, issuer })
-          const edgeToken = this.allTokensMap[tokenId]
-          if (edgeToken == null) return
-          const { currencyCode } = edgeToken
-          const nativeAmount = mul(value, edgeToken.denominations[0].multiplier)
+
+          const currencyCode = this.getCurrencyCode(tokenId)
+          if (currencyCode == null) continue
+
+          const denom = this.getDenomination(tokenId)
+          if (denom == null) continue
+
+          const nativeAmount = mul(value, denom.multiplier)
           let isSend = false
           const ourReceiveAddresses: string[] = []
 

@@ -9,12 +9,11 @@ import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeCurrencyInfo,
+  EdgeDenomination,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSpendInfo,
   EdgeTokenId,
-  EdgeTokenMap,
   EdgeTransaction,
   EdgeTxAmount,
   EdgeWalletInfo,
@@ -30,7 +29,6 @@ import { getRandomDelayMs } from '../common/network'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
-  getDenomination,
   getFetchCors,
   getOtherParams,
   makeMutex,
@@ -207,12 +205,7 @@ export class PolkadotEngine extends CurrencyEngine<
     // Fix amount for unsuccessful transactions
     const amount = success ? transferAmount : '0'
 
-    const denom = getDenomination(
-      this.currencyInfo.currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
-    if (denom == null) return
+    const denom = this.getDenomination(null)
 
     const ourReceiveAddresses = []
 
@@ -324,8 +317,8 @@ export class PolkadotEngine extends CurrencyEngine<
             {
               walletId: this.walletId,
               walletInfo: this.walletInfo,
-              currencyInfo: this.currencyInfo,
-              allTokensMap: this.allTokensMap,
+              getCurrencyCode: this.getCurrencyCode,
+              getDenomination: this.getDenomination,
               tokenId: null
             },
             tx
@@ -431,8 +424,8 @@ export class PolkadotEngine extends CurrencyEngine<
             {
               walletId: this.walletId,
               walletInfo: this.walletInfo,
-              currencyInfo: this.currencyInfo,
-              allTokensMap: this.allTokensMap,
+              getCurrencyCode: this.getCurrencyCode,
+              getDenomination: this.getDenomination,
               tokenId: llmTokenId
             },
             tx
@@ -962,9 +955,9 @@ export async function makeCurrencyEngine(
 export interface LiberlandTxProcessingContext {
   walletId: string
   walletInfo: SafePolkadotWalletInfo
-  currencyInfo: EdgeCurrencyInfo
-  allTokensMap: EdgeTokenMap
   tokenId: EdgeTokenId
+  getCurrencyCode: (tokenId: EdgeTokenId) => string | undefined
+  getDenomination: (tokenId: EdgeTokenId) => EdgeDenomination | undefined
 }
 
 // Not quite collision-proof but good enough for now
@@ -993,15 +986,7 @@ export function processLiberlandTransaction(
   const ourReceiveAddresses = []
 
   let nativeAmount = value
-  const denom =
-    tokenId == null
-      ? getDenomination(
-          context.currencyInfo.currencyCode,
-          context.currencyInfo,
-          context.allTokensMap
-        )
-      : context.allTokensMap[tokenId].denominations[0]
-
+  const denom = context.getDenomination(tokenId)
   if (denom == null) return
 
   if (fromId === context.walletInfo.keys.publicKey) {
@@ -1010,8 +995,8 @@ export function processLiberlandTransaction(
     ourReceiveAddresses.push(context.walletInfo.keys.publicKey)
   }
 
-  const { currencyCode } =
-    tokenId == null ? context.currencyInfo : context.allTokensMap[tokenId]
+  const currencyCode = context.getCurrencyCode(tokenId)
+  if (currencyCode == null) return
 
   const edgeTransaction: EdgeTransaction = {
     blockHeight,

@@ -299,7 +299,7 @@ export class CardanoEngine extends CurrencyEngine<
       for (let i = 0; i < txs.length; i++) {
         const tx = txs[i]
         const edgeTx = processCardanoTransaction({
-          currencyCode: this.currencyInfo.currencyCode,
+          currencyCode: this.getCurrencyCode(null),
           address: this.walletInfo.keys.bech32Address,
           tokenId: null,
           tx,
@@ -693,7 +693,7 @@ export class CardanoEngine extends CurrencyEngine<
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
-      currencyCode: this.currencyInfo.currencyCode,
+      currencyCode: this.getCurrencyCode(null),
       date: 0,
       isSend: isDeposit,
       memos: [],

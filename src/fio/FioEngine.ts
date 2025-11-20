@@ -41,7 +41,6 @@ import {
 } from '../common/promiseUtils'
 import {
   cleanTxLogs,
-  getDenomination,
   getFetchCors,
   getOtherParams,
   safeErrorMessage,
@@ -443,28 +442,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     return { ...this.otherData.stakingStatus }
   }
 
-  processTransaction(
-    action: FioHistoryNodeAction,
-    actor: string,
-    tokenId: EdgeTokenId = null
-  ): number {
-    const denom = getDenomination(
-      this.currencyInfo.currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
-    if (denom == null) {
-      this.error(
-        `Received unsupported currencyCode: ${this.currencyInfo.currencyCode}`
-      )
-      return 0
-    }
+  processTransaction(action: FioHistoryNodeAction, actor: string): number {
+    const denom = this.getDenomination(null)
 
     const { blockNum, transaction, updateStakingStatus } = parseAction({
       action,
       actor,
-      currencyCode: this.currencyInfo.currencyCode,
-      tokenId,
+      currencyCode: this.getCurrencyCode(null),
+      tokenId: null,
       denom,
       highestTxHeight: this.otherData.highestTxHeight,
       publicKey: this.walletInfo.keys.publicKey,
