@@ -833,12 +833,8 @@ export class PolkadotEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('Missing publicAddress from makeSpend')
 
-    const edgeToken = this.allTokens.find(
-      token => token.currencyCode === edgeTransaction.currencyCode
-    )
-
     let transfer
-    if (edgeToken == null) {
+    if (edgeTransaction.tokenId == null) {
       const nativeAmount = abs(
         add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
       )
@@ -851,15 +847,13 @@ export class PolkadotEngine extends CurrencyEngine<
         publicAddress,
         nativeAmount
       )
-    } else if (edgeToken.contractAddress != null) {
+    } else {
       const nativeAmount = abs(edgeTransaction.nativeAmount)
       transfer = await this.api.tx.assets.transfer(
-        parseInt(edgeToken.contractAddress),
+        parseInt(edgeTransaction.tokenId),
         publicAddress,
         nativeAmount
       )
-    } else {
-      throw new Error('Unrecognized asset')
     }
 
     const signer = this.api.createType('SignerPayload', {

@@ -153,7 +153,6 @@ export class TezosEngine extends CurrencyEngine<
     const transaction = asXtzGetTransaction(tx)
     const pkh = this.walletLocalData.publicKey
     const ourReceiveAddresses: string[] = []
-    const currencyCode = this.currencyInfo.currencyCode
     const date = new Date(transaction.timestamp).getTime() / 1000
     const blockHeight = transaction.level
     let nativeAmount = transaction.amount.toString()
@@ -171,7 +170,7 @@ export class TezosEngine extends CurrencyEngine<
     }
     const edgeTransaction: EdgeTransaction = {
       blockHeight,
-      currencyCode,
+      currencyCode: this.currencyInfo.currencyCode,
       date,
       isSend: nativeAmount.startsWith('-'),
       memos: [],

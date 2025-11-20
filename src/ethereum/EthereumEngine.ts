@@ -746,9 +746,7 @@ export class EthereumEngine extends CurrencyEngine<
       out[feeType] = div(totalFee, '1')
     }
 
-    this.log(
-      `updateNetworkFeesFromBaseFeePerGas ${this.currencyInfo.currencyCode}`
-    )
+    this.log(`updateNetworkFeesFromBaseFeePerGas ${this.currencyInfo.pluginId}`)
     printFees(this.log, out)
     return out
   }
@@ -1657,7 +1655,7 @@ export class EthereumEngine extends CurrencyEngine<
     let data
     if (otherParams.data != null) {
       data = otherParams.data
-      if (edgeTransaction.currencyCode !== this.currencyInfo.currencyCode) {
+      if (edgeTransaction.tokenId != null) {
         // Smart contract calls only allow for tx value if it's the parent currency
         txValue = '0x00'
       }
