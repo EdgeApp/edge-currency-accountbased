@@ -208,7 +208,7 @@ export class EthereumNetwork {
       'Broadcast failed:'
     )
     this.ethEngine.log(
-      `${this.ethEngine.currencyInfo.currencyCode} broadcastTx ${broadcastResults.server} won`
+      `${this.ethEngine.currencyInfo.pluginId} broadcastTx ${broadcastResults.server} won`
     )
     return broadcastResults
   }
@@ -370,7 +370,7 @@ export class EthereumNetwork {
 
     if (
       // If this engine supports the batch token balance query, no need to check
-      // each currencyCode individually.
+      // each token individually.
       isFetchTokenBalancesSupported
     ) {
       await this.acquireTokenBalances()
@@ -406,7 +406,7 @@ export class EthereumNetwork {
     if (ethereumNetworkUpdate.blockHeight != null) {
       this.ethEngine.log(
         `${
-          this.ethEngine.currencyInfo.currencyCode
+          this.ethEngine.currencyInfo.pluginId
         } processEthereumNetworkUpdate blockHeight ${
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
@@ -426,7 +426,7 @@ export class EthereumNetwork {
     if (ethereumNetworkUpdate.newNonce != null) {
       this.ethEngine.log(
         `${
-          this.ethEngine.currencyInfo.currencyCode
+          this.ethEngine.currencyInfo.pluginId
         } processEthereumNetworkUpdate nonce ${
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
@@ -439,7 +439,7 @@ export class EthereumNetwork {
       const tokenBal = ethereumNetworkUpdate.tokenBal
       this.ethEngine.log(
         `${
-          this.ethEngine.currencyInfo.currencyCode
+          this.ethEngine.currencyInfo.pluginId
         } processEthereumNetworkUpdate tokenBal ${
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
@@ -456,7 +456,7 @@ export class EthereumNetwork {
       const tokenTxs = ethereumNetworkUpdate.tokenTxs
       this.ethEngine.log(
         `${
-          this.ethEngine.currencyInfo.currencyCode
+          this.ethEngine.currencyInfo.pluginId
         } processEthereumNetworkUpdate tokenTxs ${
           ethereumNetworkUpdate.server ?? 'no server'
         } won`

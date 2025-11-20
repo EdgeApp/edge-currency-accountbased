@@ -80,7 +80,6 @@ export class SolanaEngine extends CurrencyEngine<
   feePerSignature: string
   getPriorityFee: () => Promise<string>
   getRecentBlockhash: () => Promise<BlockhashWithExpiryBlockHeight>
-  chainCode: string
   otherData!: SolanaWalletOtherData
   fetch: EdgeFetchFunction
   progressRatio: number
@@ -97,7 +96,6 @@ export class SolanaEngine extends CurrencyEngine<
     super(env, tools, walletInfo, opts)
     this.lightMode = opts.lightMode ?? false
     this.networkInfo = env.networkInfo
-    this.chainCode = tools.currencyInfo.currencyCode
     this.fetch = async (uri, opts) =>
       await env.io.fetch(uri, { ...opts, corsBypass: 'always' })
     this.feePerSignature = '5000'
@@ -221,7 +219,10 @@ export class SolanaEngine extends CurrencyEngine<
       }
     } catch (e: any) {
       // Nodes will return 0 for uninitiated accounts so thrown errors should be logged
-      this.error(`Error checking ${this.chainCode} address balance`, e)
+      this.error(
+        `Error checking ${this.currencyInfo.pluginId} address balance`,
+        e
+      )
     }
   }
 

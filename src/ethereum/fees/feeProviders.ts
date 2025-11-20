@@ -128,7 +128,7 @@ export const fetchFeesFromFeeHistory = async (
       highFee: highResult.maxFeePerGas
     }
 
-    log(`fetchFeesFromFeeHistory: ${currencyInfo.currencyCode}`)
+    log(`fetchFeesFromFeeHistory: ${currencyInfo.pluginId}`)
     printFees(log, out)
     return out
   } catch (error) {
@@ -190,7 +190,7 @@ export const fetchFeesFromRpc = async (
     standardFeeHigh: mul(gasPrice, '1.12'),
     highFee: mul(gasPrice, '1.25')
   }
-  log(`fetchFeesFromRpc: ${currencyInfo.currencyCode}`)
+  log(`fetchFeesFromRpc: ${currencyInfo.pluginId}`)
   printFees(log, out)
   return out
 }
@@ -258,7 +258,7 @@ export const fetchFeesFromEvmScan = async (
   const highFee = `${(newFast * WEI_MULTIPLIER) / OPTIMAL_FEE_HIGH_MULTIPLIER}`
 
   const out = { lowFee, standardFeeLow, standardFeeHigh, highFee }
-  log(`fetchFeesFromEvmScan: ${currencyInfo.currencyCode}`)
+  log(`fetchFeesFromEvmScan: ${currencyInfo.pluginId}`)
   printFees(log, out)
   return out
 }
@@ -319,7 +319,7 @@ export const fetchFeesFromEvmGasStation = async (
     standardFeeHigh: standardFeeHigh.toString(),
     highFee: highFee.toString()
   }
-  log(`fetchFeesFromEvmGasStation: ${currencyInfo.currencyCode}`)
+  log(`fetchFeesFromEvmGasStation: ${currencyInfo.pluginId}`)
   printFees(log, out)
   return out
 }
