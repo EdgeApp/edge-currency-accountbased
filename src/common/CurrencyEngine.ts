@@ -114,7 +114,6 @@ export class CurrencyEngine<
   builtinTokens: EdgeTokenMap = {}
   customTokens: EdgeTokenMap = {}
   enabledTokenIds: string[] = []
-  enabledTokens: string[] = []
 
   // Helpers
   checkBalances: (
@@ -932,8 +931,6 @@ export class CurrencyEngine<
   }
 
   private changeEnabledTokenIdsSync(tokenIds: string[]): void {
-    const { currencyCode } = this.currencyInfo
-
     const codes = new Set<string>()
     const ids = new Set<string>()
     for (const tokenId of tokenIds) {
@@ -944,7 +941,6 @@ export class CurrencyEngine<
       ids.add(tokenId)
     }
 
-    this.enabledTokens = [...codes, currencyCode]
     this.enabledTokenIds = [...ids]
   }
 

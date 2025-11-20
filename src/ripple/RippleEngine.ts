@@ -243,8 +243,7 @@ export class XrpEngine extends CurrencyEngine<
 
   getTotalReserve(): string {
     const numActivatedTokens =
-      this.enabledTokens.length -
-      1 -
+      this.enabledTokenIds.length -
       this.walletLocalData.unactivatedTokenIds.length
 
     const tokenReserve = mul(
@@ -723,37 +722,26 @@ export class XrpEngine extends CurrencyEngine<
       }
       this.updateOnAddressesChecked()
 
-      if (this.enabledTokens.length > 1) {
+      if (this.enabledTokenIds.length > 0) {
         // Check for unactivated tokens
         const acctLinesResponse = await this.tools.rippleApi.request({
           command: 'account_lines',
           account: address
         })
 
-        this.enabledTokens.forEach(tokenCurrencyCode => {
+        for (const tokenId of this.enabledTokenIds) {
           const match = acctLinesResponse.result.lines.find(line => {
             const { account: issuer, currency } = line
             const lineTokenId = makeTokenId({ currency, issuer })
-            const edgeToken = this.allTokensMap[lineTokenId]
-            if (
-              edgeToken != null &&
-              tokenCurrencyCode === edgeToken.currencyCode
-            ) {
+            if (tokenId === lineTokenId) {
               return true
             }
             return false
           })
           if (match == null) {
-            const tokenId = getTokenIdFromCurrencyCode(
-              tokenCurrencyCode,
-              this.currencyInfo.currencyCode,
-              this.allTokensMap
-            )
-            if (tokenId != null) {
-              newUnactivatedTokenIds.push(tokenId)
-            }
+            newUnactivatedTokenIds.push(tokenId)
           }
-        })
+        }
       }
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
