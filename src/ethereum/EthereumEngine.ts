@@ -1460,7 +1460,7 @@ export class EthereumEngine extends CurrencyEngine<
     // Balance checks:
     //
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       nativeNetworkFee = add(nativeNetworkFee, l1Fee)
       if (tokenId == null && this.networkInfo.nativeSendPrechargeWei != null) {
         nativeNetworkFee = add(
@@ -1627,7 +1627,7 @@ export class EthereumEngine extends CurrencyEngine<
     const gasLimitHex = toHex(otherParams.gas)
     let txValue
 
-    if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
+    if (edgeTransaction.tokenId == null) {
       // Remove the networkFee from the nativeAmount
       const nativeAmount = add(
         edgeTransaction.nativeAmount,
@@ -1665,9 +1665,7 @@ export class EthereumEngine extends CurrencyEngine<
         // Smart contract calls only allow for tx value if it's the parent currency
         txValue = '0x00'
       }
-    } else if (
-      edgeTransaction.currencyCode === this.currencyInfo.currencyCode
-    ) {
+    } else if (edgeTransaction.tokenId == null) {
       data = ''
     } else {
       const dataArray = abi.simpleEncode(
@@ -1738,7 +1736,7 @@ export class EthereumEngine extends CurrencyEngine<
   async accelerate(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction | null> {
-    const { currencyCode, tokenId } = edgeTransaction
+    const { tokenId } = edgeTransaction
 
     const txOtherParams = asMaybe(asEthereumTxOtherParams)(
       edgeTransaction.otherParams
@@ -1825,7 +1823,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     const parentNativeBalance = this.getBalance({ tokenId: null })
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       totalTxAmount = add(nativeNetworkFee, nativeAmount)
       if (gt(totalTxAmount, parentNativeBalance)) {
         throw new InsufficientFundsError({ tokenId })

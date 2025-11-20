@@ -1065,7 +1065,7 @@ export class XrpEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
 
-    if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
+    if (edgeTransaction.tokenId == null) {
       const nativeAmount = abs(
         add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
       )

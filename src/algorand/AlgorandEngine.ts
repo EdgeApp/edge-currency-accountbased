@@ -564,7 +564,7 @@ export class AlgorandEngine extends CurrencyEngine<
     const { type }: BaseTxOpts = asMaybe(asBaseTxOpts)(
       edgeSpendInfo.otherParams
     ) ?? {
-      type: currencyCode === this.currencyInfo.currencyCode ? 'pay' : 'axfer'
+      type: tokenId == null ? 'pay' : 'axfer'
     }
 
     const note =
@@ -600,12 +600,10 @@ export class AlgorandEngine extends CurrencyEngine<
         break
       }
       case 'axfer': {
-        const edgeTokenId = Object.keys(this.allTokensMap).find(
-          tokenId => this.allTokensMap[tokenId].currencyCode === currencyCode
-        )
-        if (edgeTokenId == null) throw new Error('Unrecognized asset')
+        const edgeToken = this.allTokensMap[tokenId as string]
+        if (edgeToken == null) throw new Error('Unrecognized asset')
         const networkLocation = asMaybeContractAddressLocation(
-          this.allTokensMap?.[edgeTokenId]?.networkLocation
+          edgeToken.networkLocation
         )
 
         if (networkLocation == null) throw new Error('Unrecognized asset')
