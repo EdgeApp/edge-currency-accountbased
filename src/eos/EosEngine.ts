@@ -31,7 +31,6 @@ import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall } from '../common/promiseUtils'
 import {
   cleanTxLogs,
-  getDenomination,
   getFetchCors,
   getOtherParams,
   pickRandom
@@ -243,11 +242,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         ? null
         : contractAddress?.toLowerCase()
     const ourReceiveAddresses = []
-    const denom = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
+    const denom = this.getDenomination(tokenId)
     if (denom == null) {
       this.log(
         `processIncomingTransaction Received unsupported currencyCode: ${currencyCode}`
@@ -338,11 +333,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           ? null
           : contractAddress?.toLowerCase()
 
-      const denom = getDenomination(
-        currencyCode,
-        this.currencyInfo,
-        this.allTokensMap
-      )
+      const denom = this.getDenomination(tokenId)
       // if invalid currencyCode then don't count as valid transaction
       if (denom == null) {
         this.error(
@@ -974,11 +965,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const tokenInfo = this.getTokenInfo(tokenId)
     if (tokenInfo == null) throw new Error('Unable to find token info')
     const { contractAddress = 'eosio.token' } = tokenInfo.networkLocation ?? {}
-    const nativeDenomination = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
+    const nativeDenomination = this.getDenomination(tokenId)
     if (nativeDenomination == null) {
       throw new Error(`Error: no native denomination found for ${currencyCode}`)
     }

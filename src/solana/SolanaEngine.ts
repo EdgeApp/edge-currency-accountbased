@@ -304,8 +304,8 @@ export class SolanaEngine extends CurrencyEngine<
     const ourReceiveAddresses = []
 
     const { amount, networkFee, parentNetworkFee, tokenId = null } = amounts
-    const currencyCode =
-      tokenId != null ? this.allTokensMap[tokenId].currencyCode : this.chainCode
+    const currencyCode = this.getCurrencyCode(tokenId)
+    if (currencyCode == null) return
 
     if (gte(amount, '0')) {
       ourReceiveAddresses.push(this.base58PublicKey)

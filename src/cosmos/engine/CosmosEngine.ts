@@ -354,12 +354,7 @@ export class CosmosEngine extends CurrencyEngine<
             }
 
             // Determine which asset we're spending for amount validation/display
-            let currencyCode = this.currencyInfo.currencyCode
             const tokenId = fromTokenId ?? null
-            if (fromTokenId != null) {
-              const token = this.allTokensMap[fromTokenId]
-              if (token != null) currencyCode = token.currencyCode
-            }
 
             const amounts = this.makeEdgeTransactionAmounts(
               fromNativeAmount,
@@ -367,6 +362,9 @@ export class CosmosEngine extends CurrencyEngine<
               tokenId
             )
             this.checkBalances(amounts, tokenId)
+
+            const currencyCode = this.getCurrencyCode(tokenId)
+            if (currencyCode == null) throw new Error('Unknown tokenId')
 
             const edgeTransaction: EdgeTransaction = {
               blockHeight: 0,
@@ -853,8 +851,8 @@ export class CosmosEngine extends CurrencyEngine<
       return
     }
 
-    const { currencyCode } =
-      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
+    const currencyCode = this.getCurrencyCode(tokenId)
+    if (currencyCode == null) return
 
     let networkFee = '0'
     if (fee != null) {

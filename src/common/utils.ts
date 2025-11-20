@@ -119,25 +119,6 @@ export function getLegacyDenomination(
   }
 }
 
-export function getDenomination(
-  name: string,
-  currencyInfo: EdgeCurrencyInfo,
-  allTokens: EdgeTokenMap
-): EdgeDenomination | undefined {
-  // Look in the primary currency info:
-  for (const denomination of currencyInfo.denominations) {
-    if (denomination.name === name) return denomination
-  }
-
-  // Look in the merged tokens:
-  for (const tokenId of Object.keys(allTokens)) {
-    const token = allTokens[tokenId]
-    for (const denomination of token.denominations) {
-      if (denomination.name === name) return denomination
-    }
-  }
-}
-
 export const snoozeReject: Function = async (ms: number) =>
   await new Promise((resolve: Function, reject: Function) =>
     setTimeout(reject, ms)

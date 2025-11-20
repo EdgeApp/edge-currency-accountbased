@@ -102,14 +102,8 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
       scanTx.from.hash.toLowerCase() ===
       this.ethEngine.walletLocalData.publicKey.toLowerCase()
     const tokenTx = tokenId != null
-    let currencyCode: string = this.ethEngine.currencyInfo.currencyCode
-    if (tokenTx) {
-      const knownToken = this.ethEngine.allTokensMap[tokenId]
-      if (knownToken === undefined) {
-        throw new Error(`Unknown token ${tokenId}`)
-      }
-      currencyCode = knownToken.currencyCode
-    }
+    const currencyCode = this.ethEngine.getCurrencyCode(tokenId)
+    if (currencyCode == null) throw new Error(`Unknown token ${tokenId}`)
     const gasPrice = scanTx.gas_price
     const nativeNetworkFee: string =
       gasPrice != null ? mul(gasPrice, scanTx.gas_used) : '0'
