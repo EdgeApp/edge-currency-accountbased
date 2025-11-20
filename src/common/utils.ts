@@ -1,6 +1,13 @@
 import { add, mul } from 'biggystring'
 import { Buffer } from 'buffer'
-import { asArray, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asEither,
+  asNull,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 import {
   EdgeCurrencyInfo,
   EdgeDenomination,
@@ -193,6 +200,7 @@ const asCleanTxLogs = asObject({
       })
     )
   ),
+  tokenId: asEither(asNull, asString),
   signedTx: asString,
   otherParams: asOptional(
     asObject({
