@@ -149,13 +149,6 @@ export function makeOuterPlugin<
             // Check if there are any conflicts
             if (builtinTokens[tokenId] != null) continue
 
-            // TODO: Remove after migrating away from currencyCode keyed objects
-            if (currencyInfo.currencyCode === edgeToken.currencyCode) continue
-            const matchingToken = Object.values(builtinTokens).find(
-              token => token.currencyCode === edgeToken.currencyCode
-            )
-            if (matchingToken != null) continue
-
             builtinTokens[tokenId] = edgeToken
           } catch (e) {}
         }
