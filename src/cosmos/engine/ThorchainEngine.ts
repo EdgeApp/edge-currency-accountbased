@@ -65,13 +65,6 @@ export class ThorchainEngine extends CosmosEngine {
   }
 
   async queryTransactions(): Promise<void> {
-    const allCurrencyCodes = [
-      this.currencyInfo.currencyCode,
-      ...this.enabledTokenIds.map(
-        tokenId => this.allTokensMap[tokenId].currencyCode
-      )
-    ]
-
     const { url, headers } = rpcWithApiKey(
       this.networkInfo.midgardConnctionInfo,
       this.tools.initOptions
@@ -208,9 +201,9 @@ export class ThorchainEngine extends CosmosEngine {
       this.walletLocalDataDirty = true
     }
 
-    allCurrencyCodes.forEach(
-      code => (this.tokenCheckTransactionsStatus[code] = 1)
-    )
+    for (const tokenId of [null, ...this.enabledTokenIds]) {
+      this.tokenCheckTransactionsStatus.set(tokenId, 1)
+    }
     this.updateOnAddressesChecked()
     this.sendTransactionEvents()
   }

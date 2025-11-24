@@ -155,10 +155,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     }
 
     const mainnetBalObj = balances[this.networkInfo.nativeAssetId]
-    this.updateBalance(
-      this.currencyInfo.currencyCode,
-      mainnetBalObj?.total.toString() ?? '0'
-    )
+    this.updateBalance(null, mainnetBalObj?.total.toString() ?? '0')
     this.unlockedBalanceMap.set(null, mainnetBalObj?.unlocked.toString() ?? '0')
 
     const detectedTokenIds: string[] = []
@@ -166,8 +163,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       const tokenBalObj = balances[tokenId]
       if (tokenBalObj == null) continue
 
-      const currencyCode = this.allTokensMap[tokenId].currencyCode
-      this.updateBalance(currencyCode, tokenBalObj.total.toString())
+      this.updateBalance(tokenId, tokenBalObj.total.toString())
       this.unlockedBalanceMap.set(
         tokenId,
         tokenBalObj?.unlocked.toString() ?? '0'
@@ -256,14 +252,8 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       // Zano asset_id is analogous to Edge tokenId
       const tokenId: EdgeTokenId =
         assetId === this.networkInfo.nativeAssetId ? null : assetId
-      let currencyCode = this.currencyInfo.currencyCode
-      if (tokenId != null) {
-        const token = this.allTokensMap[assetId]
-        if (token == null) {
-          continue
-        }
-        currencyCode = token.currencyCode
-      }
+      const currencyCode = this.getCurrencyCode(tokenId)
+      if (currencyCode == null) continue
 
       const isSend = lt(nativeAmount, '0')
       const isMainnet = tokenId == null
@@ -300,7 +290,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
         walletId: this.walletId
       }
 
-      this.addTransaction(currencyCode, edgeTransaction)
+      this.addTransaction(tokenId, edgeTransaction)
     }
   }
 
@@ -357,13 +347,11 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     const flooredNewProgress = Math.floor(newProgress * 10)
 
     if (newProgress === 1 || flooredNewProgress > flooredPrevProgress) {
-      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = newProgress
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        newProgress
+      this.tokenCheckBalanceStatus.set(null, newProgress)
+      this.tokenCheckTransactionsStatus.set(null, newProgress)
       for (const tokenId of this.enabledTokenIds) {
-        const token = this.allTokensMap[tokenId]
-        this.tokenCheckBalanceStatus[token.currencyCode] = newProgress
-        this.tokenCheckTransactionsStatus[token.currencyCode] = newProgress
+        this.tokenCheckBalanceStatus.set(tokenId, newProgress)
+        this.tokenCheckTransactionsStatus.set(tokenId, newProgress)
       }
       this.updateOnAddressesChecked()
     }
@@ -609,7 +597,8 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
         }
 
         const tokenId = burnAssetParams.assetId
-        const currencyCode = this.allTokensMap[tokenId].currencyCode
+        const currencyCode = this.getCurrencyCode(tokenId)
+        if (currencyCode == null) throw new Error('Unknown tokenId')
 
         const nativeAmount = burnAssetParams.burnAmount.toString()
 

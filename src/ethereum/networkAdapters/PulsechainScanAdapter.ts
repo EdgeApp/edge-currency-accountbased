@@ -55,7 +55,7 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
   private async checkTransactions(
     params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> {
-    const { startBlock, currencyCode } = params
+    const { startBlock, tokenId } = params
     const address = this.ethEngine.walletLocalData.publicKey
 
     const scanTransactions: PulsechainScanTransaction[] = []
@@ -76,23 +76,20 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
 
     // Convert the transaction data into EdgeTransactions:
     const edgeTransactions: EdgeTransaction[] = scanTransactions.map(tx =>
-      this.processScanTransaction(tx, currencyCode)
+      this.processScanTransaction(tx, tokenId)
     )
 
     return {
-      tokenTxs: {
-        [currencyCode]: {
-          blockHeight: startBlock,
-          edgeTransactions
-        }
-      },
+      tokenTxs: new Map([
+        [tokenId, { blockHeight: startBlock, edgeTransactions }]
+      ]),
       server: this.config.servers.join(',')
     }
   }
 
   private processScanTransaction(
     scanTx: PulsechainScanTransaction,
-    currencyCode: string
+    tokenId: EdgeTokenId
   ): EdgeTransaction {
     const ourReceiveAddresses: string[] = []
 
@@ -104,18 +101,9 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
     const isSpend =
       scanTx.from.hash.toLowerCase() ===
       this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
-    let tokenId: EdgeTokenId = null
-    if (tokenTx) {
-      const knownTokenId = Object.keys(this.ethEngine.allTokensMap).find(
-        tokenId =>
-          this.ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
-      )
-      if (knownTokenId === undefined) {
-        throw new Error('Unknown token')
-      }
-      tokenId = knownTokenId
-    }
+    const tokenTx = tokenId != null
+    const currencyCode = this.ethEngine.getCurrencyCode(tokenId)
+    if (currencyCode == null) throw new Error(`Unknown token ${tokenId}`)
     const gasPrice = scanTx.gas_price
     const nativeNetworkFee: string =
       gasPrice != null ? mul(gasPrice, scanTx.gas_used) : '0'

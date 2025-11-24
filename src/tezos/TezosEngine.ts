@@ -153,7 +153,6 @@ export class TezosEngine extends CurrencyEngine<
     const transaction = asXtzGetTransaction(tx)
     const pkh = this.walletLocalData.publicKey
     const ourReceiveAddresses: string[] = []
-    const currencyCode = this.currencyInfo.currencyCode
     const date = new Date(transaction.timestamp).getTime() / 1000
     const blockHeight = transaction.level
     let nativeAmount = transaction.amount.toString()
@@ -171,7 +170,7 @@ export class TezosEngine extends CurrencyEngine<
     }
     const edgeTransaction: EdgeTransaction = {
       blockHeight,
-      currencyCode,
+      currencyCode: this.currencyInfo.currencyCode,
       date,
       isSend: nativeAmount.startsWith('-'),
       memos: [],
@@ -186,7 +185,7 @@ export class TezosEngine extends CurrencyEngine<
       walletId: this.walletId
     }
     if (!failedOperation) {
-      this.addTransaction(currencyCode, edgeTransaction)
+      this.addTransaction(null, edgeTransaction)
     }
   }
 
@@ -200,7 +199,7 @@ export class TezosEngine extends CurrencyEngine<
       let txs: XtzGetTransaction[] = []
       let page = 0
       let transactions
-      this.tokenCheckTransactionsStatus.XTZ = 0.5
+      this.tokenCheckTransactionsStatus.set(null, 0.5)
       do {
         transactions = await this.multicastServers(
           'getTransactions',
@@ -216,23 +215,17 @@ export class TezosEngine extends CurrencyEngine<
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
     }
-    this.tokenCheckTransactionsStatus.XTZ = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
     this.updateOnAddressesChecked()
   }
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
-    const currencyCode = this.currencyInfo.currencyCode
-    if (
-      typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
-    ) {
-      this.walletLocalData.totalBalances[currencyCode] = '0'
-    }
     const funcs = this.getRpcToolkits().map(toolkit => async () => {
       return await toolkit.rpc.getBalance(this.walletLocalData.publicKey)
     })
     const balance: BalanceResponse = await asyncWaterfall(funcs)
-    this.updateBalance(currencyCode, balance.toString())
+    this.updateBalance(null, balance.toString())
   }
 
   async checkBlockchainInnerLoop(): Promise<void> {

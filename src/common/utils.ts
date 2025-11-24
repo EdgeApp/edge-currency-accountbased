@@ -1,6 +1,13 @@
 import { add, mul } from 'biggystring'
 import { Buffer } from 'buffer'
-import { asArray, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asEither,
+  asNull,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 import {
   EdgeCurrencyInfo,
   EdgeDenomination,
@@ -119,25 +126,6 @@ export function getLegacyDenomination(
   }
 }
 
-export function getDenomination(
-  name: string,
-  currencyInfo: EdgeCurrencyInfo,
-  allTokens: EdgeTokenMap
-): EdgeDenomination | undefined {
-  // Look in the primary currency info:
-  for (const denomination of currencyInfo.denominations) {
-    if (denomination.name === name) return denomination
-  }
-
-  // Look in the merged tokens:
-  for (const tokenId of Object.keys(allTokens)) {
-    const token = allTokens[tokenId]
-    for (const denomination of token.denominations) {
-      if (denomination.name === name) return denomination
-    }
-  }
-}
-
 export const snoozeReject: Function = async (ms: number) =>
   await new Promise((resolve: Function, reject: Function) =>
     setTimeout(reject, ms)
@@ -212,6 +200,7 @@ const asCleanTxLogs = asObject({
       })
     )
   ),
+  tokenId: asEither(asNull, asString),
   signedTx: asString,
   otherParams: asOptional(
     asObject({

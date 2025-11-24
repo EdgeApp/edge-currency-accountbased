@@ -89,11 +89,10 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         }
 
         // Create the EdgeTransaction
-        const currencyCode = this.currencyInfo.currencyCode
         const edgeTx: EdgeTransaction = {
           blockHeight: 0,
           date: 0,
-          currencyCode,
+          currencyCode: this.currencyInfo.currencyCode,
           isSend: true,
           memos: metadata?.memos ?? [],
           nativeAmount,
@@ -138,7 +137,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         const { coinType, totalBalance } = bal
 
         if (coinType === SUI_TYPE_ARG) {
-          this.updateBalance(this.currencyInfo.currencyCode, totalBalance)
+          this.updateBalance(null, totalBalance)
           continue
         }
 
@@ -146,7 +145,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         const edgeToken = this.allTokensMap[tokenId]
         if (edgeToken == null) continue
 
-        this.updateBalance(edgeToken.currencyCode, totalBalance)
+        this.updateBalance(tokenId, totalBalance)
         if (!this.enabledTokenIds.includes(tokenId)) {
           detectedTokenIds.push(tokenId)
         }
@@ -156,11 +155,8 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
       }
 
-      for (const cc of [
-        this.currencyInfo.currencyCode,
-        ...this.enabledTokens
-      ]) {
-        this.tokenCheckBalanceStatus[cc] = 1
+      for (const tokenId of [null, ...this.enabledTokenIds]) {
+        this.tokenCheckBalanceStatus.set(tokenId, 1)
       }
       this.updateOnAddressesChecked()
     } catch (e) {
@@ -180,8 +176,9 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
       this.log.warn('queryTransactions from error:', e)
     }
 
-    for (const token of this.enabledTokens) {
-      this.tokenCheckTransactionsStatus[token] = 0.5
+    this.tokenCheckTransactionsStatus.set(null, 0.5)
+    for (const tokenId of this.enabledTokenIds) {
+      this.tokenCheckTransactionsStatus.set(tokenId, 0.5)
     }
 
     const cursorTo = this.otherData.latestTxidTo
@@ -197,8 +194,9 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
 
     this.sendTransactionEvents()
 
-    for (const token of this.enabledTokens) {
-      this.tokenCheckTransactionsStatus[token] = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
+    for (const tokenId of this.enabledTokenIds) {
+      this.tokenCheckTransactionsStatus.set(tokenId, 1)
     }
     this.updateOnAddressesChecked()
   }
@@ -266,18 +264,19 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
 
     for (const [coinType, bal] of coinTypeMap) {
       let tokenId = null
-      let currencyCode = this.currencyInfo.currencyCode
       let nativeAmount = bal
       if (coinType !== SUI_TYPE_ARG) {
         tokenId = this.tools.edgeTokenIdFromCoinType(coinType)
         const edgeToken = this.allTokensMap[tokenId]
         if (edgeToken == null) continue
-        currencyCode = this.allTokensMap[tokenId].currencyCode
       }
 
       if (tokenId == null && direction === 'from') {
         nativeAmount = sub(nativeAmount, networkFee)
       }
+
+      const currencyCode = this.getCurrencyCode(tokenId)
+      if (currencyCode == null) continue
 
       const edgeTx: EdgeTransaction = {
         txid: tx.digest,
@@ -295,7 +294,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         tokenId,
         walletId: this.walletId
       }
-      this.addTransaction(currencyCode, edgeTx)
+      this.addTransaction(tokenId, edgeTx)
     }
   }
 

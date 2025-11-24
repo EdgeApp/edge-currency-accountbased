@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Index internal wallet data with tokenIds
+
 ## 4.65.0 (2025-11-18)
 
 - changed: Upgrade react-native-zcash to v0.10.0

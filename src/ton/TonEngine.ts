@@ -93,10 +93,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       const contractState: Awaited<ReturnType<TonClient['getContractState']>> =
         await promiseAny(funcs)
 
-      this.updateBalance(
-        this.currencyInfo.currencyCode,
-        contractState.balance.toString()
-      )
+      this.updateBalance(null, contractState.balance.toString())
 
       if (contractState.state !== this.otherData.contractState) {
         this.otherData.contractState = contractState.state
@@ -167,7 +164,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     this.otherData.mostRecentHash = mostRecentHash
 
     this.sendTransactionEvents()
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
     this.updateOnAddressesChecked()
   }
 
@@ -224,7 +221,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       signedTx: '',
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(null, edgeTransaction)
   }
 
   getTxCheckpoint(edgeTransaction: EdgeTransaction): string {
