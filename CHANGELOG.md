@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.65.1 (2025-11-28)
+
 - fixed: Disabled decoy address routines for performance reasons.
 
 ## 4.65.0 (2025-11-18)
