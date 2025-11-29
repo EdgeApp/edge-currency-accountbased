@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Zano) BTCx token
+- added: (Zcash) ZIP-321 URI support
 
 ## 4.65.1 (2025-11-28)
 

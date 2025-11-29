@@ -442,13 +442,26 @@ export class ZcashEngine extends CurrencyEngine<
     if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
     const synchronizer = await this.synchronizerPromise
-    const proposal = await synchronizer.proposeTransfer({
-      toAddress: publicAddress,
-      zatoshi: nativeAmount,
-      memo: memos[0]?.value ?? ''
-    })
+    // If a ZIP-321 Payment URI is provided, use that flow instead:
+    const zip321Uri: string | undefined = (edgeSpendInfo.otherParams as any)
+      ?.zip321Uri
+    if (zip321Uri != null) {
+      this.log(`[ZEC propose] zip321Uri ${zip321Uri}`)
+    }
+
+    const proposal =
+      zip321Uri != null
+        ? await synchronizer.proposeFulfillingPaymentURI(zip321Uri)
+        : await synchronizer.proposeTransfer({
+            toAddress: publicAddress,
+            zatoshi: nativeAmount,
+            memo: memos[0]?.value ?? ''
+          })
 
     const networkFee = proposal.totalFee
+    this.log(
+      '[ZEC propose] proposal result ' + JSON.stringify(proposal, null, 2)
+    )
 
     const totalTxAmount = add(nativeAmount, networkFee)
 
