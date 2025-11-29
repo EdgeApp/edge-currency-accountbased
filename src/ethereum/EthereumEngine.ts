@@ -103,6 +103,8 @@ import { RpcAdapter } from './networkAdapters/RpcAdapter'
 // How long to wait before the next scheduled sync
 const SYNC_NETWORK_INTERVAL = 20000
 const DECOY_ADDRESS_GEN_DELAY_MS = 10000
+// Temporarily disable decoy address functionality
+const DECOY_ADDRESSES_ENABLED = false
 
 export class EthereumEngine extends CurrencyEngine<
   EthereumTools,
@@ -811,24 +813,26 @@ export class EthereumEngine extends CurrencyEngine<
     this.ethNetwork.start()
 
     // Start decoy address generation background routine if needed
-    const decoyAddressConfig = this.networkInfo.decoyAddressConfig
-    if (decoyAddressConfig != null) {
-      if (this.decoyAddressCount < decoyAddressConfig.count) {
-        this.addToLoop(
-          'generateDecoyAddress',
-          DECOY_ADDRESS_GEN_DELAY_MS,
-          async () => {
-            // Find a decoy address.
-            await this.findDecoyAddress(decoyAddressConfig)
+    if (DECOY_ADDRESSES_ENABLED) {
+      const decoyAddressConfig = this.networkInfo.decoyAddressConfig
+      if (decoyAddressConfig != null) {
+        if (this.decoyAddressCount < decoyAddressConfig.count) {
+          this.addToLoop(
+            'generateDecoyAddress',
+            DECOY_ADDRESS_GEN_DELAY_MS,
+            async () => {
+              // Find a decoy address.
+              await this.findDecoyAddress(decoyAddressConfig)
 
-            if (this.decoyAddressCount >= decoyAddressConfig.count) {
-              // Merge and re-subscribe addresses.
-              await this.mergePendingDecoyAddresses()
-              // End the loop after merging pending decoy addresses.
-              this.removeFromLoop('generateDecoyAddress')
+              if (this.decoyAddressCount >= decoyAddressConfig.count) {
+                // Merge and re-subscribe addresses.
+                await this.mergePendingDecoyAddresses()
+                // End the loop after merging pending decoy addresses.
+                this.removeFromLoop('generateDecoyAddress')
+              }
             }
-          }
-        )
+          )
+        }
       }
     }
 
