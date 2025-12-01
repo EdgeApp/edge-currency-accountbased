@@ -242,7 +242,6 @@ export class XrpEngine extends CurrencyEngine<
   getTotalReserve(): string {
     const numActivatedTokens =
       this.enabledTokenIds.length -
-      1 -
       this.walletLocalData.unactivatedTokenIds.length
 
     const tokenReserve = mul(
@@ -725,7 +724,7 @@ export class XrpEngine extends CurrencyEngine<
       }
       this.updateOnAddressesChecked()
 
-      if (this.enabledTokenIds.length > 1) {
+      if (this.enabledTokenIds.length > 0) {
         // Check for unactivated tokens
         const acctLinesResponse = await this.tools.rippleApi.request({
           command: 'account_lines',
