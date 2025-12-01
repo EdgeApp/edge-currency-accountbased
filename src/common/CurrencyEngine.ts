@@ -256,8 +256,7 @@ export class CurrencyEngine<
     if (tokenId == null) {
       return this.currencyInfo.currencyCode
     } else {
-      const currencyCode = this.allTokensMap[tokenId].currencyCode
-      return currencyCode
+      return this.allTokensMap[tokenId]?.currencyCode
     }
   }
 
