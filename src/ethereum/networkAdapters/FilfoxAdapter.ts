@@ -300,7 +300,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
           const progress = transfersChecked / tokenTransferCount
 
           // Trigger scan progress event
-          onScan({ tx, progress, tokenId: tokenInfo.currencyCode })
+          onScan({ tx, progress, tokenId: tokenTransfer.token })
         }
       }
       // Mark all enabled tokens as complete
