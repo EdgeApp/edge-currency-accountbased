@@ -449,10 +449,6 @@ export class ZcashEngine extends CurrencyEngine<
 
     const totalTxAmount = add(nativeAmount, networkFee)
 
-    if (gt(totalTxAmount, this.getBalance({ tokenId }))) {
-      throw new InsufficientFundsError({ tokenId })
-    }
-
     if (gt(totalTxAmount, this.availableZatoshi)) {
       throw new InsufficientFundsError({ tokenId })
     }
