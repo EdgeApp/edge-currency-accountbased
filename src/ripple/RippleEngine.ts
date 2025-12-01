@@ -732,7 +732,7 @@ export class XrpEngine extends CurrencyEngine<
           account: address
         })
 
-        this.enabledTokenIds.forEach(tokenId => {
+        for (const tokenId of this.enabledTokenIds) {
           const match = acctLinesResponse.result.lines.find(line => {
             const { account: issuer, currency } = line
             const lineTokenId = makeTokenId({ currency, issuer })
@@ -744,7 +744,7 @@ export class XrpEngine extends CurrencyEngine<
           if (match == null) {
             newUnactivatedTokenIds.push(tokenId)
           }
-        })
+        }
       }
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
