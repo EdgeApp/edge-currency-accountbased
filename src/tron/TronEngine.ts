@@ -392,18 +392,18 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       await this.fetchTrxTransactions()
       this.tokenCheckTransactionsStatus.set(null, 1)
       this.updateOnAddressesChecked()
+
       await this.fetchTrc20Transactions()
+      for (const tokenId of this.enabledTokenIds) {
+        this.tokenCheckTransactionsStatus.set(tokenId, 1)
+      }
+      this.updateOnAddressesChecked()
+
+      this.sendTransactionEvents()
     } catch (e: any) {
       this.log.error(`Error checkTransactionsFetch fetchTrxTransactions: `, e)
       throw e
     }
-
-    this.sendTransactionEvents()
-
-    for (const tokenId of this.enabledTokenIds) {
-      this.tokenCheckTransactionsStatus.set(tokenId, 1)
-    }
-    this.updateOnAddressesChecked()
   }
 
   async fetchTrxTransactions(): Promise<void> {
