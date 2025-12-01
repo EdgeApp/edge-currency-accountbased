@@ -207,7 +207,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     }
     if (/^\d+$/.test(cleanedResponseObj.result)) {
       const balance = cleanedResponseObj.result
-      return { tokenBal: new Map([[null, balance]]), server }
+      return { tokenBal: new Map([[tokenId, balance]]), server }
     } else {
       throw new Error(
         `checkTokenBalEthscan returned invalid JSON for ${tokenId}`
