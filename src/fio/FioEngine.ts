@@ -1067,11 +1067,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
-    // Initialize balance
-    if (this.getBalance({ tokenId: null }) == null) {
-      this.updateBalance(null, '0')
-    }
-
     // Balance
     try {
       const balances = { staked: '0', locked: '0' }
