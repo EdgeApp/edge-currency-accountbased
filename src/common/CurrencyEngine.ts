@@ -400,7 +400,7 @@ export class CurrencyEngine<
         }
       }
     }
-    for (const tokenId in this.transactionList) {
+    for (const tokenId of Object.keys(this.transactionList)) {
       this.walletLocalData.numTransactions[tokenId] =
         this.transactionList[tokenId].length
     }
@@ -605,7 +605,7 @@ export class CurrencyEngine<
 
   protected checkDroppedTransactions(dateNow: number): void {
     let numUnconfirmedSpendTxs = 0
-    for (const tokenId in this.transactionList) {
+    for (const tokenId of Object.keys(this.transactionList)) {
       // const droppedTxIndices: Array<number> = []
       for (let i = 0; i < this.transactionList[tokenId].length; i++) {
         const tx = this.transactionList[tokenId][i]
@@ -639,7 +639,7 @@ export class CurrencyEngine<
 
   protected getUnconfirmedTxs(): EdgeTransaction[] {
     const transactions: EdgeTransaction[] = []
-    for (const tokenId in this.transactionList) {
+    for (const tokenId of Object.keys(this.transactionList)) {
       for (const tx of this.transactionList[tokenId]) {
         if (tx.blockHeight === 0) {
           transactions.push(tx)
