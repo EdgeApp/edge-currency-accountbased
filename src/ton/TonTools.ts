@@ -20,6 +20,7 @@ import {
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
@@ -219,7 +220,37 @@ export class TonTools implements EdgeCurrencyTools {
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
-    throw new Error('Method not implemented.')
+    validateToken(token)
+    const cleanLocation = asMaybeContractLocation(token.networkLocation)
+    if (cleanLocation == null) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+
+    const { contractAddress } = cleanLocation
+
+    // Validate that this is a valid TON address
+    if (
+      !Address.isFriendly(contractAddress) &&
+      !Address.isRaw(contractAddress)
+    ) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+
+    // Normalize to raw address format for consistent tokenId
+    const addr = Address.parse(contractAddress)
+    return `${addr.workChain}:${addr.hash.toString('hex')}`
+  }
+
+  /**
+   * Helper to check if an address is a valid jetton contract.
+   * This can be extended later to actually verify the contract on-chain.
+   */
+  isValidJettonAddress(address: string): boolean {
+    try {
+      return Address.isFriendly(address) || Address.isRaw(address)
+    } catch {
+      return false
+    }
   }
 }
 

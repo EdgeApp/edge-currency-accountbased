@@ -1,6 +1,9 @@
 import {
   asArray,
   asCodec,
+  asEither,
+  asMaybe,
+  asNull,
   asNumber,
   asObject,
   asOptional,
@@ -18,6 +21,35 @@ export interface TonNetworkInfo {
 }
 
 //
+// Jetton Types (TEP-74 Token Standard)
+//
+
+/** Network location for a jetton token - the master contract address */
+export interface JettonNetworkLocation {
+  contractAddress: string
+}
+
+export const asJettonNetworkLocation = asObject({
+  contractAddress: asString
+})
+
+/** Data returned from a JettonWallet's get_wallet_data method */
+export interface JettonWalletData {
+  balance: bigint
+  ownerAddress: string
+  jettonMasterAddress: string
+}
+
+/** Jetton transfer operation code per TEP-74 */
+export const JETTON_TRANSFER_OP = 0x0f8a7ea5
+
+/** Jetton transfer notification operation code per TEP-74 */
+export const JETTON_TRANSFER_NOTIFICATION_OP = 0x7362d09c
+
+/** Jetton internal transfer operation code per TEP-74 */
+export const JETTON_INTERNAL_TRANSFER_OP = 0x178d4519
+
+//
 // Info Payload
 //
 
@@ -29,7 +61,10 @@ export type TonInfoPayload = ReturnType<typeof asTonInfoPayload>
 export const asTonWalletOtherData = asObject({
   contractState: asOptional(asString, 'uninitialized'), //  "active" | "uninitialized" | "frozen";
   mostRecentLogicalTime: asOptional(asString),
-  mostRecentHash: asOptional(asString)
+  mostRecentHash: asOptional(asString),
+  // Track the most recent tx checkpoint per jetton (tokenId -> checkpoint)
+  jettonMostRecentLogicalTime: asMaybe(asObject(asString), () => ({})),
+  jettonMostRecentHash: asMaybe(asObject(asString), () => ({}))
 })
 export type TonWalletOtherData = ReturnType<typeof asTonWalletOtherData>
 
@@ -95,7 +130,9 @@ export const asParsedTx = asObject({
 export type ParsedTx = ReturnType<typeof asParsedTx>
 
 export const asTonTxOtherParams = asObject({
-  unsignedTxBase64: asString
+  unsignedTxBase64: asString,
+  // For jetton transfers, we need to know the token ID (master contract address)
+  tokenId: asOptional(asEither(asString, asNull))
 })
 
 export const asTonInitOptions = asObject({
