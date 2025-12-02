@@ -6,6 +6,8 @@ import {
   external,
   fromNano,
   internal,
+  JettonMaster,
+  JettonWallet,
   loadMessageRelaxed,
   MessageRelaxed,
   SendMode,
@@ -39,6 +41,7 @@ import {
   formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
+import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
 import { snooze } from '../common/utils'
 import { TonTools } from './TonTools'
@@ -47,10 +50,18 @@ import {
   asTonPrivateKeys,
   asTonTxOtherParams,
   asTonWalletOtherData,
+  JETTON_INTERNAL_TRANSFER_OP,
+  JETTON_TRANSFER_NOTIFICATION_OP,
+  JETTON_TRANSFER_OP,
   ParsedTx,
   TonNetworkInfo,
   TonWalletOtherData
 } from './tonTypes'
+
+/** Cached mapping of JettonWallet address (raw format) to tokenId */
+interface JettonWalletCache {
+  [walletAddressRaw: string]: string // tokenId
+}
 
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
@@ -61,6 +72,12 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
 
   wallet: WalletContractV5R1
   archiveTransactions: boolean
+
+  // Cache of our JettonWallet addresses for each token
+  // Key: raw address format, Value: tokenId
+  jettonWalletCache: JettonWalletCache = {}
+  // Reverse lookup: tokenId -> JettonWallet address (raw format)
+  tokenIdToJettonWallet: Map<string, string> = new Map()
 
   constructor(
     env: PluginEnvironment<TonNetworkInfo>,
@@ -104,6 +121,296 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       }
     } catch (e) {
       this.log.warn('queryBalance error:', e)
+    }
+  }
+
+  /**
+   * Query balances for all enabled jetton tokens.
+   * For each token:
+   * 1. Get the JettonMaster contract
+   * 2. Query our JettonWallet address from the master
+   * 3. Query the balance from our JettonWallet
+   */
+  async queryJettonBalances(): Promise<void> {
+    const detectedTokenIds: string[] = []
+
+    for (const tokenId of this.enabledTokenIds) {
+      try {
+        const token = this.allTokensMap[tokenId]
+        if (token == null) continue
+
+        const networkLocation = asMaybeContractLocation(token.networkLocation)
+        if (networkLocation == null) continue
+
+        const { contractAddress } = networkLocation
+        const jettonMasterAddress = Address.parse(contractAddress)
+
+        // Get a client and query the jetton wallet address
+        const clients = this.tools.getOrbsClients()
+
+        // Query our JettonWallet address from the JettonMaster
+        const walletAddressFuncs = clients.map(async client => {
+          const jettonMaster = client.open(
+            JettonMaster.create(jettonMasterAddress)
+          )
+          return await jettonMaster.getWalletAddress(this.wallet.address)
+        })
+
+        let jettonWalletAddress: Address
+        try {
+          jettonWalletAddress = await promiseAny(walletAddressFuncs)
+
+          // Cache the JettonWallet address for transaction detection
+          const walletAddressRaw = `${
+            jettonWalletAddress.workChain
+          }:${jettonWalletAddress.hash.toString('hex')}`
+          this.jettonWalletCache[walletAddressRaw] = tokenId
+          this.tokenIdToJettonWallet.set(tokenId, walletAddressRaw)
+        } catch (e: unknown) {
+          // JettonMaster might not exist or be invalid
+          this.log.warn(
+            `Failed to get jetton wallet address for ${token.currencyCode}:`,
+            e
+          )
+          this.updateBalance(token.currencyCode, '0')
+          continue
+        }
+
+        // Query the balance from our JettonWallet
+        const balanceFuncs = clients.map(async client => {
+          const jettonWallet = client.open(
+            JettonWallet.create(jettonWalletAddress)
+          )
+          return await jettonWallet.getBalance()
+        })
+
+        try {
+          const balance = await promiseAny(balanceFuncs)
+          const balanceStr = balance.toString()
+          this.updateBalance(token.currencyCode, balanceStr)
+
+          if (gt(balanceStr, '0')) {
+            detectedTokenIds.push(tokenId)
+          }
+        } catch (e: unknown) {
+          // JettonWallet might not exist (user has never received this token)
+          this.updateBalance(token.currencyCode, '0')
+        }
+      } catch (e: unknown) {
+        this.log.warn(`queryJettonBalances error for tokenId ${tokenId}:`, e)
+      }
+    }
+
+    // Notify about detected tokens
+    if (detectedTokenIds.length > 0) {
+      this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+    }
+  }
+
+  /**
+   * Query transactions for all enabled jetton tokens.
+   * We query transactions on each of our JettonWallet contracts.
+   */
+  async queryJettonTransactions(): Promise<void> {
+    // Make sure we have the JettonWallet addresses cached
+    if (this.tokenIdToJettonWallet.size === 0) {
+      // Balance query not completed yet, skip for now
+      return
+    }
+
+    for (const tokenId of this.enabledTokenIds) {
+      const jettonWalletRaw = this.tokenIdToJettonWallet.get(tokenId)
+      if (jettonWalletRaw == null) continue
+
+      const token = this.allTokensMap[tokenId]
+      if (token == null) continue
+
+      try {
+        await this.queryJettonTransactionsForToken(tokenId, jettonWalletRaw)
+      } catch (e: unknown) {
+        this.log.warn(
+          `queryJettonTransactions error for ${token.currencyCode}:`,
+          e
+        )
+      }
+    }
+
+    this.sendTransactionEvents()
+    this.updateOnAddressesChecked()
+  }
+
+  /**
+   * Query transactions for a specific jetton token.
+   */
+  private async queryJettonTransactionsForToken(
+    tokenId: string,
+    jettonWalletRaw: string
+  ): Promise<void> {
+    const token = this.allTokensMap[tokenId]
+    if (token == null) return
+
+    const clients = this.tools.getTonCenterClients()
+    const jettonWalletAddress = Address.parse(jettonWalletRaw)
+
+    // Get checkpoints for this token
+    let inLoopLogicalTime: string | undefined
+    let inLoopHash: string | undefined
+    let mostRecentLogicalTime: string | undefined
+    let mostRecentHash: string | undefined
+
+    while (true) {
+      const funcs = clients.map(client => async () => {
+        return await client.getTransactions(jettonWalletAddress, {
+          limit: 50,
+          lt: inLoopLogicalTime,
+          hash: inLoopHash,
+          inclusive: false,
+          archival: true
+        })
+      })
+
+      try {
+        const transactions: Awaited<ReturnType<TonClient['getTransactions']>> =
+          await asyncWaterfall(funcs)
+
+        let breakWhileLoop = false
+        for (const tx of transactions) {
+          inLoopLogicalTime = tx.lt.toString()
+          inLoopHash = base64.stringify(tx.hash())
+
+          if (mostRecentLogicalTime == null && mostRecentHash == null) {
+            mostRecentLogicalTime = inLoopLogicalTime
+            mostRecentHash = inLoopHash
+          }
+
+          // Check if we've reached the last known transaction
+          const savedLogicalTime =
+            this.otherData.jettonMostRecentLogicalTime[tokenId]
+          const savedHash = this.otherData.jettonMostRecentHash[tokenId]
+          if (
+            inLoopLogicalTime === savedLogicalTime &&
+            inLoopHash === savedHash
+          ) {
+            breakWhileLoop = true
+            break
+          }
+
+          // Process the jetton transaction
+          this.processJettonTransaction(tx, tokenId, token.currencyCode)
+        }
+
+        if (breakWhileLoop || transactions.length === 0) break
+      } catch (e: unknown) {
+        this.log.warn(
+          `queryJettonTransactionsForToken error for ${token.currencyCode}:`,
+          e
+        )
+        break
+      }
+    }
+
+    // Save checkpoints
+    if (mostRecentLogicalTime != null && mostRecentHash != null) {
+      this.otherData.jettonMostRecentLogicalTime[tokenId] =
+        mostRecentLogicalTime
+      this.otherData.jettonMostRecentHash[tokenId] = mostRecentHash
+      this.walletLocalDataDirty = true
+    }
+
+    this.tokenCheckTransactionsStatus[token.currencyCode] = 1
+  }
+
+  /**
+   * Process a transaction on a JettonWallet contract.
+   * Parse the message body to extract jetton transfer details.
+   */
+  private processJettonTransaction(
+    tx: Awaited<ReturnType<TonClient['getTransactions']>>[number],
+    tokenId: string,
+    currencyCode: string
+  ): void {
+    try {
+      const timestamp = tx.now
+      const txid = base16.stringify(tx.hash()).toLowerCase()
+      const networkFee = tx.totalFees.coins.toString()
+
+      // Parse the incoming message to determine the operation
+      const inMsg = tx.inMessage
+      if (inMsg == null || inMsg.body == null) return
+
+      const bodySlice = inMsg.body.beginParse()
+      if (bodySlice.remainingBits < 32) return
+
+      const opcode = bodySlice.loadUint(32)
+
+      let nativeAmount = '0'
+      let isSend = false
+      const ourReceiveAddresses: string[] = []
+
+      // Handle internal_transfer (incoming jettons)
+      if (opcode === JETTON_INTERNAL_TRANSFER_OP) {
+        // internal_transfer: query_id:uint64 amount:Coins from:MsgAddress ...
+        bodySlice.skip(64) // query_id
+        const amount = bodySlice.loadCoins()
+
+        nativeAmount = amount.toString()
+        isSend = false
+        ourReceiveAddresses.push(
+          this.wallet.address.toString({ bounceable: false })
+        )
+      }
+      // Handle transfer (outgoing jettons - we see this on our wallet's outbound msg)
+      else if (opcode === JETTON_TRANSFER_OP) {
+        // transfer: query_id:uint64 amount:Coins destination:MsgAddress ...
+        bodySlice.skip(64) // query_id
+        const amount = bodySlice.loadCoins()
+
+        nativeAmount = `-${amount.toString()}`
+        isSend = true
+      }
+      // Handle transfer_notification (notification of received jettons)
+      else if (opcode === JETTON_TRANSFER_NOTIFICATION_OP) {
+        // transfer_notification: query_id:uint64 amount:Coins sender:MsgAddress ...
+        bodySlice.skip(64) // query_id
+        const amount = bodySlice.loadCoins()
+
+        nativeAmount = amount.toString()
+        isSend = false
+        ourReceiveAddresses.push(
+          this.wallet.address.toString({ bounceable: false })
+        )
+      } else {
+        // Unknown opcode, skip
+        return
+      }
+
+      if (nativeAmount === '0') return
+
+      const edgeTransaction: EdgeTransaction = {
+        blockHeight: 1,
+        confirmations: 'confirmed',
+        currencyCode,
+        date: timestamp,
+        isSend,
+        nativeAmount,
+        // Token transactions: fee is in TON (parent), not in the token
+        networkFee: '0',
+        networkFees: isSend
+          ? [{ tokenId: null, nativeAmount: networkFee }]
+          : [],
+        parentNetworkFee: isSend ? networkFee : undefined,
+        memos: [],
+        ourReceiveAddresses,
+        tokenId,
+        txid,
+        signedTx: '',
+        walletId: this.walletId
+      }
+
+      this.addTransaction(currencyCode, edgeTransaction)
+    } catch (e: unknown) {
+      // Failed to parse transaction, skip it
+      this.log.warn('processJettonTransaction parse error:', e)
     }
   }
 
@@ -216,7 +523,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       isSend,
       nativeAmount: nativeAmount,
       networkFee,
-      networkFees: [],
+      networkFees: [{ tokenId: null, nativeAmount: networkFee }],
       memos,
       ourReceiveAddresses: [...ourReceiveAddresses],
       tokenId: null,
@@ -237,7 +544,9 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
 
   async startEngine(): Promise<void> {
     this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('queryJettonBalances', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('queryJettonTransactions', ADDRESS_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
@@ -351,7 +660,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       memos,
       nativeAmount: `-${add(nativeAmount, networkFee)}`,
       networkFee,
-      networkFees: [],
+      networkFees: [{ tokenId: null, nativeAmount: networkFee }],
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
