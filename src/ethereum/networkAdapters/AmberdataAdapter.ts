@@ -1,4 +1,7 @@
-import { base58ToHexAddress } from '../../tron/tronUtils'
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
 import { NetworkAdapter } from './networkAdapterTypes'
@@ -52,10 +55,22 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
     method: string,
     params: string[] = []
   ): Promise<any> {
-    const { amberdataApiKey = '' } = this.ethEngine.initOptions
+    const { amberdataApiKey, serviceKeys } = this.ethEngine.initOptions
 
-    return await this.serialServers(async baseUrl => {
-      const url = `${this.config.servers[0]}`
+    return await this.serialServers(async url => {
+      let apiKey = getRandomServiceKey(serviceKeys, getServiceKeyIndex(url))
+
+      if (apiKey == null && amberdataApiKey != null) {
+        this.ethEngine.log.warn(
+          "INIT OPTION 'amberdataApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+        )
+        apiKey = amberdataApiKey
+      }
+
+      if (apiKey == null) {
+        throw new Error('Missing API key')
+      }
+
       const body = {
         jsonrpc: '2.0',
         method: method,
@@ -65,7 +80,7 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
       const response = await this.ethEngine.fetchCors(url, {
         headers: {
           'x-amberdata-blockchain-id': this.config.amberdataBlockchainId,
-          'x-api-key': amberdataApiKey,
+          'x-api-key': apiKey,
           'Content-Type': 'application/json'
         },
         method: 'POST',
@@ -82,14 +97,27 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
 
   // TODO: Clean return type
   private async fetchGetAmberdataApi(path: string): Promise<any> {
-    const { amberdataApiKey = '' } = this.ethEngine.initOptions
+    const { amberdataApiKey, serviceKeys } = this.ethEngine.initOptions
 
     return await this.serialServers(async baseUrl => {
-      const url = `${base58ToHexAddress}${path}`
+      let apiKey = getRandomServiceKey(serviceKeys, getServiceKeyIndex(baseUrl))
+
+      if (apiKey == null && amberdataApiKey != null) {
+        this.ethEngine.log.warn(
+          "INIT OPTION 'amberdataApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+        )
+        apiKey = amberdataApiKey
+      }
+
+      if (apiKey == null) {
+        throw new Error('Missing API key')
+      }
+
+      const url = `${baseUrl}${path}`
       const response = await this.ethEngine.fetchCors(url, {
         headers: {
           'x-amberdata-blockchain-id': this.config.amberdataBlockchainId,
-          'x-api-key': amberdataApiKey
+          'x-api-key': apiKey
         }
       })
       if (!response.ok) {
