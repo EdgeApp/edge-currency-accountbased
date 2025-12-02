@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (TON) Support for Jetton tokens
+
 ## 4.65.1 (2025-11-28)
 
 - fixed: Disabled decoy address routines for performance reasons.

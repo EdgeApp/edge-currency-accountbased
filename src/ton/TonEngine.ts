@@ -65,6 +65,23 @@ interface JettonWalletCache {
 
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
+/**
+ * Amount of TON (in nanotons) to attach to jetton transfer message for gas.
+ * 0.05 TON is the industry convention used by OKX, Tonkeeper, and other wallets.
+ * This covers the gas for the transfer message to our JettonWallet contract.
+ * @see https://github.com/okx/js-wallet-sdk - messageAttachedTons default
+ * @see https://github.com/elizaos-plugins/plugin-ton - JettonWallet.sendTransfer
+ */
+const JETTON_TRANSFER_GAS_AMOUNT = '50000000' // 0.05 TON
+
+/**
+ * Forward TON amount (in nanotons) sent with the jetton transfer notification.
+ * Setting this to a non-zero value triggers a transfer_notification to the recipient.
+ * 1 nanoton is the minimal amount to trigger notification without wasting funds.
+ * @see https://github.com/okx/js-wallet-sdk - invokeNotificationFee default
+ */
+const JETTON_FORWARD_AMOUNT = '1' // 1 nanoton
+
 export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
   log: EdgeLog
   networkInfo: TonNetworkInfo
@@ -557,13 +574,22 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    // TON allows sending the entire balance but we need to be able to craft the entire transaction here instead of just an amount
+    const { tokenId } = spendInfo
     const spendInfoCopy = { ...spendInfo }
 
-    const balance = this.getBalance({ tokenId: spendInfoCopy.tokenId })
+    const balance = this.getBalance({ tokenId })
     spendInfoCopy.spendTargets[0].nativeAmount = balance
     spendInfoCopy.skipChecks = true
 
+    // For jetton transfers, the max spendable is the entire jetton balance
+    // (TON gas fees don't reduce the jetton amount)
+    if (tokenId != null) {
+      // Verify we have enough TON for gas by attempting makeSpend
+      await this.makeSpend(spendInfoCopy)
+      return balance
+    }
+
+    // For native TON, we need to account for fees and minimum balance
     const edgeTransaction = await this.makeSpend(spendInfoCopy)
     return sub(
       sub(balance, this.networkInfo.minimumAddressBalance),
@@ -574,7 +600,6 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
-    const memo: string | undefined = memos[0]?.value
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -584,6 +609,39 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     if (publicAddress == null) {
       throw new Error('makeSpend Missing publicAddress')
     }
+
+    // Branch based on whether this is a native TON or jetton transfer
+    if (tokenId != null) {
+      return await this.makeSpendJetton(
+        edgeSpendInfoIn,
+        currencyCode,
+        tokenId,
+        nativeAmount,
+        publicAddress,
+        memos
+      )
+    }
+
+    return await this.makeSpendTon(
+      edgeSpendInfoIn,
+      currencyCode,
+      nativeAmount,
+      publicAddress,
+      memos
+    )
+  }
+
+  /**
+   * Create a native TON transfer transaction.
+   */
+  private async makeSpendTon(
+    edgeSpendInfoIn: EdgeSpendInfo,
+    currencyCode: string,
+    nativeAmount: string,
+    publicAddress: string,
+    memos: EdgeMemo[]
+  ): Promise<EdgeTransaction> {
+    const memo: string | undefined = memos[0]?.value
 
     let memoCell: Cell | undefined
     if (memo != null) {
@@ -634,7 +692,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     }
 
     const total = add(nativeAmount, networkFee)
-    const balance = this.getBalance({ tokenId })
+    const balance = this.getBalance({ tokenId: null })
     if (
       edgeSpendInfoIn.skipChecks !== true &&
       gt(add(total, this.networkInfo.minimumAddressBalance), balance)
@@ -649,7 +707,8 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     storeMessageRelaxed(transferMessage)(builder)
     const messageSlice = builder.asSlice()
     const otherParams = {
-      unsignedTxBase64: base64.stringify(messageSlice.asCell().toBoc())
+      unsignedTxBase64: base64.stringify(messageSlice.asCell().toBoc()),
+      tokenId: null
     }
 
     const edgeTransaction: EdgeTransaction = {
@@ -661,6 +720,149 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       nativeAmount: `-${add(nativeAmount, networkFee)}`,
       networkFee,
       networkFees: [{ tokenId: null, nativeAmount: networkFee }],
+      otherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      tokenId: null,
+      txid: '',
+      walletId: this.walletId
+    }
+    return edgeTransaction
+  }
+
+  /**
+   * Create a jetton (token) transfer transaction.
+   * This involves sending a message to our JettonWallet contract.
+   */
+  private async makeSpendJetton(
+    edgeSpendInfoIn: EdgeSpendInfo,
+    currencyCode: string,
+    tokenId: string,
+    nativeAmount: string,
+    publicAddress: string,
+    memos: EdgeMemo[]
+  ): Promise<EdgeTransaction> {
+    const token = this.allTokensMap[tokenId]
+    if (token == null) {
+      throw new Error(`Unknown token: ${tokenId}`)
+    }
+
+    const networkLocation = asMaybeContractLocation(token.networkLocation)
+    if (networkLocation == null) {
+      throw new Error('Invalid token network location')
+    }
+
+    const { contractAddress } = networkLocation
+    const jettonMasterAddress = Address.parse(contractAddress)
+    const destinationAddress = Address.parse(publicAddress)
+
+    // Get our JettonWallet address
+    const clients = this.tools.getOrbsClients()
+    const walletAddressFuncs = clients.map(async client => {
+      const jettonMaster = client.open(JettonMaster.create(jettonMasterAddress))
+      return await jettonMaster.getWalletAddress(this.wallet.address)
+    })
+    const ourJettonWalletAddress = await promiseAny(walletAddressFuncs)
+
+    // Build the jetton transfer message body
+    // transfer#0f8a7ea5 query_id:uint64 amount:Coins destination:MsgAddress
+    //                   response_destination:MsgAddress custom_payload:(Maybe ^Cell)
+    //                   forward_ton_amount:Coins forward_payload:(Either Cell ^Cell)
+    const forwardPayload =
+      memos[0]?.value != null
+        ? beginCell().storeUint(0, 32).storeStringTail(memos[0].value).endCell()
+        : null
+
+    const jettonTransferBody = beginCell()
+      .storeUint(JETTON_TRANSFER_OP, 32) // op: transfer
+      .storeUint(0, 64) // query_id
+      .storeCoins(BigInt(nativeAmount)) // amount of jettons to transfer
+      .storeAddress(destinationAddress) // destination address
+      .storeAddress(this.wallet.address) // response_destination (send excess back to us)
+      .storeBit(false) // custom_payload: null
+      .storeCoins(BigInt(JETTON_FORWARD_AMOUNT)) // forward_ton_amount
+      .storeMaybeRef(forwardPayload) // forward_payload (memo)
+      .endCell()
+
+    const needsInit = this.otherData.contractState === 'uninitialized'
+
+    // Create the message to our JettonWallet
+    const transferMessage: MessageRelaxed = internal({
+      value: fromNano(JETTON_TRANSFER_GAS_AMOUNT), // TON for gas
+      to: ourJettonWalletAddress,
+      body: jettonTransferBody,
+      init: needsInit ? this.wallet.init : null,
+      bounce: true // Jetton wallets should bounce on error
+    })
+
+    const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
+      sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
+      messages: [transferMessage],
+      seqno: 0,
+      secretKey: Buffer.alloc(64)
+    }
+    const transfer = this.wallet.createTransfer(transferArgs)
+
+    // Estimate fee
+    const feeFuncs = clients.map(async client => {
+      return await client.estimateExternalMessageFee(this.wallet.address, {
+        body: transfer,
+        initCode: needsInit ? this.wallet.init.code : null,
+        initData: needsInit ? this.wallet.init.data : null,
+        ignoreSignature: false
+      })
+    })
+    const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
+      await promiseAny(feeFuncs)
+
+    const totalFee =
+      fees.source_fees.fwd_fee +
+      fees.source_fees.gas_fee +
+      fees.source_fees.in_fwd_fee +
+      fees.source_fees.storage_fee
+    // Total TON cost = gas amount + estimated fee
+    const networkFee = add(JETTON_TRANSFER_GAS_AMOUNT, totalFee.toString())
+
+    // Check jetton balance
+    const jettonBalance = this.getBalance({ tokenId })
+    if (
+      edgeSpendInfoIn.skipChecks !== true &&
+      gt(nativeAmount, jettonBalance)
+    ) {
+      throw new InsufficientFundsError({ tokenId })
+    }
+
+    // Check TON balance for gas
+    const tonBalance = this.getBalance({ tokenId: null })
+    if (
+      edgeSpendInfoIn.skipChecks !== true &&
+      gt(add(networkFee, this.networkInfo.minimumAddressBalance), tonBalance)
+    ) {
+      throw new InsufficientFundsError({
+        networkFee,
+        tokenId: null
+      })
+    }
+
+    // Serialize transferMessage
+    const builder = beginCell()
+    storeMessageRelaxed(transferMessage)(builder)
+    const messageSlice = builder.asSlice()
+    const otherParams = {
+      unsignedTxBase64: base64.stringify(messageSlice.asCell().toBoc()),
+      tokenId
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 0,
+      currencyCode,
+      date: 0,
+      isSend: true,
+      memos,
+      nativeAmount: `-${nativeAmount}`, // Jetton amount
+      networkFee: '0', // Token fee is 0
+      networkFees: [{ tokenId: null, nativeAmount: networkFee }],
+      parentNetworkFee: networkFee, // TON fee
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
