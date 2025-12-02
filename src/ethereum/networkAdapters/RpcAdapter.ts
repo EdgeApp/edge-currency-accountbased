@@ -3,6 +3,10 @@ import { EdgeTransaction } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import parse from 'url-parse'
 
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { asMaybeContractLocation } from '../../common/tokenHelpers'
 import {
   hexToDecimal,
@@ -433,15 +437,34 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   private addRpcApiKey(url: string): string {
     const regex = /{{(.*?)}}/g
     const match = regex.exec(url)
+
     if (match != null) {
       const key = match[1]
-      const cleanKey = asEthereumInitKeys(key)
-      const apiKey = this.ethEngine.initOptions[cleanKey]
+
+      // try service keys first
+      const serviceKeyIndex = getServiceKeyIndex(url)
+      let apiKey = getRandomServiceKey(
+        this.ethEngine.initOptions.serviceKeys,
+        serviceKeyIndex
+      )
+
+      // fall back to deprecated keys
+      if (apiKey == null) {
+        const cleanKey = asEthereumInitKeys(key)
+        const cleanApiKey = this.ethEngine.initOptions[cleanKey]
+        if (cleanApiKey === 'string') {
+          apiKey = cleanApiKey
+          this.ethEngine.log.warn(
+            `INIT OPTION '${cleanKey}' IS DEPRECATED. USE 'serviceKeys' INSTEAD`
+          )
+        }
+      }
+
       if (typeof apiKey === 'string') {
         url = url.replace(match[0], apiKey)
       } else if (apiKey == null) {
         throw new Error(
-          `Missing ${cleanKey} in 'initOptions' for ${this.ethEngine.currencyInfo.pluginId}`
+          `Missing '${serviceKeyIndex}' in 'initOptions.serviceKeys' for ${this.ethEngine.currencyInfo.pluginId}`
         )
       } else {
         throw new Error('Incorrect apikey type for RPC')

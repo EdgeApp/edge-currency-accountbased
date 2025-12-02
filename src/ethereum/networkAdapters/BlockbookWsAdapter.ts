@@ -2,6 +2,10 @@ import { asBoolean, asJSON, asMaybe, asObject, asString } from 'cleaners'
 import WebSocket from 'isomorphic-ws'
 
 import { makePeriodicTask, PeriodicTask } from '../../common/periodicTask'
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { pickRandomOne } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { EthereumInitOptions } from '../ethereumTypes'
@@ -208,9 +212,19 @@ export class BlockbookWsAdapter extends NetworkAdapter<BlockbookWsAdapterConfig>
 
     while (servers.length > 0) {
       const server = pickRandomOne(this.servers)
+      let apiKey = getRandomServiceKey(
+        this.ethEngine.initOptions.serviceKeys,
+        getServiceKeyIndex(server.url)
+      )
 
       if (server.keyType != null) {
-        const apiKey = this.ethEngine.initOptions[server.keyType]
+        if (apiKey == null) {
+          apiKey = this.ethEngine.initOptions[server.keyType]
+          if (apiKey != null)
+            this.ethEngine.log.warn(
+              `INIT OPTION '${server.keyType}' IS DEPRECATED. USE 'serviceKeys' INSTEAD`
+            )
+        }
 
         // Check for missing API key
         if (apiKey == null) {

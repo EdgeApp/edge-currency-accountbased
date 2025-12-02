@@ -1,3 +1,7 @@
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { safeErrorMessage } from '../../common/utils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import {
@@ -88,13 +92,24 @@ export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
     path: string,
     includeKey: boolean = false
   ): Promise<any> {
-    const { blockchairApiKey } = this.ethEngine.initOptions
+    const { blockchairApiKey, serviceKeys } = this.ethEngine.initOptions
 
     return await this.serialServers(async baseUrl => {
-      const keyParam =
-        includeKey && blockchairApiKey != null ? `&key=${blockchairApiKey}` : ''
-      const url = `${baseUrl}${path}`
-      const response = await this.ethEngine.fetchCors(`${url}${keyParam}`)
+      let apiKey: string | undefined
+
+      if (includeKey) {
+        apiKey = getRandomServiceKey(serviceKeys, getServiceKeyIndex(baseUrl))
+
+        if (apiKey == null && blockchairApiKey != null) {
+          this.ethEngine.log.warn(
+            "INIT OPTION 'blockchairApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+          )
+          apiKey = blockchairApiKey
+        }
+      }
+
+      const url = `${baseUrl}${path}${apiKey != null ? `&key=${apiKey}` : ''}`
+      const response = await this.ethEngine.fetchCors(url)
       if (!response.ok) {
         const resBody = await response.text()
         this.throwError(response, 'fetchGetBlockchair', url, resBody)

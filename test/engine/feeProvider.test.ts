@@ -33,11 +33,13 @@ describe(`FTM Network Fees`, function () {
       fetch,
       ftmCurrencyInfo,
       {
-        evmScanApiKey: [
-          'EG16P5AF5FNJ3XR8ICP3UAYHT68G53TAKU',
-          '63YA67UBCWPG6SEREC9GNRRR31SDPGSQY9',
-          'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
-        ]
+        serviceKeys: {
+          'api.etherscan.io': [
+            'EG16P5AF5FNJ3XR8ICP3UAYHT68G53TAKU',
+            '63YA67UBCWPG6SEREC9GNRRR31SDPGSQY9',
+            'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
+          ]
+        }
       },
       fakeLog,
       ftmNetworkInfo
