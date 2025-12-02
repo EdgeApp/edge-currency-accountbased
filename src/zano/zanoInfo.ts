@@ -24,6 +24,20 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress:
         'f5413f195b3347a3822ea6100e4db70f10b34ea0b22822af0ba15258d139fb71' // Asset ID
     }
+  },
+  '040a180aca4194a158c17945dd115db42086f6f074c1f77838621a4927fffa91': {
+    currencyCode: 'BTCx',
+    displayName: 'Bitcoin',
+    denominations: [
+      {
+        name: 'BTCx',
+        multiplier: '100000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        '040a180aca4194a158c17945dd115db42086f6f074c1f77838621a4927fffa91'
+    }
   }
 }
 
