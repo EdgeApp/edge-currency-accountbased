@@ -212,6 +212,7 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'polygonMnemonic',
   pluginRegularKeyName: 'polygonKey',
   evmGasStationUrl: 'https://gasstation.polygon.technology/v2',
+  feeUpdateFrequencyMs: 60000, // 1 minute (default is 10 minutes)
   networkFees,
   decoyAddressConfig: {
     count: 5,
