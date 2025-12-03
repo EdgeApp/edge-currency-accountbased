@@ -47,12 +47,13 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://api.mainnet.abs.xyz	']
+      servers: ['https://api.mainnet.abs.xyz']
     },
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.abscan.org/']
+      servers: ['https://api.etherscan.io/v2/api'],
+      version: 2
     }
   ],
   uriNetworks: ['abstract'],

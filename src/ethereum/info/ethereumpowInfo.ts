@@ -60,13 +60,6 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: ['https://mainnet.ethereumpow.org']
-    },
-    {
-      type: 'evmscan',
-      gastrackerSupport: true,
-      servers: [
-        // TODO:
-      ]
     }
   ],
 

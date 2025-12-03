@@ -117,22 +117,91 @@ export interface EthereumNetworkInfo {
   decoyAddressConfig?: DecoyAddressConfig
 }
 
-const asNetworkAdaptorConfigType = asValue(
-  'amberdata-rpc',
-  'blockbook',
-  'blockbook-ws',
-  'blockchair',
-  'blockcypher',
-  'evmscan',
-  'filfox',
-  'pulsechain-scan',
-  'rpc'
-)
-const asNetworkAdaptorConfig = asObject({
-  type: asNetworkAdaptorConfigType,
+const asAmberdataAdapterConfig: Cleaner<
+  import('./networkAdapters/AmberdataAdapter').AmberdataAdapterConfig
+> = asObject({
+  type: asValue('amberdata-rpc'),
+  amberdataBlockchainId: asString,
+  servers: asArray(asString)
+})
+
+const asBlockbookAdapterConfig: Cleaner<
+  import('./networkAdapters/BlockbookAdapter').BlockbookAdapterConfig
+> = asObject({
+  type: asValue('blockbook'),
+  servers: asArray(asString)
+})
+
+const asBlockbookWsAdapterConnection: Cleaner<
+  import('./networkAdapters/BlockbookWsAdapter').BlockbookWsAdapterConnection
+> = asObject({
+  url: asString,
+  keyType: asOptional(asValue('nowNodesApiKey'))
+})
+
+const asBlockbookWsAdapterConfig: Cleaner<
+  import('./networkAdapters/BlockbookWsAdapter').BlockbookWsAdapterConfig
+> = asObject({
+  type: asValue('blockbook-ws'),
+  connections: asArray(asBlockbookWsAdapterConnection)
+})
+
+const asBlockchairAdapterConfig: Cleaner<
+  import('./networkAdapters/BlockchairAdapter').BlockchairAdapterConfig
+> = asObject({
+  type: asValue('blockchair'),
+  servers: asArray(asString)
+})
+
+const asBlockcypherAdapterConfig: Cleaner<
+  import('./networkAdapters/BlockcypherAdapter').BlockcypherAdapterConfig
+> = asObject({
+  type: asValue('blockcypher'),
+  servers: asArray(asString)
+})
+
+const asEvmScanAdapterConfig: Cleaner<
+  import('./networkAdapters/EvmScanAdapter').EvmScanAdapterConfig
+> = asObject({
+  type: asValue('evmscan'),
+  servers: asArray(asString),
+  version: asValue(1, 2),
+  gastrackerSupport: asOptional(asBoolean)
+})
+
+const asFilfoxAdapterConfig: Cleaner<
+  import('./networkAdapters/FilfoxAdapter').FilfoxAdapterConfig
+> = asObject({
+  type: asValue('filfox'),
+  servers: asArray(asString)
+})
+
+const asPulsechainScanAdapterConfig: Cleaner<
+  import('./networkAdapters/PulsechainScanAdapter').PulsechainScanAdapterConfig
+> = asObject({
+  type: asValue('pulsechain-scan'),
+  servers: asArray(asString)
+})
+
+const asRpcAdapterConfig: Cleaner<
+  import('./networkAdapters/RpcAdapter').RpcAdapterConfig
+> = asObject({
+  type: asValue('rpc'),
   servers: asArray(asString),
   ethBalCheckerContract: asOptional(asString)
 })
+
+const asNetworkAdaptorConfig: Cleaner<NetworkAdapterConfig> = asEither(
+  asAmberdataAdapterConfig,
+  asBlockbookAdapterConfig,
+  asBlockbookWsAdapterConfig,
+  asBlockchairAdapterConfig,
+  asBlockcypherAdapterConfig,
+  asEvmScanAdapterConfig,
+  asFilfoxAdapterConfig,
+  asPulsechainScanAdapterConfig,
+  asRpcAdapterConfig
+)
 
 /**
  * Other Methods from EthereumTools

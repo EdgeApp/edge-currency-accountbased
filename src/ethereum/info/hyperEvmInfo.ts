@@ -125,14 +125,16 @@ const networkInfo: EthereumNetworkInfo = {
       servers: [
         'https://rpc.hyperliquid.xyz/evm',
         'https://rpc.hypurrscan.io',
-        'https://hyperliquid-json-rpc.stakely.io',
-        'https://hyperliquid-json-rpc.stakely.io'
+        'https://rpc.hyperlend.finance'
       ]
     },
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.routescan.io/v2/network/mainnet/evm/999/etherscan']
+      servers: [
+        'https://api.routescan.io/v2/network/mainnet/evm/999/etherscan/api'
+      ],
+      version: 1
     }
   ],
   uriNetworks: [],
