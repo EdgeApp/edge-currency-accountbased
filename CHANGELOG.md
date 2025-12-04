@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.66.0 (2025-12-04)
+
 - added: (Zano) BTCx token
 - added: (Zcash) ZIP-321 URI support
 - changed: (Polygon) Decrease gas polling frequency to 1 minute
