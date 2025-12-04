@@ -29,6 +29,7 @@ export interface ZcashSynchronizer {
   createTransfer: (opts: CreateTransferOpts) => Promise<string | SpendFailure>
   deriveUnifiedAddress: () => Promise<Addresses>
   proposeTransfer: (opts: ProposeTransferOpts) => Promise<ProposalSuccess>
+  proposeFulfillingPaymentURI: (paymentUri: string) => Promise<ProposalSuccess>
   rescan: () => Promise<void>
   shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<string>
   stop: () => Promise<string>
@@ -81,6 +82,9 @@ export function makeZcashIo(): ZcashIo {
         },
         proposeTransfer: async proposeTransferOpts => {
           return await realSynchronizer.proposeTransfer(proposeTransferOpts)
+        },
+        proposeFulfillingPaymentURI: async paymentUri => {
+          return await realSynchronizer.proposeFulfillingPaymentURI(paymentUri)
         },
         createTransfer: async transferOpts => {
           return await realSynchronizer.createTransfer(transferOpts)
