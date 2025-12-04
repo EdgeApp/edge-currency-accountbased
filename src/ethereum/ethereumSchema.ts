@@ -42,10 +42,10 @@ export const asEvmGasStation = (
     case 'polygon': {
       const polygonFees = asPolygonGasStation(raw)
       return {
-        safeLow: polygonFees.safeLow.maxPriorityFee,
-        average: polygonFees.standard.maxPriorityFee,
-        fast: polygonFees.fast.maxPriorityFee,
-        fastest: polygonFees.fast.maxPriorityFee * 1.25
+        safeLow: polygonFees.safeLow.maxFee,
+        average: polygonFees.standard.maxFee,
+        fast: polygonFees.fast.maxFee,
+        fastest: polygonFees.fast.maxFee * 1.25
       }
     }
     default: {
