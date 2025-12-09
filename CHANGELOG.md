@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.67.0 (2025-12-09)
+
 - changed: Index internal wallet data with tokenIds
 
 ## 4.66.0 (2025-12-04)
