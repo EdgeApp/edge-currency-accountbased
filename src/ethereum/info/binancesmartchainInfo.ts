@@ -154,7 +154,8 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.etherscan.io', 'https://api.bscscan.com']
+      servers: ['https://api.etherscan.io/v2/api'],
+      version: 2
     }
   ],
   uriNetworks: ['smartchain'],

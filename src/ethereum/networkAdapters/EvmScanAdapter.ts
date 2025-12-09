@@ -59,6 +59,7 @@ const NUM_TRANSACTIONS_TO_QUERY = 50
 export interface EvmScanAdapterConfig {
   type: 'evmscan'
   servers: string[]
+  version: 1 | 2
 
   /** Whether the API supports gastracker module */
   gastrackerSupport?: boolean
@@ -304,14 +305,14 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
     // Determine if we should use v2 API
     let url: string
-    if (server.includes('etherscan.io')) {
+    if (this.config.version === 2) {
       // For etherscan.io API - use v2 with chainId
-      url = `${server}/v2/api?chainid=${chainId}${
+      url = `${server}?chainid=${chainId}${
         cmd.startsWith('?') ? cmd.replace('?', '&') : cmd
       }`
     } else {
       // For non-etherscan APIs like blockscout, continue using the old format
-      url = `${server}/api${cmd}`
+      url = `${server}${cmd}`
     }
 
     const response = await this.ethEngine.fetchCors(`${url}${apiKeyParam}`)
@@ -327,7 +328,9 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       'status' in cleanData &&
       cleanData.status === '0' &&
       typeof cleanData.result === 'string' &&
-      cleanData.result.match(/Max calls|rate limit/) != null
+      (cleanData.result.match(/Max calls|rate limit/) != null ||
+        cleanData.result.match(/Free API access is temporarily unavailable/) !=
+          null)
     ) {
       throw new RateLimitError(`fetchGetEtherscan rate limit for ${server}`)
     }
