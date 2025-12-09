@@ -9,12 +9,11 @@ import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeCurrencyInfo,
+  EdgeDenomination,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSpendInfo,
   EdgeTokenId,
-  EdgeTokenMap,
   EdgeTransaction,
   EdgeTxAmount,
   EdgeWalletInfo,
@@ -30,7 +29,6 @@ import { getRandomDelayMs } from '../common/network'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
-  getDenomination,
   getFetchCors,
   getOtherParams,
   makeMutex,
@@ -152,10 +150,7 @@ export class PolkadotEngine extends CurrencyEngine<
       this.walletInfo.keys.publicKey
     )
     this.nonce = accountBalanceRes.nonce.toNumber()
-    this.updateBalance(
-      this.currencyInfo.currencyCode,
-      accountBalanceRes.data.free.toString()
-    )
+    this.updateBalance(null, accountBalanceRes.data.free.toString())
 
     for (const tokenId of this.enabledTokenIds) {
       const token = this.allTokensMap[tokenId]
@@ -171,7 +166,7 @@ export class PolkadotEngine extends CurrencyEngine<
       if (tokenBalanceRes.isSome) {
         tokenBalance = tokenBalanceRes.unwrap().balance.toString()
       }
-      this.updateBalance(token.currencyCode, tokenBalance)
+      this.updateBalance(tokenId, tokenBalance)
     }
   }
 
@@ -210,12 +205,7 @@ export class PolkadotEngine extends CurrencyEngine<
     // Fix amount for unsuccessful transactions
     const amount = success ? transferAmount : '0'
 
-    const denom = getDenomination(
-      this.currencyInfo.currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
-    if (denom == null) return
+    const denom = this.getDenomination(null)
 
     const ourReceiveAddresses = []
 
@@ -242,7 +232,7 @@ export class PolkadotEngine extends CurrencyEngine<
       txid: hash,
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(null, edgeTransaction)
   }
 
   async queryLiberlandTransactions(): Promise<void> {
@@ -327,24 +317,23 @@ export class PolkadotEngine extends CurrencyEngine<
             {
               walletId: this.walletId,
               walletInfo: this.walletInfo,
-              currencyInfo: this.currencyInfo,
-              allTokensMap: this.allTokensMap,
+              getCurrencyCode: this.getCurrencyCode,
+              getDenomination: this.getDenomination,
               tokenId: null
             },
             tx
           )
           if (edgeTransaction != null) {
+            const safeLldTokenId = ''
             if (
-              this.otherData.newestTxid[this.currencyInfo.currencyCode] ===
-              edgeTransaction.txid
+              this.otherData.newestTxid[safeLldTokenId] === edgeTransaction.txid
             ) {
               hasNextPage = false
               break
             }
 
-            this.otherData.newestTxid[this.currencyInfo.currencyCode] =
-              edgeTransaction.txid
-            this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+            this.otherData.newestTxid[safeLldTokenId] = edgeTransaction.txid
+            this.addTransaction(null, edgeTransaction)
           }
         }
 
@@ -352,8 +341,10 @@ export class PolkadotEngine extends CurrencyEngine<
         const totalCount = cleanTransfersResponse.data.transfers.totalCount
         processedCount += transfers.length
 
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        this.tokenCheckTransactionsStatus.set(
+          null,
           totalCount === 0 ? 1 : processedCount / totalCount
+        )
         this.updateOnAddressesChecked()
       } catch (e: any) {
         this.warn(`Error fetching Liberland transactions: ${e.message}`)
@@ -361,14 +352,13 @@ export class PolkadotEngine extends CurrencyEngine<
       }
     }
 
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
     this.updateOnAddressesChecked()
 
     // LLM Transfers. Endpoint only handles specifically the LLM token
     hasNextPage = true
     endCursor = null
-    const tokenId = '1'
-    const currencyCode = this.allTokensMap[tokenId].currencyCode
+    const llmTokenId = '1'
 
     while (hasNextPage) {
       const meritsOperationName = 'Merits'
@@ -434,30 +424,32 @@ export class PolkadotEngine extends CurrencyEngine<
             {
               walletId: this.walletId,
               walletInfo: this.walletInfo,
-              currencyInfo: this.currencyInfo,
-              allTokensMap: this.allTokensMap,
-              tokenId
+              getCurrencyCode: this.getCurrencyCode,
+              getDenomination: this.getDenomination,
+              tokenId: llmTokenId
             },
             tx
           )
           if (edgeTransaction != null) {
             if (
-              this.otherData.newestTxid[currencyCode] === edgeTransaction.txid
+              this.otherData.newestTxid[llmTokenId] === edgeTransaction.txid
             ) {
               hasNextPage = false
               break
             }
 
-            this.otherData.newestTxid[currencyCode] = edgeTransaction.txid
-            this.addTransaction(currencyCode, edgeTransaction)
+            this.otherData.newestTxid[llmTokenId] = edgeTransaction.txid
+            this.addTransaction(llmTokenId, edgeTransaction)
           }
         }
 
         // Update progress
         processedCount += meritTransfers.length
 
-        this.tokenCheckTransactionsStatus[currencyCode] =
+        this.tokenCheckTransactionsStatus.set(
+          llmTokenId,
           totalCount === 0 ? 1 : processedCount / totalCount
+        )
         this.updateOnAddressesChecked()
       } catch (e: any) {
         this.warn(`Error fetching Liberland transactions: ${e.message}`)
@@ -465,7 +457,7 @@ export class PolkadotEngine extends CurrencyEngine<
       }
     }
 
-    this.tokenCheckTransactionsStatus[currencyCode] = 1
+    this.tokenCheckTransactionsStatus.set(llmTokenId, 1)
     this.updateOnAddressesChecked()
     this.sendTransactionEvents()
   }
@@ -506,7 +498,7 @@ export class PolkadotEngine extends CurrencyEngine<
         await this.queryTransactionsInner(subscanBaseUrl, isActiveChain)
       }
 
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+      this.tokenCheckTransactionsStatus.set(null, 1)
       this.updateOnAddressesChecked()
       this.sendTransactionEvents()
     })
@@ -569,13 +561,15 @@ export class PolkadotEngine extends CurrencyEngine<
 
       // Only update txCount and progress for the current chain
       if (isActiveChain) {
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        this.tokenCheckTransactionsStatus.set(
+          null,
           Math.min(
             1,
             count === 0
               ? 1
               : this.otherData.subscanUrlMap[subscanBaseUrl].txCount / count
           )
+        )
         this.updateOnAddressesChecked()
       }
 
@@ -603,8 +597,8 @@ export class PolkadotEngine extends CurrencyEngine<
     if (this.networkInfo.subscanBaseUrls.length > 0) {
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     } else {
-      for (const currencyCode of this.enabledTokens) {
-        this.tokenCheckTransactionsStatus[currencyCode] = 1
+      for (const tokenId of this.enabledTokenIds) {
+        this.tokenCheckTransactionsStatus.set(tokenId, 1)
       }
       this.updateOnAddressesChecked()
     }
@@ -839,12 +833,8 @@ export class PolkadotEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('Missing publicAddress from makeSpend')
 
-    const edgeToken = this.allTokens.find(
-      token => token.currencyCode === edgeTransaction.currencyCode
-    )
-
     let transfer
-    if (edgeToken == null) {
+    if (edgeTransaction.tokenId == null) {
       const nativeAmount = abs(
         add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
       )
@@ -857,15 +847,13 @@ export class PolkadotEngine extends CurrencyEngine<
         publicAddress,
         nativeAmount
       )
-    } else if (edgeToken.contractAddress != null) {
+    } else {
       const nativeAmount = abs(edgeTransaction.nativeAmount)
       transfer = await this.api.tx.assets.transfer(
-        parseInt(edgeToken.contractAddress),
+        parseInt(edgeTransaction.tokenId),
         publicAddress,
         nativeAmount
       )
-    } else {
-      throw new Error('Unrecognized asset')
     }
 
     const signer = this.api.createType('SignerPayload', {
@@ -961,9 +949,9 @@ export async function makeCurrencyEngine(
 export interface LiberlandTxProcessingContext {
   walletId: string
   walletInfo: SafePolkadotWalletInfo
-  currencyInfo: EdgeCurrencyInfo
-  allTokensMap: EdgeTokenMap
   tokenId: EdgeTokenId
+  getCurrencyCode: (tokenId: EdgeTokenId) => string | undefined
+  getDenomination: (tokenId: EdgeTokenId) => EdgeDenomination | undefined
 }
 
 // Not quite collision-proof but good enough for now
@@ -992,15 +980,7 @@ export function processLiberlandTransaction(
   const ourReceiveAddresses = []
 
   let nativeAmount = value
-  const denom =
-    tokenId == null
-      ? getDenomination(
-          context.currencyInfo.currencyCode,
-          context.currencyInfo,
-          context.allTokensMap
-        )
-      : context.allTokensMap[tokenId].denominations[0]
-
+  const denom = context.getDenomination(tokenId)
   if (denom == null) return
 
   if (fromId === context.walletInfo.keys.publicKey) {
@@ -1009,8 +989,8 @@ export function processLiberlandTransaction(
     ourReceiveAddresses.push(context.walletInfo.keys.publicKey)
   }
 
-  const { currencyCode } =
-    tokenId == null ? context.currencyInfo : context.allTokensMap[tokenId]
+  const currencyCode = context.getCurrencyCode(tokenId)
+  if (currencyCode == null) return
 
   const edgeTransaction: EdgeTransaction = {
     blockHeight,

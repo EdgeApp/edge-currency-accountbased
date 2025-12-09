@@ -73,7 +73,7 @@ export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     const out: EthereumNetworkUpdate = {
       newNonce: '0',
-      tokenBal: {},
+      tokenBal: new Map(),
       server: ''
     }
     const query = '/api/v2/address/' + address + `?&details=tokenBalances`
@@ -100,8 +100,7 @@ export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
     }
     const { nonce, tokens, balance } = addressInfo
     out.newNonce = nonce
-    if (out.tokenBal != null)
-      out.tokenBal[this.ethEngine.currencyInfo.currencyCode] = balance
+    if (out.tokenBal != null) out.tokenBal.set(null, balance)
     out.server = server
 
     // Token balances

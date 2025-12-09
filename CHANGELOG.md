@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Index internal wallet data with tokenIds
+
 ## 4.66.0 (2025-12-04)
 
 - added: (Zano) BTCx token

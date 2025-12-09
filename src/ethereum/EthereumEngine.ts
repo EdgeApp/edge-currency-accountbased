@@ -12,6 +12,7 @@ import {
   EdgeSignMessageOptions,
   EdgeSpendInfo,
   EdgeSpendTarget,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -747,9 +748,7 @@ export class EthereumEngine extends CurrencyEngine<
       out[feeType] = div(totalFee, '1')
     }
 
-    this.log(
-      `updateNetworkFeesFromBaseFeePerGas ${this.currencyInfo.currencyCode}`
-    )
+    this.log(`updateNetworkFeesFromBaseFeePerGas ${this.currencyInfo.pluginId}`)
     printFees(this.log, out)
     return out
   }
@@ -978,7 +977,7 @@ export class EthereumEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(spendInfo)
+    const { edgeSpendInfo } = this.makeSpendCheck(spendInfo)
     const { tokenId } = edgeSpendInfo
 
     const balance = this.getBalance({
@@ -1012,7 +1011,7 @@ export class EthereumEngine extends CurrencyEngine<
     }
     const { contractAddress, data } = this.getTxParameterInformation(
       edgeSpendInfo,
-      currencyCode,
+      tokenId,
       this.currencyInfo
     )
 
@@ -1197,7 +1196,7 @@ export class EthereumEngine extends CurrencyEngine<
 
   getTxParameterInformation(
     edgeSpendInfo: EdgeSpendInfo,
-    currencyCode: string,
+    tokenId: EdgeTokenId,
     currencyInfo: EdgeCurrencyInfo
   ): EthereumTxParameterInformation {
     const { memos = [] } = edgeSpendInfo
@@ -1213,7 +1212,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Get contractAddress and/or value:
     let value: string | undefined
-    if (currencyCode === currencyInfo.currencyCode) {
+    if (tokenId == null) {
       value = nativeAmount == null ? undefined : decimalToHex(nativeAmount)
       return {
         data,
@@ -1224,17 +1223,17 @@ export class EthereumEngine extends CurrencyEngine<
       if (data != null) {
         contractAddress = publicAddress
       } else {
-        const tokenInfo = this.getTokenInfo(currencyCode)
+        const tokenInfo = this.getTokenInfo(tokenId)
         if (
           tokenInfo == null ||
-          typeof tokenInfo.contractAddress !== 'string'
+          typeof tokenInfo.networkLocation?.contractAddress !== 'string'
         ) {
           throw new Error(
             'Error: Token not supported or invalid contract address'
           )
         }
 
-        contractAddress = tokenInfo.contractAddress
+        contractAddress = tokenInfo.networkLocation?.contractAddress
 
         // Derive the data from a ERC-20 token transfer smart-contract call:
         const dataArray = abi.simpleEncode(
@@ -1353,7 +1352,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     const { contractAddress, data, value } = this.getTxParameterInformation(
       edgeSpendInfo,
-      currencyCode,
+      tokenId,
       this.currencyInfo
     )
 
@@ -1406,8 +1405,7 @@ export class EthereumEngine extends CurrencyEngine<
       }
     }
 
-    const nativeBalance =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
+    const nativeBalance = this.getBalance({ tokenId: null })
 
     let nativeNetworkFee = mul(miningFees.gasPrice, otherParams.gas)
     let totalTxAmount = '0'
@@ -1460,7 +1458,7 @@ export class EthereumEngine extends CurrencyEngine<
     // Balance checks:
     //
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       nativeNetworkFee = add(nativeNetworkFee, l1Fee)
       if (tokenId == null && this.networkInfo.nativeSendPrechargeWei != null) {
         nativeNetworkFee = add(
@@ -1520,8 +1518,7 @@ export class EthereumEngine extends CurrencyEngine<
           tokenId: null
         })
       }
-      const balanceToken =
-        this.walletLocalData.totalBalances[currencyCode] ?? '0'
+      const balanceToken = this.getBalance({ tokenId })
       if (!skipChecks && gt(nativeAmount, balanceToken)) {
         throw new InsufficientFundsError({ tokenId })
       }
@@ -1628,7 +1625,7 @@ export class EthereumEngine extends CurrencyEngine<
     const gasLimitHex = toHex(otherParams.gas)
     let txValue
 
-    if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
+    if (edgeTransaction.tokenId == null) {
       // Remove the networkFee from the nativeAmount
       const nativeAmount = add(
         edgeTransaction.nativeAmount,
@@ -1662,13 +1659,11 @@ export class EthereumEngine extends CurrencyEngine<
     let data
     if (otherParams.data != null) {
       data = otherParams.data
-      if (edgeTransaction.currencyCode !== this.currencyInfo.currencyCode) {
+      if (edgeTransaction.tokenId != null) {
         // Smart contract calls only allow for tx value if it's the parent currency
         txValue = '0x00'
       }
-    } else if (
-      edgeTransaction.currencyCode === this.currencyInfo.currencyCode
-    ) {
+    } else if (edgeTransaction.tokenId == null) {
       data = ''
     } else {
       const dataArray = abi.simpleEncode(
@@ -1739,7 +1734,7 @@ export class EthereumEngine extends CurrencyEngine<
   async accelerate(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction | null> {
-    const { currencyCode, tokenId } = edgeTransaction
+    const { tokenId } = edgeTransaction
 
     const txOtherParams = asMaybe(asEthereumTxOtherParams)(
       edgeTransaction.otherParams
@@ -1747,7 +1742,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     let replacedTxid = edgeTransaction.txid
     let replacedTxIndex = await this.findTransaction(
-      currencyCode,
+      edgeTransaction.tokenId,
       normalizeAddress(replacedTxid)
     )
     if (replacedTxIndex === -1) {
@@ -1759,7 +1754,7 @@ export class EthereumEngine extends CurrencyEngine<
         // replacement transaction itself
         replacedTxid = txOtherParams.replacedTxid
         replacedTxIndex = await this.findTransaction(
-          currencyCode,
+          edgeTransaction.tokenId,
           normalizeAddress(replacedTxid)
         )
       }
@@ -1770,7 +1765,7 @@ export class EthereumEngine extends CurrencyEngine<
       }
     }
     const replacedTx: EdgeTransaction =
-      this.transactionList[currencyCode][replacedTxIndex]
+      this.transactionList[tokenId ?? ''][replacedTxIndex]
 
     const replacedTxOtherParams = asMaybe(asEthereumTxOtherParams)(
       replacedTx.otherParams
@@ -1824,10 +1819,9 @@ export class EthereumEngine extends CurrencyEngine<
     // Balance checks:
     //
 
-    const parentNativeBalance =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
+    const parentNativeBalance = this.getBalance({ tokenId: null })
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       totalTxAmount = add(nativeNetworkFee, nativeAmount)
       if (gt(totalTxAmount, parentNativeBalance)) {
         throw new InsufficientFundsError({ tokenId })
@@ -1842,8 +1836,7 @@ export class EthereumEngine extends CurrencyEngine<
           tokenId: null
         })
       }
-      const balanceToken =
-        this.walletLocalData.totalBalances[currencyCode] ?? '0'
+      const balanceToken = this.getBalance({ tokenId })
       if (gt(nativeAmount, balanceToken)) {
         throw new InsufficientFundsError({ tokenId })
       }
@@ -1877,13 +1870,12 @@ export class EthereumEngine extends CurrencyEngine<
 
     // We must check if this transaction replaces another transaction
     if (txOtherParams?.replacedTxid != null) {
-      const { currencyCode } = edgeTransaction
       const txid = normalizeAddress(txOtherParams.replacedTxid)
-      const index = this.findTransaction(currencyCode, txid)
+      const index = this.findTransaction(edgeTransaction.tokenId, txid)
 
       if (index !== -1) {
         const replacedEdgeTransaction =
-          this.transactionList[currencyCode][index]
+          this.transactionList[edgeTransaction.tokenId ?? ''][index]
 
         // Use the RBF metadata because metadata for replaced transaction is not
         // present in edge-currency-accountbased state
@@ -1896,7 +1888,10 @@ export class EthereumEngine extends CurrencyEngine<
           blockHeight: -1
         }
 
-        this.addTransaction(currencyCode, updatedEdgeTransaction)
+        this.addTransaction(
+          updatedEdgeTransaction.tokenId,
+          updatedEdgeTransaction
+        )
       }
     }
 

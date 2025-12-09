@@ -80,7 +80,6 @@ export class SolanaEngine extends CurrencyEngine<
   feePerSignature: string
   getPriorityFee: () => Promise<string>
   getRecentBlockhash: () => Promise<BlockhashWithExpiryBlockHeight>
-  chainCode: string
   otherData!: SolanaWalletOtherData
   fetch: EdgeFetchFunction
   progressRatio: number
@@ -97,7 +96,6 @@ export class SolanaEngine extends CurrencyEngine<
     super(env, tools, walletInfo, opts)
     this.lightMode = opts.lightMode ?? false
     this.networkInfo = env.networkInfo
-    this.chainCode = tools.currencyInfo.currencyCode
     this.fetch = async (uri, opts) =>
       await env.io.fetch(uri, { ...opts, corsBypass: 'always' })
     this.feePerSignature = '5000'
@@ -186,7 +184,7 @@ export class SolanaEngine extends CurrencyEngine<
       ] = balances
 
       const balance = asAccountBalance(mainnetBal)
-      this.updateBalance(this.chainCode, balance.result.value.toString())
+      this.updateBalance(null, balance.result.value.toString())
       this.usedTokenIdSet.add(null)
 
       const tokenBalances = [
@@ -209,7 +207,7 @@ export class SolanaEngine extends CurrencyEngine<
           this.usedTokenIdSet.add(tokenId)
           balance = tokenBalMap[tokenId] ?? '0'
         }
-        this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
+        this.updateBalance(tokenId, balance)
 
         if (gt(balance, '0')) {
           detectedTokenIds.push(tokenId)
@@ -221,7 +219,10 @@ export class SolanaEngine extends CurrencyEngine<
       }
     } catch (e: any) {
       // Nodes will return 0 for uninitiated accounts so thrown errors should be logged
-      this.error(`Error checking ${this.chainCode} address balance`, e)
+      this.error(
+        `Error checking ${this.currencyInfo.pluginId} address balance`,
+        e
+      )
     }
   }
 
@@ -304,8 +305,8 @@ export class SolanaEngine extends CurrencyEngine<
     const ourReceiveAddresses = []
 
     const { amount, networkFee, parentNetworkFee, tokenId = null } = amounts
-    const currencyCode =
-      tokenId != null ? this.allTokensMap[tokenId].currencyCode : this.chainCode
+    const currencyCode = this.getCurrencyCode(tokenId)
+    if (currencyCode == null) return
 
     if (gte(amount, '0')) {
       ourReceiveAddresses.push(this.base58PublicKey)
@@ -328,7 +329,7 @@ export class SolanaEngine extends CurrencyEngine<
       txid: tx.transaction.signatures[0],
       walletId: this.walletId
     }
-    this.addTransaction(currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
   }
 
   parseTxAmounts(
@@ -417,12 +418,9 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     const mainPubkey = new PublicKey(this.base58PublicKey)
-    await this.queryTransactionsInner(
-      this.currencyInfo.currencyCode,
-      mainPubkey
-    )
+    await this.queryTransactionsInner(null, mainPubkey)
     this.sendTransactionEvents()
-    this.updateTxStatus(this.currencyInfo.currencyCode, 1)
+    this.updateTxStatus(null, 1)
 
     for (const tokenId of this.enabledTokenIds) {
       const token = this.allTokensMap[tokenId]
@@ -436,21 +434,22 @@ export class SolanaEngine extends CurrencyEngine<
           tokenOwnerPubkey,
           new PublicKey(this.networkInfo.associatedTokenPublicKey)
         )
-        await this.queryTransactionsInner(token.currencyCode, pk)
+        await this.queryTransactionsInner(tokenId, pk)
         this.sendTransactionEvents()
       }
-      this.updateTxStatus(token.currencyCode, 1)
+      this.updateTxStatus(tokenId, 1)
     }
   }
 
   async queryTransactionsInner(
-    currencyCode: string,
+    tokenId: EdgeTokenId,
     pubkey: PublicKey
   ): Promise<void> {
+    const safeTokenId = tokenId ?? ''
     let before: string | undefined
     const until =
-      this.otherData.newestTxid[currencyCode] !== ''
-        ? this.otherData.newestTxid[currencyCode]
+      this.otherData.newestTxid[safeTokenId] !== ''
+        ? this.otherData.newestTxid[safeTokenId]
         : undefined
     let txids: ConfirmedSignatureInfo[] = []
     try {
@@ -478,7 +477,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (txids.length === 0) {
-      this.updateTxStatus(currencyCode, 1)
+      this.updateTxStatus(tokenId, 1)
       return
     }
 
@@ -537,7 +536,7 @@ export class SolanaEngine extends CurrencyEngine<
         amounts.forEach(amount => {
           this.processSolanaTransaction(txResponse[i], amount, timestamp, memos)
         })
-        this.otherData.newestTxid[currencyCode] =
+        this.otherData.newestTxid[safeTokenId] =
           txResponse[i].transaction.signatures[0]
 
         // Update progress
@@ -545,7 +544,7 @@ export class SolanaEngine extends CurrencyEngine<
         if (percent !== this.progressRatio) {
           if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
             this.progressRatio = percent
-            this.updateTxStatus(currencyCode, this.progressRatio)
+            this.updateTxStatus(tokenId, this.progressRatio)
           }
         }
       }
@@ -555,8 +554,8 @@ export class SolanaEngine extends CurrencyEngine<
     this.sendTransactionEvents()
   }
 
-  updateTxStatus(currencyCode: string, progress: number): void {
-    this.tokenCheckTransactionsStatus[currencyCode] = progress
+  updateTxStatus(tokenId: EdgeTokenId, progress: number): void {
+    this.tokenCheckTransactionsStatus.set(tokenId, progress)
     this.updateOnAddressesChecked()
   }
 
@@ -569,9 +568,9 @@ export class SolanaEngine extends CurrencyEngine<
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     if (this.lightMode) {
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-      for (const edgeToken of Object.values(this.allTokensMap)) {
-        this.tokenCheckTransactionsStatus[edgeToken.currencyCode] = 1
+      this.tokenCheckTransactionsStatus.set(null, 1)
+      for (const tokenId of Object.keys(this.allTokensMap)) {
+        this.tokenCheckTransactionsStatus.set(tokenId, 1)
       }
     } else {
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
@@ -650,7 +649,7 @@ export class SolanaEngine extends CurrencyEngine<
     let totalTxAmount = '0'
     let nativeNetworkFee = this.feePerSignature
     let parentNetworkFee: string | undefined
-    const balance = this.walletLocalData.totalBalances[currencyCode] ?? '0'
+    const balance = this.getBalance({ tokenId })
 
     // pubkeys
     const payer = new PublicKey(this.base58PublicKey)
@@ -751,8 +750,7 @@ export class SolanaEngine extends CurrencyEngine<
         throw new InsufficientFundsError({ tokenId })
       }
 
-      const balanceSol =
-        this.walletLocalData.totalBalances[this.chainCode] ?? '0'
+      const balanceSol = this.getBalance({ tokenId: null })
       if (gt(add(parentNetworkFee, minimumAddressBalance), balanceSol)) {
         throw new InsufficientFundsError({
           networkFee: parentNetworkFee,

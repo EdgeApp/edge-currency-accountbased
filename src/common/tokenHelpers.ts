@@ -1,11 +1,6 @@
 import { gt, lt } from 'biggystring'
 import { asMaybe, asObject, asString } from 'cleaners'
-import {
-  EdgeMetaToken,
-  EdgeToken,
-  EdgeTokenId,
-  EdgeTokenMap
-} from 'edge-core-js/types'
+import { EdgeMetaToken, EdgeToken, EdgeTokenMap } from 'edge-core-js/types'
 
 import { normalizeAddress } from './utils'
 
@@ -38,17 +33,6 @@ export function makeMetaTokens(tokens: EdgeTokenMap): EdgeMetaToken[] {
     })
   }
   return out
-}
-
-export const getTokenIdFromCurrencyCode = (
-  currencyCode: string,
-  mainnetCurrencyCode: string,
-  allTokensMap: EdgeTokenMap
-): EdgeTokenId | undefined => {
-  if (currencyCode === mainnetCurrencyCode) return null
-  for (const tokenId of Object.keys(allTokensMap)) {
-    if (allTokensMap[tokenId].currencyCode === currencyCode) return tokenId
-  }
 }
 
 /**

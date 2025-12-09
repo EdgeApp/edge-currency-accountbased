@@ -165,10 +165,8 @@ export class PiratechainEngine extends CurrencyEngine<
 
       const balanceProgress = downloadProgress * 0.99
       const txProgress = downloadProgress * 0.8
-      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-        balanceProgress
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        txProgress
+      this.tokenCheckBalanceStatus.set(null, balanceProgress)
+      this.tokenCheckTransactionsStatus.set(null, txProgress)
 
       const totalProgress = (balanceProgress + txProgress) / 2
 
@@ -196,10 +194,10 @@ export class PiratechainEngine extends CurrencyEngine<
       const balances = await this.synchronizer.getBalance()
       if (balances.totalZatoshi === '-1') return
       this.availableZatoshi = balances.availableZatoshi
-      this.updateBalance(this.currencyInfo.currencyCode, balances.totalZatoshi)
+      this.updateBalance(null, balances.totalZatoshi)
     } catch (e: any) {
       this.warn('Failed to update balances', e)
-      this.updateBalance(this.currencyInfo.currencyCode, '0')
+      this.updateBalance(null, '0')
     }
   }
 
@@ -219,7 +217,7 @@ export class PiratechainEngine extends CurrencyEngine<
         if (last === this.walletLocalData.blockHeight) {
           first = this.walletLocalData.blockHeight
           this.walletLocalDataDirty = true
-          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+          this.tokenCheckTransactionsStatus.set(null, 1)
           this.updateOnAddressesChecked()
           break
         }
@@ -282,7 +280,7 @@ export class PiratechainEngine extends CurrencyEngine<
       txid: tx.rawTransactionId,
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(null, edgeTransaction)
   }
 
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
@@ -379,13 +377,7 @@ export class PiratechainEngine extends CurrencyEngine<
 
     const totalTxAmount = add(nativeAmount, this.networkInfo.defaultNetworkFee)
 
-    if (
-      gt(
-        totalTxAmount,
-        this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ??
-          '0'
-      )
-    ) {
+    if (gt(totalTxAmount, this.getBalance({ tokenId: null }))) {
       throw new InsufficientFundsError({ tokenId })
     }
 

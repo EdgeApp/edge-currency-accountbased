@@ -29,9 +29,9 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall } from '../common/promiseUtils'
+import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
-  getDenomination,
   getFetchCors,
   getOtherParams,
   pickRandom
@@ -243,11 +243,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         ? null
         : contractAddress?.toLowerCase()
     const ourReceiveAddresses = []
-    const denom = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
+    const denom = this.getDenomination(tokenId)
     if (denom == null) {
       this.log(
         `processIncomingTransaction Received unsupported currencyCode: ${currencyCode}`
@@ -290,7 +286,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       walletId: this.walletId
     }
 
-    this.addTransaction(currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
     return edgeTransaction.blockHeight
   }
 
@@ -338,11 +334,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           ? null
           : contractAddress?.toLowerCase()
 
-      const denom = getDenomination(
-        currencyCode,
-        this.currencyInfo,
-        this.allTokensMap
-      )
+      const denom = this.getDenomination(tokenId)
       // if invalid currencyCode then don't count as valid transaction
       if (denom == null) {
         this.error(
@@ -383,7 +375,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         walletId: this.walletId
       }
 
-      this.addTransaction(currencyCode, edgeTransaction)
+      this.addTransaction(tokenId, edgeTransaction)
     }
     return blockHeight
   }
@@ -523,10 +515,14 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     }
     const acct = this.otherData.accountName
 
-    for (const token of this.enabledTokens) {
+    for (const tokenId of [null, ...this.enabledTokenIds]) {
+      const currencyCode =
+        tokenId == null
+          ? this.currencyInfo.currencyCode
+          : this.allTokensMap[tokenId].currencyCode
       try {
-        await this.checkIncomingTransactions(acct, token)
-        await this.checkOutgoingTransactions(acct, token)
+        await this.checkIncomingTransactions(acct, currencyCode)
+        await this.checkOutgoingTransactions(acct, currencyCode)
       } catch (e: any) {
         // Unactivated accounts can continue to update status
         if (acct !== '') {
@@ -538,7 +534,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         }
       }
 
-      this.tokenCheckTransactionsStatus[token] = 1
+      this.tokenCheckTransactionsStatus.set(tokenId, 1)
       this.updateOnAddressesChecked()
       this.sendTransactionEvents()
     }
@@ -798,22 +794,20 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     try {
       // If account name still doesn't exist, set new wallet default values and return
       if (this.otherData.accountName === '') {
-        for (const token of this.allTokens) {
-          this.updateBalance(token.currencyCode, '0')
+        for (const tokenId of [null, ...this.enabledTokenIds]) {
+          this.updateBalance(tokenId, '0')
         }
         return
       }
 
       // Check balance on account
-      for (const token of this.allTokens) {
-        if (this.enabledTokens.includes(token.currencyCode)) {
-          const results: Asset[] = await this.multicastServers(
-            'getCurrencyBalance',
-            token.contractAddress
-          )
-          const nativeAmount = results[0]?.units?.toString() ?? '0'
-          this.updateBalance(token.currencyCode, nativeAmount)
-        }
+      for (const tokenId of [null, ...this.enabledTokenIds]) {
+        const results: Asset[] = await this.multicastServers(
+          'getCurrencyBalance',
+          tokenId ?? 'eosio.token'
+        )
+        const nativeAmount = results[0]?.units?.toString() ?? '0'
+        this.updateBalance(tokenId, nativeAmount)
       }
 
       // Check available resources on account
@@ -969,14 +963,18 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 
-    const tokenInfo = this.getTokenInfo(currencyCode)
-    if (tokenInfo == null) throw new Error('Unable to find token info')
-    const { contractAddress = 'eosio.token' } = tokenInfo
-    const nativeDenomination = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
+    let contractAddress: string
+    if (tokenId == null) {
+      contractAddress = 'eosio.token'
+    } else {
+      const tokenInfo = this.getTokenInfo(tokenId)
+      if (tokenInfo == null) throw new Error('Unable to find token info')
+      const cleanLocation = asMaybeContractLocation(tokenInfo.networkLocation)
+      if (cleanLocation == null) throw new Error('Unable to find token info')
+      contractAddress = cleanLocation.contractAddress
+    }
+
+    const nativeDenomination = this.getDenomination(tokenId)
     if (nativeDenomination == null) {
       throw new Error(`Error: no native denomination found for ${currencyCode}`)
     }

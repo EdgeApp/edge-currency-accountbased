@@ -56,7 +56,6 @@ import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
 import { MakeTxParams } from '../common/types'
 import { utf8 } from '../common/utf8'
 import {
@@ -170,10 +169,9 @@ export class XrpEngine extends CurrencyEngine<
 
           const networkFee = xrpTransaction.Fee ?? '0'
 
-          const { currencyCode } =
-            fromTokenId == null
-              ? this.currencyInfo
-              : this.allTokensMap[fromTokenId]
+          const tokenId = fromTokenId ?? null
+          const currencyCode = this.getCurrencyCode(tokenId)
+          if (currencyCode == null) throw new Error('Unknown tokenId')
 
           const out: EdgeTransaction = {
             assetAction: {
@@ -193,7 +191,7 @@ export class XrpEngine extends CurrencyEngine<
             },
             ourReceiveAddresses: [],
             signedTx: '',
-            tokenId: fromTokenId ?? null,
+            tokenId,
             txid: '',
             walletId: this.walletId
           }
@@ -243,8 +241,7 @@ export class XrpEngine extends CurrencyEngine<
 
   getTotalReserve(): string {
     const numActivatedTokens =
-      this.enabledTokens.length -
-      1 -
+      this.enabledTokenIds.length -
       this.walletLocalData.unactivatedTokenIds.length
 
     const tokenReserve = mul(
@@ -567,7 +564,7 @@ export class XrpEngine extends CurrencyEngine<
             ourReceiveAddresses.push(publicAddress)
           }
           // Parent currency like XRP
-          this.addTransaction(currency, {
+          this.addTransaction(null, {
             assetAction: this.processRippleDexTx(accountTx),
             blockHeight: tx.ledger_index ?? -1,
             currencyCode: currency,
@@ -593,10 +590,14 @@ export class XrpEngine extends CurrencyEngine<
             return
           }
           const tokenId = makeTokenId({ currency, issuer })
-          const edgeToken = this.allTokensMap[tokenId]
-          if (edgeToken == null) return
-          const { currencyCode } = edgeToken
-          const nativeAmount = mul(value, edgeToken.denominations[0].multiplier)
+
+          const currencyCode = this.getCurrencyCode(tokenId)
+          if (currencyCode == null) continue
+
+          const denom = this.getDenomination(tokenId)
+          if (denom == null) continue
+
+          const nativeAmount = mul(value, denom.multiplier)
           let isSend = false
           const ourReceiveAddresses: string[] = []
 
@@ -606,7 +607,7 @@ export class XrpEngine extends CurrencyEngine<
             ourReceiveAddresses.push(publicAddress)
           }
 
-          this.addTransaction(currencyCode, {
+          this.addTransaction(tokenId, {
             assetAction: this.processRippleDexTx(accountTx),
             blockHeight: tx.ledger_index ?? -1,
             currencyCode,
@@ -668,10 +669,10 @@ export class XrpEngine extends CurrencyEngine<
       }
       this.sendTransactionEvents()
       this.walletLocalData.lastAddressQueryHeight = blockHeight
-      this.tokenCheckTransactionsStatus.XRP = 1
-      this.enabledTokens.forEach(tokenCurrencyCode => {
-        this.tokenCheckTransactionsStatus[tokenCurrencyCode] = 1
-      })
+      this.tokenCheckTransactionsStatus.set(null, 1)
+      for (const tokenId of this.enabledTokenIds) {
+        this.tokenCheckTransactionsStatus.set(tokenId, 1)
+      }
       this.updateOnAddressesChecked()
     } catch (e: any) {
       this.error(`Error fetching transactions: `, e)
@@ -691,7 +692,7 @@ export class XrpEngine extends CurrencyEngine<
         ledger_index: 'current'
       })
       const { Balance, Sequence } = accountInfo.result.account_data
-      this.updateBalance(this.currencyInfo.currencyCode, Balance)
+      this.updateBalance(null, Balance)
       this.nonce = Sequence
 
       const detectedTokenIds: string[] = []
@@ -704,7 +705,7 @@ export class XrpEngine extends CurrencyEngine<
           const multiplier = edgeToken.denominations[0].multiplier
           if (multiplier == null) return
           const assetAmount = toFixed(mul(value, multiplier), 0, 0)
-          this.updateBalance(edgeToken.currencyCode, assetAmount)
+          this.updateBalance(tokenId, assetAmount)
 
           if (gt(assetAmount, '0') && !this.enabledTokenIds.includes(tokenId)) {
             detectedTokenIds.push(tokenId)
@@ -718,60 +719,42 @@ export class XrpEngine extends CurrencyEngine<
 
       // If get here, we've checked balances for all possible tokens the user
       // could have enabled. Mark all assets as checked
-      this.enabledTokens.forEach(tokenCurrencyCode => {
-        this.tokenCheckBalanceStatus[tokenCurrencyCode] = 1
-      })
+      for (const tokenId of this.enabledTokenIds) {
+        this.tokenCheckBalanceStatus.set(tokenId, 1)
+      }
       this.updateOnAddressesChecked()
 
-      if (this.enabledTokens.length > 1) {
+      if (this.enabledTokenIds.length > 0) {
         // Check for unactivated tokens
         const acctLinesResponse = await this.tools.rippleApi.request({
           command: 'account_lines',
           account: address
         })
 
-        this.enabledTokens.forEach(tokenCurrencyCode => {
+        for (const tokenId of this.enabledTokenIds) {
           const match = acctLinesResponse.result.lines.find(line => {
             const { account: issuer, currency } = line
             const lineTokenId = makeTokenId({ currency, issuer })
-            const edgeToken = this.allTokensMap[lineTokenId]
-            if (
-              edgeToken != null &&
-              tokenCurrencyCode === edgeToken.currencyCode
-            ) {
+            if (tokenId === lineTokenId) {
               return true
             }
             return false
           })
           if (match == null) {
-            const tokenId = getTokenIdFromCurrencyCode(
-              tokenCurrencyCode,
-              this.currencyInfo.currencyCode,
-              this.allTokensMap
-            )
-            if (tokenId != null) {
-              newUnactivatedTokenIds.push(tokenId)
-            }
+            newUnactivatedTokenIds.push(tokenId)
           }
-        })
+        }
       }
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
         this.log('Account not found. Probably not activated w/minimum XRP')
-        this.updateBalance(this.currencyInfo.currencyCode, '0')
-        this.enabledTokens.forEach(tokenCurrencyCode => {
-          if (tokenCurrencyCode !== this.currencyInfo.currencyCode) {
-            // All tokens are not activated if this address is not activated
-            const tokenId = getTokenIdFromCurrencyCode(
-              tokenCurrencyCode,
-              this.currencyInfo.currencyCode,
-              this.allTokensMap
-            )
-            if (tokenId != null) {
-              newUnactivatedTokenIds.push(tokenId)
-            }
-            this.updateBalance(tokenCurrencyCode, '0')
+        this.updateBalance(null, '0')
+        this.enabledTokenIds.forEach(tokenId => {
+          // All tokens are not activated if this address is not activated
+          if (tokenId != null) {
+            newUnactivatedTokenIds.push(tokenId)
           }
+          this.updateBalance(tokenId, '0')
         })
       } else {
         this.error(`Error fetching address info: `, e)
@@ -849,8 +832,6 @@ export class XrpEngine extends CurrencyEngine<
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 
-    const parentCurrencyCode = this.currencyInfo.currencyCode
-
     // Activation Transaction:
     const activateTokenParams = asMaybeActivateTokenParams(
       edgeSpendInfo.otherParams
@@ -917,7 +898,7 @@ export class XrpEngine extends CurrencyEngine<
     // Make sure amount doesn't drop the balance below the reserve amount otherwise the
     // transaction is invalid. It is not necessary to consider the fee in this
     // calculation because the transaction fee can be taken out of the reserve balance.
-    if (currencyCode === parentCurrencyCode) {
+    if (tokenId == null) {
       networkFee = this.otherData.recommendedFee
 
       const totalReserve = this.getTotalReserve()
@@ -929,8 +910,7 @@ export class XrpEngine extends CurrencyEngine<
       // Tokens
       if (gt(nativeAmount, nativeBalance))
         throw new InsufficientFundsError({ tokenId })
-      const parentBalance =
-        this.walletLocalData.totalBalances[parentCurrencyCode] ?? '0'
+      const parentBalance = this.getBalance({ tokenId: null })
 
       if (gt(parentNetworkFee, parentBalance)) {
         throw new InsufficientFundsError({
@@ -941,7 +921,7 @@ export class XrpEngine extends CurrencyEngine<
     }
 
     let payment: PaymentJson
-    if (currencyCode === parentCurrencyCode) {
+    if (tokenId == null) {
       payment = {
         Amount: nativeAmount,
         TransactionType: 'Payment',
@@ -951,14 +931,6 @@ export class XrpEngine extends CurrencyEngine<
       }
       nativeAmount = `-${add(nativeAmount, networkFee)}`
     } else {
-      const tokenId = getTokenIdFromCurrencyCode(
-        currencyCode,
-        this.currencyInfo.currencyCode,
-        this.allTokensMap
-      )
-      if (tokenId == null) {
-        throw new Error('Error: Token not supported')
-      }
       const edgeToken = this.allTokensMap[tokenId]
       const {
         networkLocation,
@@ -1085,7 +1057,7 @@ export class XrpEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
 
-    if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
+    if (edgeTransaction.tokenId == null) {
       const nativeAmount = abs(
         add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
       )

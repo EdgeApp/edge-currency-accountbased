@@ -1,7 +1,8 @@
 import { Address } from '@zondax/izari-filecoin'
 import { add, sub } from 'biggystring'
 import {
-  EdgeMetaToken,
+  EdgeToken,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeTxAmount
 } from 'edge-core-js/types'
@@ -59,7 +60,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   private async checkTransactions(
     params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> {
-    const { startBlock, currencyCode } = params
+    const { startBlock, tokenId } = params
     const { publicAddress: addressString } =
       await this.ethEngine.getFreshAddress()
 
@@ -71,12 +72,10 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
     const handleScanProgress = (
       progress: number,
-      tokenCurrencyCode?: string
+      tokenId: EdgeTokenId
     ): void => {
-      const targetCurrencyCode =
-        tokenCurrencyCode ?? this.ethEngine.currencyInfo.currencyCode
       const currentProgress =
-        this.ethEngine.tokenCheckTransactionsStatus[targetCurrencyCode]
+        this.ethEngine.tokenCheckTransactionsStatus.get(tokenId) ?? 0
       const newProgress = progress
 
       if (
@@ -85,8 +84,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         // Avoid thrashing
         (newProgress >= 1 || newProgress > currentProgress * 1.1)
       ) {
-        this.ethEngine.tokenCheckTransactionsStatus[targetCurrencyCode] =
-          newProgress
+        this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, newProgress)
         this.ethEngine.updateOnAddressesChecked()
       }
     }
@@ -94,15 +92,14 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     const handleScan = ({
       tx,
       progress,
-      tokenCurrencyCode
+      tokenId
     }: {
       tx: EdgeTransaction | undefined
       progress: number
-      tokenCurrencyCode?: string
+      tokenId: EdgeTokenId
     }): void => {
       if (tx != null) {
-        const targetCurrencyCode = tx.currencyCode
-        this.ethEngine.addTransaction(targetCurrencyCode, tx)
+        this.ethEngine.addTransaction(tokenId, tx)
         this.onUpdateTransactions()
 
         // Track the highest block height processed
@@ -117,7 +114,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         }
       }
 
-      handleScanProgress(progress, tokenCurrencyCode)
+      handleScanProgress(progress, tokenId)
     }
 
     const scanners = [
@@ -125,7 +122,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       this.scanTransactionsFromFilfox(addressString, event =>
         handleScan({
           ...event,
-          tokenCurrencyCode: this.ethEngine.currencyInfo.currencyCode
+          tokenId: null
         })
       ),
       // Scan token transactions
@@ -145,17 +142,20 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     this.ethEngine.walletLocalDataDirty = true
 
     // Make sure the sync progress is 100% for main currency
-    handleScanProgress(1, this.ethEngine.currencyInfo.currencyCode)
+    handleScanProgress(1, null)
 
     return {
-      tokenTxs: {
-        [currencyCode]: {
-          blockHeight: highestProcessedBlockHeight,
-          // This adapter manages transaction processing, so return an empty set
-          // each time the query finishes.
-          edgeTransactions: []
-        }
-      },
+      tokenTxs: new Map([
+        [
+          tokenId,
+          {
+            blockHeight: highestProcessedBlockHeight,
+            // This adapter manages transaction processing, so return an empty set
+            // each time the query finishes.
+            edgeTransactions: []
+          }
+        ]
+      ]),
       server: this.config.servers.join(',')
     }
   }
@@ -181,11 +181,11 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   // Initialize sync status only for tokens that don't have status yet (undefined)
   // This preserves existing progress for tokens already syncing or completed
   private initializeSyncStatusForNewTokens(): void {
-    for (const currencyCode of this.ethEngine.enabledTokens) {
+    for (const tokenId of this.ethEngine.enabledTokenIds) {
       // Only initialize if the status is undefined (never been set)
-      if (this.ethEngine.tokenCheckTransactionsStatus[currencyCode] == null) {
-        this.ethEngine.tokenCheckBalanceStatus[currencyCode] = 0
-        this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 0
+      if (!this.ethEngine.tokenCheckTransactionsStatus.has(tokenId)) {
+        this.ethEngine.tokenCheckBalanceStatus.set(tokenId, 0)
+        this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, 0)
       }
     }
   }
@@ -196,16 +196,11 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     onScan: (event: {
       tx: EdgeTransaction | undefined
       progress: number
-      tokenCurrencyCode?: string
+      tokenId: EdgeTokenId
     }) => void
   ): Promise<void> {
-    // Get all enabled tokens except the main currency
-    const tokenCurrencyCodesOnly = this.ethEngine.enabledTokens.filter(
-      code => code !== this.ethEngine.currencyInfo.currencyCode
-    )
-
     // If no tokens are enabled, complete sync for all tokens immediately
-    if (tokenCurrencyCodesOnly.length === 0) return
+    if (this.ethEngine.enabledTokenIds.length === 0) return
 
     // Define the core scanning logic that will be retried
     const performTokenScan = async (): Promise<void> => {
@@ -221,8 +216,8 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       const tokenTransferCount = initialResponse.totalCount
       if (tokenTransferCount === 0) {
         // No token transfers found, mark all tokens as complete
-        for (const tokenCode of tokenCurrencyCodesOnly) {
-          onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
+        for (const tokenId of this.ethEngine.enabledTokenIds) {
+          onScan({ tx: undefined, progress: 1, tokenId })
         }
         return
       }
@@ -305,12 +300,12 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
           const progress = transfersChecked / tokenTransferCount
 
           // Trigger scan progress event
-          onScan({ tx, progress, tokenCurrencyCode: tokenInfo.currencyCode })
+          onScan({ tx, progress, tokenId: tokenTransfer.token })
         }
       }
       // Mark all enabled tokens as complete
-      for (const tokenCode of tokenCurrencyCodesOnly) {
-        onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
+      for (const tokenId of this.ethEngine.enabledTokenIds) {
+        onScan({ tx: undefined, progress: 1, tokenId })
       }
     }
 
@@ -517,7 +512,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   private readonly filfoxTokenTransferToEdgeTransaction = async (
     addressString: string,
     tokenTransfer: FilfoxTokenTransfer,
-    tokenInfo: EdgeMetaToken
+    tokenInfo: EdgeToken
   ): Promise<EdgeTransaction> => {
     const ourReceiveAddresses = []
 
@@ -613,7 +608,9 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       ourReceiveAddresses,
       signedTx: '',
       tokenId:
-        tokenInfo.contractAddress?.toLowerCase().replace(/^0x/, '') ?? null,
+        tokenInfo.networkLocation?.contractAddress
+          ?.toLowerCase()
+          .replace(/^0x/, '') ?? null,
       txid: ethTransactionHash, // Use ethTransactionHash for consistency with native FIL transactions
       walletId: this.ethEngine.walletId
     }
@@ -634,13 +631,16 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
    */
   private findTokenByContractAddress(
     contractAddress: string
-  ): EdgeMetaToken | null {
+  ): EdgeToken | null {
     // Search through all enabled tokens to find one with matching contract address
-    for (const currencyCode of this.ethEngine.enabledTokens) {
-      const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
-      if (tokenInfo != null && typeof tokenInfo.contractAddress === 'string') {
+    for (const tokenId of this.ethEngine.enabledTokenIds) {
+      const tokenInfo = this.ethEngine.allTokensMap[tokenId]
+      if (
+        tokenInfo != null &&
+        typeof tokenInfo.networkLocation?.contractAddress === 'string'
+      ) {
         if (
-          tokenInfo.contractAddress.toLowerCase() ===
+          tokenInfo.networkLocation.contractAddress.toLowerCase() ===
           contractAddress.toLowerCase()
         ) {
           return tokenInfo

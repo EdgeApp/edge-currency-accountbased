@@ -354,12 +354,7 @@ export class CosmosEngine extends CurrencyEngine<
             }
 
             // Determine which asset we're spending for amount validation/display
-            let currencyCode = this.currencyInfo.currencyCode
             const tokenId = fromTokenId ?? null
-            if (fromTokenId != null) {
-              const token = this.allTokensMap[fromTokenId]
-              if (token != null) currencyCode = token.currencyCode
-            }
 
             const amounts = this.makeEdgeTransactionAmounts(
               fromNativeAmount,
@@ -367,6 +362,9 @@ export class CosmosEngine extends CurrencyEngine<
               tokenId
             )
             this.checkBalances(amounts, tokenId)
+
+            const currencyCode = this.getCurrencyCode(tokenId)
+            if (currencyCode == null) throw new Error('Unknown tokenId')
 
             const edgeTransaction: EdgeTransaction = {
               blockHeight: 0,
@@ -596,10 +594,7 @@ export class CosmosEngine extends CurrencyEngine<
       const mainnetBal = balances.find(
         bal => bal.denom === this.networkInfo.nativeDenom
       )
-      this.updateBalance(
-        this.currencyInfo.currencyCode,
-        mainnetBal?.amount ?? '0'
-      )
+      this.updateBalance(null, mainnetBal?.amount ?? '0')
 
       const detectedTokenIds: string[] = []
       Object.keys(this.allTokensMap).forEach(tokenId => {
@@ -608,7 +603,7 @@ export class CosmosEngine extends CurrencyEngine<
           bal => bal.denom === token.networkLocation?.contractAddress
         )
         const balance = tokenBal?.amount ?? '0'
-        this.updateBalance(token.currencyCode, balance)
+        this.updateBalance(tokenId, balance)
 
         if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
           detectedTokenIds.push(tokenId)
@@ -655,7 +650,7 @@ export class CosmosEngine extends CurrencyEngine<
       this.sequence = sequence
     } catch (e) {
       if (String(e).includes('does not exist on chain')) {
-        this.updateBalance(this.currencyInfo.currencyCode, '0')
+        this.updateBalance(null, '0')
       } else {
         this.log.warn('queryBalance error:', e)
       }
@@ -680,12 +675,6 @@ export class CosmosEngine extends CurrencyEngine<
 
   async queryTransactions(): Promise<void> {
     let progress = 0
-    const allCurrencyCodes = [
-      this.currencyInfo.currencyCode,
-      ...this.enabledTokenIds.map(
-        tokenId => this.allTokensMap[tokenId].currencyCode
-      )
-    ]
     const clientsList: CosmosClients[] = []
     if (
       this.networkInfo.archiveNodes != null &&
@@ -734,9 +723,9 @@ export class CosmosEngine extends CurrencyEngine<
           )
         }
         progress += 0.5 / clientsList.length
-        allCurrencyCodes.forEach(
-          code => (this.tokenCheckTransactionsStatus[code] = progress)
-        )
+        for (const tokenId of [null, ...this.enabledTokenIds]) {
+          this.tokenCheckTransactionsStatus.set(tokenId, progress)
+        }
         this.updateOnAddressesChecked()
       }
       this.otherData.archivedTxLastCheckTime = archivedTxLastCheckTime
@@ -862,8 +851,8 @@ export class CosmosEngine extends CurrencyEngine<
       return
     }
 
-    const { currencyCode } =
-      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
+    const currencyCode = this.getCurrencyCode(tokenId)
+    if (currencyCode == null) return
 
     let networkFee = '0'
     if (fee != null) {
@@ -916,13 +905,13 @@ export class CosmosEngine extends CurrencyEngine<
       txid: txidHex,
       walletId: this.walletId
     }
-    this.addTransaction(currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
   }
 
-  addTransaction(currencyCode: string, edgeTransaction: EdgeTransaction): void {
+  addTransaction(tokenId: EdgeTokenId, edgeTransaction: EdgeTransaction): void {
     // update unconfirmed cache
     this.removeFromUnconfirmedCache(edgeTransaction.txid)
-    super.addTransaction(currencyCode, edgeTransaction)
+    super.addTransaction(tokenId, edgeTransaction)
   }
 
   private createUnsignedTxHex(messages: EncodeObject[], memo?: string): string {

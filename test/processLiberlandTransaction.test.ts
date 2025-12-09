@@ -1,5 +1,5 @@
 import { assert } from 'chai'
-import { EdgeCurrencyInfo, EdgeTokenMap, EdgeTransaction } from 'edge-core-js'
+import { EdgeTokenId, EdgeTransaction } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
 import {
@@ -7,44 +7,6 @@ import {
   processLiberlandTransaction
 } from '../src/polkadot/PolkadotEngine'
 import { LiberlandTransfer } from '../src/polkadot/polkadotTypes'
-
-const currencyInfo: EdgeCurrencyInfo = {
-  canReplaceByFee: true,
-  currencyCode: 'LLD',
-  assetDisplayName: 'Liberland',
-  chainDisplayName: 'Liberland',
-  memoOptions: [],
-  pluginId: 'liberland',
-  walletType: 'wallet:liberland',
-  addressExplorer: 'https://liberland.explorer.io/address/%s',
-  transactionExplorer: 'https://liberland.explorer.io/tx/%s',
-  denominations: [
-    {
-      name: 'LLD',
-      multiplier: '1000000000000000000',
-      symbol: 'LLD'
-    }
-  ],
-
-  // Deprecated:
-  displayName: 'Liberland'
-}
-
-const allTokensMap: EdgeTokenMap = {
-  '0x1234567890123456789012345678901234567890': {
-    currencyCode: 'LLD',
-    displayName: 'Liberland Token',
-    denominations: [
-      {
-        name: 'LLD',
-        multiplier: '1000000000000000000'
-      }
-    ],
-    networkLocation: {
-      contractAddress: '0x1234567890123456789012345678901234567890'
-    }
-  }
-}
 
 export interface TestCase {
   input: {
@@ -66,8 +28,11 @@ export const testCases: TestCase[] = [
           id: '1',
           type: 'wallet:liberland'
         },
-        currencyInfo,
-        allTokensMap,
+        getCurrencyCode: (tokenId: EdgeTokenId) => 'LLD',
+        getDenomination: (tokenId: EdgeTokenId) => ({
+          name: 'LLD',
+          multiplier: '1000000000000000000'
+        }),
         tokenId: null
       },
       tx: {
@@ -127,8 +92,11 @@ export const testCases: TestCase[] = [
           id: '2',
           type: 'wallet:liberland'
         },
-        currencyInfo,
-        allTokensMap,
+        getCurrencyCode: (tokenId: EdgeTokenId) => 'LLD',
+        getDenomination: (tokenId: EdgeTokenId) => ({
+          name: 'LLD',
+          multiplier: '1000000000000000000'
+        }),
         tokenId: null
       },
       tx: {

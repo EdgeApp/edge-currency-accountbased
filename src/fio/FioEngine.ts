@@ -21,6 +21,7 @@ import {
   EdgeFreshAddress,
   EdgeSpendInfo,
   EdgeStakingStatus,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -40,7 +41,6 @@ import {
 } from '../common/promiseUtils'
 import {
   cleanTxLogs,
-  getDenomination,
   getFetchCors,
   getOtherParams,
   safeErrorMessage,
@@ -133,6 +133,7 @@ interface UpdateStakingStatus {
 interface ParseActionParams {
   action: FioHistoryNodeAction
   actor: string
+  tokenId: EdgeTokenId
   currencyCode: string
   denom: EdgeDenomination
   highestTxHeight: number
@@ -147,8 +148,8 @@ interface ParseActionResult {
   updateStakingStatus?: UpdateStakingStatus
 }
 
-export type FindTransaction = (currencyCode: string, txId: string) => number
-export type GetTransactionList = (currencyCode: string) => EdgeTransaction[]
+export type FindTransaction = (tokenId: EdgeTokenId, txId: string) => number
+export type GetTransactionList = (tokenId: EdgeTokenId) => EdgeTransaction[]
 
 export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   fetchCors: EdgeFetchFunction
@@ -441,40 +442,29 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     return { ...this.otherData.stakingStatus }
   }
 
-  processTransaction(
-    action: FioHistoryNodeAction,
-    actor: string,
-    currencyCode: string = this.currencyInfo.currencyCode
-  ): number {
-    const denom = getDenomination(
-      currencyCode,
-      this.currencyInfo,
-      this.allTokensMap
-    )
-    if (denom == null) {
-      this.error(`Received unsupported currencyCode: ${currencyCode}`)
-      return 0
-    }
+  processTransaction(action: FioHistoryNodeAction, actor: string): number {
+    const denom = this.getDenomination(null)
 
     const { blockNum, transaction, updateStakingStatus } = parseAction({
       action,
       actor,
-      currencyCode,
+      currencyCode: this.getCurrencyCode(null),
+      tokenId: null,
       denom,
       highestTxHeight: this.otherData.highestTxHeight,
       publicKey: this.walletInfo.keys.publicKey,
       walletId: this.walletId,
-      findTransaction: (currencyCode: string, txid: string): number =>
-        this.findTransaction(currencyCode, txid),
-      getTransactionList: (currencyCode: string): EdgeTransaction[] =>
-        this.transactionList[currencyCode]
+      findTransaction: (tokenId: EdgeTokenId, txid: string): number =>
+        this.findTransaction(tokenId, txid),
+      getTransactionList: (tokenId: EdgeTokenId): EdgeTransaction[] =>
+        this.transactionList[tokenId ?? '']
     })
     if (updateStakingStatus != null) {
       this.updateStakingStatus(updateStakingStatus)
     }
 
     if (transaction != null) {
-      this.addTransaction(currencyCode, transaction)
+      this.addTransaction(transaction.tokenId, transaction)
     }
 
     return blockNum
@@ -631,7 +621,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     if (transactions) {
-      this.tokenCheckTransactionsStatus.FIO = 1
+      this.tokenCheckTransactionsStatus.set(null, 1)
       this.updateOnAddressesChecked()
     }
     this.sendTransactionEvents()
@@ -1077,15 +1067,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
-    const currencyCode = this.currencyInfo.currencyCode
-
-    // Initialize balance
-    if (
-      typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
-    ) {
-      this.updateBalance(currencyCode, '0')
-    }
-
     // Balance
     try {
       const balances = { staked: '0', locked: '0' }
@@ -1119,7 +1100,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.otherData.srps = srps
       this.otherData.stakingRoe = roe
 
-      this.updateBalance(currencyCode, nativeAmount)
+      this.updateBalance(null, nativeAmount)
 
       if (
         balances.staked !== this.otherData.lockedBalances.staked ||
@@ -1757,7 +1738,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     const balance = await this.getBalance({ tokenId: null })
     const tpid =
       lte(balance, '0') &&
-      !this.transactionList.FIO.some(tx => gt(tx.nativeAmount, '0'))
+      !this.transactionList[''].some(tx => gt(tx.nativeAmount, '0'))
         ? undefined
         : this.tpid
 
@@ -1986,6 +1967,7 @@ const getUnlockDate = (txDate: Date): Date => {
 export const parseAction = ({
   action,
   actor,
+  tokenId,
   currencyCode,
   denom,
   highestTxHeight,
@@ -2009,10 +1991,10 @@ export const parseAction = ({
     data,
     meta: {}
   }
-  const index = findTransaction(currencyCode, action.action_trace.trx_id)
+  const index = findTransaction(tokenId, action.action_trace.trx_id)
   let existingTx: EdgeTransaction | undefined
   if (index > -1) {
-    existingTx = getTransactionList(currencyCode)[index]
+    existingTx = getTransactionList(tokenId)[index]
     // Change this part to match the original logic
     if (existingTx.otherParams?.meta?.isTransferProcessed != null) {
       return { blockNum: action.block_num }

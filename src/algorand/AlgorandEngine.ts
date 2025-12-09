@@ -178,27 +178,27 @@ export class AlgorandEngine extends CurrencyEngine<
       )
       const { assets, amount, 'min-balance': minBalance, round } = accountInfo
 
-      this.updateBalance(this.currencyInfo.currencyCode, amount.toString())
+      this.updateBalance(null, amount.toString())
 
       this.totalReserve = minBalance.toString()
 
       const detectedTokenIds: string[] = []
       const newUnactivatedTokenIds: string[] = []
-      for (const [tokenId, edgeToken] of Object.entries(this.allTokensMap)) {
+      for (const tokenId of Object.keys(this.allTokensMap)) {
         const asset = assets.find(
           asset => asset['asset-id'].toFixed() === tokenId
         )
 
         if (asset != null) {
           const balance = asset.amount.toString()
-          this.updateBalance(edgeToken.currencyCode, balance)
+          this.updateBalance(tokenId, balance)
 
           if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
             detectedTokenIds.push(tokenId)
           }
         } else {
           // Enabled tokens that don't have a balance are unactivated
-          this.updateBalance(edgeToken.currencyCode, '0')
+          this.updateBalance(tokenId, '0')
           if (this.enabledTokenIds.includes(tokenId)) {
             newUnactivatedTokenIds.push(tokenId)
           }
@@ -267,7 +267,6 @@ export class AlgorandEngine extends CurrencyEngine<
       sender
     } = tx
 
-    let currencyCode: string
     let tokenId: EdgeTokenId
     let nativeAmount: string
     let networkFee: string
@@ -292,7 +291,6 @@ export class AlgorandEngine extends CurrencyEngine<
           return
         }
 
-        currencyCode = this.currencyInfo.currencyCode
         tokenId = null
         break
       }
@@ -316,9 +314,6 @@ export class AlgorandEngine extends CurrencyEngine<
           return
         }
 
-        const edgeToken: EdgeToken | undefined = this.allTokensMap[assetId]
-        if (edgeToken == null) return
-        currencyCode = edgeToken.currencyCode
         tokenId = assetId.toString()
 
         break
@@ -342,7 +337,6 @@ export class AlgorandEngine extends CurrencyEngine<
           return
         }
 
-        currencyCode = this.currencyInfo.currencyCode
         tokenId = null
         break
       }
@@ -370,6 +364,9 @@ export class AlgorandEngine extends CurrencyEngine<
       }
     }
 
+    const currencyCode = this.getCurrencyCode(tokenId)
+    if (currencyCode == null) return
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: confirmedRound,
       currencyCode,
@@ -387,7 +384,7 @@ export class AlgorandEngine extends CurrencyEngine<
       walletId: this.walletId
     }
 
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
   }
 
   async queryTransactions(): Promise<void> {
@@ -444,8 +441,7 @@ export class AlgorandEngine extends CurrencyEngine<
 
       latestRound = latestRound ?? this.walletLocalData.blockHeight
       const progress = (latestRound - progressRound) / (latestRound - minRound)
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        progress
+      this.tokenCheckTransactionsStatus.set(null, progress)
       this.updateOnAddressesChecked()
 
       nextQueryToken = nextToken
@@ -457,8 +453,8 @@ export class AlgorandEngine extends CurrencyEngine<
       this.walletLocalDataDirty = true
     }
 
-    for (const cc of this.enabledTokens) {
-      this.tokenCheckTransactionsStatus[cc] = 1
+    for (const tokenId of [null, ...this.enabledTokenIds]) {
+      this.tokenCheckTransactionsStatus.set(tokenId, 1)
     }
     this.updateOnAddressesChecked()
     this.sendTransactionEvents()
@@ -565,7 +561,7 @@ export class AlgorandEngine extends CurrencyEngine<
     const { type }: BaseTxOpts = asMaybe(asBaseTxOpts)(
       edgeSpendInfo.otherParams
     ) ?? {
-      type: currencyCode === this.currencyInfo.currencyCode ? 'pay' : 'axfer'
+      type: tokenId == null ? 'pay' : 'axfer'
     }
 
     const note =
@@ -601,12 +597,10 @@ export class AlgorandEngine extends CurrencyEngine<
         break
       }
       case 'axfer': {
-        const edgeTokenId = Object.keys(this.allTokensMap).find(
-          tokenId => this.allTokensMap[tokenId].currencyCode === currencyCode
-        )
-        if (edgeTokenId == null) throw new Error('Unrecognized asset')
+        const edgeToken = this.allTokensMap[tokenId as string]
+        if (edgeToken == null) throw new Error('Unrecognized asset')
         const networkLocation = asMaybeContractAddressLocation(
-          this.allTokensMap?.[edgeTokenId]?.networkLocation
+          edgeToken.networkLocation
         )
 
         if (networkLocation == null) throw new Error('Unrecognized asset')

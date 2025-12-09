@@ -5,6 +5,7 @@ const ETH = [
     nativeAmount: '-1',
     ourReceiveAddresses: [],
     blockHeight: 0,
+    tokenId: null,
     otherParams: {}
   },
   {
@@ -13,6 +14,7 @@ const ETH = [
     nativeAmount: '1',
     ourReceiveAddresses: ['0x123456'],
     blockHeight: 0,
+    tokenId: null,
     otherParams: {}
   },
   {
@@ -21,6 +23,7 @@ const ETH = [
     nativeAmount: '-1',
     ourReceiveAddresses: [],
     blockHeight: 0,
+    tokenId: null,
     otherParams: {}
   },
   {
@@ -29,6 +32,7 @@ const ETH = [
     nativeAmount: '1',
     ourReceiveAddresses: ['0x123456'],
     blockHeight: 0,
+    tokenId: null,
     otherParams: {}
   },
   {
@@ -37,6 +41,7 @@ const ETH = [
     nativeAmount: '-1',
     ourReceiveAddresses: [],
     blockHeight: 0,
+    tokenId: null,
     otherParams: {}
   }
 ]
@@ -48,6 +53,7 @@ const DAI = [
     nativeAmount: '1',
     ourReceiveAddresses: ['0x123456'],
     blockHeight: 0,
+    tokenId: '6b175474e89094c44da98b954eedeac495271d0f',
     otherParams: {}
   },
   {
@@ -56,6 +62,7 @@ const DAI = [
     nativeAmount: '-1',
     ourReceiveAddresses: [],
     blockHeight: 0,
+    tokenId: '6b175474e89094c44da98b954eedeac495271d0f',
     otherParams: {}
   },
   {
@@ -64,6 +71,7 @@ const DAI = [
     nativeAmount: '1',
     ourReceiveAddresses: ['0x123456'],
     blockHeight: 0,
+    tokenId: '6b175474e89094c44da98b954eedeac495271d0f',
     otherParams: {}
   },
   {
@@ -72,6 +80,7 @@ const DAI = [
     nativeAmount: '-1',
     ourReceiveAddresses: [],
     blockHeight: 0,
+    tokenId: '6b175474e89094c44da98b954eedeac495271d0f',
     otherParams: {}
   },
   {
@@ -80,6 +89,7 @@ const DAI = [
     nativeAmount: '1',
     ourReceiveAddresses: ['0x123456'],
     blockHeight: 0,
+    tokenId: '6b175474e89094c44da98b954eedeac495271d0f',
     otherParams: {}
   }
 ]

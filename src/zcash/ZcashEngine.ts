@@ -7,6 +7,7 @@ import {
   EdgeMemo,
   EdgeMetadata,
   EdgeSpendInfo,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -151,7 +152,7 @@ export class ZcashEngine extends CurrencyEngine<
         orchardTotalZatoshi
       )
 
-      this.updateBalance(this.currencyInfo.currencyCode, total)
+      this.updateBalance(null, total)
       await this.checkAutoshielding()
     })
     this.synchronizer.on('transactionsChanged', async payload => {
@@ -198,10 +199,8 @@ export class ZcashEngine extends CurrencyEngine<
 
     // Balance and transaction querying is handled during the sync therefore we can treat them the same.
 
-    this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-      scanProgress / 100
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-      scanProgress / 100
+    this.tokenCheckBalanceStatus.set(null, scanProgress / 100)
+    this.tokenCheckTransactionsStatus.set(null, scanProgress / 100)
 
     if (
       scanProgress > this.progressRatio.percent &&
@@ -216,17 +215,15 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   // super.updateBalance calls updateOnAddressesChecked() but we want to limit that method to onUpdateProgress
-  updateBalance(currencyCode: string, balance: string): void {
-    const currentBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (this.walletLocalData.totalBalances[currencyCode] == null) {
-      this.walletLocalData.totalBalances[currencyCode] = '0'
-    }
+  updateBalance(tokenId: EdgeTokenId, balance: string): void {
+    const currentBalance = this.getBalance({ tokenId })
     if (currentBalance == null || !eq(balance, currentBalance)) {
-      this.walletLocalData.totalBalances[currencyCode] = balance
+      this.updateBalance(tokenId, balance)
       this.walletLocalDataDirty = true
-      this.warn(`${currencyCode}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(currencyCode, balance)
+      this.warn(`${tokenId}: token Address balance: ${balance}`)
+      this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
     }
+    this.tokenCheckBalanceStatus.set(tokenId, 1)
   }
 
   isSynced(): boolean {
@@ -300,7 +297,7 @@ export class ZcashEngine extends CurrencyEngine<
       txid: rawTransactionId,
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(null, edgeTransaction)
   }
 
   async checkAutoshielding(): Promise<void> {
@@ -464,16 +461,6 @@ export class ZcashEngine extends CurrencyEngine<
     )
 
     const totalTxAmount = add(nativeAmount, networkFee)
-
-    if (
-      gt(
-        totalTxAmount,
-        this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ??
-          '0'
-      )
-    ) {
-      throw new InsufficientFundsError({ tokenId })
-    }
 
     if (gt(totalTxAmount, this.availableZatoshi)) {
       throw new InsufficientFundsError({ tokenId })
