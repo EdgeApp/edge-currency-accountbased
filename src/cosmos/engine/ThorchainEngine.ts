@@ -25,6 +25,7 @@ import {
   ThorchainWalletOtherData
 } from '../thorchainTypes'
 import { CosmosEngine } from './CosmosEngine'
+import { snooze } from '../../common/utils'
 
 const QUERY_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
@@ -88,6 +89,8 @@ export class ThorchainEngine extends CosmosEngine {
           headers
         )
         if (!res.ok) {
+          // snooze in case we're rate-limited
+          await snooze(1000)
           const message = await res.text()
           throw new Error(message)
         }
