@@ -361,6 +361,8 @@ export class EthereumNetwork {
    * This function gets the balance and transaction updates from the network.
    */
   acquireUpdates = async (): Promise<void> => {
+    const updateFuncs = []
+
     // The engine supports token balances batch queries if an adapter provides
     // the functionality.
     const isFetchTokenBalancesSupported =
@@ -373,7 +375,7 @@ export class EthereumNetwork {
       // each token individually.
       isFetchTokenBalancesSupported
     ) {
-      await this.acquireTokenBalances()
+      updateFuncs.push(async () => await this.acquireTokenBalances())
     }
 
     const tokenIds: EdgeTokenId[] = [null, ...this.ethEngine.enabledTokenIds]
@@ -383,11 +385,24 @@ export class EthereumNetwork {
         // batch token balance queries.
         !isFetchTokenBalancesSupported
       ) {
-        await this.acquireTokenBalance(tokenId)
+        updateFuncs.push(async () => await this.acquireTokenBalance(tokenId))
       }
 
-      await this.acquireTxs(tokenId)
+      updateFuncs.push(async () => await this.acquireTxs(tokenId))
     }
+
+    let firstError: Error | undefined
+    for (const func of updateFuncs) {
+      try {
+        await func()
+      } catch (error: unknown) {
+        if (firstError == null && error instanceof Error) {
+          firstError = error
+        }
+      }
+    }
+
+    if (firstError != null) throw firstError
   }
 
   private isAnAdapterConnected(): boolean {
