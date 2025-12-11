@@ -905,7 +905,7 @@ export class CurrencyEngine<
       return
     }
 
-    const activeTokenIds = this.enabledTokenIds
+    const activeTokenIds = [null, ...this.enabledTokenIds]
     const perTokenSlice = 1 / activeTokenIds.length
     let totalStatus = 0
     let numComplete = 0
