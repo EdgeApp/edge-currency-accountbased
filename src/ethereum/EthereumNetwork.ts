@@ -463,7 +463,6 @@ export class EthereumNetwork {
       )
       let highestTxBlockHeight = 0
       for (const [tokenId, tuple] of tokenTxs) {
-        if (tokenId == null) continue
         this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, 1)
         for (const tx of tuple.edgeTransactions) {
           this.ethEngine.addTransaction(tokenId, tx)
