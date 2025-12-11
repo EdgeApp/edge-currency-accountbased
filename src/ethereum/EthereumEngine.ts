@@ -530,21 +530,6 @@ export class EthereumEngine extends CurrencyEngine<
 
   setOtherData(raw: any): void {
     const otherData = asEthereumWalletOtherData(raw)
-
-    // Hack otherData. To be removed once local data stops using currency codes as keys
-    switch (this.currencyInfo.pluginId) {
-      case 'zksync': {
-        // The USDC.e token used to be called USDC so we need to
-        // force a resync of transaction history to avoid showing USDC
-        // transactions in the now USDC.e wallet
-        if (!otherData.zksyncForceResyncUSDC) {
-          this.walletLocalData.lastTransactionQueryHeight.USDC = 0
-          otherData.zksyncForceResyncUSDC = true
-          this.walletLocalDataDirty = true
-        }
-      }
-    }
-
     this.otherData = otherData
   }
 
