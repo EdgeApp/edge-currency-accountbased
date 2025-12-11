@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Migrate ondisk transaction data keyed by `currencyCode` to `tokenId`
+
 ## 4.67.0 (2025-12-09)
 
 - changed: Index internal wallet data with tokenIds
