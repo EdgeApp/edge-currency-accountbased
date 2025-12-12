@@ -234,13 +234,7 @@ export class TezosEngine extends CurrencyEngine<
     })
     const head: BlockHeaderResponse = await asyncWaterfall(funcs)
     const blockHeight = head.level
-    if (this.walletLocalData.blockHeight !== blockHeight) {
-      this.walletLocalData.blockHeight = blockHeight
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onBlockHeightChanged(
-        this.walletLocalData.blockHeight
-      )
-    }
+    this.updateBlockHeight(blockHeight)
   }
 
   async clearBlockchainCache(): Promise<void> {

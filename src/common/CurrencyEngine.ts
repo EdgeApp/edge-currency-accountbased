@@ -734,6 +734,15 @@ export class CurrencyEngine<
     this.updateOnAddressesChecked()
   }
 
+  updateBlockHeight(blockHeight: number): void {
+    if (this.walletLocalData.blockHeight === blockHeight) return
+
+    this.checkDroppedTransactionsThrottled()
+    this.walletLocalData.blockHeight = blockHeight
+    this.walletLocalDataDirty = true
+    this.currencyEngineCallbacks.onBlockHeightChanged(blockHeight)
+  }
+
   protected updateTransaction(
     tokenId: EdgeTokenId,
     edgeTransaction: EdgeTransaction,

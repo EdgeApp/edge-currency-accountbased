@@ -201,14 +201,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         timestamp: json.block_header.raw_data.timestamp
       })
 
-      if (this.walletLocalData.blockHeight !== blockHeight) {
-        this.checkDroppedTransactionsThrottled()
-        this.walletLocalData.blockHeight = blockHeight
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
+      this.updateBlockHeight(blockHeight)
     } catch (e: any) {
       this.log.error(`Error fetching height: `, e)
     }

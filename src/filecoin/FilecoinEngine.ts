@@ -107,16 +107,6 @@ export class FilecoinEngine extends CurrencyEngine<
     this.availableAttoFil = '0'
   }
 
-  onUpdateBlockHeight(networkBlockHeight: number): void {
-    if (this.walletLocalData.blockHeight !== networkBlockHeight) {
-      this.walletLocalData.blockHeight = networkBlockHeight
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onBlockHeightChanged(
-        this.walletLocalData.blockHeight
-      )
-    }
-  }
-
   async startEngine(): Promise<void> {
     this.initData()
     this.addToLoop('checkBalance', ACCOUNT_POLL_MILLISECONDS)
@@ -346,7 +336,7 @@ export class FilecoinEngine extends CurrencyEngine<
     const response = await this.rpcExtra.getChainHead()
     const blockHeight = response.result.Height
 
-    this.onUpdateBlockHeight(blockHeight)
+    this.updateBlockHeight(blockHeight)
   }
 
   async checkTransactions(): Promise<void> {
@@ -386,7 +376,7 @@ export class FilecoinEngine extends CurrencyEngine<
           // Progress the block-height if the message's height is greater than
           // last poll for block-height.
           if (this.walletLocalData.blockHeight < tx.blockHeight) {
-            this.onUpdateBlockHeight(tx.blockHeight)
+            this.updateBlockHeight(tx.blockHeight)
           }
         }
 

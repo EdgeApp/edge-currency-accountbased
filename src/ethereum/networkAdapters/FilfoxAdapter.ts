@@ -110,7 +110,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         // Progress the block-height if the message's height is greater than
         // last poll for block-height.
         if (this.ethEngine.walletLocalData.blockHeight < tx.blockHeight) {
-          this.onUpdateBlockHeight(tx.blockHeight)
+          this.ethEngine.updateBlockHeight(tx.blockHeight)
         }
       }
 
@@ -162,16 +162,6 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
   private makeFilfoxApi(baseUrl: string): Filfox {
     return new Filfox(baseUrl, this.ethEngine.fetchCors)
-  }
-
-  private onUpdateBlockHeight(networkBlockHeight: number): void {
-    if (this.ethEngine.walletLocalData.blockHeight !== networkBlockHeight) {
-      this.ethEngine.walletLocalData.blockHeight = networkBlockHeight
-      this.ethEngine.walletLocalDataDirty = true
-      this.ethEngine.currencyEngineCallbacks.onBlockHeightChanged(
-        this.ethEngine.walletLocalData.blockHeight
-      )
-    }
   }
 
   private onUpdateTransactions(): void {

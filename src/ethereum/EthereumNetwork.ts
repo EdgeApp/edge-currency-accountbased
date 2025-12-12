@@ -428,14 +428,7 @@ export class EthereumNetwork {
       )
       const blockHeight = ethereumNetworkUpdate.blockHeight
       this.ethEngine.log(`Got block height ${blockHeight}`)
-      if (this.ethEngine.walletLocalData.blockHeight !== blockHeight) {
-        this.ethEngine.checkDroppedTransactionsThrottled()
-        this.ethEngine.walletLocalData.blockHeight = blockHeight // Convert to decimal
-        this.ethEngine.walletLocalDataDirty = true
-        this.ethEngine.currencyEngineCallbacks.onBlockHeightChanged(
-          this.ethEngine.walletLocalData.blockHeight
-        )
-      }
+      this.ethEngine.updateBlockHeight(blockHeight)
     }
 
     if (ethereumNetworkUpdate.newNonce != null) {
@@ -498,11 +491,7 @@ export class EthereumNetwork {
         this.ethEngine.log(
           `Updating blockHeight from transactions: ${this.ethEngine.walletLocalData.blockHeight} -> ${highestTxBlockHeight}`
         )
-        this.ethEngine.checkDroppedTransactionsThrottled()
-        this.ethEngine.walletLocalData.blockHeight = highestTxBlockHeight
-        this.ethEngine.currencyEngineCallbacks.onBlockHeightChanged(
-          this.ethEngine.walletLocalData.blockHeight
-        )
+        this.ethEngine.updateBlockHeight(highestTxBlockHeight)
       }
 
       this.ethEngine.walletLocalDataDirty = true
