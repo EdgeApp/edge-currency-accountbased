@@ -395,8 +395,6 @@ describe('Engine', function () {
           .date === 1555650000
       )
       // @ts-expect-error
-      assert(engine.walletLocalData.numUnconfirmedSpendTxs === 5)
-      // @ts-expect-error
       validateTxidListMap(engine)
     })
 
@@ -423,8 +421,6 @@ describe('Engine', function () {
       assert(engine.transactionList[''][3].txid === '001')
       // @ts-expect-error
       assert(engine.transactionList[''][4].txid === '003')
-      // @ts-expect-error
-      assert(engine.walletLocalData.numUnconfirmedSpendTxs === 5)
       // @ts-expect-error
       validateTxidListMap(engine)
     })
@@ -468,8 +464,6 @@ describe('Engine', function () {
       assert(engine.transactionList[''][4].txid === '001')
       // @ts-expect-error
       assert(engine.transactionList[''][4].blockHeight === 1)
-      // @ts-expect-error
-      assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
       // @ts-expect-error
       validateTxidListMap(engine)
     })
@@ -525,8 +519,6 @@ describe('Engine', function () {
       assert(engine.transactionList[''][4].txid === '001')
       // @ts-expect-error
       assert(engine.transactionList[''][4].blockHeight === 1)
-      // @ts-expect-error
-      assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
       // @ts-expect-error
       validateTxidListMap(engine)
     })
@@ -587,8 +579,6 @@ describe('Engine', function () {
       assert(engine.transactionList[''][4].txid === '001')
       // @ts-expect-error
       assert(engine.transactionList[''][4].blockHeight === 1)
-      // @ts-expect-error
-      assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
       // @ts-expect-error
       validateTxidListMap(engine)
     })

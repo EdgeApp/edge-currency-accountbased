@@ -55,7 +55,6 @@ export const asWalletLocalData = asObject({
   publicKey: asMaybe(asString, ''),
   totalBalances: asMaybe(asObject(asEither(asString, asUndefined)), () => ({})),
   lastCheckedTxsDropped: asMaybe(asNumber, 0),
-  numUnconfirmedSpendTxs: asMaybe(asNumber, 0),
   numTransactions: asMaybe(asObject(asNumber), () => ({})),
   unactivatedTokenIds: asMaybe(asArray(asString), () => []),
   otherData: asOptional(asUnknown, () => ({}))

@@ -193,7 +193,6 @@ export class CurrencyEngine<
       publicKey: '',
       totalBalances: {},
       lastCheckedTxsDropped: 0,
-      numUnconfirmedSpendTxs: 0,
       numTransactions: {},
       unactivatedTokenIds: [],
       otherData: undefined
@@ -566,15 +565,6 @@ export class CurrencyEngine<
     let needsReSort = false
     // if transaction doesn't exist in database
     if (idx === -1) {
-      if (
-        // if unconfirmed spend then increment # unconfirmed spend TX's
-        this.isSpendTx(edgeTransaction) &&
-        edgeTransaction.blockHeight === 0
-      ) {
-        this.walletLocalData.numUnconfirmedSpendTxs++
-        this.walletLocalDataDirty = true
-      }
-
       needsReSort = true
       // if currency's transactionList is uninitialized then initialize
       if (typeof this.transactionList[safeTokenId] === 'undefined') {
@@ -613,15 +603,6 @@ export class CurrencyEngine<
             otherParamsOld.lastSeenTime !== otherParamsNew.lastSeenTime ||
             edgeTx.date !== edgeTransaction.date))
       ) {
-        // If a spend transaction goes from unconfirmed to dropped or confirmed,
-        // decrement numUnconfirmedSpendTxs
-        if (
-          this.isSpendTx(edgeTransaction) &&
-          edgeTransaction.blockHeight !== 0 &&
-          edgeTx.blockHeight === 0
-        ) {
-          this.walletLocalData.numUnconfirmedSpendTxs--
-        }
         if (edgeTx.date !== edgeTransaction.date) {
           needsReSort = true
         }
@@ -672,7 +653,6 @@ export class CurrencyEngine<
   }
 
   protected checkDroppedTransactions(dateNow: number): void {
-    let numUnconfirmedSpendTxs = 0
     for (const tokenId of Object.keys(this.transactionList)) {
       // const droppedTxIndices: Array<number> = []
       for (let i = 0; i < this.transactionList[tokenId].length; i++) {
@@ -686,9 +666,6 @@ export class CurrencyEngine<
             tx.nativeAmount = '0'
             this.transactionEvents.push({ isNew: false, transaction: tx })
             // delete this.txIdMap[currencyCode][tx.txid]
-          } else if (this.isSpendTx(tx)) {
-            // Still have a pending spend transaction in the tx list
-            numUnconfirmedSpendTxs++
           }
         }
       }
@@ -701,8 +678,6 @@ export class CurrencyEngine<
       //   this.sortTransactions(currencyCode)
       // }
     }
-    this.walletLocalData.numUnconfirmedSpendTxs = numUnconfirmedSpendTxs
-    this.walletLocalDataDirty = true
   }
 
   protected getUnconfirmedTxs(): EdgeTransaction[] {
