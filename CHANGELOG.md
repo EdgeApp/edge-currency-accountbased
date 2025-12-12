@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: Migrate ondisk transaction data keyed by `currencyCode` to `tokenId`
+- changed: Refactor Ethereum `EthereumNetwork.acquireUpdates` to allow partial status updates
+
 ## 4.67.0 (2025-12-09)
 
 - changed: Index internal wallet data with tokenIds
