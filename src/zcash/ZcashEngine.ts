@@ -218,12 +218,11 @@ export class ZcashEngine extends CurrencyEngine<
   updateBalance(tokenId: EdgeTokenId, balance: string): void {
     const currentBalance = this.getBalance({ tokenId })
     if (currentBalance == null || !eq(balance, currentBalance)) {
-      this.updateBalance(tokenId, balance)
+      this.walletLocalData.totalBalances[''] = balance
       this.walletLocalDataDirty = true
       this.warn(`${tokenId}: token Address balance: ${balance}`)
       this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
     }
-    this.tokenCheckBalanceStatus.set(tokenId, 1)
   }
 
   isSynced(): boolean {

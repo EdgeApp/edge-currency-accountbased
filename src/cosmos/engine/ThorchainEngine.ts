@@ -6,6 +6,7 @@ import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../../common/innerPlugin'
 import { getRandomDelayMs } from '../../common/network'
+import { snooze } from '../../common/utils'
 import { CosmosTools } from '../CosmosTools'
 import {
   asCosmosWalletOtherData,
@@ -88,6 +89,8 @@ export class ThorchainEngine extends CosmosEngine {
           headers
         )
         if (!res.ok) {
+          // snooze in case we're rate-limited
+          await snooze(1000)
           const message = await res.text()
           throw new Error(message)
         }

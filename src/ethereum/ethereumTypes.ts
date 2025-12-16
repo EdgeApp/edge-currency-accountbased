@@ -288,9 +288,6 @@ export const asEthereumWalletOtherData = asObject({
   /** @deprecated use nextNonce and count the observed pending transactions instead */
   unconfirmedNextNonce: asMaybe(asString, '0'),
 
-  // hacks
-  zksyncForceResyncUSDC: asMaybe(asBoolean, false),
-
   /** Decoy addresses that are pending inclusion in subscribedAddresses */
   pendingDecoyAddresses: asMaybe(asArray(asDecoyAddress), () => [])
 })

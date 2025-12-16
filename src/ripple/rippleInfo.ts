@@ -77,11 +77,11 @@ export const builtinTokens: EdgeTokenMap = {
       }
     },
   'USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq': {
-    currencyCode: 'USD.gh',
+    currencyCode: 'USD',
     displayName: 'Gatehub USD',
     denominations: [
       {
-        name: 'USD.gh',
+        name: 'USD',
         multiplier: '1000000000000000000'
       }
     ],
@@ -91,11 +91,11 @@ export const builtinTokens: EdgeTokenMap = {
     }
   },
   'EUR-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq': {
-    currencyCode: 'EUR.gh',
+    currencyCode: 'EUR',
     displayName: 'Gatehub EUR',
     denominations: [
       {
-        name: 'EUR.gh',
+        name: 'EUR',
         multiplier: '1000000000000000000'
       }
     ],
@@ -105,11 +105,11 @@ export const builtinTokens: EdgeTokenMap = {
     }
   },
   'USD-rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B': {
-    currencyCode: 'USD.bs',
+    currencyCode: 'USD',
     displayName: 'Bitstamp USD',
     denominations: [
       {
-        name: 'USD.bs',
+        name: 'USD',
         multiplier: '1000000000000000000'
       }
     ],
@@ -119,11 +119,11 @@ export const builtinTokens: EdgeTokenMap = {
     }
   },
   'EUR-rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B': {
-    currencyCode: 'EUR.bs',
+    currencyCode: 'EUR',
     displayName: 'Bitstamp EUR',
     denominations: [
       {
-        name: 'EUR.bs',
+        name: 'EUR',
         multiplier: '1000000000000000000'
       }
     ],
@@ -133,11 +133,11 @@ export const builtinTokens: EdgeTokenMap = {
     }
   },
   'USD-rEn9eRkX25wfGPLysUMAvZ84jAzFNpT5fL': {
-    currencyCode: 'USD.st',
+    currencyCode: 'USD',
     displayName: 'Stably USD',
     denominations: [
       {
-        name: 'USD.st',
+        name: 'USD',
         multiplier: '1000000000000000000'
       }
     ],

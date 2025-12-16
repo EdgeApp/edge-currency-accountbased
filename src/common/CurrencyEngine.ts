@@ -154,11 +154,8 @@ export class CurrencyEngine<
     // Sync in-memory decoy addresses with what core has saved
     this.subscribedAddresses = opts.subscribedAddresses ?? []
     this.transactionEvents = []
-    this.transactionList = {}
     this.transactionListDirty = false
     this.transactionsLoaded = false
-    this.txIdMap = {}
-    this.txIdList = {}
     this.walletInfo = walletInfo
     this.walletId = walletInfo.id
     this.currencyInfo = currencyInfo
@@ -166,9 +163,9 @@ export class CurrencyEngine<
     this.minimumAddressBalance = '0'
 
     // Use empty string null tokenId
-    this.transactionList[''] = []
-    this.txIdMap[''] = {}
-    this.txIdList[''] = []
+    this.transactionList = { '': [] }
+    this.txIdMap = { '': {} }
+    this.txIdList = { '': [] }
 
     // Configure tokens:
     this.builtinTokens = builtinTokens
@@ -321,6 +318,51 @@ export class CurrencyEngine<
 
   protected setOtherData(raw: any): void {}
 
+  /**
+   * Migrates transaction data from currency code keys to tokenId keys, if necessary.
+   * Old format: keyed by currency codes (e.g., "ETH", "USDC")
+   * New format: keyed by tokenIds (e.g., "", "a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+   */
+  private migrateCurrencyCodeToTokenId<T>(
+    data: Record<string, T> | undefined
+  ): Record<string, T> | undefined {
+    if (data == null) {
+      return data
+    }
+
+    // Check if migration is needed - if data already has empty string key, it's already migrated
+    if (data[''] != null) {
+      return data
+    }
+
+    const migrated: Record<string, T> = {}
+
+    for (const [currencyCode, value] of Object.entries(data)) {
+      let newKey: string
+
+      // Native currency maps to empty string
+      if (currencyCode === this.currencyInfo.currencyCode) {
+        newKey = ''
+      } else {
+        // Find tokenId in allTokensMap that matches this currency code
+        const tokenId = Object.keys(this.allTokensMap).find(
+          tid => this.allTokensMap[tid]?.currencyCode === currencyCode
+        )
+
+        if (tokenId != null) {
+          newKey = tokenId
+        } else {
+          // No matching token found
+          continue
+        }
+      }
+
+      migrated[newKey] = value
+    }
+
+    return migrated
+  }
+
   protected async loadTransactions(): Promise<void> {
     if (this.transactionsLoaded) {
       this.log('Transactions already loaded')
@@ -364,6 +406,31 @@ export class CurrencyEngine<
       } else {
         this.log.crash(e, { currencyPluginId: this.currencyInfo.pluginId })
       }
+    }
+
+    // Migrate old data from currency codes to tokenIds if needed
+    const needsMigration =
+      (txIdList != null &&
+        Object.keys(txIdList).length > 0 &&
+        txIdList[''] == null) ||
+      (txIdMap != null &&
+        Object.keys(txIdMap).length > 0 &&
+        txIdMap[''] == null) ||
+      (transactionList != null &&
+        Object.keys(transactionList).length > 0 &&
+        transactionList[''] == null)
+
+    if (needsMigration) {
+      this.log.warn(
+        'Migrating transaction data from currency codes to tokenIds'
+      )
+      txIdList = this.migrateCurrencyCodeToTokenId(txIdList) ?? this.txIdList
+      txIdMap = this.migrateCurrencyCodeToTokenId(txIdMap) ?? this.txIdMap
+      transactionList =
+        this.migrateCurrencyCodeToTokenId(transactionList) ??
+        this.transactionList
+      this.transactionListDirty = true
+      this.log.warn('Migration complete')
     }
 
     let isEmptyTransactions = true
@@ -838,7 +905,7 @@ export class CurrencyEngine<
       return
     }
 
-    const activeTokenIds = this.enabledTokenIds
+    const activeTokenIds = [null, ...this.enabledTokenIds]
     const perTokenSlice = 1 / activeTokenIds.length
     let totalStatus = 0
     let numComplete = 0
