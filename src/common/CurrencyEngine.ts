@@ -31,6 +31,7 @@ import { PluginEnvironment } from './innerPlugin'
 import { makePeriodicTask, PeriodicTask } from './periodicTask'
 import { makeMetaTokens, validateToken } from './tokenHelpers'
 import {
+  asMaybeOtherParamsLastSeenTime,
   asWalletLocalData,
   DATA_STORE_FILE,
   EdgeTransactionHelperAmounts,
@@ -192,7 +193,6 @@ export class CurrencyEngine<
       lastTransactionDate: {},
       publicKey: '',
       totalBalances: {},
-      lastCheckedTxsDropped: 0,
       numTransactions: {},
       unactivatedTokenIds: [],
       otherData: undefined
@@ -638,48 +638,6 @@ export class CurrencyEngine<
     this.txIdList[safeTokenId] = txIdList
   }
 
-  // Called by EthereumNetwork
-  checkDroppedTransactionsThrottled(): void {
-    const now = Date.now() / 1000
-    if (
-      now - this.walletLocalData.lastCheckedTxsDropped >
-      DROPPED_TX_TIME_GAP
-    ) {
-      this.checkDroppedTransactions(now)
-      this.walletLocalData.lastCheckedTxsDropped = now
-      this.walletLocalDataDirty = true
-      this.sendTransactionEvents()
-    }
-  }
-
-  protected checkDroppedTransactions(dateNow: number): void {
-    for (const tokenId of Object.keys(this.transactionList)) {
-      // const droppedTxIndices: Array<number> = []
-      for (let i = 0; i < this.transactionList[tokenId].length; i++) {
-        const tx = this.transactionList[tokenId][i]
-        if (tx.blockHeight === 0) {
-          const { otherParams = {} } = tx
-          const lastSeen = otherParams.lastSeenTime
-          if (dateNow - lastSeen > DROPPED_TX_TIME_GAP) {
-            // droppedTxIndices.push(i)
-            tx.blockHeight = -1
-            tx.nativeAmount = '0'
-            this.transactionEvents.push({ isNew: false, transaction: tx })
-            // delete this.txIdMap[currencyCode][tx.txid]
-          }
-        }
-      }
-      // Delete transactions in reverse order
-      // for (let i = droppedTxIndices.length - 1; i >= 0; i--) {
-      //   const droppedIndex = droppedTxIndices[i]
-      //   this.transactionList[currencyCode].splice(droppedIndex, 1)
-      // }
-      // if (droppedTxIndices.length) {
-      //   this.sortTransactions(currencyCode)
-      // }
-    }
-  }
-
   protected getUnconfirmedTxs(): EdgeTransaction[] {
     const transactions: EdgeTransaction[] = []
     for (const tokenId of Object.keys(this.transactionList)) {
@@ -749,13 +707,25 @@ export class CurrencyEngine<
       return false
     }
 
+    // See if the transaction should be dropped
+    if (tx.confirmations === 'unconfirmed' && tx.blockHeight === 0) {
+      const otherParams = asMaybeOtherParamsLastSeenTime(tx.otherParams)
+      if (otherParams != null) {
+        const lastSeen = otherParams.lastSeenTime
+        if (Date.now() / 1000 - lastSeen > DROPPED_TX_TIME_GAP) {
+          tx.confirmations = 'dropped'
+          tx.nativeAmount = '0'
+          return true
+        }
+      }
+    }
+
     return false
   }
 
   updateBlockHeight(blockHeight: number): void {
     if (this.walletLocalData.blockHeight === blockHeight) return
 
-    this.checkDroppedTransactionsThrottled()
     this.walletLocalData.blockHeight = blockHeight
     this.walletLocalDataDirty = true
     this.currencyEngineCallbacks.onBlockHeightChanged(blockHeight)

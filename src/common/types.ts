@@ -54,7 +54,6 @@ export const asWalletLocalData = asObject({
   lastTransactionDate: asMaybe(asObject(asNumber), () => ({})),
   publicKey: asMaybe(asString, ''),
   totalBalances: asMaybe(asObject(asEither(asString, asUndefined)), () => ({})),
-  lastCheckedTxsDropped: asMaybe(asNumber, 0),
   numTransactions: asMaybe(asObject(asNumber), () => ({})),
   unactivatedTokenIds: asMaybe(asArray(asString), () => []),
   otherData: asOptional(asUnknown, () => ({}))
@@ -193,3 +192,9 @@ export const asEdgeToken = asObject({
 export const asInfoServerTokens = asObject({
   infoServerTokens: asMaybe(asArray(asUnknown))
 })
+
+export const asMaybeOtherParamsLastSeenTime = asMaybe(
+  asObject({
+    lastSeenTime: asNumber
+  })
+)

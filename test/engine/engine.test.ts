@@ -449,7 +449,7 @@ describe('Engine', function () {
         engine.addTransaction(null, tx, tx.date)
       }
       // @ts-expect-error
-      engine.checkDroppedTransactions(1555590000)
+      engine.updateBlockHeight(999)
       // @ts-expect-error
       assert(engine.transactionList[''][0].txid === '005')
       // @ts-expect-error
@@ -500,7 +500,7 @@ describe('Engine', function () {
         engine.addTransaction(null, tx, tx.date)
       }
       // @ts-expect-error
-      engine.checkDroppedTransactions(1555656401)
+      engine.updateBlockHeight(999)
       // @ts-expect-error
       assert(engine.transactionList[''].length === 5)
       // @ts-expect-error
@@ -514,7 +514,7 @@ describe('Engine', function () {
       // @ts-expect-error
       assert(engine.transactionList[''][3].txid === '002')
       // @ts-expect-error
-      assert(engine.transactionList[''][3].blockHeight === -1)
+      assert(engine.transactionList[''][3].blockHeight === 0)
       // @ts-expect-error
       assert(engine.transactionList[''][4].txid === '001')
       // @ts-expect-error
@@ -558,15 +558,13 @@ describe('Engine', function () {
       engine.addTransaction(null, updateTx, 1555666401)
 
       // @ts-expect-error
-      engine.checkDroppedTransactions(1555666401)
+      engine.updateBlockHeight(999)
       // @ts-expect-error
       assert(engine.transactionList[''].length === 5)
       // @ts-expect-error
       assert(engine.transactionList[''][0].txid === '005')
       // @ts-expect-error
       assert(engine.transactionList[''][1].txid === '004')
-      // @ts-expect-error
-      assert(engine.transactionList[''][1].blockHeight === -1)
       // @ts-expect-error
       assert(engine.transactionList[''][2].txid === '003')
       // @ts-expect-error
