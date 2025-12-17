@@ -558,6 +558,7 @@ export class CurrencyEngine<
       edgeTransaction.otherParams.lastSeenTime =
         lastSeenTime ?? Math.round(Date.now() / 1000)
     }
+    this.updateConfirmations(edgeTransaction)
     const txid = normalizeAddress(edgeTransaction.txid)
     const idx = this.findTransaction(tokenId, txid)
 
@@ -734,6 +735,48 @@ export class CurrencyEngine<
     this.updateOnAddressesChecked()
   }
 
+  updateConfirmations(tx: EdgeTransaction): boolean {
+    // No update needed for these status
+    switch (tx.confirmations) {
+      case 'confirmed':
+      case 'dropped':
+      case 'failed': {
+        return false
+      }
+      // don't use syncing status
+      case undefined:
+      case 'syncing': {
+        tx.confirmations = 'unconfirmed'
+        return this.updateConfirmations(tx)
+      }
+    }
+
+    // Fix negative block heights
+    tx.blockHeight = Math.max(0, tx.blockHeight)
+
+    if (
+      typeof tx.confirmations === 'number' ||
+      (tx.confirmations === 'unconfirmed' && tx.blockHeight > 0)
+    ) {
+      const numConfirmations =
+        this.walletLocalData.blockHeight - tx.blockHeight + 1
+      const requiredConfirmations = this.currencyInfo.requiredConfirmations ?? 1
+
+      // confirmations exceed required, mark as confirmed
+      if (numConfirmations >= requiredConfirmations) {
+        tx.confirmations = 'confirmed'
+        return true
+      } else if (numConfirmations !== tx.confirmations) {
+        // less than required confirmations, update the confirmation count
+        tx.confirmations = numConfirmations
+        return true
+      }
+      return false
+    }
+
+    return false
+  }
+
   updateBlockHeight(blockHeight: number): void {
     if (this.walletLocalData.blockHeight === blockHeight) return
 
@@ -741,6 +784,20 @@ export class CurrencyEngine<
     this.walletLocalData.blockHeight = blockHeight
     this.walletLocalDataDirty = true
     this.currencyEngineCallbacks.onBlockHeightChanged(blockHeight)
+
+    const activeTokenIds = [null, ...this.enabledTokenIds]
+
+    for (const tokenId of activeTokenIds) {
+      const txList = this.transactionList[tokenId ?? ''] ?? []
+      for (let i = 0; i < txList.length; i++) {
+        const tx = txList[i]
+        const didUpdate = this.updateConfirmations(tx)
+        if (didUpdate) {
+          this.updateTransaction(tokenId, tx, i)
+        }
+      }
+    }
+    this.sendTransactionEvents()
   }
 
   protected updateTransaction(
