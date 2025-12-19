@@ -174,13 +174,7 @@ export class PolkadotEngine extends CurrencyEngine<
     try {
       const response = await this.api.rpc.chain.getBlock()
       const height = response.block.header.number.toNumber()
-      if (height !== this.walletLocalData.blockHeight) {
-        this.walletLocalData.blockHeight = height
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
+      this.updateBlockHeight(height)
     } catch (e: any) {
       this.warn('queryBlockheight failed with error: ', e)
     }

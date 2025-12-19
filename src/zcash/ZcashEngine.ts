@@ -116,7 +116,7 @@ export class ZcashEngine extends CurrencyEngine<
     if (this.synchronizer == null) return
     this.synchronizer.on('update', async payload => {
       const { scanProgress, networkBlockHeight } = payload
-      this.onUpdateBlockHeight(networkBlockHeight)
+      this.updateBlockHeight(networkBlockHeight)
       this.onUpdateProgress(scanProgress)
       await this.checkAutoshielding()
     })
@@ -178,16 +178,6 @@ export class ZcashEngine extends CurrencyEngine<
         await this.startEngine()
       }
     })
-  }
-
-  onUpdateBlockHeight(networkBlockHeight: number): void {
-    if (this.walletLocalData.blockHeight !== networkBlockHeight) {
-      this.walletLocalData.blockHeight = networkBlockHeight
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onBlockHeightChanged(
-        this.walletLocalData.blockHeight
-      )
-    }
   }
 
   onUpdateProgress(scanProgress: number): void {

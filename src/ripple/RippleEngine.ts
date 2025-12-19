@@ -289,14 +289,7 @@ export class XrpEngine extends CurrencyEngine<
         throw new Error('Received response without ledger info')
 
       this.log(`Got block height ${blockHeight}`)
-      if (this.walletLocalData.blockHeight !== blockHeight) {
-        this.checkDroppedTransactionsThrottled()
-        this.walletLocalData.blockHeight = blockHeight // Convert to decimal
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
+      this.updateBlockHeight(blockHeight)
     } catch (e: any) {
       this.error(`Error fetching height: `, e)
       await this.tools.reconnectApi()

@@ -31,6 +31,7 @@ import { PluginEnvironment } from './innerPlugin'
 import { makePeriodicTask, PeriodicTask } from './periodicTask'
 import { makeMetaTokens, validateToken } from './tokenHelpers'
 import {
+  asMaybeOtherParamsLastSeenTime,
   asWalletLocalData,
   DATA_STORE_FILE,
   EdgeTransactionHelperAmounts,
@@ -192,8 +193,6 @@ export class CurrencyEngine<
       lastTransactionDate: {},
       publicKey: '',
       totalBalances: {},
-      lastCheckedTxsDropped: 0,
-      numUnconfirmedSpendTxs: 0,
       numTransactions: {},
       unactivatedTokenIds: [],
       otherData: undefined
@@ -558,6 +557,7 @@ export class CurrencyEngine<
       edgeTransaction.otherParams.lastSeenTime =
         lastSeenTime ?? Math.round(Date.now() / 1000)
     }
+    this.updateConfirmations(edgeTransaction)
     const txid = normalizeAddress(edgeTransaction.txid)
     const idx = this.findTransaction(tokenId, txid)
 
@@ -565,15 +565,6 @@ export class CurrencyEngine<
     let needsReSort = false
     // if transaction doesn't exist in database
     if (idx === -1) {
-      if (
-        // if unconfirmed spend then increment # unconfirmed spend TX's
-        this.isSpendTx(edgeTransaction) &&
-        edgeTransaction.blockHeight === 0
-      ) {
-        this.walletLocalData.numUnconfirmedSpendTxs++
-        this.walletLocalDataDirty = true
-      }
-
       needsReSort = true
       // if currency's transactionList is uninitialized then initialize
       if (typeof this.transactionList[safeTokenId] === 'undefined') {
@@ -612,15 +603,6 @@ export class CurrencyEngine<
             otherParamsOld.lastSeenTime !== otherParamsNew.lastSeenTime ||
             edgeTx.date !== edgeTransaction.date))
       ) {
-        // If a spend transaction goes from unconfirmed to dropped or confirmed,
-        // decrement numUnconfirmedSpendTxs
-        if (
-          this.isSpendTx(edgeTransaction) &&
-          edgeTransaction.blockHeight !== 0 &&
-          edgeTx.blockHeight === 0
-        ) {
-          this.walletLocalData.numUnconfirmedSpendTxs--
-        }
         if (edgeTx.date !== edgeTransaction.date) {
           needsReSort = true
         }
@@ -656,54 +638,6 @@ export class CurrencyEngine<
     this.txIdList[safeTokenId] = txIdList
   }
 
-  // Called by EthereumNetwork
-  checkDroppedTransactionsThrottled(): void {
-    const now = Date.now() / 1000
-    if (
-      now - this.walletLocalData.lastCheckedTxsDropped >
-      DROPPED_TX_TIME_GAP
-    ) {
-      this.checkDroppedTransactions(now)
-      this.walletLocalData.lastCheckedTxsDropped = now
-      this.walletLocalDataDirty = true
-      this.sendTransactionEvents()
-    }
-  }
-
-  protected checkDroppedTransactions(dateNow: number): void {
-    let numUnconfirmedSpendTxs = 0
-    for (const tokenId of Object.keys(this.transactionList)) {
-      // const droppedTxIndices: Array<number> = []
-      for (let i = 0; i < this.transactionList[tokenId].length; i++) {
-        const tx = this.transactionList[tokenId][i]
-        if (tx.blockHeight === 0) {
-          const { otherParams = {} } = tx
-          const lastSeen = otherParams.lastSeenTime
-          if (dateNow - lastSeen > DROPPED_TX_TIME_GAP) {
-            // droppedTxIndices.push(i)
-            tx.blockHeight = -1
-            tx.nativeAmount = '0'
-            this.transactionEvents.push({ isNew: false, transaction: tx })
-            // delete this.txIdMap[currencyCode][tx.txid]
-          } else if (this.isSpendTx(tx)) {
-            // Still have a pending spend transaction in the tx list
-            numUnconfirmedSpendTxs++
-          }
-        }
-      }
-      // Delete transactions in reverse order
-      // for (let i = droppedTxIndices.length - 1; i >= 0; i--) {
-      //   const droppedIndex = droppedTxIndices[i]
-      //   this.transactionList[currencyCode].splice(droppedIndex, 1)
-      // }
-      // if (droppedTxIndices.length) {
-      //   this.sortTransactions(currencyCode)
-      // }
-    }
-    this.walletLocalData.numUnconfirmedSpendTxs = numUnconfirmedSpendTxs
-    this.walletLocalDataDirty = true
-  }
-
   protected getUnconfirmedTxs(): EdgeTransaction[] {
     const transactions: EdgeTransaction[] = []
     for (const tokenId of Object.keys(this.transactionList)) {
@@ -732,6 +666,83 @@ export class CurrencyEngine<
     }
     this.tokenCheckBalanceStatus.set(tokenId, 1)
     this.updateOnAddressesChecked()
+  }
+
+  updateConfirmations(tx: EdgeTransaction): boolean {
+    // No update needed for these status
+    switch (tx.confirmations) {
+      case 'confirmed':
+      case 'dropped':
+      case 'failed': {
+        return false
+      }
+      // don't use syncing status
+      case undefined:
+      case 'syncing': {
+        tx.confirmations = 'unconfirmed'
+        return this.updateConfirmations(tx)
+      }
+    }
+
+    // Fix negative block heights
+    tx.blockHeight = Math.max(0, tx.blockHeight)
+
+    if (
+      typeof tx.confirmations === 'number' ||
+      (tx.confirmations === 'unconfirmed' && tx.blockHeight > 0)
+    ) {
+      const numConfirmations =
+        this.walletLocalData.blockHeight - tx.blockHeight + 1
+      const requiredConfirmations = this.currencyInfo.requiredConfirmations ?? 1
+
+      // confirmations exceed required, mark as confirmed
+      if (numConfirmations >= requiredConfirmations) {
+        tx.confirmations = 'confirmed'
+        return true
+      } else if (numConfirmations !== tx.confirmations) {
+        // less than required confirmations, update the confirmation count
+        tx.confirmations = numConfirmations
+        return true
+      }
+      return false
+    }
+
+    // See if the transaction should be dropped
+    if (tx.confirmations === 'unconfirmed' && tx.blockHeight === 0) {
+      const otherParams = asMaybeOtherParamsLastSeenTime(tx.otherParams)
+      if (otherParams != null) {
+        const lastSeen = otherParams.lastSeenTime
+        if (Date.now() / 1000 - lastSeen > DROPPED_TX_TIME_GAP) {
+          tx.confirmations = 'dropped'
+          tx.nativeAmount = '0'
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
+  updateBlockHeight(blockHeight: number): void {
+    if (this.walletLocalData.blockHeight === blockHeight) return
+
+    this.walletLocalData.blockHeight = blockHeight
+    this.walletLocalDataDirty = true
+    this.currencyEngineCallbacks.onBlockHeightChanged(blockHeight)
+
+    const activeTokenIds = [null, ...this.enabledTokenIds]
+
+    for (const tokenId of activeTokenIds) {
+      const txList = this.transactionList[tokenId ?? ''] ?? []
+      for (let i = 0; i < txList.length; i++) {
+        const tx = txList[i]
+        const didUpdate = this.updateConfirmations(tx)
+        if (didUpdate) {
+          this.updateTransaction(tokenId, tx, i)
+        }
+      }
+    }
+    this.sendTransactionEvents()
   }
 
   protected updateTransaction(

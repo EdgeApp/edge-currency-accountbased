@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: Use `EdgeTransaction.confirmations`
 - changed: Migrate ondisk transaction data keyed by `currencyCode` to `tokenId`
 - changed: Refactor Ethereum `EthereumNetwork.acquireUpdates` to allow partial status updates
 

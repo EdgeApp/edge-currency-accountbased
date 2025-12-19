@@ -661,13 +661,7 @@ export class CosmosEngine extends CurrencyEngine<
     try {
       const { stargateClient } = this.getClients()
       const blockheight = await stargateClient.getHeight()
-      if (blockheight > this.walletLocalData.blockHeight) {
-        this.walletLocalData.blockHeight = blockheight
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
+      this.updateBlockHeight(blockheight)
     } catch (e: any) {
       this.error(`queryBlockheight Error `, e)
     }

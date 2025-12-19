@@ -209,13 +209,7 @@ export class AlgorandEngine extends CurrencyEngine<
         this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
       }
 
-      if (round > this.walletLocalData.blockHeight) {
-        this.walletLocalData.blockHeight = round
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
+      this.updateBlockHeight(round)
 
       if (
         !matchJson(

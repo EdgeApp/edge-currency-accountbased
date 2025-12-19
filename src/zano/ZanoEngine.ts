@@ -318,10 +318,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       status.current_wallet_height,
       status.current_daemon_height
     )
-    if (blockheight > this.walletLocalData.blockHeight) {
-      this.walletLocalData.blockHeight = blockheight
-      this.walletLocalDataDirty = true
-    }
+    this.updateBlockHeight(blockheight)
 
     if (status.progress === 100 || status.wallet_state === 2) {
       this.updateProgress({ sync: 1 })

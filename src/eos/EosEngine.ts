@@ -200,14 +200,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         'getInfo'
       )
       const blockHeight = result.head_block_num.toNumber()
-      if (this.walletLocalData.blockHeight !== blockHeight) {
-        this.checkDroppedTransactionsThrottled()
-        this.walletLocalData.blockHeight = blockHeight
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
+      this.updateBlockHeight(blockHeight)
 
       const header = result.getTransactionHeader()
       this.referenceBlock = {

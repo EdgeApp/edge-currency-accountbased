@@ -100,7 +100,7 @@ export class PiratechainEngine extends CurrencyEngine<
     if (this.synchronizer == null) return
     this.synchronizer.on('update', async payload => {
       const { lastDownloadedHeight, scanProgress, networkBlockHeight } = payload
-      this.onUpdateBlockHeight(networkBlockHeight)
+      this.updateBlockHeight(networkBlockHeight)
       this.onUpdateProgress(
         lastDownloadedHeight,
         scanProgress,
@@ -132,16 +132,6 @@ export class PiratechainEngine extends CurrencyEngine<
       this.sendTransactionEvents()
     } catch (e: any) {}
     this.queryMutex = false
-  }
-
-  onUpdateBlockHeight(networkBlockHeight: number): void {
-    if (this.walletLocalData.blockHeight !== networkBlockHeight) {
-      this.walletLocalData.blockHeight = networkBlockHeight
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onBlockHeightChanged(
-        this.walletLocalData.blockHeight
-      )
-    }
   }
 
   onUpdateProgress(

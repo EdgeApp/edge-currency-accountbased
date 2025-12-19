@@ -207,13 +207,7 @@ export class CardanoEngine extends CurrencyEngine<
         epoch_no: epochNumber
       } = clean
 
-      if (blockHeight > this.walletLocalData.blockHeight) {
-        this.walletLocalData.blockHeight = blockHeight
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
+      this.updateBlockHeight(blockHeight)
       this.epochNumber = epochNumber
       this.slot = absSlot
 

@@ -288,14 +288,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     try {
       const info = await this.multicastServers('getChainInfo')
       const blockHeight = info.head_block_num
-      if (this.walletLocalData.blockHeight !== blockHeight) {
-        this.checkDroppedTransactionsThrottled()
-        this.walletLocalData.blockHeight = blockHeight
-        this.localDataDirty()
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
+      this.updateBlockHeight(blockHeight)
 
       const block = await this.multicastServers('getBlock', info)
       const expiration = new Date(`${info.head_block_time}Z`)

@@ -442,14 +442,7 @@ export class StellarEngine extends CurrencyEngine<
     this.multicastServers('ledgers')
       .then(r => {
         const blockHeight = r.records[0].sequence
-        if (this.walletLocalData.blockHeight !== blockHeight) {
-          this.checkDroppedTransactionsThrottled()
-          this.walletLocalData.blockHeight = blockHeight
-          this.walletLocalDataDirty = true
-          this.currencyEngineCallbacks.onBlockHeightChanged(
-            this.walletLocalData.blockHeight
-          )
-        }
+        this.updateBlockHeight(blockHeight)
       })
       .catch(e => {
         this.error(`checkBlockchainInnerLoop Error `, e)

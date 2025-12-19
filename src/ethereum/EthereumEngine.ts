@@ -1866,11 +1866,11 @@ export class EthereumEngine extends CurrencyEngine<
         // present in edge-currency-accountbased state
         const metadata = edgeTransaction.metadata
 
-        // Update the transaction's blockHeight to -1 (drops the transaction)
+        // Update the transaction's confirmations to dropped
         const updatedEdgeTransaction: EdgeTransaction = {
           ...replacedEdgeTransaction,
           metadata,
-          blockHeight: -1
+          confirmations: 'dropped'
         }
 
         this.addTransaction(
