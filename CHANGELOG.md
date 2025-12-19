@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.68.0 (2025-12-19)
+
 - changed: Use `EdgeTransaction.confirmations`
 - changed: Migrate ondisk transaction data keyed by `currencyCode` to `tokenId`
 - changed: Refactor Ethereum `EthereumNetwork.acquireUpdates` to allow partial status updates
