@@ -338,7 +338,7 @@ export class XrpEngine extends CurrencyEngine<
     if (tokenId == null) {
       takerDenom = this.currencyInfo.denominations[0]
     } else {
-      const builtinToken = this.builtinTokens[tokenId]
+      const builtinToken = this.allTokensMap[tokenId]
       if (builtinToken == null) return
       takerDenom = builtinToken.denominations[0]
     }
