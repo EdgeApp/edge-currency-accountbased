@@ -113,7 +113,6 @@ export class CurrencyEngine<
   // Tokens:
   allTokens: EdgeMetaToken[] = []
   allTokensMap: EdgeTokenMap = {}
-  builtinTokens: EdgeTokenMap = {}
   customTokens: EdgeTokenMap = {}
   enabledTokenIds: string[] = []
 
@@ -136,7 +135,7 @@ export class CurrencyEngine<
     opts: EdgeCurrencyEngineOptions,
     makeSyncTracker: (engine: SyncEngine) => SyncTrackerT
   ) {
-    const { builtinTokens, currencyInfo } = env
+    const { currencyInfo } = env
     const {
       callbacks,
       customTokens,
@@ -171,7 +170,6 @@ export class CurrencyEngine<
     this.txIdList = { '': [] }
 
     // Configure tokens:
-    this.builtinTokens = builtinTokens
     this.changeCustomTokensSync(customTokens)
     this.changeEnabledTokenIdsSync(enabledTokenIds)
 
@@ -1014,7 +1012,7 @@ export class CurrencyEngine<
       this.customTokens[tokenId] = token
     }
 
-    this.allTokensMap = { ...this.customTokens, ...this.builtinTokens }
+    this.allTokensMap = this.customTokens
     this.allTokens = makeMetaTokens(this.allTokensMap)
   }
 
