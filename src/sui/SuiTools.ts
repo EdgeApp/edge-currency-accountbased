@@ -16,7 +16,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -31,7 +30,6 @@ import { asSuiPrivateKeys, SuiInfoPayload, SuiNetworkInfo } from './suiTypes'
 
 export class SuiTools implements EdgeCurrencyTools {
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: SuiNetworkInfo
   initOptions: JsonObject
@@ -39,10 +37,9 @@ export class SuiTools implements EdgeCurrencyTools {
   suiClient: SuiClient
 
   constructor(env: PluginEnvironment<SuiNetworkInfo>) {
-    const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
+    const { currencyInfo, initOptions, io, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
-    this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
     this.initOptions = initOptions
 

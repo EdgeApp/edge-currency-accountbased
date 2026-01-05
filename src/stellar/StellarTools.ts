@@ -8,7 +8,6 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import stellarApi, { Server as StellarServer } from 'stellar-sdk'
@@ -29,7 +28,6 @@ import {
 const URI_PREFIX = 'web+stellar'
 
 export class StellarTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: StellarNetworkInfo
@@ -38,8 +36,7 @@ export class StellarTools implements EdgeCurrencyTools {
   stellarApiServers: StellarServer[]
 
   constructor(env: PluginEnvironment<StellarNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo

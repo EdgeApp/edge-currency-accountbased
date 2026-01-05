@@ -8,7 +8,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -41,7 +40,6 @@ import {
 import { makeTokenId } from './rippleUtils'
 
 export class RippleTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: XrpNetworkInfo
@@ -54,8 +52,7 @@ export class RippleTools implements EdgeCurrencyTools {
   makeWallet: (keys: RipplePrivateKeys) => Wallet
 
   constructor(env: PluginEnvironment<XrpNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo

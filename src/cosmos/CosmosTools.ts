@@ -14,7 +14,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -38,7 +37,6 @@ import { createCosmosClients, rpcWithApiKey } from './cosmosUtils'
 
 export class CosmosTools implements EdgeCurrencyTools {
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: CosmosNetworkInfo
   clients?: CosmosClients
@@ -49,10 +47,9 @@ export class CosmosTools implements EdgeCurrencyTools {
   chainData: CosmosChainData
 
   constructor(env: PluginEnvironment<CosmosNetworkInfo>) {
-    const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
+    const { currencyInfo, initOptions, io, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
-    this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
     this.initOptions = initOptions
     this.clientCount = 0

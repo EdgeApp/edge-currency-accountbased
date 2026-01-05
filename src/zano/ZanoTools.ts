@@ -10,7 +10,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -34,15 +33,13 @@ import {
 export class ZanoTools implements EdgeCurrencyTools {
   zano: CppBridge
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   log: EdgeLog
   networkInfo: ZanoNetworkInfo
 
   constructor(env: PluginEnvironment<ZanoNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, log, nativeIo, networkInfo } = env
+    const { currencyInfo, io, log, nativeIo, networkInfo } = env
     this.io = io
-    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
     this.log = log
     this.networkInfo = networkInfo

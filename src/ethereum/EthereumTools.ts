@@ -10,7 +10,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -38,15 +37,13 @@ import {
 import { RpcAdapterConfig } from './networkAdapters/RpcAdapter'
 
 export class EthereumTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: EthereumNetworkInfo
   initOptions: EthereumInitOptions
 
   constructor(env: PluginEnvironment<EthereumNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo, initOptions } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo, initOptions } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo

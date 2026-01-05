@@ -13,7 +13,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -38,7 +37,6 @@ import {
 
 export class TonTools implements EdgeCurrencyTools {
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: TonNetworkInfo
   initOptions: TonInitOptions
@@ -49,10 +47,9 @@ export class TonTools implements EdgeCurrencyTools {
   getOrbsClients: () => TonClient[]
 
   constructor(env: PluginEnvironment<TonNetworkInfo>) {
-    const { builtinTokens, currencyInfo, initOptions, io } = env
+    const { currencyInfo, initOptions, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
-    this.builtinTokens = builtinTokens
     this.networkInfo = env.networkInfo
     this.initOptions = asTonInitOptions(initOptions)
     this.log = env.log

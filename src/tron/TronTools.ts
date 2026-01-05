@@ -9,7 +9,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -38,7 +37,6 @@ const {
 } = TronWeb
 
 export class TronTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   initOptions: TronInitOptions
   io: EdgeIo
@@ -46,9 +44,7 @@ export class TronTools implements EdgeCurrencyTools {
   networkInfo: TronNetworkInfo
 
   constructor(env: PluginEnvironment<TronNetworkInfo>) {
-    const { builtinTokens, currencyInfo, initOptions, io, log, networkInfo } =
-      env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, initOptions, io, log, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.initOptions = asTronInitOptions(initOptions)
     this.io = io

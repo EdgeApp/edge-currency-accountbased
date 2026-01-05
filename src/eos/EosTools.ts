@@ -19,7 +19,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
@@ -57,7 +56,6 @@ export function getClient(fetch: EdgeFetchFunction, server: string): APIClient {
 }
 
 export class EosTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   engineFetch: EdgeFetchFunction
   io: EdgeIo
@@ -65,8 +63,7 @@ export class EosTools implements EdgeCurrencyTools {
   networkInfo: EosNetworkInfo
 
   constructor(env: PluginEnvironment<EosNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, log, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, log, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.engineFetch = makeEngineFetch(env.io)
     this.io = io

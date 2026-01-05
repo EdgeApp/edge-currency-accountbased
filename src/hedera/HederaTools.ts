@@ -10,7 +10,6 @@ import {
   EdgeLog,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -34,7 +33,6 @@ import { createChecksum } from './hederaUtils'
 const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
 export class HederaTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   engineFetch: EdgeFetchFunction
   io: EdgeIo
@@ -42,8 +40,7 @@ export class HederaTools implements EdgeCurrencyTools {
   networkInfo: HederaNetworkInfo
 
   constructor(env: PluginEnvironment<HederaNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, log, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, log, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.engineFetch = makeEngineFetch(io)
     this.io = io

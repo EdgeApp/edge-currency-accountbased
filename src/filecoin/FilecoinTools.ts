@@ -15,7 +15,6 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -33,15 +32,13 @@ import {
 } from './filecoinTypes'
 
 export class FilecoinTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: FilecoinNetworkInfo
   derivationPath: string
 
   constructor(env: PluginEnvironment<FilecoinNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
