@@ -1,7 +1,7 @@
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -118,7 +118,6 @@ export const botanix = makeOuterPlugin<
   builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
-  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {

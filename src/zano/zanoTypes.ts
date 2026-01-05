@@ -7,10 +7,9 @@ import {
   asString,
   Cleaner
 } from 'cleaners'
-import { EdgeToken, EdgeTransaction } from 'edge-core-js/types'
+import { EdgeTransaction } from 'edge-core-js/types'
 import type { BurnAssetParams, TransferParams } from 'react-native-zano'
 
-import { createTokenIdFromContractAddress } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo, MakeTxParams } from '../common/types'
 
 export interface ZanoNetworkInfo {
@@ -89,10 +88,6 @@ export const asZanoTransferParams = asObject<TransferParams>({
   fee: asNumber,
   paymentId: asOptional(asString)
 })
-
-export const createZanoTokenId = (token: EdgeToken): string => {
-  return createTokenIdFromContractAddress(token).toLowerCase()
-}
 
 export const asZanoAssetDetails = asObject({
   result: asObject({

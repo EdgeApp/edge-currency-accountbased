@@ -2,8 +2,6 @@ import { gt, lt } from 'biggystring'
 import { asMaybe, asObject, asString } from 'cleaners'
 import { EdgeMetaToken, EdgeToken, EdgeTokenMap } from 'edge-core-js/types'
 
-import { normalizeAddress } from './utils'
-
 /**
  * The `networkLocation` field is untyped,
  * but many currency plugins will put a contract address in there.
@@ -70,16 +68,4 @@ export const validateToken = (token: EdgeToken): void => {
  */
 export const isCurrencyCode = (code: string): boolean => {
   return typeof code === 'string' && code.length > 0 && code.trim() === code
-}
-
-export const createTokenIdFromContractAddress = (token: EdgeToken): string => {
-  const cleanLocation = asMaybeContractLocation(token.networkLocation)
-  if (cleanLocation == null) {
-    throw new Error('ErrorInvalidContractAddress')
-  }
-  return cleanLocation.contractAddress
-}
-
-export const createEvmTokenId = (token: EdgeToken): string => {
-  return normalizeAddress(createTokenIdFromContractAddress(token))
 }

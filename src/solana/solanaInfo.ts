@@ -1,10 +1,7 @@
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import {
-  createTokenIdFromContractAddress,
-  makeMetaTokens
-} from '../common/tokenHelpers'
+import { makeMetaTokens } from '../common/tokenHelpers'
 import type { SolanaTools } from './SolanaTools'
 import {
   asSolanaInfoPayload,
@@ -284,7 +281,6 @@ export const solana = makeOuterPlugin<
 >({
   currencyInfo,
   asInfoPayload: asSolanaInfoPayload,
-  createTokenId: createTokenIdFromContractAddress,
   networkInfo,
   builtinTokens,
 

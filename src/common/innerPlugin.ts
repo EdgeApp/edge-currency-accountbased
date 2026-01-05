@@ -7,13 +7,10 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeOtherMethods,
-  EdgeToken,
   EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-
-import { asEdgeToken, asInfoServerTokens } from './types'
 
 /**
  * We pass a more complete plugin environment to the inner plugin,
@@ -69,7 +66,6 @@ export interface OuterPlugin<
   InfoPayload
 > {
   asInfoPayload: Cleaner<InfoPayload>
-  createTokenId?: (token: EdgeToken) => string
   builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
@@ -94,7 +90,6 @@ export function makeOuterPlugin<
       currencyInfo,
       networkInfo: defaultNetworkInfo,
       asInfoPayload,
-      createTokenId,
       otherMethodNames = [],
       checkEnvironment = () => {}
     } = template
@@ -137,23 +132,7 @@ export function makeOuterPlugin<
       return { plugin, tools }
     }
 
-    function updateBuiltinTokens(payload: JsonObject = {}): void {
-      if (createTokenId != null) {
-        const { infoServerTokens = [] } = asInfoServerTokens(payload)
-
-        for (const rawToken of infoServerTokens) {
-          try {
-            const edgeToken = asEdgeToken(rawToken)
-            const tokenId = createTokenId(edgeToken)
-
-            // Check if there are any conflicts
-            if (builtinTokens[tokenId] != null) continue
-
-            builtinTokens[tokenId] = edgeToken
-          } catch (e) {}
-        }
-      }
-    }
+    function updateBuiltinTokens(payload: JsonObject = {}): void {}
 
     async function getBuiltinTokens(): Promise<EdgeTokenMap> {
       return builtinTokens
