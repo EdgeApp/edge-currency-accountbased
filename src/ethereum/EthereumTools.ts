@@ -306,10 +306,8 @@ export class EthereumTools implements EdgeCurrencyTools {
               : edgeParsedUri.nativeAmount
 
           // Get token from contract address
-          const edgeToken = Object.values(this.builtinTokens).find(
-            token =>
-              token.networkLocation?.contractAddress.toLowerCase() ===
-              contractAddress
+          const edgeToken = customTokens?.find(
+            token => token?.contractAddress?.toLowerCase() === contractAddress
           )
 
           // If there is a currencyCode param, the token must be found

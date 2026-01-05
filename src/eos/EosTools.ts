@@ -25,11 +25,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asyncWaterfall } from '../common/promiseUtils'
-import {
-  asMaybeContractLocation,
-  makeMetaTokens,
-  validateToken
-} from '../common/tokenHelpers'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   getLegacyDenomination,
@@ -154,14 +150,20 @@ export class EosTools implements EdgeCurrencyTools {
     return { publicKey, ownerPublicKey }
   }
 
-  async parseUri(uri: string): Promise<EdgeParsedUri> {
+  async parseUri(
+    uri: string,
+    currencyCode?: string,
+    customTokens?: EdgeMetaToken[]
+  ): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks: {
         [this.networkInfo.uriProtocol]: true
       },
-      builtinTokens: this.builtinTokens
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens
     })
 
     if (!checkAddress(edgeParsedUri.publicAddress ?? '')) {
@@ -185,7 +187,7 @@ export class EosTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
+        customTokens,
         this.builtinTokens
       )
       if (denom == null) {

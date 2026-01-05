@@ -23,7 +23,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asyncWaterfall } from '../common/promiseUtils'
-import { makeMetaTokens, validateToken } from '../common/tokenHelpers'
+import { validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   getLegacyDenomination,
@@ -170,7 +170,11 @@ export class RippleTools implements EdgeCurrencyTools {
     }
   }
 
-  async parseUri(uri: string): Promise<EdgeParsedUri> {
+  async parseUri(
+    uri: string,
+    currencyCode?: string,
+    customTokens?: EdgeMetaToken[]
+  ): Promise<EdgeParsedUri> {
     const networks = {
       ripple: true,
       'xrp-ledger': true,
@@ -200,7 +204,9 @@ export class RippleTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens
     })
     const valid = isValidAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
@@ -226,7 +232,7 @@ export class RippleTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
+        customTokens,
         this.builtinTokens
       )
       if (denom == null) {

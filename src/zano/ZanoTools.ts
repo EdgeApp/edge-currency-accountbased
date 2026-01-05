@@ -180,14 +180,20 @@ export class ZanoTools implements EdgeCurrencyTools {
       if (amountStr != null && typeof amountStr === 'string') {
         // Validate that the currency in the deeplink matches the requested
         // currency code:
-        let deeplinkCurrencyCode: string
+        let deeplinkCurrencyCode: string | undefined
         if (zanoDeeplink.asset_id == null) {
           deeplinkCurrencyCode = this.currencyInfo.currencyCode
         } else {
-          deeplinkCurrencyCode =
-            this.builtinTokens[zanoDeeplink.asset_id]?.currencyCode
+          deeplinkCurrencyCode = customTokens?.find(
+            token =>
+              token.contractAddress?.toLowerCase() ===
+              zanoDeeplink.asset_id?.toLowerCase()
+          )?.currencyCode
         }
-        if (currencyCode != null && currencyCode !== deeplinkCurrencyCode) {
+        if (
+          deeplinkCurrencyCode == null ||
+          (currencyCode != null && currencyCode !== deeplinkCurrencyCode)
+        ) {
           throw new Error('InvalidCurrencyCodeError')
         }
         const denom = getLegacyDenomination(

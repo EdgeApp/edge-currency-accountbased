@@ -1,6 +1,6 @@
 import { eq, gt, lt, mul } from 'biggystring'
 import { asEither, asNumber, asObject, asString, asValue } from 'cleaners'
-import { EdgeIo, EdgeParsedUri, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeIo, EdgeParsedUri, EdgeToken } from 'edge-core-js/types'
 
 import { cleanMultiFetch, makeQueryParams, QueryParams } from './network'
 import { computeCRC, formatPixKey } from './pixkey'
@@ -45,19 +45,12 @@ const asSmartPaySwapQuote = asObject({
 
 export const parsePixKey = async (
   io: EdgeIo,
-  tokens: EdgeTokenMap,
+  token: EdgeToken,
   code: string,
   smartPayPublicAddress: string,
   smartPayUserId: string
 ): Promise<EdgeParsedUri | undefined> => {
   const now = new Date()
-
-  // Get USDT info
-  const tokenId = Object.keys(tokens).find(
-    id => tokens[id].currencyCode === 'USDT'
-  )
-  if (tokenId == null) return
-  const token = tokens[tokenId]
 
   const minNativeAmount = mul('0.5', token.denominations[0].multiplier)
 

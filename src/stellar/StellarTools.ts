@@ -16,7 +16,6 @@ import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { makeMetaTokens } from '../common/tokenHelpers'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
@@ -194,7 +193,7 @@ export class StellarTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
+        customTokens,
         this.builtinTokens
       )
       if (denom == null) {
