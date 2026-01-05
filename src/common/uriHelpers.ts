@@ -4,7 +4,6 @@ import {
   EdgeEncodeUri,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap,
   JsonObject
 } from 'edge-core-js/types'
 import { serialize } from 'uri-js'
@@ -18,7 +17,6 @@ export async function parseUriCommon(opts: {
   currencyInfo: EdgeCurrencyInfo
   uri: string
   networks: { [network: string]: boolean }
-  builtinTokens: EdgeTokenMap
   currencyCode?: string
   customTokens?: EdgeMetaToken[]
   testPrivateKeys?: (input: string) => Promise<JsonObject>
@@ -27,7 +25,6 @@ export async function parseUriCommon(opts: {
     currencyInfo,
     uri,
     networks,
-    builtinTokens,
     customTokens = [],
     testPrivateKeys
   } = opts
@@ -89,8 +86,7 @@ export async function parseUriCommon(opts: {
     const denom = getLegacyDenomination(
       currencyCode ?? '',
       currencyInfo,
-      customTokens,
-      builtinTokens
+      customTokens
     )
     if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')

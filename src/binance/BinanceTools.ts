@@ -129,7 +129,6 @@ export class BinanceTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? 'BNB',
       customTokens
     })
@@ -158,8 +157,7 @@ export class BinanceTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? 'BNB',
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

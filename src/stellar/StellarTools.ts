@@ -139,8 +139,7 @@ export class StellarTools implements EdgeCurrencyTools {
     const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
-      networks,
-      builtinTokens: this.builtinTokens
+      networks
     })
 
     const valid = this.checkAddress(edgeParsedUri.publicAddress ?? '')
@@ -193,8 +192,7 @@ export class StellarTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

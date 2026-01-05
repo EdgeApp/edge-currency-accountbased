@@ -147,7 +147,6 @@ export class HederaTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks: { [`${pluginId}`]: true },
-      builtinTokens: this.builtinTokens,
       currencyCode: this.currencyInfo.currencyCode
     })
 
@@ -183,8 +182,7 @@ export class HederaTools implements EdgeCurrencyTools {
     const denom = getLegacyDenomination(
       this.currencyInfo.currencyCode,
       this.currencyInfo,
-      customTokens,
-      this.builtinTokens
+      customTokens
     )
     if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')

@@ -161,7 +161,6 @@ export class EosTools implements EdgeCurrencyTools {
       networks: {
         [this.networkInfo.uriProtocol]: true
       },
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     })
@@ -187,8 +186,7 @@ export class EosTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

@@ -108,7 +108,6 @@ export class TezosTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode
     })
 

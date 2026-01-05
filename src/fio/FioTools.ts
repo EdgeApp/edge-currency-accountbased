@@ -162,7 +162,6 @@ export class FioTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks: { fio: true },
-      builtinTokens: this.builtinTokens,
       currencyCode: FIO_CURRENCY_CODE,
       testPrivateKeys: this.importPrivateKey.bind(this)
     })
@@ -194,8 +193,7 @@ export class FioTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
