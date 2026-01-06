@@ -13,7 +13,6 @@ import {
   EdgeGetTransactionsOptions,
   EdgeIo,
   EdgeLog,
-  EdgeMetaToken,
   EdgeSpendInfo,
   EdgeSubscribedAddress,
   EdgeSyncStatus,
@@ -31,7 +30,7 @@ import {
 import { PluginEnvironment } from './innerPlugin'
 import { makePeriodicTask, PeriodicTask } from './periodicTask'
 import type { SyncEngine, SyncTracker } from './SyncTracker'
-import { makeMetaTokens, validateToken } from './tokenHelpers'
+import { validateToken } from './tokenHelpers'
 import {
   asMaybeOtherParamsLastSeenTime,
   asWalletLocalData,
@@ -111,7 +110,6 @@ export class CurrencyEngine<
   minimumAddressBalance: string
 
   // Tokens:
-  allTokens: EdgeMetaToken[] = []
   allTokensMap: EdgeTokenMap = {}
   customTokens: EdgeTokenMap = {}
   enabledTokenIds: string[] = []
@@ -1013,7 +1011,6 @@ export class CurrencyEngine<
     }
 
     this.allTokensMap = this.customTokens
-    this.allTokens = makeMetaTokens(this.allTokensMap)
   }
 
   async changeCustomTokens(tokens: EdgeTokenMap): Promise<void> {
