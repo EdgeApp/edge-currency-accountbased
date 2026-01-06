@@ -29,8 +29,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:polkadot',
 
   // Explorers:
-  addressExplorer: 'https://polkadot.subscan.io/account/%s',
-  transactionExplorer: 'https://polkadot.subscan.io/extrinsic/%s',
+  addressExplorer: 'https://assethub-polkadot.subscan.io/account/%s',
+  transactionExplorer: 'https://assethub-polkadot.subscan.io/extrinsic/%s',
 
   denominations: [
     {
