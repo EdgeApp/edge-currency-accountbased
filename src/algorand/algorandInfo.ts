@@ -1,24 +1,12 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import { makeMetaTokens } from '../common/tokenHelpers'
 import type { AlgorandTools } from './AlgorandTools'
 import {
   AlgorandInfoPayload,
   AlgorandNetworkInfo,
   asAlgorandInfoPayload
 } from './algorandTypes'
-
-const builtinTokens: EdgeTokenMap = {
-  '31566704': {
-    currencyCode: 'USDC',
-    displayName: 'USD Coin',
-    denominations: [{ name: 'USDC', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '31566704' // assetIndex
-    }
-  }
-}
 
 const networkInfo: AlgorandNetworkInfo = {
   algodServers: [
@@ -74,8 +62,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: { customFeeSettings: ['fee'] },
-  displayName: 'Algorand',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Algorand'
 }
 
 export const algorand = makeOuterPlugin<
@@ -83,7 +70,6 @@ export const algorand = makeOuterPlugin<
   AlgorandTools,
   AlgorandInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asAlgorandInfoPayload,
   networkInfo,

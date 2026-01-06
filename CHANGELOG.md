@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- removed: `builtinTokens`
+
 ## 4.75.2 (2026-02-24)
 
 - changed: Update chain-registry package

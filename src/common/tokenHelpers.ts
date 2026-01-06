@@ -1,6 +1,6 @@
 import { gt, lt } from 'biggystring'
 import { asMaybe, asObject, asString } from 'cleaners'
-import { EdgeMetaToken, EdgeToken, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeToken } from 'edge-core-js/types'
 
 /**
  * The `networkLocation` field is untyped,
@@ -11,27 +11,6 @@ export const asMaybeContractLocation = asMaybe(
     contractAddress: asString
   })
 )
-
-/**
- * Downgrades EdgeToken objects to the legacy EdgeMetaToken format.
- */
-export function makeMetaTokens(tokens: EdgeTokenMap): EdgeMetaToken[] {
-  const out: EdgeMetaToken[] = []
-  for (const tokenId of Object.keys(tokens)) {
-    const { currencyCode, displayName, denominations, networkLocation } =
-      tokens[tokenId]
-
-    const cleanLocation = asMaybeContractLocation(networkLocation)
-    if (cleanLocation == null) continue
-    out.push({
-      currencyCode,
-      currencyName: displayName,
-      denominations,
-      contractAddress: cleanLocation.contractAddress
-    })
-  }
-  return out
-}
 
 /**
  * Validates common things about a token, such as its currency code.

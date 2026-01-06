@@ -1,44 +1,12 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import { makeMetaTokens } from '../common/tokenHelpers'
 import type { ZanoTools } from './ZanoTools'
 import {
   asZanoInfoPayload,
   ZanoInfoPayload,
   ZanoNetworkInfo
 } from './zanoTypes'
-
-const builtinTokens: EdgeTokenMap = {
-  f5413f195b3347a3822ea6100e4db70f10b34ea0b22822af0ba15258d139fb71: {
-    currencyCode: 'TALLY',
-    displayName: 'Tally Note',
-    denominations: [
-      {
-        name: 'TALLY',
-        multiplier: '1000000'
-      }
-    ],
-    networkLocation: {
-      contractAddress:
-        'f5413f195b3347a3822ea6100e4db70f10b34ea0b22822af0ba15258d139fb71' // Asset ID
-    }
-  },
-  '040a180aca4194a158c17945dd115db42086f6f074c1f77838621a4927fffa91': {
-    currencyCode: 'BTCx',
-    displayName: 'Bitcoin',
-    denominations: [
-      {
-        name: 'BTCx',
-        multiplier: '100000000'
-      }
-    ],
-    networkLocation: {
-      contractAddress:
-        '040a180aca4194a158c17945dd115db42086f6f074c1f77838621a4927fffa91'
-    }
-  }
-}
 
 const networkInfo: ZanoNetworkInfo = {
   nativeAssetId:
@@ -90,8 +58,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: { customFeeSettings: ['fee'] },
-  displayName: 'Zano',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Zano'
 }
 
 export const zano = makeOuterPlugin<
@@ -99,7 +66,6 @@ export const zano = makeOuterPlugin<
   ZanoTools,
   ZanoInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asZanoInfoPayload,
   networkInfo,

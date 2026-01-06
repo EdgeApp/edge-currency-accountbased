@@ -17,7 +17,6 @@ import {
  * so we can share the same instance between sibling networks.
  */
 export interface PluginEnvironment<NetworkInfo> extends EdgeCorePluginOptions {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
 }
@@ -66,7 +65,6 @@ export interface OuterPlugin<
   InfoPayload
 > {
   asInfoPayload: Cleaner<InfoPayload>
-  builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
   otherMethodNames?: ReadonlyArray<string & keyof Tools>
@@ -86,7 +84,6 @@ export function makeOuterPlugin<
 ): EdgeCorePluginFactory {
   return (env: EdgeCorePluginOptions): EdgeCurrencyPlugin => {
     const {
-      builtinTokens = {},
       currencyInfo,
       networkInfo: defaultNetworkInfo,
       asInfoPayload,
@@ -94,11 +91,8 @@ export function makeOuterPlugin<
       checkEnvironment = () => {}
     } = template
 
-    updateBuiltinTokens(env.infoPayload)
-
     const innerEnv: PluginEnvironment<NetworkInfo> = {
       ...env,
-      builtinTokens,
       currencyInfo,
       networkInfo: defaultNetworkInfo
     }
@@ -132,10 +126,8 @@ export function makeOuterPlugin<
       return { plugin, tools }
     }
 
-    function updateBuiltinTokens(payload: JsonObject = {}): void {}
-
     async function getBuiltinTokens(): Promise<EdgeTokenMap> {
-      return builtinTokens
+      return {}
     }
 
     async function makeCurrencyTools(): Promise<Tools> {
@@ -161,7 +153,6 @@ export function makeOuterPlugin<
 
       const infoPayload = asInfoPayload(payload)
       await plugin.updateInfoPayload(innerEnv, infoPayload)
-      updateBuiltinTokens(payload)
     }
 
     return {

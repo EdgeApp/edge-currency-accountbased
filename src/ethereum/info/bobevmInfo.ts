@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -15,8 +14,6 @@ import {
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {}
 
 // Fees are in Wei
 const networkFees: EthereumFees = {
@@ -110,8 +107,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'BOB',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'BOB'
 }
 
 export const bobevm = makeOuterPlugin<
@@ -119,7 +115,6 @@ export const bobevm = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
   networkInfo,

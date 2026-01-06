@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { CosmosTools } from '../CosmosTools'
 import {
   asCosmosInfoPayload,
@@ -12,26 +11,6 @@ import {
   cosmosCustomTokenTemplate,
   makeCosmosDefaultSettings
 } from './cosmosCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  uion: {
-    currencyCode: 'ION',
-    displayName: 'Ion',
-    denominations: [{ name: 'ION', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: 'uion'
-    }
-  },
-  ibc27394fb092d2eccd56123c74f36e4c1f926001ceada9ca97ea622b25f41e5eb2: {
-    currencyCode: 'ATOM',
-    displayName: 'Cosmos Hub',
-    denominations: [{ name: 'ATOM', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress:
-        'ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2'
-    }
-  }
-}
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'osmo',
@@ -84,8 +63,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeCosmosDefaultSettings(),
-  displayName: 'Osmosis',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Osmosis'
 }
 
 export const osmosis = makeOuterPlugin<
@@ -96,7 +74,6 @@ export const osmosis = makeOuterPlugin<
   currencyInfo,
   asInfoPayload: asCosmosInfoPayload,
   networkInfo,
-  builtinTokens,
 
   checkEnvironment() {
     if (global.BigInt == null) {

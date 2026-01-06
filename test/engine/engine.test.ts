@@ -306,7 +306,6 @@ describe('Engine', function () {
     nativeIo: {} as any,
     pluginDisklet: {} as any,
 
-    builtinTokens: {},
     currencyInfo: {} as any,
     networkInfo: {}
   }

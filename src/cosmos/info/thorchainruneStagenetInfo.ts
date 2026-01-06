@@ -1,4 +1,4 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
@@ -6,17 +6,6 @@ import { asCosmosInfoPayload, CosmosInfoPayload } from '../cosmosTypes'
 import { ThorchainNetworkInfo } from '../thorchainTypes'
 import { makeCosmosDefaultSettings } from './cosmosCommonInfo'
 // import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  tcy: {
-    currencyCode: 'TCY',
-    displayName: 'TCY',
-    denominations: [{ name: 'TCY', multiplier: '100000000' }],
-    networkLocation: {
-      contractAddress: 'tcy'
-    }
-  }
-}
 
 const networkInfo: ThorchainNetworkInfo = {
   bech32AddressPrefix: 'sthor',
@@ -91,7 +80,6 @@ export const thorchainrunestagenet = makeOuterPlugin<
   currencyInfo,
   asInfoPayload: asCosmosInfoPayload,
   networkInfo,
-  builtinTokens,
 
   checkEnvironment() {
     if (global.BigInt == null) {

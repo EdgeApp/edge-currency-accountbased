@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { CosmosTools } from '../CosmosTools'
 import {
   asCosmosInfoPayload,
@@ -9,17 +8,6 @@ import {
   CosmosNetworkInfo
 } from '../cosmosTypes'
 import { makeCosmosDefaultSettings } from './cosmosCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  unyx: {
-    currencyCode: 'NYX',
-    displayName: 'NYX',
-    denominations: [{ name: 'NYX', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: 'unyx'
-    }
-  }
-}
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'n',
@@ -60,8 +48,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeCosmosDefaultSettings(),
-  displayName: 'Nym',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Nym'
 }
 
 export const nym = makeOuterPlugin<
@@ -72,7 +59,6 @@ export const nym = makeOuterPlugin<
   currencyInfo,
   asInfoPayload: asCosmosInfoPayload,
   networkInfo,
-  builtinTokens,
 
   checkEnvironment() {
     if (global.BigInt == null) {

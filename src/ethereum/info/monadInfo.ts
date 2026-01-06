@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -15,41 +14,6 @@ import {
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  '754704bc059f8c67012fed69bc8a327a5aafb603': {
-    currencyCode: 'USDC',
-    displayName: 'USD Coin',
-    denominations: [{ name: 'USDC', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603'
-    }
-  },
-  e7cd86e13ac4309349f30b3435a9d337750fc82d: {
-    currencyCode: 'USDT',
-    displayName: 'Tether USD',
-    denominations: [{ name: 'USDT', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '0xe7cd86e13AC4309349F30B3435a9d337750fC82D'
-    }
-  },
-  ee8c0e9f1bffb4eb878d8f15f368a02a35481242: {
-    currencyCode: 'WETH',
-    displayName: 'Wrapped Ether',
-    denominations: [{ name: 'WETH', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0xEE8c0E9f1BFFb4Eb878d8f15f368A02a35481242'
-    }
-  },
-  '0555e30da8f98308edb960aa94c0db47230d2b9c': {
-    currencyCode: 'WBTC',
-    displayName: 'Wrapped Bitcoin',
-    denominations: [{ name: 'WBTC', multiplier: '100000000' }],
-    networkLocation: {
-      contractAddress: '0x0555E30da8f98308EdB960aa94C0Db47230d2B9c'
-    }
-  }
-}
 
 // Fees are in Wei
 const networkFees: EthereumFees = {
@@ -139,8 +103,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'Monad',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Monad'
 }
 
 export const monad = makeOuterPlugin<
@@ -148,7 +111,6 @@ export const monad = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
   networkInfo,
