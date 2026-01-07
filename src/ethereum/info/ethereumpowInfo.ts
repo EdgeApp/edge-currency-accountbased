@@ -59,7 +59,9 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://mainnet.ethereumpow.org']
+      servers: ['https://mainnet.ethereumpow.org'],
+      // Same address as Ethereum mainnet since ETHW is an Ethereum fork
+      ethBalCheckerContract: '0xb1f8e55c7f64d203c1400b9d8555d050f94adf39'
     },
     {
       type: 'evmscan',
