@@ -20,6 +20,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://suivision.xyz/account/%s',
   transactionExplorer: 'https://suivision.xyz/txblock/%s',
 
+  customTokenTemplate: [],
+
   denominations: [
     {
       name: 'SUI',

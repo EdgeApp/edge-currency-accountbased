@@ -29,6 +29,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: '',
   transactionExplorer: '',
 
+  customTokenTemplate: [],
+
   denominations: [
     {
       name: 'LDN',

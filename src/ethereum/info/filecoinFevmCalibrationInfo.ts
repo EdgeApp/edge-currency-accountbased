@@ -71,7 +71,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'tFIL',
   evmChainId: 314159,
   customFeeTemplate: evmCustomFeeTemplate,
-  // customTokenTemplate: evmCustomTokenTemplate,
+  customTokenTemplate: [],
   assetDisplayName: 'Filecoin FEVM (Calibration Testnet)',
   chainDisplayName: 'Filecoin FEVM (Calibration Testnet)',
   memoOptions: evmMemoOptions,

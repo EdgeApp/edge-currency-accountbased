@@ -47,7 +47,7 @@ const networkInfo: ThorchainNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'RUNE',
-  // customTokenTemplate: cosmosCustomTokenTemplate,
+  customTokenTemplate: [],
   assetDisplayName: 'THORChain Stagenet',
   chainDisplayName: 'THORChain Stagenet',
   pluginId: 'thorchainrunestagenet',

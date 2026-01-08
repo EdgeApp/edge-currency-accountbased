@@ -32,6 +32,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://chainscan.mainnet.liberland.org/account/%s',
   transactionExplorer: 'https://chainscan.mainnet.liberland.org/%s',
 
+  customTokenTemplate: [],
+
   denominations: [
     {
       name: 'LLD',
