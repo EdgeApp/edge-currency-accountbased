@@ -498,12 +498,17 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   tokenIdFromDenom(denom: string): EdgeTokenId {
-    if (this.networkInfo.nativeDenom === denom) return null
+    if (this.networkInfo.nativeDenom.toLowerCase() === denom.toLowerCase())
+      return null
 
-    const tokenId = Object.keys(this.allTokensMap).find(
-      tokenId =>
-        this.allTokensMap[tokenId].networkLocation?.contractAddress === denom
-    )
+    const tokenId = Object.keys(this.allTokensMap).find(tokenId => {
+      const contractAddress =
+        this.allTokensMap[tokenId].networkLocation?.contractAddress
+      return (
+        contractAddress != null &&
+        contractAddress.toLowerCase() === denom.toLowerCase()
+      )
+    })
     if (tokenId === undefined) {
       throw new Error(`Unrecognized denom: ${denom}`)
     }
@@ -592,15 +597,19 @@ export class CosmosEngine extends CurrencyEngine<
         this.walletInfo.keys.bech32Address
       )
       const mainnetBal = balances.find(
-        bal => bal.denom === this.networkInfo.nativeDenom
+        bal =>
+          bal.denom.toLowerCase() === this.networkInfo.nativeDenom.toLowerCase()
       )
       this.updateBalance(null, mainnetBal?.amount ?? '0')
 
       const detectedTokenIds: string[] = []
       Object.keys(this.allTokensMap).forEach(tokenId => {
         const token = this.allTokensMap[tokenId]
+        const contractAddress = token.networkLocation?.contractAddress
         const tokenBal = balances.find(
-          bal => bal.denom === token.networkLocation?.contractAddress
+          bal =>
+            contractAddress != null &&
+            bal.denom.toLowerCase() === contractAddress.toLowerCase()
         )
         const balance = tokenBal?.amount ?? '0'
         this.updateBalance(tokenId, balance)
@@ -835,7 +844,8 @@ export class CosmosEngine extends CurrencyEngine<
   ): void {
     const { amount, denom } = cosmosCoin
 
-    const isMainnet = this.networkInfo.nativeDenom === denom
+    const isMainnet =
+      this.networkInfo.nativeDenom.toLowerCase() === denom.toLowerCase()
 
     let tokenId: EdgeTokenId
     try {

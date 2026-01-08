@@ -65,7 +65,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://api.node.glif.io/',
         'https://rpc.ankr.com/filecoin',
         'https://lb.drpc.org/ogrpc?network=filecoin&dkey={{drpcApiKey}}'
-      ]
+      ],
+      ethBalCheckerContract: '0x726391B6cA41761c4c332aa556Cf804A50279b52'
     },
     {
       type: 'filfox',
