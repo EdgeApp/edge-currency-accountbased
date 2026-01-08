@@ -995,7 +995,7 @@ export class CurrencyEngine<
     return this.walletLocalData.blockHeight
   }
 
-  private changeCustomTokensSync(customTokens: EdgeTokenMap): void {
+  protected changeCustomTokensSync(customTokens: EdgeTokenMap): void {
     this.customTokens = {}
     for (const tokenId of Object.keys(customTokens)) {
       const token = customTokens[tokenId]

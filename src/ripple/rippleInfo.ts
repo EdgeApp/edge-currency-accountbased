@@ -25,6 +25,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://xrpscan.com/account/%s',
   transactionExplorer: 'https://xrpscan.com/tx/%s',
 
+  customTokenTemplate: [
+    {
+      displayName: 'Issuer Address',
+      key: 'issuer',
+      type: 'string'
+    }
+  ],
+
   denominations: [
     {
       name: 'XRP',
