@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (Celo, FilecoinFEVM, Sonic, RSK) Add ethBalCheckerContract to network adaptor configs
+- fixed: Auto token detection for Cosmos-related networks
+
 ## 4.68.0 (2025-12-19)
 
 - changed: Use `EdgeTransaction.confirmations`
