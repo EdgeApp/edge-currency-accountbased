@@ -691,8 +691,10 @@ export class CurrencyEngine<
       typeof tx.confirmations === 'number' ||
       (tx.confirmations === 'unconfirmed' && tx.blockHeight > 0)
     ) {
-      const numConfirmations =
+      const numConfirmations = Math.max(
+        1,
         this.walletLocalData.blockHeight - tx.blockHeight + 1
+      )
       const requiredConfirmations = this.currencyInfo.requiredConfirmations ?? 1
 
       // confirmations exceed required, mark as confirmed

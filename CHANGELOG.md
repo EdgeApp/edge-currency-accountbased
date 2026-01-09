@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: FIO - Stop saving blockheight on broadcast
+
 ## 4.68.0 (2025-12-19)
 
 - changed: Use `EdgeTransaction.confirmations`

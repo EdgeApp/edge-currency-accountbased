@@ -1782,7 +1782,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
     edgeTransaction.txid = trx.transaction_id
     edgeTransaction.date = Date.now() / 1000
-    edgeTransaction.blockHeight = trx.block_num
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
 
     // Save additional return values to otherParams
