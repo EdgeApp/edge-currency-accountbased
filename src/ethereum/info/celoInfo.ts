@@ -71,14 +71,20 @@ const networkInfo: EthereumNetworkInfo = {
       servers: [
         'https://forno.celo.org',
         'https://rpc.ankr.com/celo',
-        'https://celo-mainnet-rpc.allthatnode.com',
         'https://lb.drpc.org/ogrpc?network=celo&dkey={{drpcApiKey}}'
       ]
     },
     {
       type: 'evmscan',
       gastrackerSupport: false,
-      servers: ['https://api.etherscan.io', 'https://explorer.celo.org/mainnet']
+      servers: ['https://api.etherscan.io/v2/api'],
+      version: 2
+    },
+    {
+      type: 'evmscan',
+      gastrackerSupport: false,
+      servers: ['https://explorer.celo.org/mainnet/api'],
+      version: 1
     }
   ],
   uriNetworks: ['celo'],

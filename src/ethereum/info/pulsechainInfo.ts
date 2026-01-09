@@ -64,7 +64,8 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: false,
-      servers: ['https://api.scan.pulsechain.com']
+      servers: ['https://api.scan.pulsechain.com/api'],
+      version: 1
     },
     {
       type: 'pulsechain-scan',

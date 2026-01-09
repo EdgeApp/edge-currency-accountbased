@@ -185,9 +185,6 @@ const networkInfo: EthereumNetworkInfo = {
       type: 'rpc',
       servers: [
         'https://polygon-rpc.com/',
-        'https://rpc.polycat.finance',
-        'https://rpc-mainnet.maticvigil.com',
-        'https://matic-mainnet.chainstacklabs.com',
         'https://rpc.ankr.com/polygon',
         'https://poly.api.pocket.network',
         'https://rpc-mainnet.matic.quiknode.pro/{{quiknodeApiKey}}/',
@@ -198,7 +195,8 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.etherscan.io', 'https://api.polygonscan.com']
+      servers: ['https://api.etherscan.io/v2/api'],
+      version: 2
     }
   ],
   uriNetworks: ['polygon'],
