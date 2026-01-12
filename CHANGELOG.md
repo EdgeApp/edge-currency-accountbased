@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.69.0 (2026-01-12)
+
 - added: (Celo, FilecoinFEVM, Sonic, RSK) Add ethBalCheckerContract to network adaptor configs
 - changed: FIO - Stop saving blockheight on broadcast
 - fixed: Auto token detection for Cosmos-related networks
