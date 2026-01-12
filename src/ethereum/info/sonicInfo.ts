@@ -140,7 +140,8 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://rpc.soniclabs.com']
+      servers: ['https://rpc.soniclabs.com'],
+      ethBalCheckerContract: '0x726391B6cA41761c4c332aa556Cf804A50279b52'
     },
     {
       type: 'evmscan',

@@ -73,7 +73,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://rpc.ankr.com/celo',
         'https://celo-mainnet-rpc.allthatnode.com',
         'https://lb.drpc.org/ogrpc?network=celo&dkey={{drpcApiKey}}'
-      ]
+      ],
+      ethBalCheckerContract: '0x726391B6cA41761c4c332aa556Cf804A50279b52'
     },
     {
       type: 'evmscan',

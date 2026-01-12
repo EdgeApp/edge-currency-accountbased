@@ -57,7 +57,8 @@ const networkInfo: EthereumNetworkInfo = {
       servers: [
         'https://public-node.rsk.co',
         'https://lb.drpc.org/ogrpc?network=rootstock&dkey={{drpcApiKey}}'
-      ]
+      ],
+      ethBalCheckerContract: '0x726391B6cA41761c4c332aa556Cf804A50279b52'
     },
     {
       type: 'evmscan',
