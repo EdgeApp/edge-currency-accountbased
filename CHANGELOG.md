@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.70.0 (2026-01-16)
+
+- changed: (Polkadot) Update block explorer URL
+
 ## 4.69.0 (2026-01-12)
 
 - added: (Celo, FilecoinFEVM, Sonic, RSK) Add ethBalCheckerContract to network adaptor configs
