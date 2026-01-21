@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add Monad (MON) support
+
 ## 4.70.0 (2026-01-16)
 
 - changed: (Polkadot) Update block explorer URL
