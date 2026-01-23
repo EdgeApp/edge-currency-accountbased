@@ -63,7 +63,7 @@ import { PluginEnvironment } from '../../common/innerPlugin'
 import { getRandomDelayMs } from '../../common/network'
 import { asMaybeContractLocation } from '../../common/tokenHelpers'
 import { MakeTxParams } from '../../common/types'
-import { cleanTxLogs, getFetchCors } from '../../common/utils'
+import { cleanTxLogs, makeEngineFetch } from '../../common/utils'
 import { CosmosTools } from '../CosmosTools'
 import {
   asCosmosPrivateKeys,
@@ -140,7 +140,7 @@ export class CosmosEngine extends CurrencyEngine<
   SafeCosmosWalletInfo
 > {
   networkInfo: CosmosNetworkInfo
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   accountNumber: number
   sequence: number
   unconfirmedTransactionCache: {
@@ -164,7 +164,7 @@ export class CosmosEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
-    this.fetchCors = getFetchCors(env.io, () => {
+    this.engineFetch = makeEngineFetch(env.io, () => {
       const networkPrivacy = this.currentSettings?.networkPrivacy
       return networkPrivacy === 'nym' ? { privacy: 'nym' } : {}
     })
@@ -706,7 +706,7 @@ export class CosmosEngine extends CurrencyEngine<
         ) {
           try {
             const archiveClients = await createCosmosClients(
-              this.fetchCors,
+              this.engineFetch,
               rpcWithApiKey(node.endpoint, this.tools.initOptions)
             )
             clientsList.push(archiveClients)
@@ -1031,7 +1031,7 @@ export class CosmosEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    await this.tools.connectClient(this.fetchCors)
+    await this.tools.connectClient(this.engineFetch)
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('queryBlockheight', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)

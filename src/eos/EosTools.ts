@@ -32,8 +32,8 @@ import {
 } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
-  getFetchCors,
   getLegacyDenomination,
+  makeEngineFetch,
   mergeDeeply
 } from '../common/utils'
 import {
@@ -63,7 +63,7 @@ export function getClient(fetch: EdgeFetchFunction, server: string): APIClient {
 export class EosTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   io: EdgeIo
   log: EdgeLog
   networkInfo: EosNetworkInfo
@@ -72,7 +72,7 @@ export class EosTools implements EdgeCurrencyTools {
     const { builtinTokens, currencyInfo, io, log, networkInfo } = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.io = io
     this.log = log
     this.networkInfo = networkInfo
@@ -213,7 +213,7 @@ export class EosTools implements EdgeCurrencyTools {
   async getAccSystemStats(account: string): Promise<API.v1.AccountObject> {
     return await asyncWaterfall(
       this.networkInfo.eosNodes.map(server => async () => {
-        const client = getClient(this.fetchCors, server)
+        const client = getClient(this.engineFetch, server)
         return await client.v1.chain.get_account(account)
       })
     )
@@ -230,7 +230,7 @@ export class EosTools implements EdgeCurrencyTools {
       const out = await asyncWaterfall(
         this.networkInfo.eosActivationServers.map(server => async () => {
           const uri = `${server}/api/v1/getSupportedCurrencies`
-          const response = await this.fetchCors(uri)
+          const response = await this.engineFetch(uri)
           const result = await response.json()
           return {
             result
@@ -249,10 +249,10 @@ export class EosTools implements EdgeCurrencyTools {
       const out = await asyncWaterfall(
         this.networkInfo.eosActivationServers.map(server => async () => {
           const uri = `${server}/api/v1/eosPrices/${currencyCode}`
-          const response = await this.fetchCors(uri)
+          const response = await this.engineFetch(uri)
           const prices = asGetActivationCost(await response.json())
           const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
-          const startingResourcesResponse = await this.fetchCors(
+          const startingResourcesResponse = await this.engineFetch(
             startingResourcesUri
           )
           const startingResources = asGetActivationCost(

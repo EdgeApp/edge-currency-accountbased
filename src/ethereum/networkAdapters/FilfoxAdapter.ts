@@ -161,7 +161,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   }
 
   private makeFilfoxApi(baseUrl: string): Filfox {
-    return new Filfox(baseUrl, this.ethEngine.fetchCors)
+    return new Filfox(baseUrl, this.ethEngine.engineFetch)
   }
 
   private onUpdateTransactions(): void {

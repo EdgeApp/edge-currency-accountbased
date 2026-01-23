@@ -57,7 +57,7 @@ export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig>
     }
 
     const url = `${baseUrl}/${cmd}${apiKey}`
-    const response = await this.ethEngine.fetchCors(url, {
+    const response = await this.ethEngine.engineFetch(url, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'

@@ -36,11 +36,11 @@ import {
   biggyRoundToNearestInt,
   cleanTxLogs,
   decimalToHex,
-  getFetchCors,
   getOtherParams,
   hexToBuf,
   hexToDecimal,
   isHex,
+  makeEngineFetch,
   mergeDeeply,
   normalizeAddress,
   pickRandomOne,
@@ -127,7 +127,7 @@ export class EthereumEngine extends CurrencyEngine<
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
   ethNetwork: EthereumNetwork
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   otherMethods: EthereumOtherMethods
   utils: EthereumUtils
   infoFeeProvider: () => Promise<EthereumFees>
@@ -155,14 +155,14 @@ export class EthereumEngine extends CurrencyEngine<
         blobBaseFeeScalar: '659851'
       }
     }
-    this.fetchCors = getFetchCors(env.io, () => {
+    this.engineFetch = makeEngineFetch(env.io, () => {
       const networkPrivacy = this.currentSettings?.networkPrivacy
       return networkPrivacy === 'nym' ? { privacy: 'nym' } : {}
     })
 
     // Update network fees from other providers
     const { infoFeeProvider, externalFeeProviders } = FeeProviders(
-      this.fetchCors,
+      this.engineFetch,
       this.currencyInfo,
       this.initOptions,
       this.log,

@@ -19,8 +19,8 @@ import { base16 } from 'rfc4648'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
-  getFetchCors,
   getLegacyDenomination,
+  makeEngineFetch,
   mergeDeeply
 } from '../common/utils'
 import {
@@ -36,7 +36,7 @@ const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 export class HederaTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   io: EdgeIo
   log: EdgeLog
   networkInfo: HederaNetworkInfo
@@ -45,7 +45,7 @@ export class HederaTools implements EdgeCurrencyTools {
     const { builtinTokens, currencyInfo, io, log, networkInfo } = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
-    this.fetchCors = getFetchCors(io)
+    this.engineFetch = makeEngineFetch(io)
     this.io = io
     this.log = log
     this.networkInfo = networkInfo

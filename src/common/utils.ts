@@ -231,15 +231,17 @@ export function biggyScience(num: string): string {
  * Optionally accepts a function that returns additional init options
  * to merge into fetch requests dynamically.
  */
-export function getFetchCors(
+export function makeEngineFetch(
   io: EdgeIo,
   getInitOverload: () => EdgeFetchOptions = () => ({})
 ): EdgeFetchFunction {
-  const baseFetch = io.fetchCors ?? io.fetch
   return async (input, init) => {
     const initOverload = getInitOverload()
-    const enhancedInit = { ...initOverload, ...init }
-    return await baseFetch(input, enhancedInit)
+    return await io.fetch(input, {
+      ...initOverload,
+      ...init,
+      corsBypass: 'auto'
+    })
   }
 }
 

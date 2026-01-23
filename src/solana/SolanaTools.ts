@@ -251,14 +251,14 @@ export class SolanaTools implements EdgeCurrencyTools {
   }
 
   makeConnections(rpcUrls: string[]): Connection[] {
-    const fetchCorsBypassed: EdgeFetchFunction = async (uri, opts) =>
+    const engineFetchBypassed: EdgeFetchFunction = async (uri, opts) =>
       await this.io.fetch(uri, {
         ...opts,
         corsBypass: 'always'
       })
     const connectionConfig: ConnectionConfig = {
       commitment: this.networkInfo.commitment,
-      fetch: fetchCorsBypassed as FetchFn
+      fetch: engineFetchBypassed as FetchFn
     }
 
     const out: Connection[] = []

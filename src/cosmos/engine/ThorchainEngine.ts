@@ -51,7 +51,7 @@ export class ThorchainEngine extends CosmosEngine {
 
   async queryChainId(): Promise<void> {
     try {
-      const res = await this.fetchCors(this.networkInfo.chainIdUpdateUrl)
+      const res = await this.engineFetch(this.networkInfo.chainIdUpdateUrl)
       if (!res.ok) {
         const message = await res.text()
         throw new Error(message)
@@ -84,7 +84,7 @@ export class ThorchainEngine extends CosmosEngine {
         const fromHeightQueryString = `&fromHeight=${fromHeight}`
         const nextPageQueryString =
           nextPageToken != null ? `&nextPageToken=${nextPageToken}` : ''
-        const res = await this.fetchCors(
+        const res = await this.engineFetch(
           `${baseUrl}${fromHeightQueryString}${nextPageQueryString}`,
           headers
         )
@@ -217,7 +217,7 @@ export class ThorchainEngine extends CosmosEngine {
       this.tools.initOptions
     )
 
-    const res = await this.fetchCors(url, {
+    const res = await this.engineFetch(url, {
       method: 'GET',
       headers
     })

@@ -89,7 +89,7 @@ export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
       const keyParam =
         includeKey && blockchairApiKey != null ? `&key=${blockchairApiKey}` : ''
       const url = `${baseUrl}${path}`
-      const response = await this.ethEngine.fetchCors(`${url}${keyParam}`)
+      const response = await this.ethEngine.engineFetch(`${url}${keyParam}`)
       if (!response.ok) {
         const resBody = await response.text()
         this.throwError(response, 'fetchGetBlockchair', url, resBody)
