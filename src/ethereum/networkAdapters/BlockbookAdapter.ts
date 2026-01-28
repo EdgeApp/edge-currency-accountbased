@@ -127,8 +127,8 @@ export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
   private async fetchGetBlockbook(server: string, param: string): Promise<any> {
     const url = server + param
     const resultRaw = !server.includes('trezor')
-      ? await this.ethEngine.fetchCors(url)
-      : await this.ethEngine.fetchCors(url, {
+      ? await this.ethEngine.engineFetch(url)
+      : await this.ethEngine.engineFetch(url, {
           headers: { 'User-Agent': 'http.agent' }
         })
     return await resultRaw.json()

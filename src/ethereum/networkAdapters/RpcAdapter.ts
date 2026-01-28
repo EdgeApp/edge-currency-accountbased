@@ -172,7 +172,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
 
       baseUrl = this.addRpcApiKey(baseUrl)
 
-      const response = await this.ethEngine.fetchCors(baseUrl, {
+      const response = await this.ethEngine.engineFetch(baseUrl, {
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json'
@@ -460,7 +460,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
 
     url = this.addRpcApiKey(url)
 
-    const response = await this.ethEngine.fetchCors(url, {
+    const response = await this.ethEngine.engineFetch(url, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'

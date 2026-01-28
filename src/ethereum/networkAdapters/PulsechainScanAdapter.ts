@@ -182,7 +182,7 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
           ? new URLSearchParams(nextPageParams as any).toString()
           : ''
       const url = `${server}/api/v2/${endpoint}?${params}`
-      const response = await this.ethEngine.fetchCors(url, {
+      const response = await this.ethEngine.engineFetch(url, {
         method: 'GET',
         headers: {
           'content-type': 'application/json'

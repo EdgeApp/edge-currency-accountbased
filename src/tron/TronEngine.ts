@@ -21,9 +21,9 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall } from '../common/promiseUtils'
 import {
-  getFetchCors,
   getOtherParams,
   hexToDecimal,
+  makeEngineFetch,
   makeMutex,
   shuffleArray
 } from '../common/utils'
@@ -103,7 +103,7 @@ type TronFunction =
   | 'trx_getTransactions'
 
 export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   readonly recentBlock: ReferenceBlock
   accountResources: TronAccountResources
   networkFees: TronNetworkFees
@@ -122,7 +122,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   ) {
     super(env, currencyPlugin, walletInfo, opts)
     const { networkInfo } = env
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.networkInfo = networkInfo
     this.recentBlock = {
       hash: '0',
@@ -169,7 +169,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     opts: Object = {}
   ): Promise<{ server: string; result: Object }> {
     const url = server + path
-    const response = await this.fetchCors(url, opts)
+    const response = await this.engineFetch(url, opts)
     if (!response.ok || response.status !== 200) {
       this.log(`The server returned error code ${response.status} for ${url}`)
       throw new Error(

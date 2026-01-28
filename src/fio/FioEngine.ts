@@ -41,8 +41,8 @@ import {
 } from '../common/promiseUtils'
 import {
   cleanTxLogs,
-  getFetchCors,
   getOtherParams,
+  makeEngineFetch,
   safeErrorMessage,
   shuffleArray
 } from '../common/utils'
@@ -152,7 +152,7 @@ export type FindTransaction = (tokenId: EdgeTokenId, txId: string) => number
 export type GetTransactionList = (tokenId: EdgeTokenId) => EdgeTransaction[]
 
 export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   otherMethods: Object
   otherMethodsWithKeys: Object
   tpid: string
@@ -187,7 +187,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     tpid: string
   ) {
     super(env, tools, walletInfo, opts)
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.tpid = tpid
     this.networkInfo = env.networkInfo
     this.refBlock = {
@@ -241,7 +241,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           privateKeys.fioKey,
           this.walletInfo.keys.publicKey,
           this.networkInfo.historyNodeUrls,
-          this.fetchCors
+          this.engineFetch
         )
         const ITEMS_PER_PAGE = 100
 
@@ -657,7 +657,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       '',
       this.walletInfo.keys.publicKey,
       apiUrl,
-      this.fetchCors,
+      this.engineFetch,
       undefined,
       this.tpid,
       returnPreparedTrx
@@ -691,7 +691,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           // Only the balance of the wallet will be returned and staked amounts
           // will appear as zero until the account is corrected. This can be
           // removed once all affected accounts are fixed.
-          const currencyBalRes = await this.fetchCors(
+          const currencyBalRes = await this.engineFetch(
             `${apiUrl}chain/get_currency_balance`,
             {
               method: 'POST',
@@ -750,7 +750,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       '',
       this.walletInfo.keys.publicKey,
       apiUrl,
-      this.fetchCors,
+      this.engineFetch,
       undefined,
       this.tpid,
       true
@@ -909,7 +909,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
               '',
               this.walletInfo.keys.publicKey,
               apiUrl,
-              this.fetchCors,
+              this.engineFetch,
               undefined,
               this.tpid
             )
@@ -1653,7 +1653,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             privateKeys.fioKey,
             this.walletInfo.keys.publicKey,
             this.networkInfo.historyNodeUrls,
-            this.fetchCors
+            this.engineFetch
           )
 
           const { encrypt_public_key: encryptPublicKey } =

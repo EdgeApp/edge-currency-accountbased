@@ -28,7 +28,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { utf8 } from '../common/utf8'
-import { getFetchCors } from '../common/utils'
+import { makeEngineFetch } from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
   asGetHederaAccount,
@@ -52,7 +52,7 @@ export class HederaEngine extends CurrencyEngine<
   SafeHederaWalletInfo
 > {
   client: Client
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   mirrorNodes: [string]
   maxFee: number
   otherData!: HederaWalletOtherData
@@ -67,7 +67,7 @@ export class HederaEngine extends CurrencyEngine<
 
     const { client, mirrorNodes, maxFee } = env.networkInfo
     this.client = Client.forName(client)
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.mirrorNodes = mirrorNodes
     this.maxFee = maxFee
   }
@@ -75,7 +75,7 @@ export class HederaEngine extends CurrencyEngine<
   async checkAccountCreationStatus(): Promise<void> {
     // Use mirror node to see if there's an account associated with the public key
     try {
-      const response = await this.fetchCors(
+      const response = await this.engineFetch(
         `${this.mirrorNodes[0]}/api/v1/accounts?account.publickey=${this.walletInfo.keys.publicKey}`
       )
       const { accounts } = asGetHederaAccount(await response.json())
@@ -109,7 +109,7 @@ export class HederaEngine extends CurrencyEngine<
     const url = `${this.mirrorNodes[0]}/api/v1/balances?account.id=${accountId}`
 
     try {
-      const response = await this.fetchCors(url)
+      const response = await this.engineFetch(url)
 
       if (!response.ok) {
         const text = await response.text()
@@ -210,7 +210,7 @@ export class HederaEngine extends CurrencyEngine<
       this.mirrorNodes[0]
     }/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&limit=${LIMIT}&timestamp=gt:${startTimestamp.toString()}&timestamp=lte:${endTimestamp.toString()}`
 
-    const response = await this.fetchCors(url)
+    const response = await this.engineFetch(url)
 
     if (!response.ok) {
       const text = await response.text()

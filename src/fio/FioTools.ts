@@ -19,8 +19,8 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { asyncWaterfall } from '../common/promiseUtils'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
-  getFetchCors,
   getLegacyDenomination,
+  makeEngineFetch,
   mergeDeeply,
   safeErrorMessage,
   shuffleArray
@@ -55,7 +55,7 @@ export class FioTools implements EdgeCurrencyTools {
   io: EdgeIo
   networkInfo: FioNetworkInfo
 
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   fioRegApiToken: string
   freeRegApiToken: string
   freeRegRefCode: string
@@ -75,7 +75,7 @@ export class FioTools implements EdgeCurrencyTools {
       freeRegRefCode = 'edgeFree'
     } = initOptions
 
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.fioRegApiToken = fioRegApiToken
     this.freeRegApiToken = freeRegApiToken
     this.freeRegRefCode = freeRegRefCode
@@ -84,7 +84,7 @@ export class FioTools implements EdgeCurrencyTools {
     // The sdk constructor will fetch and store abi definitions for future instances
     for (const baseUrl of this.networkInfo.apiUrls) {
       // eslint-disable-next-line
-      new FIOSDK('', '', baseUrl, this.fetchCors, undefined, tpid)
+      new FIOSDK('', '', baseUrl, this.engineFetch, undefined, tpid)
     }
   }
 
@@ -340,7 +340,7 @@ export class FioTools implements EdgeCurrencyTools {
         400,
         this.networkInfo.errorCodes.FIO_DOMAIN_IS_NOT_EXIST
       )
-    const result = await this.fetchCors(
+    const result = await this.engineFetch(
       `${this.networkInfo.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.isDomainPublic}/${domain}`,
       {
         method: 'GET'
@@ -402,7 +402,7 @@ export class FioTools implements EdgeCurrencyTools {
       'Content-Type': 'application/json'
     }
     try {
-      const result = await this.fetchCors(
+      const result = await this.engineFetch(
         `${this.networkInfo.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.buyAddress}`,
         {
           method: 'POST',
@@ -451,7 +451,7 @@ export class FioTools implements EdgeCurrencyTools {
   async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
     if (ref == null) ref = this.networkInfo.defaultRef
     try {
-      const result = await this.fetchCors(
+      const result = await this.engineFetch(
         `${this.networkInfo.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.getDomains}/${ref}`,
         {
           method: 'GET'
@@ -485,7 +485,7 @@ export class FioTools implements EdgeCurrencyTools {
 
   async getStakeEstReturn(): Promise<number | { error: any }> {
     try {
-      const result = await this.fetchCors(
+      const result = await this.engineFetch(
         `${this.networkInfo.fioStakingApyUrl}`,
         {
           method: 'GET'
@@ -539,7 +539,7 @@ export class FioTools implements EdgeCurrencyTools {
             '',
             '',
             apiUrl,
-            this.fetchCors,
+            this.engineFetch,
             undefined,
             this.tpid
           )

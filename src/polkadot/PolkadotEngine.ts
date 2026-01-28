@@ -29,8 +29,8 @@ import { getRandomDelayMs } from '../common/network'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
-  getFetchCors,
   getOtherParams,
+  makeEngineFetch,
   makeMutex,
   snooze
 } from '../common/utils'
@@ -62,7 +62,7 @@ export class PolkadotEngine extends CurrencyEngine<
   PolkadotTools,
   SafePolkadotWalletInfo
 > {
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   networkInfo: PolkadotNetworkInfo
   otherData!: PolkadotWalletOtherData
   api!: ApiPromise
@@ -76,7 +76,7 @@ export class PolkadotEngine extends CurrencyEngine<
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.networkInfo = env.networkInfo
     this.nonce = 0
   }
@@ -116,7 +116,7 @@ export class PolkadotEngine extends CurrencyEngine<
       body: JSON.stringify(body)
     }
 
-    const response = await this.fetchCors(endpoint, options)
+    const response = await this.engineFetch(endpoint, options)
     if (!response.ok) {
       throw new Error(`Liberland API failed with status ${response.status}`)
     }
@@ -137,7 +137,7 @@ export class PolkadotEngine extends CurrencyEngine<
       },
       body: JSON.stringify(body)
     }
-    const response = await this.fetchCors(baseSubscanUrl + endpoint, options)
+    const response = await this.engineFetch(baseSubscanUrl + endpoint, options)
     if (!response.ok || response.status === 429) {
       throw new Error(`Subscan ${endpoint} failed with ${response.status}`)
     }

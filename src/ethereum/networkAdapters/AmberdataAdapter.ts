@@ -62,7 +62,7 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
         params: params,
         id: 1
       }
-      const response = await this.ethEngine.fetchCors(url, {
+      const response = await this.ethEngine.engineFetch(url, {
         headers: {
           'x-amberdata-blockchain-id': this.config.amberdataBlockchainId,
           'x-api-key': amberdataApiKey,
@@ -86,7 +86,7 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
 
     return await this.serialServers(async baseUrl => {
       const url = `${base58ToHexAddress}${path}`
-      const response = await this.ethEngine.fetchCors(url, {
+      const response = await this.ethEngine.engineFetch(url, {
         headers: {
           'x-amberdata-blockchain-id': this.config.amberdataBlockchainId,
           'x-api-key': amberdataApiKey

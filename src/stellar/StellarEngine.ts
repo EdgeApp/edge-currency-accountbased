@@ -22,7 +22,7 @@ import {
   formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
-import { cleanTxLogs, getFetchCors, getOtherParams } from '../common/utils'
+import { cleanTxLogs, getOtherParams, makeEngineFetch } from '../common/utils'
 import { StellarTools } from './StellarTools'
 import {
   asFeeStats,
@@ -56,7 +56,7 @@ export class StellarEngine extends CurrencyEngine<
   SafeStellarWalletInfo
 > {
   networkInfo: StellarNetworkInfo
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
   pendingTransactionsMap: { [index: number]: Transaction }
@@ -71,7 +71,7 @@ export class StellarEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
@@ -119,7 +119,7 @@ export class StellarEngine extends CurrencyEngine<
       case 'feeStats':
         funcs = this.networkInfo.stellarServers.map(
           (serverUrl: string) => async () => {
-            const response = await this.fetchCors(`${serverUrl}/fee_stats`)
+            const response = await this.engineFetch(`${serverUrl}/fee_stats`)
             const result = asFeeStats(await response.json())
 
             return { server: serverUrl, result }

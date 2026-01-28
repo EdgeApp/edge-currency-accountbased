@@ -8,7 +8,10 @@ import {
   CosmosInfoPayload,
   CosmosNetworkInfo
 } from '../cosmosTypes'
-import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
+import {
+  cosmosCustomTokenTemplate,
+  makeCosmosDefaultSettings
+} from './cosmosCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   uion: {
@@ -80,6 +83,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }],
 
   // Deprecated:
+  defaultSettings: makeCosmosDefaultSettings(),
   displayName: 'Osmosis',
   metaTokens: makeMetaTokens(builtinTokens)
 }

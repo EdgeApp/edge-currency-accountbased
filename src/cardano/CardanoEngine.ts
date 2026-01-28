@@ -22,7 +22,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { formatAggregateError, promiseAny } from '../common/promiseUtils'
 import { trial } from '../common/trial'
-import { cleanTxLogs, getFetchCors } from '../common/utils'
+import { cleanTxLogs, makeEngineFetch } from '../common/utils'
 import { asStakingTxBody } from './asStakingTx'
 import { CardanoTools } from './CardanoTools'
 import {
@@ -53,7 +53,7 @@ export class CardanoEngine extends CurrencyEngine<
   CardanoTools,
   SafeCardanoWalletInfo
 > {
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   networkInfo: CardanoNetworkInfo
   otherData!: CardanoWalletOtherData
   initOptions: CardanoInitOptions
@@ -72,7 +72,7 @@ export class CardanoEngine extends CurrencyEngine<
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.initOptions = asCardanoInitOptions(initOptions)
     this.networkInfo = env.networkInfo
     this.epochNumber = -1
@@ -88,7 +88,7 @@ export class CardanoEngine extends CurrencyEngine<
     opts: EdgeFetchOptions = {},
     authenticated: boolean = false
   ): Promise<unknown> {
-    const res = await this.fetchCors(
+    const res = await this.engineFetch(
       `${this.networkInfo.koiosServer}/api/v1/${method}`,
       {
         ...opts,
@@ -135,7 +135,7 @@ export class CardanoEngine extends CurrencyEngine<
       url: string,
       headers: JsonObject
     ): Promise<string> => {
-      const res = await this.fetchCors(url, {
+      const res = await this.engineFetch(url, {
         ...opts,
         headers: { ...opts.headers, ...headers }
       })

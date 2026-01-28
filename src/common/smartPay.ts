@@ -5,7 +5,7 @@ import { EdgeIo, EdgeParsedUri, EdgeTokenMap } from 'edge-core-js/types'
 import { cleanMultiFetch, makeQueryParams, QueryParams } from './network'
 import { computeCRC, formatPixKey } from './pixkey'
 import { asNumberString } from './types'
-import { getFetchCors } from './utils'
+import { makeEngineFetch } from './utils'
 
 const MAX_TIMEOUT_S = 60 * 60 * 24 * 7
 
@@ -67,7 +67,7 @@ export const parsePixKey = async (
       return
     }
     try {
-      const fetchCors = getFetchCors(io)
+      const engineFetch = makeEngineFetch(io)
       const qrcode = encodeURIComponent(code)
       const decode = await cleanMultiFetch(
         asSmartPayQrDecode,
@@ -75,7 +75,7 @@ export const parsePixKey = async (
         `api/pix/qrdecode?qrcode=${qrcode}`,
         undefined,
         undefined,
-        fetchCors
+        engineFetch
       )
       if (decode.status !== 'ok') {
         throw new Error(decode.msg)
@@ -107,7 +107,7 @@ export const parsePixKey = async (
           `api/swapix/swapquote?${params}`,
           undefined,
           undefined,
-          fetchCors
+          engineFetch
         )
 
         const { data: quoteData } = quote

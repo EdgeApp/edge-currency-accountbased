@@ -525,3 +525,15 @@ export const asEthereumInfoPayload = asObject({
   networkFees: asOptional(asEthereumFees)
 })
 export type EthereumInfoPayload = ReturnType<typeof asEthereumInfoPayload>
+
+//
+// User Settings
+//
+
+export interface EthereumUserSettings {
+  networkPrivacy: 'none' | 'nym'
+}
+
+export const asEthereumUserSettings: Cleaner<EthereumUserSettings> = asObject({
+  networkPrivacy: asOptional(asValue('none', 'nym'), 'none')
+})

@@ -25,7 +25,7 @@ import {
 } from '../common/promiseUtils'
 import {
   cleanTxLogs,
-  getFetchCors,
+  makeEngineFetch,
   makeMutex,
   shuffleArray
 } from '../common/utils'
@@ -57,7 +57,7 @@ export class TezosEngine extends CurrencyEngine<
   SafeTezosWalletInfo
 > {
   networkInfo: TezosNetworkInfo
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   otherData!: TezosWalletOtherData
   walletInfo: SafeTezosWalletInfo
 
@@ -70,7 +70,7 @@ export class TezosEngine extends CurrencyEngine<
     super(env, tools, walletInfo, opts)
     this.walletInfo = asSafeTezosWalletInfo(walletInfo)
     this.networkInfo = env.networkInfo
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
   }
 
   getRpcToolkits(): TezosToolkit[] {
@@ -113,7 +113,7 @@ export class TezosEngine extends CurrencyEngine<
       // Functions that should waterfall from top to low priority servers
       case 'getNumberOfOperations':
         funcs = this.tools.tezosApiServers.map(server => async () => {
-          const result = await this.fetchCors(
+          const result = await this.engineFetch(
             `${server}/v1/accounts/${params[0]}`
           )
             .then(async function (response) {
@@ -132,7 +132,7 @@ export class TezosEngine extends CurrencyEngine<
           const pagination = server.includes('tzkt')
             ? ''
             : `&p='${params[1]}&number=50`
-          const result: XtzGetTransaction = await this.fetchCors(
+          const result: XtzGetTransaction = await this.engineFetch(
             `${server}/v1/accounts/${params[0]}/operations?type=transaction` +
               pagination
           ).then(async function (response) {

@@ -290,7 +290,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       server
     )
 
-    // Quick hack to signal to use slower fetchCors over fetch from EdgeIo
+    // Quick hack to signal to use slower engineFetch over fetch from EdgeIo
     const useFetchCors = server.indexOf('cors-http') === 0
     if (useFetchCors) server = server.replace(/^cors-http/, 'http')
 
@@ -314,7 +314,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       url = `${server}/api${cmd}`
     }
 
-    const response = await this.ethEngine.fetchCors(`${url}${apiKeyParam}`)
+    const response = await this.ethEngine.engineFetch(`${url}${apiKeyParam}`)
 
     if (!response.ok) {
       const resBody = await response.text()

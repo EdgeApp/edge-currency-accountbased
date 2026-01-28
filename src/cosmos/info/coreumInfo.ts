@@ -8,6 +8,7 @@ import {
   CosmosInfoPayload,
   CosmosNetworkInfo
 } from '../cosmosTypes'
+import { makeCosmosDefaultSettings } from './cosmosCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   'usara-core1r9gc0rnxnzpq33u82f44aufgdwvyxv4wyepyck98m9v2pxua6naqr8h03z': {
@@ -179,6 +180,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }],
 
   // Deprecated:
+  defaultSettings: makeCosmosDefaultSettings(),
   displayName: 'Coreum',
   metaTokens: makeMetaTokens(builtinTokens)
 }

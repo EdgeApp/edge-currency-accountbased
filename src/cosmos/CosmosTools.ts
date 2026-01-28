@@ -9,6 +9,7 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
+  EdgeFetchFunction,
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
@@ -219,10 +220,10 @@ export class CosmosTools implements EdgeCurrencyTools {
     return encodedUri
   }
 
-  async connectClient(): Promise<void> {
+  async connectClient(fetch: EdgeFetchFunction): Promise<void> {
     if (this.clients == null) {
       this.clients = await createCosmosClients(
-        this.io.fetchCors,
+        fetch,
         rpcWithApiKey(this.networkInfo.rpcNode, this.initOptions)
       )
     }

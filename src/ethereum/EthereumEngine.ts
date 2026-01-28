@@ -36,11 +36,11 @@ import {
   biggyRoundToNearestInt,
   cleanTxLogs,
   decimalToHex,
-  getFetchCors,
   getOtherParams,
   hexToBuf,
   hexToDecimal,
   isHex,
+  makeEngineFetch,
   mergeDeeply,
   normalizeAddress,
   pickRandomOne,
@@ -63,6 +63,7 @@ import {
   asEthereumPrivateKeys,
   asEthereumSignMessageParams,
   asEthereumTxOtherParams,
+  asEthereumUserSettings,
   asEthereumWalletOtherData,
   asRpcResultString,
   asSafeEthWalletInfo,
@@ -80,6 +81,7 @@ import {
   EthereumPrivateKeys,
   EthereumTxOtherParams,
   EthereumTxParameterInformation,
+  EthereumUserSettings,
   EthereumUtils,
   EthereumWalletOtherData,
   EvmWcRpcPayload,
@@ -111,6 +113,7 @@ export class EthereumEngine extends CurrencyEngine<
   EthereumTools,
   SafeEthWalletInfo
 > {
+  declare currentSettings: EthereumUserSettings
   otherData!: EthereumWalletOtherData
   // Cache of last max-spend computation for native sends on OP chains
   private lastMaxSpendable?: {
@@ -124,7 +127,7 @@ export class EthereumEngine extends CurrencyEngine<
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
   ethNetwork: EthereumNetwork
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   otherMethods: EthereumOtherMethods
   utils: EthereumUtils
   infoFeeProvider: () => Promise<EthereumFees>
@@ -152,11 +155,14 @@ export class EthereumEngine extends CurrencyEngine<
         blobBaseFeeScalar: '659851'
       }
     }
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io, () => {
+      const networkPrivacy = this.currentSettings?.networkPrivacy
+      return networkPrivacy === 'nym' ? { privacy: 'nym' } : {}
+    })
 
     // Update network fees from other providers
     const { infoFeeProvider, externalFeeProviders } = FeeProviders(
-      this.fetchCors,
+      this.engineFetch,
       this.currencyInfo,
       this.initOptions,
       this.log,
@@ -832,6 +838,12 @@ export class EthereumEngine extends CurrencyEngine<
 
     await super.killEngine()
     this.ethNetwork.stop()
+  }
+
+  async changeUserSettings(userSettings: object): Promise<void> {
+    // Validate the user settings with our cleaner
+    asEthereumUserSettings(userSettings)
+    await super.changeUserSettings(userSettings)
   }
 
   async resyncBlockchain(): Promise<void> {

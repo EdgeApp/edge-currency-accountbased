@@ -32,8 +32,8 @@ import { asyncWaterfall } from '../common/promiseUtils'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
-  getFetchCors,
   getOtherParams,
+  makeEngineFetch,
   pickRandom
 } from '../common/utils'
 import {
@@ -94,7 +94,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   otherData!: EosWalletOtherData
   otherMethods: Object
   networkInfo: EosNetworkInfo
-  fetchCors: EdgeFetchFunction
+  engineFetch: EdgeFetchFunction
   referenceBlock: ReferenceBlock
   accountResources: AccountResources
   accountNameChecked: boolean
@@ -108,7 +108,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   ) {
     super(env, tools, walletInfo, opts)
     const { networkInfo } = env
-    this.fetchCors = getFetchCors(env.io)
+    this.engineFetch = makeEngineFetch(env.io)
     this.networkInfo = networkInfo
     this.activatedAccountsCache = {}
     const { currencyCode, denominations } = this.currencyInfo
@@ -175,7 +175,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           const out = await asyncWaterfall(
             this.networkInfo.eosActivationServers.map(server => async () => {
               const uri = `${server}/api/v1/activateAccount`
-              const response = await this.fetchCors(uri, options)
+              const response = await this.engineFetch(uri, options)
               return await response.json()
             }),
             15000
@@ -540,7 +540,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       case 'getAccount': {
         out = await asyncWaterfall(
           this.networkInfo.eosNodes.map(server => async () => {
-            const client = getClient(this.fetchCors, server)
+            const client = getClient(this.engineFetch, server)
             const result = await client.v1.chain.get_account(
               this.otherData.accountName
             )
@@ -560,7 +560,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
               `/v2/history/get_actions?transfer.${
                 direction === 'outgoing' ? 'from' : 'to'
               }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
-            const response = await this.fetchCors(url)
+            const response = await this.engineFetch(url)
             const parsedUrl = parse(url, {}, true)
             if (!response.ok) {
               this.error(`multicast in / out tx server error: ${server}`)
@@ -578,7 +578,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           server => async () => {
             if (this.currencyInfo.currencyCode !== 'EOS')
               throw new Error('dfuse only supports EOS')
-            const response = await this.fetchCors(`${server}/graphql`, {
+            const response = await this.engineFetch(`${server}/graphql`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -639,7 +639,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         const publicKey = params[0]
         const hyperionFuncs = this.networkInfo.eosHyperionNodes.map(
           server => async () => {
-            const client = getClient(this.fetchCors, server)
+            const client = getClient(this.engineFetch, server)
             const accounts = await client.v1.history.get_key_accounts(publicKey)
             // TODO: v1 history node endpoint has been deprecated. New Greymass Robo API (in development) will provide history v1 compatibility.
 
@@ -657,7 +657,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           server => async () => {
             if (this.currencyInfo.currencyCode !== 'EOS')
               throw new Error('dfuse only supports EOS')
-            const response = await this.fetchCors(
+            const response = await this.engineFetch(
               `${server}/v0/state/key_accounts?public_key=${publicKey}`
             )
             if (!response.ok) {
@@ -684,7 +684,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         const contractAddress = params[0]
         out = await asyncWaterfall(
           this.networkInfo.eosNodes.map(server => async () => {
-            const client = getClient(this.fetchCors, server)
+            const client = getClient(this.engineFetch, server)
             const result = await client.v1.chain.get_currency_balance(
               contractAddress,
               this.otherData.accountName
@@ -700,7 +700,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         const randomNodes = pickRandom(eosNodes, 3)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
-            const client = getClient(this.fetchCors, server)
+            const client = getClient(this.engineFetch, server)
             const result = await client.v1.chain.get_info()
 
             return { server, result }
@@ -711,7 +711,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       case 'getPowerUpState': {
         out = await asyncWaterfall(
           this.networkInfo.eosNodes.map(server => async () => {
-            const client = getClient(this.fetchCors, server)
+            const client = getClient(this.engineFetch, server)
             const resources = new Resources({ api: client })
             const result = await resources.v1.powerup.get_state()
 
@@ -723,7 +723,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       case 'getResourceUsage': {
         out = await asyncWaterfall(
           this.networkInfo.eosNodes.map(server => async () => {
-            const client = getClient(this.fetchCors, server)
+            const client = getClient(this.engineFetch, server)
             const resources = new Resources({ api: client })
             const result = await resources.getSampledUsage()
 
@@ -738,7 +738,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
             const tx: PackedTransaction = params[0]
-            const client = getClient(this.fetchCors, server)
+            const client = getClient(this.engineFetch, server)
             const result = await client.v1.chain.send_transaction(tx)
 
             return { server, result }
@@ -833,7 +833,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     ) {
       const server = pickRandom(this.networkInfo.powerUpServers, 1)
       try {
-        const response = await this.fetchCors(
+        const response = await this.engineFetch(
           `${server}/${this.otherData.accountName}`
         )
         if (!response.ok) {
