@@ -63,6 +63,7 @@ import {
   asEthereumPrivateKeys,
   asEthereumSignMessageParams,
   asEthereumTxOtherParams,
+  asEthereumUserSettings,
   asEthereumWalletOtherData,
   asRpcResultString,
   asSafeEthWalletInfo,
@@ -80,6 +81,7 @@ import {
   EthereumPrivateKeys,
   EthereumTxOtherParams,
   EthereumTxParameterInformation,
+  EthereumUserSettings,
   EthereumUtils,
   EthereumWalletOtherData,
   EvmWcRpcPayload,
@@ -111,6 +113,7 @@ export class EthereumEngine extends CurrencyEngine<
   EthereumTools,
   SafeEthWalletInfo
 > {
+  declare currentSettings: EthereumUserSettings
   otherData!: EthereumWalletOtherData
   // Cache of last max-spend computation for native sends on OP chains
   private lastMaxSpendable?: {
@@ -152,7 +155,10 @@ export class EthereumEngine extends CurrencyEngine<
         blobBaseFeeScalar: '659851'
       }
     }
-    this.fetchCors = getFetchCors(env.io)
+    this.fetchCors = getFetchCors(env.io, () => {
+      const networkPrivacy = this.currentSettings?.networkPrivacy
+      return networkPrivacy === 'nym' ? { privacy: 'nym' } : {}
+    })
 
     // Update network fees from other providers
     const { infoFeeProvider, externalFeeProviders } = FeeProviders(
@@ -832,6 +838,12 @@ export class EthereumEngine extends CurrencyEngine<
 
     await super.killEngine()
     this.ethNetwork.stop()
+  }
+
+  async changeUserSettings(userSettings: object): Promise<void> {
+    // Validate the user settings with our cleaner
+    asEthereumUserSettings(userSettings)
+    await super.changeUserSettings(userSettings)
   }
 
   async resyncBlockchain(): Promise<void> {

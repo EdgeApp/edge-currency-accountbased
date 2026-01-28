@@ -4,7 +4,7 @@ import type {
   JsonObject
 } from 'edge-core-js/types'
 
-import type { EthereumNetworkInfo } from '../ethereumTypes'
+import { asEthereumUserSettings, EthereumNetworkInfo } from '../ethereumTypes'
 
 // We are using the memo to pass Ethereum contract calls:
 export const evmMemoOptions: EdgeMemoOption[] = [
@@ -49,6 +49,7 @@ export function makeEvmDefaultSettings(
       chainParams: networkInfo.chainParams,
       ercTokenStandard: networkInfo.ercTokenStandard,
       networkAdapterConfigs: networkInfo.networkAdapterConfigs
-    }
+    },
+    ...asEthereumUserSettings({})
   }
 }

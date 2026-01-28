@@ -12,6 +12,7 @@ import {
   EdgeCurrencyInfo,
   EdgeDenomination,
   EdgeFetchFunction,
+  EdgeFetchOptions,
   EdgeIo,
   EdgeMetaToken,
   EdgeTokenMap,
@@ -227,9 +228,19 @@ export function biggyScience(num: string): string {
 
 /**
  * Emulates the browser Fetch API more accurately than fetch JSON.
+ * Optionally accepts a function that returns additional init options
+ * to merge into fetch requests dynamically.
  */
-export function getFetchCors(io: EdgeIo): EdgeFetchFunction {
-  return io.fetchCors ?? io.fetch
+export function getFetchCors(
+  io: EdgeIo,
+  getInitOverload: () => EdgeFetchOptions = () => ({})
+): EdgeFetchFunction {
+  const baseFetch = io.fetchCors ?? io.fetch
+  return async (input, init) => {
+    const initOverload = getInitOverload()
+    const enhancedInit = { ...initOverload, ...init }
+    return await baseFetch(input, enhancedInit)
+  }
 }
 
 export function safeErrorMessage(e?: Error): string {
