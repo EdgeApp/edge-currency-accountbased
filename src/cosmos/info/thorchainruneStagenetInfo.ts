@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
 import { asCosmosInfoPayload, CosmosInfoPayload } from '../cosmosTypes'
 import { ThorchainNetworkInfo } from '../thorchainTypes'
+import { makeCosmosDefaultSettings } from './cosmosCommonInfo'
 // import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
@@ -78,6 +79,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }],
 
   // Deprecated:
+  defaultSettings: makeCosmosDefaultSettings(),
   displayName: 'THORChain Stagenet'
 }
 

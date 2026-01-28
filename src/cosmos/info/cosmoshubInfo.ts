@@ -7,6 +7,7 @@ import {
   CosmosInfoPayload,
   CosmosNetworkInfo
 } from '../cosmosTypes'
+import { makeCosmosDefaultSettings } from './cosmosCommonInfo'
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'cosmos',
@@ -51,6 +52,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }],
 
   // Deprecated:
+  defaultSettings: makeCosmosDefaultSettings(),
   displayName: 'Cosmos Hub'
 }
 

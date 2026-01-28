@@ -269,3 +269,15 @@ export const asCosmosInfoPayload = asObject({
   archiveNodes: asOptional(asHttpEndpoint)
 })
 export type CosmosInfoPayload = ReturnType<typeof asCosmosInfoPayload>
+
+//
+// User Settings
+//
+
+export interface CosmosUserSettings {
+  networkPrivacy: 'none' | 'nym'
+}
+
+export const asCosmosUserSettings: Cleaner<CosmosUserSettings> = asObject({
+  networkPrivacy: asOptional(asValue('none', 'nym'), 'none')
+})
