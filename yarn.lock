@@ -227,15 +227,15 @@
     bfs-path "^1.0.2"
     cross-fetch "^3.1.5"
 
+"@chain-registry/types@^2.0.144":
+  version "2.0.144"
+  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.144.tgz#94e50ecc85127750ea091c39a6ecaedbfc43d61e"
+  integrity sha512-LaPg4E0STJycrSlxur7DiqhX7iou8p+6dyEZfcI2D27fe1xRlTaJvnDH+JFQoiM0P6GuF/81VRjv9M74dYs82w==
+
 "@chain-registry/types@^2.0.28":
   version "2.0.28"
   resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.28.tgz#c8be322cdcbc5c573443c6e71da64eb31a8aa195"
   integrity sha512-o8SKdXEj40HtjF6erOikpn8nj7lOO7/peU5tKK62JjCv2BtMnlxuCeU5q/GmjLZwhRQ93u3/AHtU892DPIA3IA==
-
-"@chain-registry/types@^2.0.96":
-  version "2.0.96"
-  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.96.tgz#03bf768988caaa73861b5698fb7ab702c83136b5"
-  integrity sha512-kE0cWIEi4Cd8dhi/tXqF8CIR+VsorD3W7EojNpFR2Ff8WAP6qlcDLDHzaPkUqSuaHBi3R42sYhkT4+3YDWFX1Q==
 
 "@chain-registry/utils@^2.0.28":
   version "2.0.28"
@@ -3576,19 +3576,19 @@ chai@^4.2.0:
     pathval "^1.1.1"
     type-detect "^4.0.5"
 
+chain-registry@^2.0.144:
+  version "2.0.144"
+  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.144.tgz#d08253f02c4d8c70994db07f391ac5ab96bfb4a4"
+  integrity sha512-XBeTVIPuY04icfHTm1D+drqMzS03kAhXZ9aeGxgOSyv3tB7V128FgCRsX+MuTROpxNRGK/T4uDssqW8G9NANtQ==
+  dependencies:
+    "@chain-registry/types" "^2.0.144"
+
 chain-registry@^2.0.28:
   version "2.0.28"
   resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.28.tgz#8f75e0481aaf7de66df59f0b20deb5337e0f92a3"
   integrity sha512-+QggaB7fpB+bpgo/CCa1CMZooLqRDq24k25adXAFar7dOTFIGEE+9DC8BWChCtJngCz8fV093uCsEcFhOXJf4g==
   dependencies:
     "@chain-registry/types" "^2.0.28"
-
-chain-registry@^2.0.96:
-  version "2.0.96"
-  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.96.tgz#6848ec450f87c922a9b2aa4c1dfa3f8c6585f841"
-  integrity sha512-E0wTyI8lRFZHOeGmewlroB0vt59E1xSGiRtlE/fPTJLWCspsv0PX5sSb5QSuEIhiDD+g+c/z+7DNjCHIlSGoyA==
-  dependencies:
-    "@chain-registry/types" "^2.0.96"
 
 chalk@^2.4.1, chalk@^2.4.2:
   version "2.4.2"
