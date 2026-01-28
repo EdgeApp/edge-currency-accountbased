@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.71.0 (2026-01-27)
+
 - added: (Cosmos) Add networkPrivacy user setting to enable privacy-enhanced fetch requests
 - added: (Ethereum) Add networkPrivacy user setting to enable privacy-enhanced fetch requests
 
