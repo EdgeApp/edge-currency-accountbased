@@ -573,6 +573,14 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xe9a95d175a5f4c9369f3b74222402eb1b837693b'
     }
   },
+  '525a8f6f3ba4752868cde25164382bfbae3990e1': {
+    currencyCode: 'NYM',
+    displayName: 'Nym',
+    denominations: [{ name: 'NYM', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x525A8F6F3Ba4752868cde25164382BfbAe3990e1'
+    }
+  },
   d7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b: {
     currencyCode: 'NXM',
     displayName: 'Nexus Mutual',

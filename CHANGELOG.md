@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Nym (NYM) Cosmos-based chain with NYX builtin token
+- added: (Ethereum) NYM ERC-20 builtin token
 
 ## 4.70.0 (2026-01-16)
 
