@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Nym (NYM) Cosmos-based chain with NYX builtin token
+
 ## 4.70.0 (2026-01-16)
 
 - changed: (Polkadot) Update block explorer URL
