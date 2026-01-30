@@ -294,14 +294,6 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     }
   }
 
-  async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
-    const nativeId = await this.nativeId.get()
-    if (nativeId != null) {
-      await this.tools.zano.whitelistAssets(nativeId, tokenIds)
-    }
-    await super.changeEnabledTokenIds(tokenIds)
-  }
-
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
     if (!this.engineOn) return 1000
 
