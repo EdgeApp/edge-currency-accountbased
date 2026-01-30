@@ -112,6 +112,14 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0xCC42724C6683B7E57334c4E856f4c9965ED682bD'
     }
+  },
+  '31d0e332ccef98b583e40e0cefbb7502c9a6b3f8': {
+    currencyCode: 'NYM',
+    displayName: 'Nym',
+    denominations: [{ name: 'NYM', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x31d0E332ccEf98b583E40e0cEFBb7502c9a6b3f8'
+    }
   }
 }
 
