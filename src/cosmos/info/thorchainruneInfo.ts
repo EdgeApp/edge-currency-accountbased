@@ -30,7 +30,7 @@ const networkInfo: ThorchainNetworkInfo = {
     url: 'https://thornode.ninerealms.com/thorchain/network',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
-  midgardConnctionInfo: {
+  midgardConnectionInfo: {
     url: 'https://midgard.ninerealms.com',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },

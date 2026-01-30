@@ -9,19 +9,26 @@ import { CosmosTools } from './CosmosTools'
 import { asSafeCosmosWalletInfo, CosmosNetworkInfo } from './cosmosTypes'
 import { CosmosEngine } from './engine/CosmosEngine'
 import { ThorchainEngine } from './engine/ThorchainEngine'
+import { MidgardNetworkInfo } from './midgardTypes'
 import { isThorchainEnvironment, ThorchainNetworkInfo } from './thorchainTypes'
 
 export { CosmosEngine } from './engine/CosmosEngine'
+export { MidgardEngine } from './engine/MidgardEngine'
 export { ThorchainEngine } from './engine/ThorchainEngine'
 
+type AllNetworkInfo =
+  | CosmosNetworkInfo
+  | MidgardNetworkInfo
+  | ThorchainNetworkInfo
+
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<CosmosNetworkInfo | ThorchainNetworkInfo>,
+  env: PluginEnvironment<AllNetworkInfo>,
   tools: CosmosTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafeCosmosWalletInfo(walletInfo)
-  console.debug('isThorchainEnvironment', isThorchainEnvironment(env))
+
   const engine = isThorchainEnvironment(env)
     ? new ThorchainEngine(env, tools, safeWalletInfo, opts)
     : new CosmosEngine(env, tools, safeWalletInfo, opts)
