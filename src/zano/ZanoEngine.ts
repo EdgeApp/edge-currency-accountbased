@@ -41,9 +41,9 @@ import {
   ZanoWalletOtherData
 } from './zanoTypes'
 
-const SYNC_PROGRESS_WEIGHT = 0.6
-const BALANCE_PROGRESS_WEIGHT = 0.1
-const TRANSACTION_PROGRESS_WEIGHT = 0.3
+const SYNC_PROGRESS_WEIGHT = 0.85
+const BALANCE_PROGRESS_WEIGHT = 0.05
+const TRANSACTION_PROGRESS_WEIGHT = 0.1
 
 export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   networkInfo: ZanoNetworkInfo
@@ -339,9 +339,9 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     const previousProgress = this.calculateSyncProgress({})
     const newProgress = this.calculateSyncProgress(values)
 
-    // Update every 10% change
-    const flooredPrevProgress = Math.floor(previousProgress * 10)
-    const flooredNewProgress = Math.floor(newProgress * 10)
+    // Update every 1% change
+    const flooredPrevProgress = Math.floor(previousProgress * 100)
+    const flooredNewProgress = Math.floor(newProgress * 100)
 
     if (newProgress === 1 || flooredNewProgress > flooredPrevProgress) {
       this.tokenCheckBalanceStatus.set(null, newProgress)
