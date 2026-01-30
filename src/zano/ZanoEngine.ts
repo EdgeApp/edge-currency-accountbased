@@ -313,7 +313,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     const nativeId = await this.nativeId.get()
     if (nativeId == null) return 1000
 
-    const status = await this.tools.zano.walletStatus(nativeId)
+    const status = await this.tools.zano.getWalletStatus(nativeId)
     const blockheight = Math.max(
       status.current_wallet_height,
       status.current_daemon_height
