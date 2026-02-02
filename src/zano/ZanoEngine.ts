@@ -41,9 +41,9 @@ import {
   ZanoWalletOtherData
 } from './zanoTypes'
 
-const SYNC_PROGRESS_WEIGHT = 0.6
-const BALANCE_PROGRESS_WEIGHT = 0.1
-const TRANSACTION_PROGRESS_WEIGHT = 0.3
+const SYNC_PROGRESS_WEIGHT = 0.85
+const BALANCE_PROGRESS_WEIGHT = 0.05
+const TRANSACTION_PROGRESS_WEIGHT = 0.1
 
 export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   networkInfo: ZanoNetworkInfo
@@ -294,14 +294,6 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     }
   }
 
-  async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
-    const nativeId = await this.nativeId.get()
-    if (nativeId != null) {
-      await this.tools.zano.whitelistAssets(nativeId, tokenIds)
-    }
-    await super.changeEnabledTokenIds(tokenIds)
-  }
-
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
     if (!this.engineOn) return 1000
 
@@ -313,7 +305,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     const nativeId = await this.nativeId.get()
     if (nativeId == null) return 1000
 
-    const status = await this.tools.zano.walletStatus(nativeId)
+    const status = await this.tools.zano.getWalletStatus(nativeId)
     const blockheight = Math.max(
       status.current_wallet_height,
       status.current_daemon_height
@@ -339,9 +331,9 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     const previousProgress = this.calculateSyncProgress({})
     const newProgress = this.calculateSyncProgress(values)
 
-    // Update every 10% change
-    const flooredPrevProgress = Math.floor(previousProgress * 10)
-    const flooredNewProgress = Math.floor(newProgress * 10)
+    // Update every 1% change
+    const flooredPrevProgress = Math.floor(previousProgress * 100)
+    const flooredNewProgress = Math.floor(newProgress * 100)
 
     if (newProgress === 1 || flooredNewProgress > flooredPrevProgress) {
       this.tokenCheckBalanceStatus.set(null, newProgress)

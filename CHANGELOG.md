@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Remove extra call to whitelistAssets that was hanging and preventing core callbacks from resolving
+
 ## 4.71.1 (2026-01-28)
 
 - changed: Update chain-registry package
