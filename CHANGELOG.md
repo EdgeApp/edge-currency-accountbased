@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fix wFIL currency code
+
 ## 4.71.1 (2026-01-28)
 
 - changed: Update chain-registry package
