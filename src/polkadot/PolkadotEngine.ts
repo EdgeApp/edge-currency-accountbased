@@ -311,8 +311,8 @@ export class PolkadotEngine extends CurrencyEngine<
             {
               walletId: this.walletId,
               walletInfo: this.walletInfo,
-              getCurrencyCode: this.getCurrencyCode,
-              getDenomination: this.getDenomination,
+              getCurrencyCode: this.getCurrencyCode.bind(this),
+              getDenomination: this.getDenomination.bind(this),
               tokenId: null
             },
             tx
@@ -418,8 +418,8 @@ export class PolkadotEngine extends CurrencyEngine<
             {
               walletId: this.walletId,
               walletInfo: this.walletInfo,
-              getCurrencyCode: this.getCurrencyCode,
-              getDenomination: this.getDenomination,
+              getCurrencyCode: this.getCurrencyCode.bind(this),
+              getDenomination: this.getDenomination.bind(this),
               tokenId: llmTokenId
             },
             tx

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fix missing engine scope in Liberland transaction processing
+
 ## 4.72.0 (2026-02-05)
 
 - added: Cacao (CACAO) MAYAChain support
