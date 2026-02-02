@@ -25,7 +25,7 @@ const builtinTokens: EdgeTokenMap = {
     }
   },
   '60e1773636cf5e4a227d9ac24f20feca034ee25a': {
-    currencyCode: 'WFIL',
+    currencyCode: 'wFIL',
     displayName: 'Wrapped FIL',
     denominations: [{ name: 'wFIL', multiplier: '1000000000000000000' }],
     networkLocation: {
