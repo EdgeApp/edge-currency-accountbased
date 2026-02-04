@@ -6,6 +6,7 @@
 - added: Nym (NYM) Cosmos-based chain with NYX builtin token
 - added: (Ethereum) NYM ERC-20 builtin token
 - added: (BSC) NYM BEP-20 builtin token
+- added: opBNB support
 
 ## 4.71.2 (2026-02-02)
 
