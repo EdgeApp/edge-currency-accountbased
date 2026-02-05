@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.72.0 (2026-02-05)
+
 - added: Cacao (CACAO) MAYAChain support
 - added: Add Monad (MON) support
 - added: Nym (NYM) Cosmos-based chain with NYX builtin token
