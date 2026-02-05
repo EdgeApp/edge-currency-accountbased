@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Cacao (CACAO) MAYAChain support
 - added: Add Monad (MON) support
 - added: Nym (NYM) Cosmos-based chain with NYX builtin token
 - added: (Ethereum) NYM ERC-20 builtin token
@@ -1202,7 +1203,6 @@ removed: Disabled all Piratechain synchronizer functionality. This is a temporar
 
 - added: Support for XRP OfferCreate txs
 - added: Fantom tokens listed on Axelarscan (AXLUSDC, AXLUSDT, AXLETH, AXLWBTC)
--
 
 ## 1.4.12 (2023-08-11)
 

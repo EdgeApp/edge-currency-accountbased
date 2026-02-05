@@ -1,96 +1,35 @@
 import { HttpEndpoint } from '@cosmjs/stargate'
-import { asArray, asMaybe, asObject, asOptional, asString } from 'cleaners'
+import { asObject, asString } from 'cleaners'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { CosmosNetworkInfo } from './cosmosTypes'
+import { MidgardNetworkInfo } from './midgardTypes'
 
-export interface ThorchainNetworkInfo extends CosmosNetworkInfo {
-  chainIdUpdateUrl: string
+/**
+ * Thorchain-specific network info that extends MidgardNetworkInfo.
+ * Adds the thornode fee API endpoint.
+ */
+export interface ThorchainNetworkInfo extends MidgardNetworkInfo {
   transactionFeeConnectionInfo: HttpEndpoint
-  midgardConnctionInfo: HttpEndpoint
 }
+
+type AnyCosmosNetworkInfo =
+  | CosmosNetworkInfo
+  | MidgardNetworkInfo
+  | ThorchainNetworkInfo
 
 export function isThorchainEnvironment(
-  env: PluginEnvironment<CosmosNetworkInfo | ThorchainNetworkInfo>
+  env: PluginEnvironment<AnyCosmosNetworkInfo>
 ): env is PluginEnvironment<ThorchainNetworkInfo> {
   return (
-    (env as PluginEnvironment<ThorchainNetworkInfo>).currencyInfo.pluginId ===
-      'thorchainrune' ||
-    (env as PluginEnvironment<ThorchainNetworkInfo>).currencyInfo.pluginId ===
-      'thorchainrunestagenet'
+    env.currencyInfo.pluginId === 'thorchainrune' ||
+    env.currencyInfo.pluginId === 'thorchainrunestagenet'
   )
 }
 
-export const asChainIdUpdate = asObject({
-  result: asObject({
-    node_info: asObject({
-      network: asString // 'thorchain-mainnet-v1',
-    })
-  })
-})
-
-// Midgard API https://midgard.ninerealms.com/v2/doc#operation/GetActions
-const asMidgardAction = asObject({
-  address: asString,
-  coins: asArray(
-    asObject({
-      amount: asString,
-      asset: asString // 'THOR.RUNE'
-    })
-  ),
-  txID: asString
-})
-export type MidgardAction = ReturnType<typeof asMidgardAction>
-export const asMidgardActionsResponse = asObject({
-  actions: asArray(
-    asObject({
-      date: asString,
-      height: asString,
-      in: asArray(asMidgardAction),
-      metadata: asObject(
-        asObject({
-          memo: asString,
-          networkFees: asOptional(
-            asArray(
-              asObject({
-                amount: asString,
-                asset: asString // 'THOR.RUNE'
-              })
-            ),
-            () => []
-          )
-        })
-      ),
-      out: asArray(asMidgardAction)
-      // pools: ['BTC.BTC'],
-      // status: 'success',
-      // type: 'swap'
-    })
-  ),
-  // count: '5',
-  meta: asObject({
-    nextPageToken: asString // '169417139000000051',
-    // prevPageToken: '170158859000000025'
-  })
-})
-
-export const asThorchainWalletOtherData = asObject({
-  midgardTxQueryParams: asMaybe(
-    asObject({
-      mostRecentHeight: asString,
-      mostRecentTxId: asString
-    }),
-    () => ({
-      mostRecentHeight: '0',
-      mostRecentTxId: ''
-    })
-  )
-})
-
-export type ThorchainWalletOtherData = ReturnType<
-  typeof asThorchainWalletOtherData
->
-
+/**
+ * Thornode network API response for fee calculation.
+ */
 export const asThornodeNetwork = asObject({
   // bond_reward_rune: asString, // '17257435059176',
   // burned_bep_2_rune: asString, // '47115838110346964',
