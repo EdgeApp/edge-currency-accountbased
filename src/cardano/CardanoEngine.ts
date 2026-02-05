@@ -21,6 +21,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { formatAggregateError, promiseAny } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { trial } from '../common/trial'
 import { cleanTxLogs, makeEngineFetch } from '../common/utils'
 import { asStakingTxBody } from './asStakingTx'
@@ -51,7 +52,8 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class CardanoEngine extends CurrencyEngine<
   CardanoTools,
-  SafeCardanoWalletInfo
+  SafeCardanoWalletInfo,
+  TokenSyncTracker
 > {
   engineFetch: EdgeFetchFunction
   networkInfo: CardanoNetworkInfo
@@ -71,7 +73,7 @@ export class CardanoEngine extends CurrencyEngine<
     initOptions: JsonObject,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.engineFetch = makeEngineFetch(env.io)
     this.initOptions = asCardanoInitOptions(initOptions)
     this.networkInfo = env.networkInfo
@@ -306,15 +308,10 @@ export class CardanoEngine extends CurrencyEngine<
       }
 
       this.walletLocalDataDirty = true
-      this.tokenCheckTransactionsStatus.set(
-        null,
-        progressCurrent / progressTotal
-      )
-      this.updateOnAddressesChecked()
+      this.syncTracker.updateHistoryRatio(null, progressCurrent / progressTotal)
     }
 
-    this.tokenCheckTransactionsStatus.set(null, 1)
-    this.updateOnAddressesChecked()
+    this.syncTracker.updateHistoryRatio(null, 1)
     this.sendTransactionEvents()
   }
 

@@ -16,6 +16,10 @@ import fetch from 'node-fetch'
 
 import { CurrencyEngine } from '../../src/common/CurrencyEngine'
 import { PluginEnvironment } from '../../src/common/innerPlugin'
+import {
+  makeTokenSyncTracker,
+  TokenSyncTracker
+} from '../../src/common/SyncTracker'
 import { asWalletLocalData, SafeCommonWalletInfo } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
@@ -305,7 +309,7 @@ describe('Engine', function () {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function validateTxidListMap(
-    engine: CurrencyEngine<FakeTools, SafeCommonWalletInfo>
+    engine: CurrencyEngine<FakeTools, SafeCommonWalletInfo, TokenSyncTracker>
   ) {
     const tokenIds = [null, '6b175474e89094c44da98b954eedeac495271d0f']
     for (const tokenId of tokenIds) {
@@ -340,7 +344,8 @@ describe('Engine', function () {
           type: '',
           keys: { publicKey: 'hi' }
         },
-        currencyEngineOptions
+        currencyEngineOptions,
+        makeTokenSyncTracker
       )
       engine.walletLocalData = asWalletLocalData({ publicKey: '0x123456' })
 

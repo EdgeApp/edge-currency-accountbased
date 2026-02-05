@@ -29,6 +29,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
@@ -89,7 +90,11 @@ const bogusAccounts: { readonly [name: string]: true } = {
   fobleos13125: true
 }
 
-export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
+export class EosEngine extends CurrencyEngine<
+  EosTools,
+  SafeEosWalletInfo,
+  TokenSyncTracker
+> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   otherData!: EosWalletOtherData
   otherMethods: Object
@@ -106,7 +111,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     walletInfo: SafeEosWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     const { networkInfo } = env
     this.engineFetch = makeEngineFetch(env.io)
     this.networkInfo = networkInfo
@@ -527,8 +532,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         }
       }
 
-      this.tokenCheckTransactionsStatus.set(tokenId, 1)
-      this.updateOnAddressesChecked()
+      this.syncTracker.updateHistoryRatio(tokenId, 1)
       this.sendTransactionEvents()
     }
   }

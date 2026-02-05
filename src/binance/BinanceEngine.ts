@@ -6,6 +6,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { makeTokenSyncTracker } from '../common/SyncTracker'
 import { BinanceTools } from './BinanceTools'
 import { asSafeBnbWalletInfo, BinanceNetworkInfo } from './binanceTypes'
 
@@ -19,7 +20,13 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafeBnbWalletInfo(walletInfo)
-  const engine = new CurrencyEngine(env, tools, safeWalletInfo, opts)
+  const engine = new CurrencyEngine(
+    env,
+    tools,
+    safeWalletInfo,
+    opts,
+    makeTokenSyncTracker
+  )
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine()

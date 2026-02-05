@@ -22,6 +22,10 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from '../common/utils'
 import type { PiratechainIo, PiratechainSynchronizer } from './piratechainIo'
+import {
+  makePiratechainSyncTracker,
+  PiratechainSyncTracker
+} from './PiratechainSyncTracker'
 import { PiratechainTools } from './PiratechainTools'
 import {
   asPiratechainPrivateKeys,
@@ -34,7 +38,8 @@ import {
 
 export class PiratechainEngine extends CurrencyEngine<
   PiratechainTools,
-  SafePiratechainWalletInfo
+  SafePiratechainWalletInfo,
+  PiratechainSyncTracker
 > {
   pluginId: string
   networkInfo: PiratechainNetworkInfo
@@ -43,7 +48,6 @@ export class PiratechainEngine extends CurrencyEngine<
   availableZatoshi!: string
   initialNumBlocksToDownload!: number
   birthdayHeight: number
-  progressRatio!: number
   queryMutex: boolean
   makeSynchronizer: PiratechainIo['makeSynchronizer']
 
@@ -62,7 +66,7 @@ export class PiratechainEngine extends CurrencyEngine<
     opts: EdgeCurrencyEngineOptions,
     makeSynchronizer: PiratechainIo['makeSynchronizer']
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makePiratechainSyncTracker)
     const { networkInfo } = env
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
@@ -74,7 +78,6 @@ export class PiratechainEngine extends CurrencyEngine<
     this.queryMutex = false
 
     this.started = false
-    this.progressRatio = 0
   }
 
   setOtherData(raw: any): void {
@@ -99,13 +102,13 @@ export class PiratechainEngine extends CurrencyEngine<
   initSubscriptions(): void {
     if (this.synchronizer == null) return
     this.synchronizer.on('update', async payload => {
-      const { lastDownloadedHeight, scanProgress, networkBlockHeight } = payload
+      const { lastDownloadedHeight, networkBlockHeight } = payload
       this.updateBlockHeight(networkBlockHeight)
-      this.onUpdateProgress(
+      this.syncTracker.updateBlockProgress({
+        birthdayHeight: this.birthdayHeight,
         lastDownloadedHeight,
-        scanProgress,
         networkBlockHeight
-      )
+      })
       await this.queryAll()
     })
     this.synchronizer.on('statusChanged', async payload => {
@@ -134,40 +137,6 @@ export class PiratechainEngine extends CurrencyEngine<
     this.queryMutex = false
   }
 
-  onUpdateProgress(
-    lastDownloadedHeight: number,
-    scanProgress: number,
-    networkBlockHeight: number
-  ): void {
-    if (!this.addressesChecked && !this.isSynced()) {
-      const blocksToNetworkHeight = networkBlockHeight - this.birthdayHeight
-      const blocksDownloaded = lastDownloadedHeight - this.birthdayHeight
-
-      // Protect against division by zero
-      if (blocksToNetworkHeight === 0) return
-
-      const downloadProgress = Math.max(
-        Math.min(blocksDownloaded / blocksToNetworkHeight, 1),
-        0
-      )
-      // Sync status is split up between downloading and scanning blocks (89.5%),
-      // getting balance (0.5%), and querying transactions (10%).
-
-      const balanceProgress = downloadProgress * 0.99
-      const txProgress = downloadProgress * 0.8
-      this.tokenCheckBalanceStatus.set(null, balanceProgress)
-      this.tokenCheckTransactionsStatus.set(null, txProgress)
-
-      const totalProgress = (balanceProgress + txProgress) / 2
-
-      if (totalProgress > this.progressRatio) {
-        this.progressRatio = totalProgress
-        this.log.warn(`Scan and download progress: ${totalProgress}%`)
-        this.updateOnAddressesChecked()
-      }
-    }
-  }
-
   async startEngine(): Promise<void> {
     this.started = true
     await super.startEngine()
@@ -185,6 +154,7 @@ export class PiratechainEngine extends CurrencyEngine<
       if (balances.totalZatoshi === '-1') return
       this.availableZatoshi = balances.availableZatoshi
       this.updateBalance(null, balances.totalZatoshi)
+      this.syncTracker.updateBalanceRatio(1)
     } catch (e: any) {
       this.warn('Failed to update balances', e)
       this.updateBalance(null, '0')
@@ -196,19 +166,20 @@ export class PiratechainEngine extends CurrencyEngine<
     try {
       let first = this.otherData.blockRange.first
       let last = this.otherData.blockRange.last
+      const blocksToHeight =
+        this.walletLocalData.blockHeight - this.birthdayHeight
       while (this.isSynced() && last <= this.walletLocalData.blockHeight) {
         const transactions = await this.synchronizer.getTransactions({
           first,
           last
         })
 
-        transactions.forEach(tx => this.processTransaction(tx))
+        for (const tx of transactions) this.processTransaction(tx)
 
         if (last === this.walletLocalData.blockHeight) {
           first = this.walletLocalData.blockHeight
           this.walletLocalDataDirty = true
-          this.tokenCheckTransactionsStatus.set(null, 1)
-          this.updateOnAddressesChecked()
+          this.syncTracker.updateTransactionRatio(1)
           break
         }
 
@@ -224,6 +195,11 @@ export class PiratechainEngine extends CurrencyEngine<
           last
         }
         this.walletLocalDataDirty = true
+
+        if (blocksToHeight > 0) {
+          const historyRatio = (last - this.birthdayHeight) / blocksToHeight
+          this.syncTracker.updateTransactionRatio(historyRatio)
+        }
       }
     } catch (e: any) {
       this.error(
@@ -337,7 +313,7 @@ export class PiratechainEngine extends CurrencyEngine<
       ?.rescan()
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
     this.initData()
-    this.progressRatio = 0
+    this.syncTracker.resetSync()
     this.synchronizerStatus = 'SYNCING'
   }
 

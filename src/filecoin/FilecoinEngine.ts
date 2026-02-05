@@ -25,6 +25,7 @@ import {
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { FilecoinTools } from './FilecoinTools'
 import {
   asFilecoinInitOptions,
@@ -47,7 +48,8 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class FilecoinEngine extends CurrencyEngine<
   FilecoinTools,
-  SafeFilecoinWalletInfo
+  SafeFilecoinWalletInfo,
+  TokenSyncTracker
 > {
   address: Address
   availableAttoFil: string
@@ -78,7 +80,7 @@ export class FilecoinEngine extends CurrencyEngine<
     walletInfo: SafeFilecoinWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     const { networkInfo } = env
     this.address = Address.fromString(walletInfo.keys.address)
     this.availableAttoFil = '0'
@@ -102,7 +104,6 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   initData(): void {
-    this.tokenCheckTransactionsStatus.set(null, 0)
     // Engine variables
     this.availableAttoFil = '0'
   }
@@ -327,8 +328,7 @@ export class FilecoinEngine extends CurrencyEngine<
     const response = await this.filfoxApi.getAccount(addressString)
     this.availableAttoFil = response.balance
     this.updateBalance(null, response.balance)
-    this.tokenCheckBalanceStatus.set(null, 1)
-    this.updateOnAddressesChecked()
+    this.syncTracker.updateBalanceRatio(null, 1)
     this.walletLocalDataDirty = true
   }
 
@@ -346,21 +346,6 @@ export class FilecoinEngine extends CurrencyEngine<
       this.isScanning = true
 
       const addressString = this.address.toString()
-
-      const handleScanProgress = (progress: number): void => {
-        const currentProgress = this.tokenCheckTransactionsStatus.get(null) ?? 0
-        const newProgress = progress
-
-        if (
-          // Only send event if we haven't completed sync
-          currentProgress < 1 &&
-          // Avoid thrashing
-          (newProgress >= 1 || newProgress > currentProgress * 1.1)
-        ) {
-          this.tokenCheckTransactionsStatus.set(null, newProgress)
-          this.updateOnAddressesChecked()
-        }
-      }
 
       const handleScan = ({
         tx,
@@ -380,7 +365,7 @@ export class FilecoinEngine extends CurrencyEngine<
           }
         }
 
-        handleScanProgress(progress)
+        this.syncTracker.updateHistoryRatio(null, progress, 0.1)
       }
 
       const scanners = [
@@ -397,7 +382,7 @@ export class FilecoinEngine extends CurrencyEngine<
       this.walletLocalDataDirty = true
 
       // Make sure the sync progress is 100%
-      handleScanProgress(1)
+      this.syncTracker.updateHistoryRatio(null, 1)
     } catch (error) {
       console.error(error)
       throw error

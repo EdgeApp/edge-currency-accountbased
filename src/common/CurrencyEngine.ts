@@ -29,6 +29,7 @@ import {
 
 import { PluginEnvironment } from './innerPlugin'
 import { makePeriodicTask, PeriodicTask } from './periodicTask'
+import type { SyncEngine, SyncTracker } from './SyncTracker'
 import { makeMetaTokens, validateToken } from './tokenHelpers'
 import {
   asMaybeOtherParamsLastSeenTime,
@@ -68,7 +69,8 @@ export class CurrencyEngine<
     io: EdgeIo
     currencyInfo: EdgeCurrencyInfo
   },
-  SafeWalletInfo extends SafeCommonWalletInfo
+  SafeWalletInfo extends SafeCommonWalletInfo,
+  SyncTrackerT extends SyncTracker
 > implements EdgeCurrencyEngine
 {
   tools: Tools
@@ -76,9 +78,8 @@ export class CurrencyEngine<
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalDisklet: Disklet
   engineOn: boolean
-  addressesChecked: boolean
-  tokenCheckBalanceStatus: Map<EdgeTokenId, number> // Each tokenId can be a 0-1 value
-  tokenCheckTransactionsStatus: Map<EdgeTokenId, number> // Each tokenId code can be a 0-1 value
+  syncComplete: boolean
+  syncTracker: SyncTrackerT
   walletLocalData: WalletLocalData
   walletLocalDataDirty: boolean
 
@@ -131,7 +132,8 @@ export class CurrencyEngine<
     env: PluginEnvironment<{}>,
     tools: Tools,
     walletInfo: SafeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions,
+    makeSyncTracker: (engine: SyncEngine) => SyncTrackerT
   ) {
     const { builtinTokens, currencyInfo } = env
     const {
@@ -147,9 +149,8 @@ export class CurrencyEngine<
     this.warn = (message, e?) => this.log.warn(message + safeErrorMessage(e))
     this.error = (message, e?) => this.log.error(message + safeErrorMessage(e))
     this.engineOn = false
-    this.addressesChecked = false
-    this.tokenCheckBalanceStatus = new Map()
-    this.tokenCheckTransactionsStatus = new Map()
+    this.syncComplete = false
+    this.syncTracker = makeSyncTracker(this)
     this.walletLocalDataDirty = false
     this.seenTxCheckpoint = opts.seenTxCheckpoint
     // Sync in-memory decoy addresses with what core has saved
@@ -505,10 +506,6 @@ export class CurrencyEngine<
       this.walletLocalData.otherData
     )
 
-    // Add the native token currency
-    this.tokenCheckBalanceStatus.set(null, 0)
-    this.tokenCheckTransactionsStatus.set(null, 0)
-
     this.doInitialBalanceCallback()
     this.doInitialUnactivatedTokenIdsCallback()
 
@@ -664,8 +661,7 @@ export class CurrencyEngine<
       this.warn(`${tokenId}: token Address balance: ${balance}`)
       this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
     }
-    this.tokenCheckBalanceStatus.set(tokenId, 1)
-    this.updateOnAddressesChecked()
+    this.syncTracker.balanceComplete?.(tokenId)
   }
 
   updateConfirmations(tx: EdgeTransaction): boolean {
@@ -913,28 +909,16 @@ export class CurrencyEngine<
   }
 
   // Called by EthereumNetwork
-  updateOnAddressesChecked(): void {
-    if (this.addressesChecked) {
+  sendSyncStatus(totalStatus: number): void {
+    if (this.syncComplete) {
       return
     }
 
-    const activeTokenIds = [null, ...this.enabledTokenIds]
-    const perTokenSlice = 1 / activeTokenIds.length
-    let totalStatus = 0
-    let numComplete = 0
-    for (const tokenId of activeTokenIds) {
-      const balanceStatus = this.tokenCheckBalanceStatus.get(tokenId) ?? 0
-      const txStatus = this.tokenCheckTransactionsStatus.get(tokenId) ?? 0
-      totalStatus += ((balanceStatus + txStatus) / 2) * perTokenSlice
-      if (balanceStatus === 1 && txStatus === 1) {
-        numComplete++
-      }
-    }
-    if (numComplete === activeTokenIds.length) {
-      totalStatus = 1
-      this.addressesChecked = true
+    if (totalStatus === 1) {
+      this.syncComplete = true
     }
     this.log(`${this.walletId} syncRatio of: ${totalStatus}`)
+
     // note that sometimes callback does not get triggered on Android debug
     this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
 
@@ -942,7 +926,7 @@ export class CurrencyEngine<
     // This ensure that all initial syncs, without a defined seenTxCheckpoint,
     // will not incorrectly update the seenTxCheckpoint in the middle of an
     // initial sync.
-    if (this.addressesChecked) this.updateSeenTxCheckpoint()
+    if (this.syncComplete) this.updateSeenTxCheckpoint()
   }
 
   /**
@@ -950,11 +934,11 @@ export class CurrencyEngine<
    */
   setOneHundoSyncRatio(): void {
     // We need to make sure the wallet state is updated so it never gets a
-    // sync ratio of less than 1 from updateOnAddressesChecked. This
-    // is coupled logic that you need to know about. Setting this.addressesChecked
-    // is all that's needed to short circuit the logic in updateOnAddressesChecked.
-    // Go read updateOnAddressesChecked to understand.
-    this.addressesChecked = true
+    // sync ratio of less than 1 from sendSyncStatus. This
+    // is coupled logic that you need to know about. Setting this.syncComplete
+    // is all that's needed to short circuit the logic in sendSyncStatus.
+    // Go read sendSyncStatus to understand.
+    this.syncComplete = true
 
     // Need to sent the sync ratio up the core and to the client (GUI):
     this.currencyEngineCallbacks.onAddressesChecked(1)
@@ -977,9 +961,8 @@ export class CurrencyEngine<
       publicKey: this.walletLocalData.publicKey
     })
     this.walletLocalDataDirty = true
-    this.addressesChecked = false
-    this.tokenCheckBalanceStatus = new Map()
-    this.tokenCheckTransactionsStatus = new Map()
+    this.syncComplete = false
+    this.syncTracker.resetSync()
     this.transactionList = {}
     this.txIdList = {}
     this.txIdMap = {}

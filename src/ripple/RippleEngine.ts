@@ -56,6 +56,7 @@ import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { MakeTxParams } from '../common/types'
 import { utf8 } from '../common/utf8'
 import {
@@ -107,7 +108,8 @@ interface XrpParams {
 
 export class XrpEngine extends CurrencyEngine<
   RippleTools,
-  SafeRippleWalletInfo
+  SafeRippleWalletInfo,
+  TokenSyncTracker
 > {
   otherData!: XrpWalletOtherData
   networkInfo: XrpNetworkInfo
@@ -120,7 +122,7 @@ export class XrpEngine extends CurrencyEngine<
     walletInfo: SafeRippleWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     const { networkInfo } = env
     this.networkInfo = networkInfo
     this.nonce = 0
@@ -662,11 +664,7 @@ export class XrpEngine extends CurrencyEngine<
       }
       this.sendTransactionEvents()
       this.walletLocalData.lastAddressQueryHeight = blockHeight
-      this.tokenCheckTransactionsStatus.set(null, 1)
-      for (const tokenId of this.enabledTokenIds) {
-        this.tokenCheckTransactionsStatus.set(tokenId, 1)
-      }
-      this.updateOnAddressesChecked()
+      this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
     } catch (e: any) {
       this.error(`Error fetching transactions: `, e)
       await this.tools.reconnectApi()
@@ -712,10 +710,7 @@ export class XrpEngine extends CurrencyEngine<
 
       // If get here, we've checked balances for all possible tokens the user
       // could have enabled. Mark all assets as checked
-      for (const tokenId of this.enabledTokenIds) {
-        this.tokenCheckBalanceStatus.set(tokenId, 1)
-      }
-      this.updateOnAddressesChecked()
+      this.syncTracker.setBalanceRatios(this.enabledTokenIds, 1)
 
       if (this.enabledTokenIds.length > 0) {
         // Check for unactivated tokens

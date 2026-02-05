@@ -32,6 +32,7 @@ import {
   RetryCancelledError,
   retryWithBackoff
 } from '../common/retryWithBackoff'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import {
   biggyRoundToNearestInt,
   cleanTxLogs,
@@ -111,7 +112,8 @@ const DECOY_ADDRESSES_ENABLED = false
 
 export class EthereumEngine extends CurrencyEngine<
   EthereumTools,
-  SafeEthWalletInfo
+  SafeEthWalletInfo,
+  TokenSyncTracker
 > {
   declare currentSettings: EthereumUserSettings
   otherData!: EthereumWalletOtherData
@@ -134,6 +136,7 @@ export class EthereumEngine extends CurrencyEngine<
   externalFeeProviders: FeeProviderFunction[]
   optimismRollupParams?: OptimismRollupParams
   private syncNetworkAbortController?: AbortController
+
   constructor(
     env: PluginEnvironment<EthereumNetworkInfo>,
     tools: EthereumTools,
@@ -142,7 +145,7 @@ export class EthereumEngine extends CurrencyEngine<
     opts: EdgeCurrencyEngineOptions,
     currencyInfo: EdgeCurrencyInfo
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.lightMode = opts.lightMode ?? false
     this.initOptions = initOptions
     this.networkInfo = env.networkInfo
@@ -907,7 +910,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     // If no sync is needed, then set the sync ratio to 100% and return.
     if (!needsSync) {
-      if (!this.addressesChecked) {
+      if (!this.syncComplete) {
         this.setOneHundoSyncRatio()
       }
       return SYNC_NETWORK_INTERVAL

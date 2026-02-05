@@ -7,7 +7,6 @@ import {
   EdgeMemo,
   EdgeMetadata,
   EdgeSpendInfo,
-  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -24,6 +23,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs, getOtherParams } from '../common/utils'
 import type { ZcashIo, ZcashSynchronizer } from './zcashIo'
+import { makeZcashSyncTracker, ZcashSyncTracker } from './ZcashSyncTracker'
 import { ZcashTools } from './ZcashTools'
 import {
   asSafeZcashWalletInfo,
@@ -37,7 +37,8 @@ import {
 
 export class ZcashEngine extends CurrencyEngine<
   ZcashTools,
-  SafeZcashWalletInfo
+  SafeZcashWalletInfo,
+  ZcashSyncTracker
 > {
   pluginId: string
   networkInfo: ZcashNetworkInfo
@@ -45,11 +46,6 @@ export class ZcashEngine extends CurrencyEngine<
   synchronizerStatus!: StatusEvent['name']
   availableZatoshi!: string
   balances: ZcashBalances
-  progressRatio!: {
-    seenFirstUpdate: boolean
-    percent: number
-    lastUpdate: number
-  }
 
   makeSynchronizer: ZcashIo['makeSynchronizer']
 
@@ -71,7 +67,7 @@ export class ZcashEngine extends CurrencyEngine<
     opts: EdgeCurrencyEngineOptions,
     makeSynchronizer: ZcashIo['makeSynchronizer']
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeZcashSyncTracker)
     const { networkInfo } = env
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
@@ -105,11 +101,6 @@ export class ZcashEngine extends CurrencyEngine<
     // Engine variables
     this.synchronizerStatus = 'DISCONNECTED'
     this.availableZatoshi = '0'
-    this.progressRatio = {
-      seenFirstUpdate: false,
-      percent: 0,
-      lastUpdate: 0
-    }
   }
 
   initSubscriptions(): void {
@@ -117,7 +108,7 @@ export class ZcashEngine extends CurrencyEngine<
     this.synchronizer.on('update', async payload => {
       const { scanProgress, networkBlockHeight } = payload
       this.updateBlockHeight(networkBlockHeight)
-      this.onUpdateProgress(scanProgress)
+      this.syncTracker.updateProgress(scanProgress)
       await this.checkAutoshielding()
     })
     this.synchronizer.on('statusChanged', async payload => {
@@ -178,41 +169,6 @@ export class ZcashEngine extends CurrencyEngine<
         await this.startEngine()
       }
     })
-  }
-
-  onUpdateProgress(scanProgress: number): void {
-    // We can't trust the first progress report from the sdks. We'll take it if its 100 but otherwise we should toss it.
-    if (!this.progressRatio.seenFirstUpdate) {
-      this.progressRatio.seenFirstUpdate = true
-      if (scanProgress !== 100) return
-    }
-
-    // Balance and transaction querying is handled during the sync therefore we can treat them the same.
-
-    this.tokenCheckBalanceStatus.set(null, scanProgress / 100)
-    this.tokenCheckTransactionsStatus.set(null, scanProgress / 100)
-
-    if (
-      scanProgress > this.progressRatio.percent &&
-      (scanProgress === 100 ||
-        Date.now() - this.progressRatio.lastUpdate > 1000) // throttle updates to one second
-    ) {
-      this.progressRatio.percent = scanProgress
-      this.progressRatio.lastUpdate = Date.now()
-      this.log.warn(`Scan and download progress: ${Math.floor(scanProgress)}%`)
-      this.updateOnAddressesChecked()
-    }
-  }
-
-  // super.updateBalance calls updateOnAddressesChecked() but we want to limit that method to onUpdateProgress
-  updateBalance(tokenId: EdgeTokenId, balance: string): void {
-    const currentBalance = this.getBalance({ tokenId })
-    if (currentBalance == null || !eq(balance, currentBalance)) {
-      this.walletLocalData.totalBalances[''] = balance
-      this.walletLocalDataDirty = true
-      this.warn(`${tokenId}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
-    }
   }
 
   isSynced(): boolean {

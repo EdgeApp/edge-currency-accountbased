@@ -46,6 +46,7 @@ import {
   promiseAny,
   timeout
 } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { cache, cleanTxLogs, getOtherParams, snooze } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
@@ -72,7 +73,8 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class SolanaEngine extends CurrencyEngine<
   SolanaTools,
-  SafeSolanaWalletInfo
+  SafeSolanaWalletInfo,
+  TokenSyncTracker
 > {
   lightMode: boolean
   networkInfo: SolanaNetworkInfo
@@ -93,7 +95,7 @@ export class SolanaEngine extends CurrencyEngine<
     walletInfo: SafeSolanaWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.lightMode = opts.lightMode ?? false
     this.networkInfo = env.networkInfo
     this.fetch = async (uri, opts) =>
@@ -420,7 +422,7 @@ export class SolanaEngine extends CurrencyEngine<
     const mainPubkey = new PublicKey(this.base58PublicKey)
     await this.queryTransactionsInner(null, mainPubkey)
     this.sendTransactionEvents()
-    this.updateTxStatus(null, 1)
+    this.syncTracker.updateHistoryRatio(null, 1)
 
     for (const tokenId of this.enabledTokenIds) {
       const token = this.allTokensMap[tokenId]
@@ -437,7 +439,7 @@ export class SolanaEngine extends CurrencyEngine<
         await this.queryTransactionsInner(tokenId, pk)
         this.sendTransactionEvents()
       }
-      this.updateTxStatus(tokenId, 1)
+      this.syncTracker.updateHistoryRatio(tokenId, 1)
     }
   }
 
@@ -477,7 +479,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (txids.length === 0) {
-      this.updateTxStatus(tokenId, 1)
+      this.syncTracker.updateHistoryRatio(tokenId, 1)
       return
     }
 
@@ -544,7 +546,7 @@ export class SolanaEngine extends CurrencyEngine<
         if (percent !== this.progressRatio) {
           if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
             this.progressRatio = percent
-            this.updateTxStatus(tokenId, this.progressRatio)
+            this.syncTracker.updateHistoryRatio(tokenId, this.progressRatio)
           }
         }
       }
@@ -552,11 +554,6 @@ export class SolanaEngine extends CurrencyEngine<
 
     this.walletLocalDataDirty = true
     this.sendTransactionEvents()
-  }
-
-  updateTxStatus(tokenId: EdgeTokenId, progress: number): void {
-    this.tokenCheckTransactionsStatus.set(tokenId, progress)
-    this.updateOnAddressesChecked()
   }
 
   // // ****************************************************************************
@@ -568,10 +565,7 @@ export class SolanaEngine extends CurrencyEngine<
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     if (this.lightMode) {
-      this.tokenCheckTransactionsStatus.set(null, 1)
-      for (const tokenId of Object.keys(this.allTokensMap)) {
-        this.tokenCheckTransactionsStatus.set(tokenId, 1)
-      }
+      this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
     } else {
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     }

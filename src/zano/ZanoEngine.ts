@@ -25,7 +25,8 @@ import {
   makeLifecycleManager
 } from '../common/lifecycleManager'
 import { MakeTxParams } from '../common/types'
-import { cleanTxLogs, createWeightedAverageCalculator } from '../common/utils'
+import { cleanTxLogs } from '../common/utils'
+import { makeZanoSyncTracker, ZanoSyncTracker } from './ZanoSyncTracker'
 import { ZanoTools } from './ZanoTools'
 import {
   asGetAliasDetailsResponse,
@@ -41,15 +42,14 @@ import {
   ZanoWalletOtherData
 } from './zanoTypes'
 
-const SYNC_PROGRESS_WEIGHT = 0.85
-const BALANCE_PROGRESS_WEIGHT = 0.05
-const TRANSACTION_PROGRESS_WEIGHT = 0.1
-
-export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
+export class ZanoEngine extends CurrencyEngine<
+  ZanoTools,
+  SafeZanoWalletInfo,
+  ZanoSyncTracker
+> {
   networkInfo: ZanoNetworkInfo
   otherData!: ZanoWalletOtherData
 
-  calculateSyncProgress: (values: { [key: string]: number }) => number
   unlockedBalanceMap: Map<EdgeTokenId, string>
   private readonly nativeId: LifecycleManager<number>
   private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
@@ -60,14 +60,9 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     walletInfo: SafeZanoWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeZanoSyncTracker)
     this.networkInfo = env.networkInfo
 
-    this.calculateSyncProgress = createWeightedAverageCalculator({
-      balance: BALANCE_PROGRESS_WEIGHT,
-      transaction: TRANSACTION_PROGRESS_WEIGHT,
-      sync: SYNC_PROGRESS_WEIGHT
-    })
     this.unlockedBalanceMap = new Map()
 
     // This will receive the private keys on the first network sync:
@@ -178,7 +173,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
     }
 
-    this.updateProgress({ balance: 1 })
+    this.syncTracker.updateBalanceRatio(1)
   }
 
   async queryTransactions(): Promise<void> {
@@ -206,12 +201,12 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       ) {
         break
       }
-      this.updateProgress({
-        transaction: transactions.total_transfers / transactions.last_item_index
-      })
+      this.syncTracker.updateHistoryRatio(
+        transactions.total_transfers / transactions.last_item_index
+      )
     }
     this.sendTransactionEvents()
-    this.updateProgress({ transaction: 1 })
+    this.syncTracker.updateHistoryRatio(1)
   }
 
   processTransaction = (tx: RecentTransaction): void => {
@@ -313,7 +308,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     this.updateBlockHeight(blockheight)
 
     if (status.progress === 100 || status.wallet_state === 2) {
-      this.updateProgress({ sync: 1 })
+      this.syncTracker.updateBlockRatio(1)
       await this.tools.zano.whitelistAssets(
         nativeId,
         Object.keys(this.allTokensMap)
@@ -322,27 +317,8 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       await this.queryTransactions()
       return 20000
     } else {
-      this.updateProgress({ sync: status.progress / 100 })
+      this.syncTracker.updateBlockRatio(status.progress / 100)
       return 1000
-    }
-  }
-
-  private updateProgress(values: { [key: string]: number }): void {
-    const previousProgress = this.calculateSyncProgress({})
-    const newProgress = this.calculateSyncProgress(values)
-
-    // Update every 1% change
-    const flooredPrevProgress = Math.floor(previousProgress * 100)
-    const flooredNewProgress = Math.floor(newProgress * 100)
-
-    if (newProgress === 1 || flooredNewProgress > flooredPrevProgress) {
-      this.tokenCheckBalanceStatus.set(null, newProgress)
-      this.tokenCheckTransactionsStatus.set(null, newProgress)
-      for (const tokenId of this.enabledTokenIds) {
-        this.tokenCheckBalanceStatus.set(tokenId, newProgress)
-        this.tokenCheckTransactionsStatus.set(tokenId, newProgress)
-      }
-      this.updateOnAddressesChecked()
     }
   }
 
@@ -354,7 +330,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     this.nativeId.stop()
     this.unlockedBalanceMap.clear()
     await this.killEngine()
-    this.updateProgress({ sync: 0, balance: 0, transaction: 0 })
+    this.syncTracker.resetSync()
     await this.clearBlockchainCache()
     await this.startEngine()
   }

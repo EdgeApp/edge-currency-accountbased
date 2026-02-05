@@ -61,6 +61,10 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../../common/CurrencyEngine'
 import { PluginEnvironment } from '../../common/innerPlugin'
 import { getRandomDelayMs } from '../../common/network'
+import {
+  makeTokenSyncTracker,
+  TokenSyncTracker
+} from '../../common/SyncTracker'
 import { asMaybeContractLocation } from '../../common/tokenHelpers'
 import { MakeTxParams } from '../../common/types'
 import { cleanTxLogs, makeEngineFetch } from '../../common/utils'
@@ -137,7 +141,8 @@ const asRangoProviderTxDataFromJson = asJSON(asRangoProviderTxData)
 
 export class CosmosEngine extends CurrencyEngine<
   CosmosTools,
-  SafeCosmosWalletInfo
+  SafeCosmosWalletInfo,
+  TokenSyncTracker
 > {
   networkInfo: CosmosNetworkInfo
   engineFetch: EdgeFetchFunction
@@ -162,7 +167,7 @@ export class CosmosEngine extends CurrencyEngine<
     walletInfo: SafeCosmosWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.networkInfo = env.networkInfo
     this.engineFetch = makeEngineFetch(env.io, () => {
       const networkPrivacy = this.currentSettings?.networkPrivacy
@@ -738,10 +743,10 @@ export class CosmosEngine extends CurrencyEngine<
           )
         }
         progress += 0.5 / clientsList.length
-        for (const tokenId of [null, ...this.enabledTokenIds]) {
-          this.tokenCheckTransactionsStatus.set(tokenId, progress)
-        }
-        this.updateOnAddressesChecked()
+        this.syncTracker.setHistoryRatios(
+          [null, ...this.enabledTokenIds],
+          progress
+        )
       }
       this.otherData.archivedTxLastCheckTime = archivedTxLastCheckTime
       this.walletLocalDataDirty = true

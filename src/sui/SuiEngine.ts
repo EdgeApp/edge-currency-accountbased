@@ -24,6 +24,7 @@ import { base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   asSafeCommonWalletInfo,
@@ -44,7 +45,11 @@ import {
 
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
-export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
+export class SuiEngine extends CurrencyEngine<
+  SuiTools,
+  SafeCommonWalletInfo,
+  TokenSyncTracker
+> {
   networkInfo: SuiNetworkInfo
 
   otherData!: SuiWalletOtherData
@@ -57,7 +62,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
     walletInfo: SafeCommonWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.networkInfo = env.networkInfo
     const publicKey = new Ed25519PublicKey(walletInfo.keys.publicKey)
     this.suiAddress = publicKey.toSuiAddress()
@@ -155,10 +160,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
       }
 
-      for (const tokenId of [null, ...this.enabledTokenIds]) {
-        this.tokenCheckBalanceStatus.set(tokenId, 1)
-      }
-      this.updateOnAddressesChecked()
+      this.syncTracker.setBalanceRatios([null, ...this.enabledTokenIds], 1)
     } catch (e) {
       this.log.warn('queryBalance error:', e)
     }
@@ -176,10 +178,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
       this.log.warn('queryTransactions from error:', e)
     }
 
-    this.tokenCheckTransactionsStatus.set(null, 0.5)
-    for (const tokenId of this.enabledTokenIds) {
-      this.tokenCheckTransactionsStatus.set(tokenId, 0.5)
-    }
+    this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 0.5)
 
     const cursorTo = this.otherData.latestTxidTo
     try {
@@ -194,11 +193,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
 
     this.sendTransactionEvents()
 
-    this.tokenCheckTransactionsStatus.set(null, 1)
-    for (const tokenId of this.enabledTokenIds) {
-      this.tokenCheckTransactionsStatus.set(tokenId, 1)
-    }
-    this.updateOnAddressesChecked()
+    this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
   }
 
   async queryTransactionsInner(
