@@ -15,9 +15,7 @@ import {
   EdgeAssetAction,
   EdgeDenomination,
   EdgeMetadata,
-  EdgeToken,
   EdgeTokenId,
-  EdgeTokenInfo,
   EdgeTxAction,
   EdgeTxSwap
 } from 'edge-core-js/types'
@@ -40,11 +38,6 @@ export const asNumberString = (raw: any): string => {
   const n = asEither(asString, asNumber)(raw)
   return n.toString()
 }
-
-export interface BooleanMap {
-  readonly [key: string]: boolean
-}
-export type CustomToken = EdgeTokenInfo & EdgeToken
 
 export const asWalletLocalData = asObject({
   blockHeight: asMaybe(asNumber, 0),
