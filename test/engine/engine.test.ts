@@ -53,9 +53,8 @@ describe('Engine', function () {
 
     const emitter = new EventEmitter()
     const callbacks: EdgeCurrencyEngineCallbacks = {
-      onAddressesChecked(progressRatio) {
-        // console.log('onAddressesCheck', progressRatio)
-        emitter.emit('onAddressesCheck', progressRatio)
+      onAddressesChecked(totalRatio) {
+        emitter.emit('onSyncStatusChanged', { totalRatio })
       },
       onTxidsChanged(txid) {
         // console.log('onTxidsChanged', txid)
@@ -74,6 +73,9 @@ describe('Engine', function () {
       },
       onStakingStatusChanged() {},
       onSubscribeAddresses() {},
+      onSyncStatusChanged(status) {
+        emitter.emit('onSyncStatusChanged', status)
+      },
       onNewTokens() {},
       onTokenBalanceChanged(tokenId, balance) {
         emitter.emit('onTokenBalanceChanged', tokenId, balance)
@@ -240,9 +242,8 @@ describe('Engine', function () {
   // Get the currency info
   const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
-    onAddressesChecked(progressRatio) {
-      // console.log('onAddressesCheck', progressRatio)
-      emitter.emit('onAddressesCheck', progressRatio)
+    onAddressesChecked(totalRatio) {
+      emitter.emit('onSyncStatusChanged', { totalRatio })
     },
     onTxidsChanged(txid) {
       // console.log('onTxidsChanged', txid)
@@ -261,6 +262,9 @@ describe('Engine', function () {
     },
     onStakingStatusChanged() {},
     onSubscribeAddresses() {},
+    onSyncStatusChanged(status) {
+      emitter.emit('onSyncStatusChanged', status)
+    },
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChanged', tokenId, balance)

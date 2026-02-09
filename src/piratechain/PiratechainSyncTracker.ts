@@ -1,3 +1,5 @@
+import type { EdgeSyncStatus } from 'edge-core-js/types'
+
 import { SyncEngine, SyncTracker } from '../common/SyncTracker'
 
 const BLOCK_PROGRESS_WEIGHT = 0.895
@@ -32,37 +34,39 @@ export function makePiratechainSyncTracker(
   let lastTotalRatio = 0
   let lastUpdate = new Date()
 
-  function calculateStatus(): number {
+  function calculateStatus(): EdgeSyncStatus {
     // Avoid rounding issues by treating 1 as special:
     if (
       blocksDownloaded === blocksNeeded &&
       balanceRatio === 1 &&
       transactionRatio === 1
     ) {
-      return 1
+      return { totalRatio: 1 }
     }
 
-    return (
-      (blocksDownloaded / blocksNeeded) * BLOCK_PROGRESS_WEIGHT +
-      balanceRatio * BALANCE_PROGRESS_WEIGHT +
-      transactionRatio * TRANSACTION_PROGRESS_WEIGHT
-    )
+    return {
+      totalRatio:
+        (blocksDownloaded / blocksNeeded) * BLOCK_PROGRESS_WEIGHT +
+        balanceRatio * BALANCE_PROGRESS_WEIGHT +
+        transactionRatio * TRANSACTION_PROGRESS_WEIGHT,
+      blockRatio: [blocksDownloaded, blocksNeeded]
+    }
   }
 
   function maybeSendUpdate(): void {
-    const totalRatio = calculateStatus()
+    const status = calculateStatus()
 
     // Don't go backwards:
-    if (totalRatio <= lastTotalRatio) return
+    if (status.totalRatio <= lastTotalRatio) return
 
     // Throttle updates:
     const now = new Date()
     if (
-      totalRatio === 1 ||
+      status.totalRatio === 1 ||
       now.valueOf() - lastUpdate.valueOf() > THROTTLE_UPDATE_MS
     ) {
-      engine.sendSyncStatus(totalRatio)
-      lastTotalRatio = totalRatio
+      engine.sendSyncStatus(status)
+      lastTotalRatio = status.totalRatio
       lastUpdate = now
     }
   }

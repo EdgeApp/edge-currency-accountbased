@@ -1,3 +1,5 @@
+import type { EdgeSyncStatus } from 'edge-core-js/types'
+
 import { SyncEngine, SyncTracker } from '../common/SyncTracker'
 
 const THROTTLE_UPDATE_MS = 1000
@@ -29,19 +31,21 @@ export function makeZcashSyncTracker(engine: SyncEngine): ZcashSyncTracker {
         if (progressPercent !== 100) return
       }
 
-      const totalRatio = progressPercent / 100
+      const status: EdgeSyncStatus = {
+        totalRatio: progressPercent / 100
+      }
 
       // Don't go backwards:
-      if (totalRatio <= lastTotalRatio) return
+      if (status.totalRatio <= lastTotalRatio) return
 
       // Throttle updates:
       const now = new Date()
       if (
-        totalRatio === 1 ||
+        status.totalRatio === 1 ||
         now.valueOf() - lastUpdate.valueOf() > THROTTLE_UPDATE_MS
       ) {
-        engine.sendSyncStatus(totalRatio)
-        lastTotalRatio = totalRatio
+        engine.sendSyncStatus(status)
+        lastTotalRatio = status.totalRatio
         lastUpdate = now
       }
     }

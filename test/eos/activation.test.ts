@@ -38,9 +38,8 @@ describe(`EOS activation`, function () {
 
   const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
-    onAddressesChecked(progressRatio) {
-      // console.log('onAddressesCheck', progressRatio)
-      emitter.emit('onAddressesCheck', progressRatio)
+    onAddressesChecked(totalRatio) {
+      emitter.emit('onSyncStatusChanged', { totalRatio })
     },
     onTxidsChanged(txid) {
       // console.log('onTxidsChanged', txid)
@@ -59,6 +58,9 @@ describe(`EOS activation`, function () {
     },
     onStakingStatusChanged() {},
     onSubscribeAddresses() {},
+    onSyncStatusChanged(status) {
+      emitter.emit('onSyncStatusChanged', status)
+    },
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChange', tokenId, balance)

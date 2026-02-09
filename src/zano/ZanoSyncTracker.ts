@@ -1,3 +1,5 @@
+import type { EdgeSyncStatus } from 'edge-core-js/types'
+
 import { SyncEngine, SyncTracker } from '../common/SyncTracker'
 
 const SYNC_PROGRESS_WEIGHT = 0.85
@@ -9,7 +11,11 @@ const TRANSACTION_PROGRESS_WEIGHT = 0.1
  */
 export interface ZanoSyncTracker extends SyncTracker {
   updateBalanceRatio: (ratio: number) => void
-  updateBlockRatio: (ratio: number) => void
+  updateBlockRatio: (
+    ratio: number,
+    walletHeight: number,
+    daemonHeight: number
+  ) => void
   updateHistoryRatio: (ratio: number) => void
 }
 
@@ -19,34 +25,40 @@ export interface ZanoSyncTracker extends SyncTracker {
 export function makeZanoSyncTracker(engine: SyncEngine): ZanoSyncTracker {
   let balanceRatio = 0
   let blockRatio = 0
+  let blockRatioDetail: [number, number] = [0, 1]
   let historyRatio = 0
   let lastTotalRatio = 0
 
-  function calculateStatus(): number {
+  function calculateStatus(): EdgeSyncStatus {
     // Avoid rounding issues by treating 1 as special:
     if (balanceRatio === 1 && blockRatio === 1 && historyRatio === 1) {
-      return 1
+      return {
+        totalRatio: 1,
+        blockRatio: blockRatioDetail
+      }
     }
 
-    return (
-      balanceRatio * BALANCE_PROGRESS_WEIGHT +
-      blockRatio * SYNC_PROGRESS_WEIGHT +
-      historyRatio * TRANSACTION_PROGRESS_WEIGHT
-    )
+    return {
+      totalRatio:
+        balanceRatio * BALANCE_PROGRESS_WEIGHT +
+        blockRatio * SYNC_PROGRESS_WEIGHT +
+        historyRatio * TRANSACTION_PROGRESS_WEIGHT,
+      blockRatio: blockRatioDetail
+    }
   }
 
   function maybeSendUpdate(): void {
-    const totalRatio = calculateStatus()
+    const status = calculateStatus()
 
     // Update every 1% change
     const flooredPrevProgress = Math.floor(lastTotalRatio * 100)
-    const flooredNewProgress = Math.floor(totalRatio * 100)
+    const flooredNewProgress = Math.floor(status.totalRatio * 100)
 
-    if (totalRatio === 1 || flooredNewProgress > flooredPrevProgress) {
-      engine.sendSyncStatus(totalRatio)
+    if (status.totalRatio === 1 || flooredNewProgress > flooredPrevProgress) {
+      engine.sendSyncStatus(status)
     }
 
-    lastTotalRatio = totalRatio
+    lastTotalRatio = status.totalRatio
   }
 
   const out: ZanoSyncTracker = {
@@ -62,8 +74,9 @@ export function makeZanoSyncTracker(engine: SyncEngine): ZanoSyncTracker {
       maybeSendUpdate()
     },
 
-    updateBlockRatio(ratio) {
+    updateBlockRatio(ratio, walletHeight, daemonHeight) {
       blockRatio = ratio
+      blockRatioDetail = [walletHeight, Math.max(1, daemonHeight)]
       maybeSendUpdate()
     },
 

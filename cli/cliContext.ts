@@ -152,6 +152,7 @@ export async function makeCliEngine(
         onSeenTxCheckpoint: () => log('onSeenTxCheckpoint'),
         onStakingStatusChanged: () => log('onStakingStatusChanged'),
         onSubscribeAddresses: () => log('onSubscribeAddresses'),
+        onSyncStatusChanged: () => log('onSyncStatusChanged'),
         onTokenBalanceChanged: () => log('onTokenBalanceChanged'),
         onTransactions: () => log('onTransactionsChanged'),
         onTransactionsChanged: () => log('onTransactionsChanged'),

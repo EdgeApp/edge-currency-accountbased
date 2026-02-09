@@ -308,7 +308,11 @@ export class ZanoEngine extends CurrencyEngine<
     this.updateBlockHeight(blockheight)
 
     if (status.progress === 100 || status.wallet_state === 2) {
-      this.syncTracker.updateBlockRatio(1)
+      this.syncTracker.updateBlockRatio(
+        1,
+        status.current_wallet_height,
+        status.current_daemon_height
+      )
       await this.tools.zano.whitelistAssets(
         nativeId,
         Object.keys(this.allTokensMap)
@@ -317,7 +321,11 @@ export class ZanoEngine extends CurrencyEngine<
       await this.queryTransactions()
       return 20000
     } else {
-      this.syncTracker.updateBlockRatio(status.progress / 100)
+      this.syncTracker.updateBlockRatio(
+        status.progress / 100,
+        status.current_wallet_height,
+        status.current_daemon_height
+      )
       return 1000
     }
   }

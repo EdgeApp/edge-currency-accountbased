@@ -16,6 +16,7 @@ import {
   EdgeMetaToken,
   EdgeSpendInfo,
   EdgeSubscribedAddress,
+  EdgeSyncStatus,
   EdgeToken,
   EdgeTokenId,
   EdgeTokenIdOptions,
@@ -909,18 +910,22 @@ export class CurrencyEngine<
   }
 
   // Called by EthereumNetwork
-  sendSyncStatus(totalStatus: number): void {
+  sendSyncStatus(syncStatus: EdgeSyncStatus): void {
     if (this.syncComplete) {
       return
     }
 
-    if (totalStatus === 1) {
+    if (syncStatus.totalRatio === 1) {
       this.syncComplete = true
     }
-    this.log(`${this.walletId} syncRatio of: ${totalStatus}`)
+    this.log(`${this.walletId} syncRatio of: ${syncStatus.totalRatio}`)
 
     // note that sometimes callback does not get triggered on Android debug
-    this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
+    if (this.currencyEngineCallbacks.onSyncStatusChanged != null) {
+      this.currencyEngineCallbacks.onSyncStatusChanged(syncStatus)
+    } else {
+      this.currencyEngineCallbacks.onAddressesChecked(syncStatus.totalRatio)
+    }
 
     // Only call the callback if the wallet is fully synced.
     // This ensure that all initial syncs, without a defined seenTxCheckpoint,
@@ -941,7 +946,11 @@ export class CurrencyEngine<
     this.syncComplete = true
 
     // Need to sent the sync ratio up the core and to the client (GUI):
-    this.currencyEngineCallbacks.onAddressesChecked(1)
+    if (this.currencyEngineCallbacks.onSyncStatusChanged != null) {
+      this.currencyEngineCallbacks.onSyncStatusChanged({ totalRatio: 1 })
+    } else {
+      this.currencyEngineCallbacks.onAddressesChecked(1)
+    }
   }
 
   updateSeenTxCheckpoint(): void {

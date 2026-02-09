@@ -1,4 +1,4 @@
-import type { EdgeTokenId } from 'edge-core-js/types'
+import type { EdgeSyncStatus, EdgeTokenId } from 'edge-core-js/types'
 
 /**
  * Abstracts the ability to return a sync status,
@@ -19,7 +19,7 @@ export interface SyncTracker {
 export interface SyncEngine {
   enabledTokenIds: EdgeTokenId[]
 
-  sendSyncStatus: (status: number) => void
+  sendSyncStatus: (status: EdgeSyncStatus) => void
 }
 
 /**
@@ -44,7 +44,7 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
   const balanceRatios = new Map<EdgeTokenId, number>()
   const historyRatios = new Map<EdgeTokenId, number>()
 
-  function getSyncStatus(): number {
+  function getSyncStatus(): EdgeSyncStatus {
     const activeTokenIds = [null, ...engine.enabledTokenIds]
     const perTokenSlice = 1 / activeTokenIds.length
     let totalRatio = 0
@@ -60,10 +60,10 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
 
     // Avoid rounding issues by returning a literal "1":
     if (numComplete === activeTokenIds.length) {
-      return 1
+      return { totalRatio: 1 }
     }
 
-    return totalRatio
+    return { totalRatio }
   }
 
   const out: TokenSyncTracker = {
