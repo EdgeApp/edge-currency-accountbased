@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.72.1 (2026-02-09)
+
 - fixed: Fix missing engine scope in Liberland transaction processing
 
 ## 4.72.0 (2026-02-05)
