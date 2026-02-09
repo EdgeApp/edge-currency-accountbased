@@ -108,22 +108,18 @@ export function getLegacyDenomination(
   builtinTokens: EdgeTokenMap
 ): EdgeDenomination | undefined {
   // Look in the primary currency info:
-  for (const denomination of currencyInfo.denominations) {
-    if (denomination.name === name) return denomination
+  if (currencyInfo.currencyCode === name) {
+    return currencyInfo.denominations[0]
   }
 
   // Look in the custom tokens:
   for (const metaToken of legacyTokens) {
-    for (const denomination of metaToken.denominations) {
-      if (denomination.name === name) return denomination
-    }
+    if (metaToken.currencyCode === name) return metaToken.denominations[0]
   }
 
   // Look in the builtin tokens:
   for (const token of Object.values(builtinTokens)) {
-    for (const denomination of token.denominations) {
-      if (denomination.name === name) return denomination
-    }
+    if (token.currencyCode === name) return token.denominations[0]
   }
 }
 
