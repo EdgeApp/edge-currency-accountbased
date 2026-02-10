@@ -13,6 +13,7 @@ import { calibration } from './filecoin/calibrationInfo'
 import { filecoin } from './filecoin/filecoinInfo'
 import { fio } from './fio/fioInfo'
 import { hedera } from './hedera/hederaInfo'
+import { monero } from './monero/moneroInfo'
 import { piratechain } from './piratechain/piratechainInfo'
 import { liberland } from './polkadot/info/liberlandInfo'
 import { liberlandtestnet } from './polkadot/info/liberlandTestnetInfo'
@@ -42,6 +43,7 @@ const plugins = {
   hedera,
   liberland,
   liberlandtestnet,
+  monero,
   piratechain,
   polkadot,
   ripple,
