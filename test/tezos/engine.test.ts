@@ -37,8 +37,8 @@ describe(`Tezos engine`, function () {
 
   const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
-    onAddressesChecked(progressRatio) {
-      emitter.emit('onAddressesCheck', progressRatio)
+    onAddressesChecked(totalRatio) {
+      emitter.emit('onSyncStatusChanged', { totalRatio })
     },
     onTxidsChanged(txid) {
       emitter.emit('onTxidsChanged', txid)
@@ -54,6 +54,9 @@ describe(`Tezos engine`, function () {
     },
     onStakingStatusChanged() {},
     onSubscribeAddresses() {},
+    onSyncStatusChanged(status) {
+      emitter.emit('onSyncStatusChanged', status)
+    },
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChanged', tokenId, balance)

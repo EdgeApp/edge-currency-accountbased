@@ -67,28 +67,6 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     // Track the highest block height of transactions processed
     let highestProcessedBlockHeight = startBlock
 
-    // Initialize sync status only for tokens that don't have status yet
-    this.initializeSyncStatusForNewTokens()
-
-    const handleScanProgress = (
-      progress: number,
-      tokenId: EdgeTokenId
-    ): void => {
-      const currentProgress =
-        this.ethEngine.tokenCheckTransactionsStatus.get(tokenId) ?? 0
-      const newProgress = progress
-
-      if (
-        // Only send event if we haven't completed sync
-        currentProgress < 1 &&
-        // Avoid thrashing
-        (newProgress >= 1 || newProgress > currentProgress * 1.1)
-      ) {
-        this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, newProgress)
-        this.ethEngine.updateOnAddressesChecked()
-      }
-    }
-
     const handleScan = ({
       tx,
       progress,
@@ -114,7 +92,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         }
       }
 
-      handleScanProgress(progress, tokenId)
+      this.ethEngine.syncTracker.updateHistoryRatio(tokenId, progress, 0.1)
     }
 
     const scanners = [
@@ -142,7 +120,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     this.ethEngine.walletLocalDataDirty = true
 
     // Make sure the sync progress is 100% for main currency
-    handleScanProgress(1, null)
+    this.ethEngine.syncTracker.updateHistoryRatio(null, 1)
 
     return {
       tokenTxs: new Map([
@@ -166,18 +144,6 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
   private onUpdateTransactions(): void {
     this.ethEngine.sendTransactionEvents()
-  }
-
-  // Initialize sync status only for tokens that don't have status yet (undefined)
-  // This preserves existing progress for tokens already syncing or completed
-  private initializeSyncStatusForNewTokens(): void {
-    for (const tokenId of this.ethEngine.enabledTokenIds) {
-      // Only initialize if the status is undefined (never been set)
-      if (!this.ethEngine.tokenCheckTransactionsStatus.has(tokenId)) {
-        this.ethEngine.tokenCheckBalanceStatus.set(tokenId, 0)
-        this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, 0)
-      }
-    }
   }
 
   private async scanTokenTransactionsFromFilfox(

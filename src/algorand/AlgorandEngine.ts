@@ -30,6 +30,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { utf8 } from '../common/utf8'
 import {
   cleanTxLogs,
@@ -73,7 +74,8 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class AlgorandEngine extends CurrencyEngine<
   AlgorandTools,
-  SafeAlgorandWalletInfo
+  SafeAlgorandWalletInfo,
+  TokenSyncTracker
 > {
   otherData!: AlgorandWalletOtherData
   networkInfo: AlgorandNetworkInfo
@@ -90,7 +92,7 @@ export class AlgorandEngine extends CurrencyEngine<
     walletInfo: SafeAlgorandWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.networkInfo = env.networkInfo
 
     this.queryTxMutex = makeMutex()
@@ -435,8 +437,7 @@ export class AlgorandEngine extends CurrencyEngine<
 
       latestRound = latestRound ?? this.walletLocalData.blockHeight
       const progress = (latestRound - progressRound) / (latestRound - minRound)
-      this.tokenCheckTransactionsStatus.set(null, progress)
-      this.updateOnAddressesChecked()
+      this.syncTracker.updateHistoryRatio(null, progress)
 
       nextQueryToken = nextToken
     } while (nextQueryToken != null && continueQuery)
@@ -447,10 +448,7 @@ export class AlgorandEngine extends CurrencyEngine<
       this.walletLocalDataDirty = true
     }
 
-    for (const tokenId of [null, ...this.enabledTokenIds]) {
-      this.tokenCheckTransactionsStatus.set(tokenId, 1)
-    }
-    this.updateOnAddressesChecked()
+    this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
     this.sendTransactionEvents()
   }
 

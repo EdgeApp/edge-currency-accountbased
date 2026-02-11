@@ -39,6 +39,7 @@ import {
   formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
 import { snooze } from '../common/utils'
 import { TonTools } from './TonTools'
@@ -54,7 +55,11 @@ import {
 
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
-export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
+export class TonEngine extends CurrencyEngine<
+  TonTools,
+  SafeCommonWalletInfo,
+  TokenSyncTracker
+> {
   log: EdgeLog
   networkInfo: TonNetworkInfo
   otherData!: TonWalletOtherData
@@ -68,7 +73,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     walletInfo: SafeCommonWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.networkInfo = env.networkInfo
     this.log = env.log
 
@@ -164,8 +169,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     this.otherData.mostRecentHash = mostRecentHash
 
     this.sendTransactionEvents()
-    this.tokenCheckTransactionsStatus.set(null, 1)
-    this.updateOnAddressesChecked()
+    this.syncTracker.updateHistoryRatio(null, 1)
   }
 
   processTonTransaction(tx: ParsedTx): void {

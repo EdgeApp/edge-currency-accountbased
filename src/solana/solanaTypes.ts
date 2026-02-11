@@ -27,7 +27,7 @@ export interface SolanaNetworkInfo {
 }
 
 export const asSolanaWalletOtherData = asObject({
-  newestTxid: asMaybe(asObject(asString), () => ({}))
+  newestTxid: asMaybe<Record<string, string>>(asObject(asString), () => ({}))
 })
 
 export type SolanaWalletOtherData = ReturnType<typeof asSolanaWalletOtherData>

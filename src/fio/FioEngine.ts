@@ -39,6 +39,7 @@ import {
   promisesAgree,
   timeout
 } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import {
   cleanTxLogs,
   getOtherParams,
@@ -151,7 +152,11 @@ interface ParseActionResult {
 export type FindTransaction = (tokenId: EdgeTokenId, txId: string) => number
 export type GetTransactionList = (tokenId: EdgeTokenId) => EdgeTransaction[]
 
-export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
+export class FioEngine extends CurrencyEngine<
+  FioTools,
+  SafeFioWalletInfo,
+  TokenSyncTracker
+> {
   engineFetch: EdgeFetchFunction
   otherMethods: Object
   otherMethodsWithKeys: Object
@@ -186,7 +191,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     opts: EdgeCurrencyEngineOptions,
     tpid: string
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.engineFetch = makeEngineFetch(env.io)
     this.tpid = tpid
     this.networkInfo = env.networkInfo
@@ -614,8 +619,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     if (transactions) {
-      this.tokenCheckTransactionsStatus.set(null, 1)
-      this.updateOnAddressesChecked()
+      this.syncTracker.updateHistoryRatio(null, 1)
     }
     this.sendTransactionEvents()
   }

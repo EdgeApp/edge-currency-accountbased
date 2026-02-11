@@ -22,6 +22,7 @@ import {
   formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { cleanTxLogs, getOtherParams, makeEngineFetch } from '../common/utils'
 import { StellarTools } from './StellarTools'
 import {
@@ -53,7 +54,8 @@ type StellarServerFunction =
 
 export class StellarEngine extends CurrencyEngine<
   StellarTools,
-  SafeStellarWalletInfo
+  SafeStellarWalletInfo,
+  TokenSyncTracker
 > {
   networkInfo: StellarNetworkInfo
   engineFetch: EdgeFetchFunction
@@ -69,7 +71,7 @@ export class StellarEngine extends CurrencyEngine<
     walletInfo: SafeStellarWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.networkInfo = env.networkInfo
     this.engineFetch = makeEngineFetch(env.io)
     this.activatedAccountsCache = {}
@@ -377,8 +379,7 @@ export class StellarEngine extends CurrencyEngine<
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (e.response && e.response.title === 'Resource Missing') {
           this.log('Account not found. Probably not activated w/minimum XLM')
-          this.tokenCheckTransactionsStatus.set(null, 1)
-          this.updateOnAddressesChecked()
+          this.syncTracker.updateHistoryRatio(null, 1)
         } else {
           this.error(
             'checkTransactionsInnerLoop Error fetching transaction info: ',
@@ -395,8 +396,7 @@ export class StellarEngine extends CurrencyEngine<
       this.walletLocalDataDirty = true
     }
     this.walletLocalData.lastAddressQueryHeight = blockHeight
-    this.tokenCheckTransactionsStatus.set(null, 1)
-    this.updateOnAddressesChecked()
+    this.syncTracker.updateHistoryRatio(null, 1)
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -429,8 +429,7 @@ export class StellarEngine extends CurrencyEngine<
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (e.response && e.response.title === 'Resource Missing') {
         this.log('Account not found. Probably not activated w/minimum XLM')
-        this.tokenCheckBalanceStatus.set(null, 1)
-        this.updateOnAddressesChecked()
+        this.syncTracker.updateBalanceRatio(null, 1)
       } else {
         this.error(`checkAccountInnerLoop Error fetching address info: `, e)
       }

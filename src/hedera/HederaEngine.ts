@@ -27,6 +27,7 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { utf8 } from '../common/utf8'
 import { makeEngineFetch } from '../common/utils'
 import { HederaTools } from './HederaTools'
@@ -49,7 +50,8 @@ const SIXTY_DAYS = 5184000 // seconds
 
 export class HederaEngine extends CurrencyEngine<
   HederaTools,
-  SafeHederaWalletInfo
+  SafeHederaWalletInfo,
+  TokenSyncTracker
 > {
   client: Client
   engineFetch: EdgeFetchFunction
@@ -63,7 +65,7 @@ export class HederaEngine extends CurrencyEngine<
     walletInfo: SafeHederaWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
 
     const { client, mirrorNodes, maxFee } = env.networkInfo
     this.client = Client.forName(client)
@@ -90,9 +92,7 @@ export class HederaEngine extends CurrencyEngine<
         this.startActiveAccountLoops()
       } else {
         this.updateBalance(null, '0')
-        this.tokenCheckTransactionsStatus.set(null, 1)
-        this.tokenCheckBalanceStatus.set(null, 1)
-        this.updateOnAddressesChecked()
+        this.syncTracker.updateHistoryRatio(null, 1)
       }
     } catch (e: any) {
       this.warn(`checkAccountCreationStatus ${this.mirrorNodes[0]} error`, e)
@@ -144,14 +144,9 @@ export class HederaEngine extends CurrencyEngine<
           this.walletLocalDataDirty = true
 
           // Report progress in 10% increments
-          const currentProgress =
-            this.tokenCheckTransactionsStatus.get(null) ?? 0
           const newProgress =
             1 - (startingTimestamp - parseInt(timestamp)) / startingProgressDiff
-          if (newProgress - currentProgress > 0.1) {
-            this.tokenCheckTransactionsStatus.set(null, newProgress)
-            this.updateOnAddressesChecked()
-          }
+          this.syncTracker.updateHistoryRatio(null, newProgress, 0.1)
         } else {
           if (this.otherData.latestTimestamp !== timestamp) {
             this.otherData.latestTimestamp = timestamp
@@ -160,8 +155,7 @@ export class HederaEngine extends CurrencyEngine<
           break
         }
       }
-      this.tokenCheckTransactionsStatus.set(null, 1)
-      this.updateOnAddressesChecked()
+      this.syncTracker.updateHistoryRatio(null, 1)
     } catch (e: any) {
       this.warn('getNewTransactions error getting transactions:', e)
     }

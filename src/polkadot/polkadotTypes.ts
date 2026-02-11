@@ -24,7 +24,7 @@ export interface PolkadotNetworkInfo {
 }
 
 export const asPolkadotWalletOtherData = asObject({
-  subscanUrlMap: asMaybe(
+  subscanUrlMap: asMaybe<Record<string, { txCount: number }>>(
     asObject(
       asMaybe(
         asObject({
@@ -38,7 +38,7 @@ export const asPolkadotWalletOtherData = asObject({
     () => ({})
   ),
   txCount: asMaybe(asNumber, 0),
-  newestTxid: asMaybe(asObject(asString), () => ({}))
+  newestTxid: asMaybe<Record<string, string>>(asObject(asString), () => ({}))
 })
 
 export type PolkadotWalletOtherData = ReturnType<

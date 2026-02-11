@@ -23,6 +23,7 @@ import {
   asyncWaterfall,
   promiseAny
 } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import {
   cleanTxLogs,
   makeEngineFetch,
@@ -54,7 +55,8 @@ type TezosFunction = 'getNumberOfOperations' | 'getTransactions'
 
 export class TezosEngine extends CurrencyEngine<
   TezosTools,
-  SafeTezosWalletInfo
+  SafeTezosWalletInfo,
+  TokenSyncTracker
 > {
   networkInfo: TezosNetworkInfo
   engineFetch: EdgeFetchFunction
@@ -67,7 +69,7 @@ export class TezosEngine extends CurrencyEngine<
     walletInfo: SafeTezosWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.walletInfo = asSafeTezosWalletInfo(walletInfo)
     this.networkInfo = env.networkInfo
     this.engineFetch = makeEngineFetch(env.io)
@@ -199,7 +201,7 @@ export class TezosEngine extends CurrencyEngine<
       let txs: XtzGetTransaction[] = []
       let page = 0
       let transactions
-      this.tokenCheckTransactionsStatus.set(null, 0.5)
+      this.syncTracker.updateHistoryRatio(null, 0.5)
       do {
         transactions = await this.multicastServers(
           'getTransactions',
@@ -215,8 +217,7 @@ export class TezosEngine extends CurrencyEngine<
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
     }
-    this.tokenCheckTransactionsStatus.set(null, 1)
-    this.updateOnAddressesChecked()
+    this.syncTracker.updateHistoryRatio(null, 1)
   }
 
   // Check all account balance and other relevant info

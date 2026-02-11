@@ -26,6 +26,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Pirate Chain',
   pluginId: 'piratechain',
   requiredConfirmations: 10,
+  syncDisplayPrecision: 6,
   unsafeBroadcastTx: true,
   unsafeSyncNetwork: true,
   walletType: 'wallet:piratechain',

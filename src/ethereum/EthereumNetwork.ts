@@ -470,8 +470,9 @@ export class EthereumNetwork {
         } won`
       )
       let highestTxBlockHeight = 0
+      const syncedTokenIds: EdgeTokenId[] = []
       for (const [tokenId, tuple] of tokenTxs) {
-        this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, 1)
+        syncedTokenIds.push(tokenId)
         for (const tx of tuple.edgeTransactions) {
           this.ethEngine.addTransaction(tokenId, tx)
         }
@@ -495,13 +496,13 @@ export class EthereumNetwork {
       }
 
       this.ethEngine.walletLocalDataDirty = true
-      this.ethEngine.updateOnAddressesChecked()
+      this.ethEngine.syncTracker.setHistoryRatios(syncedTokenIds, 1)
 
       // Update addressSync state:
       if (
         // Don't update address needs if the engine has not finished it's
         // initial sync.
-        this.ethEngine.addressesChecked
+        this.ethEngine.syncComplete
       ) {
         // Filter the txids that have been processed:
         const updatedNeedsTxIds = this.ethNeeds.addressSync.needsTxids.filter(

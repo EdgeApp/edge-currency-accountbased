@@ -193,10 +193,7 @@ export class MidgardEngine extends CosmosEngine {
       this.walletLocalDataDirty = true
     }
 
-    for (const tokenId of [null, ...this.enabledTokenIds]) {
-      this.tokenCheckTransactionsStatus.set(tokenId, 1)
-    }
-    this.updateOnAddressesChecked()
+    this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
     this.sendTransactionEvents()
   }
 

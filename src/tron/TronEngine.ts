@@ -20,6 +20,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall } from '../common/promiseUtils'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import {
   getOtherParams,
   hexToDecimal,
@@ -102,7 +103,11 @@ type TronFunction =
   | 'trx_getTransactionInfo'
   | 'trx_getTransactions'
 
-export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
+export class TronEngine extends CurrencyEngine<
+  TronTools,
+  SafeTronWalletInfo,
+  TokenSyncTracker
+> {
   engineFetch: EdgeFetchFunction
   readonly recentBlock: ReferenceBlock
   accountResources: TronAccountResources
@@ -120,7 +125,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     walletInfo: SafeTronWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, currencyPlugin, walletInfo, opts)
+    super(env, currencyPlugin, walletInfo, opts, makeTokenSyncTracker)
     const { networkInfo } = env
     this.engineFetch = makeEngineFetch(env.io)
     this.networkInfo = networkInfo
@@ -383,14 +388,10 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         this.walletLocalDataDirty = true
       }
       await this.fetchTrxTransactions()
-      this.tokenCheckTransactionsStatus.set(null, 1)
-      this.updateOnAddressesChecked()
+      this.syncTracker.updateHistoryRatio(null, 1)
 
       await this.fetchTrc20Transactions()
-      for (const tokenId of this.enabledTokenIds) {
-        this.tokenCheckTransactionsStatus.set(tokenId, 1)
-      }
-      this.updateOnAddressesChecked()
+      this.syncTracker.setHistoryRatios(this.enabledTokenIds, 1)
 
       this.sendTransactionEvents()
     } catch (e: any) {

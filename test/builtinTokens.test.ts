@@ -3,7 +3,6 @@ import { EdgeCorePluginOptions, makeFakeIo } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
 import { makeMetaTokens } from '../src/common/tokenHelpers'
-import { BooleanMap } from '../src/common/types'
 import plugins from '../src/index'
 import { fakeLog } from './fake/fakeLog'
 
@@ -24,7 +23,10 @@ const fakePluginOptions: EdgeCorePluginOptions = {
 }
 
 const pluginIds = Object.keys(plugins) as Array<keyof typeof plugins>
-const pluginsWithoutMetatokens: BooleanMap = { algorand: true, ripple: true }
+const pluginsWithoutMetatokens: Record<string, boolean> = {
+  algorand: true,
+  ripple: true
+}
 
 describe('builtinTokens', function () {
   for (const pluginId of pluginIds) {

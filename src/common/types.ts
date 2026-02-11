@@ -15,9 +15,7 @@ import {
   EdgeAssetAction,
   EdgeDenomination,
   EdgeMetadata,
-  EdgeToken,
   EdgeTokenId,
-  EdgeTokenInfo,
   EdgeTxAction,
   EdgeTxSwap
 } from 'edge-core-js/types'
@@ -41,20 +39,27 @@ export const asNumberString = (raw: any): string => {
   return n.toString()
 }
 
-export interface BooleanMap {
-  readonly [key: string]: boolean
-}
-export type CustomToken = EdgeTokenInfo & EdgeToken
-
 export const asWalletLocalData = asObject({
   blockHeight: asMaybe(asNumber, 0),
   highestTxBlockHeight: asMaybe(asNumber, 0),
   lastAddressQueryHeight: asMaybe(asNumber, 0),
-  lastTransactionQueryHeight: asMaybe(asObject(asNumber), () => ({})),
-  lastTransactionDate: asMaybe(asObject(asNumber), () => ({})),
+  lastTransactionQueryHeight: asMaybe<Record<string, number>>(
+    asObject(asNumber),
+    () => ({})
+  ),
+  lastTransactionDate: asMaybe<Record<string, number>>(
+    asObject(asNumber),
+    () => ({})
+  ),
   publicKey: asMaybe(asString, ''),
-  totalBalances: asMaybe(asObject(asEither(asString, asUndefined)), () => ({})),
-  numTransactions: asMaybe(asObject(asNumber), () => ({})),
+  totalBalances: asMaybe<Record<string, string | undefined>>(
+    asObject(asEither(asString, asUndefined)),
+    () => ({})
+  ),
+  numTransactions: asMaybe<Record<string, number>>(
+    asObject(asNumber),
+    () => ({})
+  ),
   unactivatedTokenIds: asMaybe(asArray(asString), () => []),
   otherData: asOptional(asUnknown, () => ({}))
 })

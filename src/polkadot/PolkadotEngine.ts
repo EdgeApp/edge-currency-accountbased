@@ -26,6 +26,7 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
@@ -60,7 +61,8 @@ const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<
   PolkadotTools,
-  SafePolkadotWalletInfo
+  SafePolkadotWalletInfo,
+  TokenSyncTracker
 > {
   engineFetch: EdgeFetchFunction
   networkInfo: PolkadotNetworkInfo
@@ -75,7 +77,7 @@ export class PolkadotEngine extends CurrencyEngine<
     walletInfo: SafePolkadotWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.engineFetch = makeEngineFetch(env.io)
     this.networkInfo = env.networkInfo
     this.nonce = 0
@@ -335,19 +337,17 @@ export class PolkadotEngine extends CurrencyEngine<
         const totalCount = cleanTransfersResponse.data.transfers.totalCount
         processedCount += transfers.length
 
-        this.tokenCheckTransactionsStatus.set(
+        this.syncTracker.updateHistoryRatio(
           null,
           totalCount === 0 ? 1 : processedCount / totalCount
         )
-        this.updateOnAddressesChecked()
       } catch (e: any) {
         this.warn(`Error fetching Liberland transactions: ${e.message}`)
         throw e
       }
     }
 
-    this.tokenCheckTransactionsStatus.set(null, 1)
-    this.updateOnAddressesChecked()
+    this.syncTracker.updateHistoryRatio(null, 1)
 
     // LLM Transfers. Endpoint only handles specifically the LLM token
     hasNextPage = true
@@ -440,19 +440,17 @@ export class PolkadotEngine extends CurrencyEngine<
         // Update progress
         processedCount += meritTransfers.length
 
-        this.tokenCheckTransactionsStatus.set(
+        this.syncTracker.updateHistoryRatio(
           llmTokenId,
           totalCount === 0 ? 1 : processedCount / totalCount
         )
-        this.updateOnAddressesChecked()
       } catch (e: any) {
         this.warn(`Error fetching Liberland transactions: ${e.message}`)
         throw e
       }
     }
 
-    this.tokenCheckTransactionsStatus.set(llmTokenId, 1)
-    this.updateOnAddressesChecked()
+    this.syncTracker.updateHistoryRatio(llmTokenId, 1)
     this.sendTransactionEvents()
   }
 
@@ -492,8 +490,7 @@ export class PolkadotEngine extends CurrencyEngine<
         await this.queryTransactionsInner(subscanBaseUrl, isActiveChain)
       }
 
-      this.tokenCheckTransactionsStatus.set(null, 1)
-      this.updateOnAddressesChecked()
+      this.syncTracker.updateHistoryRatio(null, 1)
       this.sendTransactionEvents()
     })
   }
@@ -555,7 +552,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
       // Only update txCount and progress for the current chain
       if (isActiveChain) {
-        this.tokenCheckTransactionsStatus.set(
+        this.syncTracker.updateHistoryRatio(
           null,
           Math.min(
             1,
@@ -564,7 +561,6 @@ export class PolkadotEngine extends CurrencyEngine<
               : this.otherData.subscanUrlMap[subscanBaseUrl].txCount / count
           )
         )
-        this.updateOnAddressesChecked()
       }
 
       page++
@@ -591,10 +587,7 @@ export class PolkadotEngine extends CurrencyEngine<
     if (this.networkInfo.subscanBaseUrls.length > 0) {
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     } else {
-      for (const tokenId of this.enabledTokenIds) {
-        this.tokenCheckTransactionsStatus.set(tokenId, 1)
-      }
-      this.updateOnAddressesChecked()
+      this.syncTracker.setHistoryRatios(this.enabledTokenIds, 1)
     }
     await super.startEngine()
   }
