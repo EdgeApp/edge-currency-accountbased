@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.73.0 (2026-02-10)
+
 - chaged: Utilize the new edge-core-js sync status API (when available).
 
 ## 4.72.1 (2026-02-09)
