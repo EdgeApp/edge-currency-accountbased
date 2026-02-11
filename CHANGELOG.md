@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (HyperEVM) Correct USD₮0 denomination multiplier from 18 to 6 decimals
+
 ## 4.73.1 (2026-02-13)
 
 - changed: Move FIO SDK fork under EdgeApp GitHub organization
