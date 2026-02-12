@@ -7,6 +7,8 @@ import {
   asString,
   Cleaner
 } from 'cleaners'
+import type { NetworkType, WalletEventData } from 'react-native-monero-lwsf'
+import type { Subscriber } from 'yaob'
 
 export const EDGE_MONERO_LWS_SERVER = 'https://monerolws1.edge.app'
 
@@ -16,7 +18,7 @@ export const asMoneroInitOptions = asObject({
 export type MoneroInitOptions = ReturnType<typeof asMoneroInitOptions>
 
 export interface MoneroNetworkInfo {
-  networkType: number
+  networkType: NetworkType
 }
 
 export const asMoneroUserSettings = asObject({
@@ -109,3 +111,19 @@ export const asSafeMoneroWalletInfo: Cleaner<SafeMoneroWalletInfo> = asCodec(
     keys: asMoneroPublicKeys(clean.keys)
   })
 )
+
+// --- yaob-compatible IO interface for bridging events across webview ---
+
+export interface MoneroWalletEvents {
+  walletEvent: WalletEventData
+}
+
+export interface MoneroIo {
+  on: Subscriber<MoneroWalletEvents>
+  readonly callMonero: (
+    name: string,
+    jsonArguments: string[]
+  ) => Promise<string>
+  readonly methodNames: string[]
+  readonly documentDirectory: string
+}
