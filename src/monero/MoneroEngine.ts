@@ -95,37 +95,27 @@ export class MoneroEngine extends CurrencyEngine<
           ? this.currentSettings.moneroLightwalletServer
           : defaults.moneroLightwalletServer
 
-        let birthdayHeight: number
         try {
-          if (daemonAddress === EDGE_MONERO_LWS_SERVER) {
-            await this.tools.cppBridge.setLwsApiKey(this.initOptions.edgeApiKey)
-
-            const loginResult = await this.loginToLwsServer(
+          // LWS setup: API key and login
+          const isEdgeLws = daemonAddress === EDGE_MONERO_LWS_SERVER
+          let loginResult: LoginResponse | undefined
+          await this.tools.cppBridge.setLwsApiKey(
+            isEdgeLws ? this.initOptions.edgeApiKey : ''
+          )
+          if (isEdgeLws) {
+            loginResult = await this.loginToLwsServer(
               daemonAddress,
               this.walletInfo.keys.moneroAddress,
               this.walletInfo.keys.moneroViewKeyPrivate
             )
-
-            if (loginResult.start_height != null) {
-              birthdayHeight = loginResult.start_height
-            } else {
-              const addressInfo = await this.getAddressInfo(
-                daemonAddress,
-                this.walletInfo.keys.moneroAddress,
-                this.walletInfo.keys.moneroViewKeyPrivate
-              )
-              birthdayHeight = addressInfo.start_height
-            }
-          } else {
-            await this.tools.cppBridge.setLwsApiKey('')
-
-            const addressInfo = await this.getAddressInfo(
-              daemonAddress,
-              this.walletInfo.keys.moneroAddress,
-              this.walletInfo.keys.moneroViewKeyPrivate
-            )
-            birthdayHeight = addressInfo.start_height
           }
+
+          // Resolve birthday height (never open a wallet with height 0)
+          const birthdayHeight = await this.resolveBirthdayHeight(
+            keys.birthdayHeight,
+            daemonAddress,
+            loginResult
+          )
 
           await this.tools.cppBridge.openWallet(
             base64UrlWalletId,
@@ -181,6 +171,31 @@ export class MoneroEngine extends CurrencyEngine<
 
   setOtherData(raw: unknown): void {
     this.otherData = asMoneroWalletOtherData(raw)
+  }
+
+  /**
+   * Determine the wallet's creation height. For LWS wallets the login
+   * response or getAddressInfo endpoint is used as a fallback.
+   */
+  private async resolveBirthdayHeight(
+    height: number,
+    daemonAddress: string,
+    loginResult?: LoginResponse
+  ): Promise<number> {
+    if (height !== 0) return height
+
+    // For Edge LWS, the login response may already have it
+    if (loginResult?.start_height != null) {
+      return loginResult.start_height
+    }
+
+    // Fall back to getAddressInfo
+    const addressInfo = await this.getAddressInfo(
+      daemonAddress,
+      this.walletInfo.keys.moneroAddress,
+      this.walletInfo.keys.moneroViewKeyPrivate
+    )
+    return addressInfo.start_height
   }
 
   async loginToLwsServer(

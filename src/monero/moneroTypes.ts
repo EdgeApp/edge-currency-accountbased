@@ -16,6 +16,7 @@ import type {
 import type { Subscriber } from 'yaob'
 
 export const EDGE_MONERO_LWS_SERVER = 'https://monerolws1.edge.app'
+export const EDGE_MONERO_SERVER = `https://monerod.edge.app`
 
 export const asMoneroInitOptions = asObject({
   edgeApiKey: asOptional(asString, '')
@@ -32,9 +33,22 @@ export const asMoneroUserSettings = asObject({
 })
 export type MoneroUserSettings = ReturnType<typeof asMoneroUserSettings>
 
+export const asMoneroKeyOptions = asObject({
+  birthdayHeight: asNumber
+})
+export type MoneroKeyOptions = ReturnType<typeof asMoneroKeyOptions>
+
+export const asGetBlockCountResponse = asObject({
+  result: asObject({
+    count: asNumber
+  })
+})
+export type GetBlockCountResponse = ReturnType<typeof asGetBlockCountResponse>
+
 export interface MoneroPrivateKeys {
   dataKey: string
   moneroKey: string
+  birthdayHeight: number
   moneroSpendKeyPrivate: string
   moneroSpendKeyPublic: string
 }
@@ -45,6 +59,7 @@ export const asMoneroPrivateKeys = (
   const asKeys = asObject({
     dataKey: asString,
     [`${pluginId}Key`]: asString,
+    [`${pluginId}BirthdayHeight`]: asOptional(asNumber, 0),
     [`${pluginId}SpendKeyPrivate`]: asString,
     [`${pluginId}SpendKeyPublic`]: asString
   })
@@ -54,14 +69,16 @@ export const asMoneroPrivateKeys = (
       const clean = asKeys(raw)
       return {
         dataKey: clean.dataKey,
-        moneroKey: clean[`${pluginId}Key`],
-        moneroSpendKeyPrivate: clean[`${pluginId}SpendKeyPrivate`],
-        moneroSpendKeyPublic: clean[`${pluginId}SpendKeyPublic`]
+        moneroKey: clean[`${pluginId}Key`] as string,
+        birthdayHeight: clean[`${pluginId}BirthdayHeight`] as number,
+        moneroSpendKeyPrivate: clean[`${pluginId}SpendKeyPrivate`] as string,
+        moneroSpendKeyPublic: clean[`${pluginId}SpendKeyPublic`] as string
       }
     },
     clean => ({
       dataKey: clean.dataKey,
       [`${pluginId}Key`]: clean.moneroKey,
+      [`${pluginId}BirthdayHeight`]: clean.birthdayHeight,
       [`${pluginId}SpendKeyPrivate`]: clean.moneroSpendKeyPrivate,
       [`${pluginId}SpendKeyPublic`]: clean.moneroSpendKeyPublic
     })
