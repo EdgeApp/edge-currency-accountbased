@@ -17,8 +17,11 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
+  asGetBlockCountResponse,
+  asMoneroKeyOptions,
   asMoneroPrivateKeys,
   asSafeMoneroWalletInfo,
+  EDGE_MONERO_SERVER,
   MoneroIo,
   MoneroNetworkInfo
 } from './moneroTypes'
@@ -46,12 +49,38 @@ export class MoneroTools implements EdgeCurrencyTools {
     this.cppBridge = new CppBridge(moneroIo)
   }
 
+  async getBlockCount(monerodUrl: string): Promise<number> {
+    const url = `${monerodUrl.replace(/\/$/, '')}/json_rpc`
+    const response = await this.io.fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: '0',
+        method: 'get_block_count'
+      })
+    })
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(`get_block_count failed ${response.status}: ${text}`)
+    }
+    const json = await response.json()
+    const parsed = asGetBlockCountResponse(json)
+    return parsed.result.count
+  }
+
   async getDisplayPrivateKey(
     privateWalletInfo: EdgeWalletInfo
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
-    const keys = asMoneroPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.moneroKey
+    const { birthdayHeight, moneroKey } = asMoneroPrivateKeys(pluginId)(
+      privateWalletInfo.keys
+    )
+    const birthdayHeightString =
+      birthdayHeight > 0
+        ? `\n\nBirthday Height:\n${birthdayHeight.toString()}`
+        : ''
+    return `Seed Phrase:\n${moneroKey}${birthdayHeightString}`
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
@@ -61,7 +90,7 @@ export class MoneroTools implements EdgeCurrencyTools {
 
   async importPrivateKey(
     input: string,
-    _opts?: JsonObject
+    opts?: JsonObject
   ): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
     const { networkType } = this.networkInfo
@@ -72,8 +101,16 @@ export class MoneroTools implements EdgeCurrencyTools {
       networkType
     )
 
+    const { birthdayHeight } = asMoneroKeyOptions(opts)
+
+    const currentNetworkHeight = await this.getBlockCount(EDGE_MONERO_SERVER)
+    if (birthdayHeight > currentNetworkHeight) {
+      throw new Error('InvalidBirthdayHeight') // must be less than current block height
+    }
+
     return {
       [`${pluginId}Key`]: mnemonic,
+      [`${pluginId}BirthdayHeight`]: birthdayHeight,
       [`${pluginId}SpendKeyPrivate`]: keys.secretSpendKey,
       [`${pluginId}SpendKeyPublic`]: keys.publicSpendKey
     }
@@ -87,7 +124,11 @@ export class MoneroTools implements EdgeCurrencyTools {
 
     const generatedWallet = await this.cppBridge.generateWallet(networkType)
 
-    return await this.importPrivateKey(generatedWallet.mnemonic)
+    const birthdayHeight = await this.getBlockCount(EDGE_MONERO_SERVER)
+
+    return await this.importPrivateKey(generatedWallet.mnemonic, {
+      birthdayHeight
+    })
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
