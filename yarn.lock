@@ -7798,6 +7798,13 @@ raw-body@2.5.1:
     iconv-lite "0.4.24"
     unpipe "1.0.0"
 
+react-native-monero-lwsf@0.1.0-beta.0:
+  version "0.1.0-beta.0"
+  resolved "https://registry.yarnpkg.com/react-native-monero-lwsf/-/react-native-monero-lwsf-0.1.0-beta.0.tgz#5db7b2c17b072b084ba63e316cadafa7043a8dbd"
+  integrity sha512-sA0MXjhld+Fw2empyETYRVs0qHaAw3qifkAa8aotQG3xxEUOndWQjFeGmpXBPPFAyc8JC1oH3PBzCREm2Htjag==
+  dependencies:
+    cleaners "^0.3.17"
+
 react-native-piratechain@0.5.0:
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/react-native-piratechain/-/react-native-piratechain-0.5.0.tgz#74519d6983d6281eda9b0b788081eb2221a08204"
