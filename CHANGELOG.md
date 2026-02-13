@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Move FIO SDK fork under EdgeApp GitHub organization
+
 ## 4.73.0 (2026-02-10)
 
 - chaged: Utilize the new edge-core-js sync status API (when available).
