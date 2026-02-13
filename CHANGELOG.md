@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.73.1 (2026-02-13)
+
 - changed: Move FIO SDK fork under EdgeApp GitHub organization
 
 ## 4.73.0 (2026-02-10)
