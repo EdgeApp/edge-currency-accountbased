@@ -79,7 +79,7 @@ const builtinTokens: EdgeTokenMap = {
     denominations: [
       {
         name: 'USD₮0',
-        multiplier: '1000000000000000000',
+        multiplier: '1000000',
         symbol: 'USD₮0'
       }
     ],
