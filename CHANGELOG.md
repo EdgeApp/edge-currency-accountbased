@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Zano) Reject wrapped ETH addresses in address validation
+
 ## 4.71.2 (2026-02-02)
 
 - fixed: Remove extra call to whitelistAssets that was hanging and preventing core callbacks from resolving

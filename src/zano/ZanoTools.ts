@@ -152,7 +152,8 @@ export class ZanoTools implements EdgeCurrencyTools {
 
   async isValidAddress(address: string): Promise<boolean> {
     const info = await this.zano.getAddressInfo(address)
-    return info.valid
+    // Reject wrapped (ETH) addresses - only accept native Zano addresses
+    return info.valid && !info.wrap
   }
 
   async parseUri(
