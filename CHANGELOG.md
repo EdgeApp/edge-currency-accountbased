@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.71.4 (2026-02-15)
+
+- changed: Move FIO SDK fork under EdgeApp GitHub organization
+
 ## 4.71.3 (2026-02-15)
 
 - fixed: (Zano) Reject wrapped ETH addresses in address validation
