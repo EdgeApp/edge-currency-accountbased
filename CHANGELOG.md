@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.71.3 (2026-02-15)
+
 - fixed: (Zano) Reject wrapped ETH addresses in address validation
 
 ## 4.71.2 (2026-02-02)
