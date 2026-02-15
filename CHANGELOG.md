@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.73.2 (2026-02-15)
+
 - fixed: (HyperEVM) Correct USD₮0 denomination multiplier from 18 to 6 decimals
 - fixed: (Zano) Reject wrapped ETH addresses in address validation
 
