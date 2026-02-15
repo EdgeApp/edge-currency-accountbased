@@ -53,6 +53,7 @@ export class ZanoEngine extends CurrencyEngine<
   unlockedBalanceMap: Map<EdgeTokenId, string>
   private readonly nativeId: LifecycleManager<number>
   private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
+  private needsNativeStorageClear: boolean = false
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -75,6 +76,20 @@ export class ZanoEngine extends CurrencyEngine<
       onStart: async () => {
         // Block startup until the keys are ready:
         const keys = await keysPromise
+
+        // If resync was requested, delete the native wallet storage files
+        // before restarting. This ensures the wallet syncs from scratch.
+        if (this.needsNativeStorageClear) {
+          this.needsNativeStorageClear = false
+          try {
+            await this.tools.zano.deleteWallet(keys.storagePath)
+            this.log('Deleted native wallet storage for resync')
+          } catch (error: unknown) {
+            this.log.warn(
+              'Failed to delete native wallet storage: ' + String(error)
+            )
+          }
+        }
 
         try {
           await this.tools.zano.init(this.networkInfo.walletRpcAddress, -1)
@@ -234,6 +249,14 @@ export class ZanoEngine extends CurrencyEngine<
       const currentAmount = nativeAmountMap.get(assetId) ?? '0'
       nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
     }
+    // Also process token transfers from subtransfers (for BTCx and other tokens)
+    for (const transfer of tx.subtransfers ?? []) {
+      if (transfer.is_income) {
+        const { asset_id: assetId, amount } = transfer
+        const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+        nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
+      }
+    }
     for (const entry of tx.employed_entries.spent ?? []) {
       // spent amounts include the fee
       const { asset_id: assetId, amount } = entry
@@ -335,6 +358,7 @@ export class ZanoEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async resyncBlockchain(): Promise<void> {
+    this.needsNativeStorageClear = true
     this.nativeId.stop()
     this.unlockedBalanceMap.clear()
     await this.killEngine()
