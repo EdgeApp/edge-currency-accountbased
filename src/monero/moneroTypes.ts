@@ -6,9 +6,14 @@ import {
   asObject,
   asOptional,
   asString,
+  asValue,
   Cleaner
 } from 'cleaners'
-import type { NetworkType, WalletEventData } from 'react-native-monero-lwsf'
+import type {
+  NetworkType,
+  WalletBackend,
+  WalletEventData
+} from 'react-native-monero-lwsf'
 import { TransactionPriority } from 'react-native-monero-lwsf'
 import type { Subscriber } from 'yaob'
 
@@ -32,6 +37,11 @@ export const asMoneroUserSettings = asObject({
   monerodServer: asMaybe(asString, EDGE_MONERO_SERVER)
 })
 export type MoneroUserSettings = ReturnType<typeof asMoneroUserSettings>
+
+export const asMoneroWalletSettings = asObject({
+  backend: asMaybe<WalletBackend>(asValue('lws', 'monerod'), 'lws')
+})
+export type MoneroWalletSettings = ReturnType<typeof asMoneroWalletSettings>
 
 export const asMoneroKeyOptions = asObject({
   birthdayHeight: asNumber
