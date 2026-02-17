@@ -40,6 +40,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   defaultSettings,
+  hasWalletSettings: true,
 
   unsafeSyncNetwork: true,
   chainDisplayName: 'Monero',

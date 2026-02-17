@@ -13,7 +13,10 @@ import {
   NoAmountSpecifiedError,
   PendingFundsError
 } from 'edge-core-js/types'
-import type { TransactionDirection } from 'react-native-monero-lwsf'
+import type {
+  TransactionDirection,
+  WalletBackend
+} from 'react-native-monero-lwsf'
 import { base64, base64url } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
@@ -36,6 +39,7 @@ import {
   asMoneroPrivateKeys,
   asMoneroUserSettings,
   asMoneroWalletOtherData,
+  asMoneroWalletSettings,
   asSafeMoneroWalletInfo,
   EDGE_MONERO_LWS_SERVER,
   LoginResponse,
@@ -44,6 +48,7 @@ import {
   MoneroPrivateKeys,
   MoneroUserSettings,
   MoneroWalletOtherData,
+  MoneroWalletSettings,
   SafeMoneroWalletInfo,
   translateFee
 } from './moneroTypes'
@@ -55,6 +60,7 @@ export class MoneroEngine extends CurrencyEngine<
 > {
   networkInfo: MoneroNetworkInfo
   currentSettings: MoneroUserSettings
+  currentWalletSettings: MoneroWalletSettings
   otherData!: MoneroWalletOtherData
   initOptions: MoneroInitOptions
   unlockedBalance: string
@@ -77,7 +83,12 @@ export class MoneroEngine extends CurrencyEngine<
 
     this.unlockedBalance = '0'
 
+    // Shared across all wallets using this engine:
     this.currentSettings = asMoneroUserSettings(opts.userSettings)
+    // Unique to this particular wallet instance:
+    this.currentWalletSettings = asMoneroWalletSettings(
+      opts.walletSettings ?? {}
+    )
 
     const keysPromise = new Promise<MoneroPrivateKeys>(resolve => {
       this.sendKeysToNative = resolve
@@ -90,36 +101,47 @@ export class MoneroEngine extends CurrencyEngine<
           base64.parse(this.walletId)
         )
 
+        const { backend } = this.currentWalletSettings
+        this.log.warn('Using backend:', backend)
         const defaults = asMoneroUserSettings({})
-        const daemonAddress = this.currentSettings.enableCustomServers
-          ? this.currentSettings.moneroLightwalletServer
-          : defaults.moneroLightwalletServer
+        const daemonAddress =
+          backend === 'lws'
+            ? this.currentSettings.enableCustomServers
+              ? this.currentSettings.moneroLightwalletServer
+              : defaults.moneroLightwalletServer
+            : this.currentSettings.enableCustomMonerod
+            ? this.currentSettings.monerodServer
+            : defaults.monerodServer
 
         try {
-          // LWS setup: API key and login
-          const isEdgeLws = daemonAddress === EDGE_MONERO_LWS_SERVER
+          // LWS-specific setup: API key and login
           let loginResult: LoginResponse | undefined
-          await this.tools.cppBridge.setLwsApiKey(
-            isEdgeLws ? this.initOptions.edgeApiKey : ''
-          )
-          if (isEdgeLws) {
-            loginResult = await this.loginToLwsServer(
-              daemonAddress,
-              this.walletInfo.keys.moneroAddress,
-              this.walletInfo.keys.moneroViewKeyPrivate
+          if (backend === 'lws') {
+            const isEdgeLws = daemonAddress === EDGE_MONERO_LWS_SERVER
+            await this.tools.cppBridge.setLwsApiKey(
+              isEdgeLws ? this.initOptions.edgeApiKey : ''
             )
+            if (isEdgeLws) {
+              loginResult = await this.loginToLwsServer(
+                daemonAddress,
+                this.walletInfo.keys.moneroAddress,
+                this.walletInfo.keys.moneroViewKeyPrivate
+              )
+            }
           }
 
           // Resolve birthday height (never open a wallet with height 0)
           const birthdayHeight = await this.resolveBirthdayHeight(
             keys.birthdayHeight,
+            backend,
             daemonAddress,
+            defaults.moneroLightwalletServer,
             loginResult
           )
 
           await this.tools.cppBridge.openWallet(
             base64UrlWalletId,
-            'lws',
+            backend,
             keys.moneroKey,
             base64url.stringify(base64.parse(keys.dataKey)),
             this.networkInfo.networkType,
@@ -179,7 +201,9 @@ export class MoneroEngine extends CurrencyEngine<
    */
   private async resolveBirthdayHeight(
     height: number,
+    backend: WalletBackend,
     daemonAddress: string,
+    edgeLwsServer: string,
     loginResult?: LoginResponse
   ): Promise<number> {
     if (height !== 0) return height
@@ -189,12 +213,20 @@ export class MoneroEngine extends CurrencyEngine<
       return loginResult.start_height
     }
 
-    // Fall back to getAddressInfo
+    // For monerod wallets, fall back to the Edge LWS server
+    const serverUrl = backend === 'lws' ? daemonAddress : edgeLwsServer
     const addressInfo = await this.getAddressInfo(
-      daemonAddress,
+      serverUrl,
       this.walletInfo.keys.moneroAddress,
       this.walletInfo.keys.moneroViewKeyPrivate
     )
+
+    if (addressInfo.start_height === 0) {
+      throw new Error(
+        'Cannot open wallet: birthdayHeight is 0. ' +
+          'The wallet creation height could not be determined.'
+      )
+    }
     return addressInfo.start_height
   }
 
@@ -521,7 +553,7 @@ export class MoneroEngine extends CurrencyEngine<
     await this.clearBlockchainCache()
     await this.tools.cppBridge.deleteWallet(
       base64url.stringify(base64.parse(this.walletId)),
-      'lws'
+      this.currentWalletSettings.backend
     )
     await this.startEngine()
   }
@@ -534,6 +566,21 @@ export class MoneroEngine extends CurrencyEngine<
 
     this.currentSettings = newSettings
     await this.killEngine()
+    await this.startEngine()
+  }
+
+  async changeWalletSettings(walletSettings: JsonObject): Promise<void> {
+    const newSettings = asMaybe(asMoneroWalletSettings)(walletSettings)
+    if (
+      newSettings == null ||
+      matchJson(this.currentWalletSettings, newSettings)
+    ) {
+      return
+    }
+
+    this.currentWalletSettings = newSettings
+    await this.killEngine()
+    await this.clearBlockchainCache()
     await this.startEngine()
   }
 
