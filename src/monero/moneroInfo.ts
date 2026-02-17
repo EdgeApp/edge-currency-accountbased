@@ -9,6 +9,7 @@ import {
 } from './moneroTypes'
 
 const networkInfo: MoneroNetworkInfo = {
+  edgeLwsServer: EDGE_MONERO_LWS_SERVER,
   networkType: 'MAINNET'
 }
 
