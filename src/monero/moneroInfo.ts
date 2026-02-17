@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../common/innerPlugin'
 import type { MoneroTools } from './MoneroTools'
 import {
   EDGE_MONERO_LWS_SERVER,
+  EDGE_MONERO_SERVER,
   MoneroNetworkInfo,
   MoneroUserSettings
 } from './moneroTypes'
@@ -14,7 +15,9 @@ const networkInfo: MoneroNetworkInfo = {
 
 const defaultSettings: MoneroUserSettings = {
   enableCustomServers: false,
-  moneroLightwalletServer: EDGE_MONERO_LWS_SERVER
+  enableCustomMonerod: false,
+  moneroLightwalletServer: EDGE_MONERO_LWS_SERVER,
+  monerodServer: EDGE_MONERO_SERVER
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
