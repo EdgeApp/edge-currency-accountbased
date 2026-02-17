@@ -2,12 +2,17 @@ import {
   asBoolean,
   asCodec,
   asMaybe,
+  asNumber,
   asObject,
   asOptional,
   asString,
   Cleaner
 } from 'cleaners'
-import type { NetworkType, WalletEventData } from 'react-native-monero-lwsf'
+import type {
+  NetworkType,
+  TransactionPriority,
+  WalletEventData
+} from 'react-native-monero-lwsf'
 import type { Subscriber } from 'yaob'
 
 export const EDGE_MONERO_LWS_SERVER = 'https://monerolws1.edge.app'
@@ -28,6 +33,7 @@ export const asMoneroUserSettings = asObject({
 export type MoneroUserSettings = ReturnType<typeof asMoneroUserSettings>
 
 export interface MoneroPrivateKeys {
+  dataKey: string
   moneroKey: string
   moneroSpendKeyPrivate: string
   moneroSpendKeyPublic: string
@@ -37,6 +43,7 @@ export const asMoneroPrivateKeys = (
   pluginId: string
 ): Cleaner<MoneroPrivateKeys> => {
   const asKeys = asObject({
+    dataKey: asString,
     [`${pluginId}Key`]: asString,
     [`${pluginId}SpendKeyPrivate`]: asString,
     [`${pluginId}SpendKeyPublic`]: asString
@@ -46,12 +53,14 @@ export const asMoneroPrivateKeys = (
     raw => {
       const clean = asKeys(raw)
       return {
+        dataKey: clean.dataKey,
         moneroKey: clean[`${pluginId}Key`],
         moneroSpendKeyPrivate: clean[`${pluginId}SpendKeyPrivate`],
         moneroSpendKeyPublic: clean[`${pluginId}SpendKeyPublic`]
       }
     },
     clean => ({
+      dataKey: clean.dataKey,
       [`${pluginId}Key`]: clean.moneroKey,
       [`${pluginId}SpendKeyPrivate`]: clean.moneroSpendKeyPrivate,
       [`${pluginId}SpendKeyPublic`]: clean.moneroSpendKeyPublic
@@ -111,6 +120,37 @@ export const asSafeMoneroWalletInfo: Cleaner<SafeMoneroWalletInfo> = asCodec(
     keys: asMoneroPublicKeys(clean.keys)
   })
 )
+
+export function translateFee(fee?: string): TransactionPriority {
+  if (fee === 'low') return 1
+  if (fee === 'high') return 3
+  return 2 // Default to medium
+}
+
+export const asMoneroWalletOtherData = asObject({
+  processedTransactionCount: asMaybe(asNumber, 0),
+  mostRecentTxid: asMaybe(asString)
+})
+export type MoneroWalletOtherData = ReturnType<typeof asMoneroWalletOtherData>
+
+export const asLoginResponse = asObject({
+  new_address: asBoolean,
+  generated_locally: asOptional(asBoolean),
+  start_height: asOptional(asNumber)
+})
+export type LoginResponse = ReturnType<typeof asLoginResponse>
+
+export const asAddressInfoResponse = asObject({
+  blockchain_height: asNumber,
+  locked_funds: asString,
+  scanned_block_height: asNumber,
+  scanned_height: asNumber,
+  start_height: asNumber,
+  total_received: asString,
+  total_sent: asString,
+  transaction_height: asNumber
+})
+export type AddressInfoResponse = ReturnType<typeof asAddressInfoResponse>
 
 // --- yaob-compatible IO interface for bridging events across webview ---
 
