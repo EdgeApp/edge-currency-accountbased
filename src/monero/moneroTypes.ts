@@ -29,7 +29,9 @@ export interface MoneroNetworkInfo {
 
 export const asMoneroUserSettings = asObject({
   enableCustomServers: asMaybe(asBoolean, false),
-  moneroLightwalletServer: asMaybe(asString, EDGE_MONERO_LWS_SERVER)
+  enableCustomMonerod: asMaybe(asBoolean, false),
+  moneroLightwalletServer: asMaybe(asString, EDGE_MONERO_LWS_SERVER),
+  monerodServer: asMaybe(asString, EDGE_MONERO_SERVER)
 })
 export type MoneroUserSettings = ReturnType<typeof asMoneroUserSettings>
 
