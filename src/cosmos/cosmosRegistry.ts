@@ -62,7 +62,8 @@ export const upgradeRegistryAndCreateMethods = (
   // Special cases
   switch (pluginId) {
     case 'thorchainrune':
-    case 'thorchainrunestagenet': {
+    case 'thorchainrunestagenet':
+    case 'mayachain': {
       const depositTypeUrl = '/types.MsgDeposit'
       registry.register(depositTypeUrl, MsgDeposit)
       const deposit = (opts: DepositOpts): EncodeObject => {
