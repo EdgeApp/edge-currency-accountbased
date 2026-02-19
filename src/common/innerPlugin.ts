@@ -7,7 +7,6 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeOtherMethods,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -126,10 +125,6 @@ export function makeOuterPlugin<
       return { plugin, tools }
     }
 
-    async function getBuiltinTokens(): Promise<EdgeTokenMap> {
-      return {}
-    }
-
     async function makeCurrencyTools(): Promise<Tools> {
       const { tools } = await loadInnerPlugin()
       return tools
@@ -157,7 +152,6 @@ export function makeOuterPlugin<
 
     return {
       currencyInfo,
-      getBuiltinTokens,
       makeCurrencyTools,
       makeCurrencyEngine,
       otherMethods,
