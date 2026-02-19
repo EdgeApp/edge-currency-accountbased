@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Return first denom from getDenomination
+
 ## 4.71.4 (2026-02-15)
 
 - changed: Move FIO SDK fork under EdgeApp GitHub organization

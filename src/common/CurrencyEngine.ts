@@ -262,19 +262,9 @@ export class CurrencyEngine<
   getDenomination(tokenId: EdgeTokenId): EdgeDenomination | undefined
   getDenomination(tokenId: EdgeTokenId): EdgeDenomination | undefined {
     if (tokenId == null) {
-      const mainnetDenom = this.currencyInfo.denominations.find(
-        d => d.name === this.currencyInfo.currencyCode
-      )
-      if (mainnetDenom == null) {
-        throw new Error(
-          `Improbable case where we cannot find the mainnet denom`
-        )
-      }
-      return mainnetDenom
+      return this.currencyInfo.denominations[0]
     } else {
-      const tokenDenom = this.allTokensMap[tokenId]?.denominations?.find(
-        d => d.name === this.allTokensMap[tokenId]?.currencyCode
-      )
+      const tokenDenom = this.allTokensMap[tokenId]?.denominations?.[0]
       return tokenDenom
     }
   }
