@@ -26,7 +26,10 @@ import {
 } from '../common/lifecycleManager'
 import { MakeTxParams } from '../common/types'
 import { cleanTxLogs } from '../common/utils'
-import { makeZanoSyncTracker, ZanoSyncTracker } from './ZanoSyncTracker'
+import {
+  makeWeightedSyncTracker,
+  WeightedSyncTracker
+} from '../common/WeightedSyncTracker'
 import { ZanoTools } from './ZanoTools'
 import {
   asGetAliasDetailsResponse,
@@ -45,7 +48,7 @@ import {
 export class ZanoEngine extends CurrencyEngine<
   ZanoTools,
   SafeZanoWalletInfo,
-  ZanoSyncTracker
+  WeightedSyncTracker
 > {
   networkInfo: ZanoNetworkInfo
   otherData!: ZanoWalletOtherData
@@ -60,7 +63,7 @@ export class ZanoEngine extends CurrencyEngine<
     walletInfo: SafeZanoWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts, makeZanoSyncTracker)
+    super(env, tools, walletInfo, opts, makeWeightedSyncTracker)
     this.networkInfo = env.networkInfo
 
     this.unlockedBalanceMap = new Map()
