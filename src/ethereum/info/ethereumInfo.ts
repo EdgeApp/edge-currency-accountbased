@@ -578,7 +578,7 @@ export const builtinTokens: EdgeTokenMap = {
     displayName: 'Nym',
     denominations: [{ name: 'NYM', multiplier: '1000000' }],
     networkLocation: {
-      contractAddress: '0x525A8F6F3Ba4752868cde25164382BfbAe3990e1'
+      contractAddress: '0x525A8F6F3Ba4752868cde25164382BfbaE3990e1'
     }
   },
   d7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b: {
@@ -1160,7 +1160,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://eth-mainnet.alchemyapi.io/v2/{{alchemyApiKey}}',
+        'https://eth-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}',
         'https://mainnet.infura.io/v3/{{infuraProjectId}}',
         'https://rpc.ankr.com/eth',
         'https://eth.api.pocket.network',

@@ -83,7 +83,7 @@ export async function retryWithBackoff<T>(
       }
 
       // If we have a maxRetries limit and exhausted it, throw the last error
-      if (maxRetries !== undefined && attempts > maxRetries) {
+      if (maxRetries != null && attempts > maxRetries) {
         throw error
       }
 
