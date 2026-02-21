@@ -59,7 +59,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }],
 
   // Deprecated:
-  displayName: 'Cacao'
+  displayName: 'MAYAChain'
 }
 
 export const mayachain = makeOuterPlugin<
