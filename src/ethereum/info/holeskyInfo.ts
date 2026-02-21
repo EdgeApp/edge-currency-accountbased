@@ -61,7 +61,7 @@ const networkInfo: EthereumNetworkInfo = {
       type: 'rpc',
       servers: [
         'https://eth-holesky-testnet.api.pocket.network',
-        'https://eth-holesky.alchemyapi.io/v2/{{alchemyApiKey}}',
+        'https://eth-holesky.g.alchemy.com/v2/{{alchemyApiKey}}',
         'https://holesky.infura.io/v3/{{infuraProjectId}}',
         'https://1rpc.io/holesky',
         'https://ethereum-holesky-rpc.publicnode.com',

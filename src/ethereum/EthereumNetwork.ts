@@ -391,18 +391,19 @@ export class EthereumNetwork {
       updateFuncs.push(async () => await this.acquireTxs(tokenId))
     }
 
-    let firstError: Error | undefined
+    let hasError = false
+    let firstError: unknown
     for (const func of updateFuncs) {
       try {
         await func()
       } catch (error: unknown) {
-        if (firstError == null && error instanceof Error) {
+        if (!hasError) {
           firstError = error
+          hasError = true
         }
       }
     }
-
-    if (firstError != null) throw firstError
+    if (hasError) throw firstError
   }
 
   private isAnAdapterConnected(): boolean {
