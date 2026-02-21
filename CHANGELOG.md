@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 4.74.2 (2026-02-21)
+
+- fixed: Correctly handle `throw undefined` in the ETH update loop
+- fixed: Typo in the NYM contract address
+- fixed: Use correct Alchemy URL's
+
 ## 4.74.1 (2026-02-21)
 
 - fixed: (Maya) Fix MAYAChain (CACAO) `currencyInfo.displayName`
