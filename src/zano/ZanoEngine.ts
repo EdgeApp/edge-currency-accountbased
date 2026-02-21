@@ -76,6 +76,7 @@ export class ZanoEngine extends CurrencyEngine<
         // Block startup until the keys are ready:
         const keys = await keysPromise
 
+        let walletId: number
         try {
           await this.tools.zano.init(this.networkInfo.walletRpcAddress, -1)
           const response = await this.tools.zano.startWallet(
@@ -83,7 +84,7 @@ export class ZanoEngine extends CurrencyEngine<
             keys.passphrase ?? '',
             keys.storagePath
           )
-          return response.wallet_id
+          walletId = response.wallet_id
         } catch (error: unknown) {
           if (!(error instanceof Error)) throw error
           if (!error.message.includes('ALREADY_EXISTS')) throw error
@@ -116,8 +117,17 @@ export class ZanoEngine extends CurrencyEngine<
           this.log(
             `initializeWallet: found existing wallet with ID ${existingWallet.wallet_id}`
           )
-          return existingWallet.wallet_id
+          walletId = existingWallet.wallet_id
         }
+
+        // Whitelist token assets early so the wallet tracks them
+        // during sync (before progress reaches 100%):
+        await this.tools.zano.whitelistAssets(
+          walletId,
+          Object.keys(this.allTokensMap)
+        )
+
+        return walletId
       },
 
       onStop: async (nativeId: number) => {
@@ -228,17 +238,34 @@ export class ZanoEngine extends CurrencyEngine<
       })
     }
 
+    // Use subtransfers as the primary source for amounts. The Zano V2
+    // API (get_recent_txs_and_info2) documents subtransfers as the
+    // "essential part of transfer entry" while employed_entries can be
+    // empty, especially for emit/mint operations like BTCx bridging.
     const nativeAmountMap = new Map<string, string>()
-    for (const entry of tx.employed_entries.receive ?? []) {
-      const { asset_id: assetId, amount } = entry
-      const currentAmount = nativeAmountMap.get(assetId) ?? '0'
-      nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
-    }
-    for (const entry of tx.employed_entries.spent ?? []) {
-      // spent amounts include the fee
-      const { asset_id: assetId, amount } = entry
-      const currentAmount = nativeAmountMap.get(assetId) ?? '0'
-      nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
+    const subtransfers = tx.subtransfers ?? []
+    if (subtransfers.length > 0) {
+      for (const transfer of subtransfers) {
+        const { asset_id: assetId, amount } = transfer
+        const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+        if (transfer.is_income) {
+          nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
+        } else {
+          nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
+        }
+      }
+    } else {
+      // Fallback to employed_entries for backward compatibility
+      for (const entry of tx.employed_entries.receive ?? []) {
+        const { asset_id: assetId, amount } = entry
+        const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+        nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
+      }
+      for (const entry of tx.employed_entries.spent ?? []) {
+        const { asset_id: assetId, amount } = entry
+        const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+        nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
+      }
     }
 
     for (const [assetId, nativeAmount] of nativeAmountMap.entries()) {
