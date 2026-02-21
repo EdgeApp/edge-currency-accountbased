@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.74.1 (2026-02-21)
+
 - fixed: (Maya) Fix MAYAChain (CACAO) `currencyInfo.displayName`
 
 ## 4.74.0 (2026-02-19)
