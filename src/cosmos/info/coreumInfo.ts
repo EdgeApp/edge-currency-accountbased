@@ -160,8 +160,8 @@ const networkInfo: CosmosNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'COREUM',
   // customTokenTemplate: cosmosCustomTokenTemplate,
-  assetDisplayName: 'Coreum',
-  chainDisplayName: 'Coreum',
+  assetDisplayName: 'TX',
+  chainDisplayName: 'TX',
   pluginId: 'coreum',
   walletType: 'wallet:coreum',
 
@@ -181,7 +181,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeCosmosDefaultSettings(),
-  displayName: 'Coreum',
+  displayName: 'TX',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
@@ -197,7 +197,7 @@ export const coreum = makeOuterPlugin<
 
   checkEnvironment() {
     if (global.BigInt == null) {
-      throw new Error('Coreum requires BigInt support')
+      throw new Error('TX requires BigInt support')
     }
   },
 

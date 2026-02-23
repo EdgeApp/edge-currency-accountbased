@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update Coreum display names to TX branding
+
 ## 4.74.2 (2026-02-21)
 
 - fixed: Correctly handle `throw undefined` in the ETH update loop
