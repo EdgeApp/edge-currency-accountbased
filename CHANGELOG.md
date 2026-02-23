@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.75.0 (2026-02-23)
+
 - changed: Update Coreum display names to TX branding
 
 ## 4.74.2 (2026-02-21)
