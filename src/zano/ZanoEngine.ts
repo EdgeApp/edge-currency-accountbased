@@ -228,17 +228,34 @@ export class ZanoEngine extends CurrencyEngine<
       })
     }
 
+    // Use subtransfers as the primary source for amounts. The Zano V2
+    // API (get_recent_txs_and_info2) documents subtransfers as the
+    // "essential part of transfer entry" while employed_entries can be
+    // empty, especially for emit/mint operations like BTCx bridging.
     const nativeAmountMap = new Map<string, string>()
-    for (const entry of tx.employed_entries.receive ?? []) {
-      const { asset_id: assetId, amount } = entry
-      const currentAmount = nativeAmountMap.get(assetId) ?? '0'
-      nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
-    }
-    for (const entry of tx.employed_entries.spent ?? []) {
-      // spent amounts include the fee
-      const { asset_id: assetId, amount } = entry
-      const currentAmount = nativeAmountMap.get(assetId) ?? '0'
-      nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
+    const subtransfers = tx.subtransfers ?? []
+    if (subtransfers.length > 0) {
+      for (const transfer of subtransfers) {
+        const { asset_id: assetId, amount } = transfer
+        const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+        if (transfer.is_income) {
+          nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
+        } else {
+          nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
+        }
+      }
+    } else {
+      // Fallback to employed_entries for backward compatibility
+      for (const entry of tx.employed_entries.receive ?? []) {
+        const { asset_id: assetId, amount } = entry
+        const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+        nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
+      }
+      for (const entry of tx.employed_entries.spent ?? []) {
+        const { asset_id: assetId, amount } = entry
+        const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+        nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
+      }
     }
 
     for (const [assetId, nativeAmount] of nativeAmountMap.entries()) {
