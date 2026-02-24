@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (Zano) Clear native storage on resync to prevent stale cached data conflicts
+- fixed: (Zano) Fix BTCx mint transactions not showing in wallet
+
 ## 4.75.0 (2026-02-23)
 
 - changed: Update Coreum display names to TX branding
