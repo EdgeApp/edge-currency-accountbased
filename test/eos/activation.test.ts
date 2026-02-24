@@ -87,7 +87,8 @@ describe(`EOS activation`, function () {
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
     log: fakeLog,
-    userSettings: undefined,
+    userSettings: {},
+    walletSettings: {},
     walletLocalDisklet,
     walletLocalEncryptedDisklet: walletLocalDisklet,
     customTokens: {},

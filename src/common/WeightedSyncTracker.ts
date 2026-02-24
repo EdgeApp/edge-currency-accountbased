@@ -1,6 +1,6 @@
 import type { EdgeSyncStatus } from 'edge-core-js/types'
 
-import { SyncEngine, SyncTracker } from '../common/SyncTracker'
+import { SyncEngine, SyncTracker } from './SyncTracker'
 
 const SYNC_PROGRESS_WEIGHT = 0.85
 const BALANCE_PROGRESS_WEIGHT = 0.05
@@ -9,7 +9,7 @@ const TRANSACTION_PROGRESS_WEIGHT = 0.1
 /**
  * A sync status tracker that works block-by-block.
  */
-export interface ZanoSyncTracker extends SyncTracker {
+export interface WeightedSyncTracker extends SyncTracker {
   updateBalanceRatio: (ratio: number) => void
   updateBlockRatio: (
     ratio: number,
@@ -22,7 +22,9 @@ export interface ZanoSyncTracker extends SyncTracker {
 /**
  * Creates a Sync
  */
-export function makeZanoSyncTracker(engine: SyncEngine): ZanoSyncTracker {
+export function makeWeightedSyncTracker(
+  engine: SyncEngine
+): WeightedSyncTracker {
   let balanceRatio = 0
   let blockRatio = 0
   let blockRatioDetail: [number, number] = [0, 1]
@@ -61,7 +63,7 @@ export function makeZanoSyncTracker(engine: SyncEngine): ZanoSyncTracker {
     lastTotalRatio = status.totalRatio
   }
 
-  const out: ZanoSyncTracker = {
+  const out: WeightedSyncTracker = {
     resetSync() {
       balanceRatio = 0
       blockRatio = 0

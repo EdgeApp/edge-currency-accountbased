@@ -164,6 +164,7 @@ export async function makeCliEngine(
       enabledTokenIds: settings.enabledTokens[pluginId] ?? [],
       log,
       userSettings: {},
+      walletSettings: {},
       walletLocalDisklet: navigateDisklet(disklet, pluginId),
       walletLocalEncryptedDisklet: navigateDisklet(
         disklet,
