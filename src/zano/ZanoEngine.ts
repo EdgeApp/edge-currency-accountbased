@@ -77,8 +77,15 @@ export class ZanoEngine extends CurrencyEngine<
         // Block startup until the keys are ready:
         const keys = await keysPromise
 
-        // If resync was requested, delete the native wallet storage files
-        // before restarting. This ensures the wallet syncs from scratch.
+        // Delete native wallet storage here in onStart rather than in
+        // resyncBlockchain because:
+        // 1. We need `keys.storagePath` which is only available after
+        //    awaiting `keysPromise` above.
+        // 2. The lifecycle manager serializes stop→start transitions,
+        //    so this runs only after the previous wallet has fully closed,
+        //    avoiding deletion of files while the native wallet is open.
+        // 3. Placing the delete at the top of onStart guarantees the
+        //    files are removed before the next startWallet call.
         if (this.needsNativeStorageClear) {
           this.needsNativeStorageClear = false
           try {
