@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update chain-registry package
+
 ## 4.75.1 (2026-02-23)
 
 - fixed: (Zano) Clear native storage on resync to prevent stale cached data conflicts
