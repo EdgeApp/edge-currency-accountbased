@@ -53,6 +53,7 @@ export class ZanoEngine extends CurrencyEngine<
   unlockedBalanceMap: Map<EdgeTokenId, string>
   private readonly nativeId: LifecycleManager<number>
   private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
+  private needsNativeStorageClear: boolean = false
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -75,6 +76,27 @@ export class ZanoEngine extends CurrencyEngine<
       onStart: async () => {
         // Block startup until the keys are ready:
         const keys = await keysPromise
+
+        // Delete native wallet storage here in onStart rather than in
+        // resyncBlockchain because:
+        // 1. We need `keys.storagePath` which is only available after
+        //    awaiting `keysPromise` above.
+        // 2. The lifecycle manager serializes stop→start transitions,
+        //    so this runs only after the previous wallet has fully closed,
+        //    avoiding deletion of files while the native wallet is open.
+        // 3. Placing the delete at the top of onStart guarantees the
+        //    files are removed before the next startWallet call.
+        if (this.needsNativeStorageClear) {
+          this.needsNativeStorageClear = false
+          try {
+            await this.tools.zano.deleteWallet(keys.storagePath)
+            this.log('Deleted native wallet storage for resync')
+          } catch (error: unknown) {
+            this.log.warn(
+              'Failed to delete native wallet storage: ' + String(error)
+            )
+          }
+        }
 
         try {
           await this.tools.zano.init(this.networkInfo.walletRpcAddress, -1)
@@ -352,6 +374,7 @@ export class ZanoEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async resyncBlockchain(): Promise<void> {
+    this.needsNativeStorageClear = true
     this.nativeId.stop()
     this.unlockedBalanceMap.clear()
     await this.killEngine()
