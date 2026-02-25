@@ -15,6 +15,7 @@ import {
   EdgeLog,
   EdgeMetaToken,
   EdgeSpendInfo,
+  EdgeStakingStatus,
   EdgeSubscribedAddress,
   EdgeSyncStatus,
   EdgeToken,
@@ -654,6 +655,15 @@ export class CurrencyEngine<
       this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
     }
     this.syncTracker.balanceComplete?.(tokenId)
+  }
+
+  private lastStakingStatusJson: string = ''
+
+  protected reportStakingStatus(status: EdgeStakingStatus): void {
+    const json = JSON.stringify(status)
+    if (json === this.lastStakingStatusJson) return
+    this.lastStakingStatusJson = json
+    this.currencyEngineCallbacks.onStakingStatusChanged(status)
   }
 
   reportDetectedTokens(tokenIds: string[]): void {

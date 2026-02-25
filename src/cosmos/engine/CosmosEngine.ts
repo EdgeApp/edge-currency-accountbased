@@ -656,7 +656,7 @@ export class CosmosEngine extends CurrencyEngine<
                 }
               ]
             }
-            this.currencyEngineCallbacks.onStakingStatusChanged(stakingStatus)
+            this.reportStakingStatus(stakingStatus)
             this.stakedBalanceCache = stakedBalance.amount
           }
         } catch (e) {
