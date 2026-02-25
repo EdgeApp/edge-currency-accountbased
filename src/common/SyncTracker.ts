@@ -1,5 +1,8 @@
 import type { EdgeSyncStatus, EdgeTokenId } from 'edge-core-js/types'
 
+// Global throttle: max 1 sendSyncStatus per 500ms; totalRatio=1 always passes.
+let ssLastEmitTime = 0
+
 /**
  * Abstracts the ability to return a sync status,
  * since different chains track their sync status in different ways.
@@ -74,6 +77,13 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
       lastSyncStatus.totalRatio !== currentStatus.totalRatio
     ) {
       lastSyncStatus = currentStatus
+
+      if (currentStatus.totalRatio !== 1) {
+        const now = Date.now()
+        if (now - ssLastEmitTime < 500) return
+        ssLastEmitTime = now
+      }
+
       engine.sendSyncStatus(currentStatus)
     }
   }
