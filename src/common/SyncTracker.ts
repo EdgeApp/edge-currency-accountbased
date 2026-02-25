@@ -76,14 +76,13 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
       lastSyncStatus == null ||
       lastSyncStatus.totalRatio !== currentStatus.totalRatio
     ) {
-      lastSyncStatus = currentStatus
-
       if (currentStatus.totalRatio !== 1) {
         const now = Date.now()
         if (now - ssLastEmitTime < 500) return
         ssLastEmitTime = now
       }
 
+      lastSyncStatus = currentStatus
       engine.sendSyncStatus(currentStatus)
     }
   }
