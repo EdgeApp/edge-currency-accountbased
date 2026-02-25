@@ -256,7 +256,7 @@ export class TronEngine extends CurrencyEngine<
       }
 
       if (detectedTokenIds.length > 0) {
-        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+        this.reportDetectedTokens(detectedTokenIds)
       }
     } catch (e) {
       this.log.error('checkTokenBalances error', e)
@@ -345,9 +345,7 @@ export class TronEngine extends CurrencyEngine<
       }
 
       this.stakingStatus = { stakedAmounts }
-      this.currencyEngineCallbacks.onStakingStatusChanged({
-        ...this.stakingStatus
-      })
+      this.reportStakingStatus({ ...this.stakingStatus })
     } catch (e: any) {
       this.log.error('Error checking TRX address balance: ', e)
     }
