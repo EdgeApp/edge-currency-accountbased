@@ -717,10 +717,12 @@ export class CurrencyEngine<
 
     this.walletLocalData.blockHeight = blockHeight
     this.walletLocalDataDirty = true
-    this.currencyEngineCallbacks.onBlockHeightChanged(blockHeight)
 
+    // Update confirmations directly on all in-memory transactions and emit
+    // any that changed via onTransactions. Confirmations are owned by the engine;
+    // core-js learns of changes only when we send txs with updated confirmations
+    // via onTransactions (i.e. the deprecated onBlockHeightChanged is not called).
     const activeTokenIds = [null, ...this.enabledTokenIds]
-
     for (const tokenId of activeTokenIds) {
       const txList = this.transactionList[tokenId ?? ''] ?? []
       for (let i = 0; i < txList.length; i++) {
