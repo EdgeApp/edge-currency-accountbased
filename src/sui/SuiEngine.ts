@@ -157,7 +157,7 @@ export class SuiEngine extends CurrencyEngine<
       }
 
       if (detectedTokenIds.length > 0) {
-        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+        this.reportDetectedTokens(detectedTokenIds)
       }
 
       this.syncTracker.setBalanceRatios([null, ...this.enabledTokenIds], 1)

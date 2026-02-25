@@ -637,7 +637,7 @@ export class CosmosEngine extends CurrencyEngine<
       })
 
       if (detectedTokenIds.length > 0) {
-        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+        this.reportDetectedTokens(detectedTokenIds)
       }
 
       if (this.stakingSupported) {

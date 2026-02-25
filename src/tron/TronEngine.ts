@@ -256,7 +256,7 @@ export class TronEngine extends CurrencyEngine<
       }
 
       if (detectedTokenIds.length > 0) {
-        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+        this.reportDetectedTokens(detectedTokenIds)
       }
     } catch (e) {
       this.log.error('checkTokenBalances error', e)

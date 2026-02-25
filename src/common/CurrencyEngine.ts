@@ -196,6 +196,7 @@ export class CurrencyEngine<
       publicKey: '',
       totalBalances: {},
       numTransactions: {},
+      detectedTokenIds: {},
       unactivatedTokenIds: [],
       otherData: undefined
     }
@@ -653,6 +654,15 @@ export class CurrencyEngine<
       this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
     }
     this.syncTracker.balanceComplete?.(tokenId)
+  }
+
+  reportDetectedTokens(tokenIds: string[]): void {
+    const known = this.walletLocalData.detectedTokenIds
+    const newTokenIds = tokenIds.filter(id => known[id] == null)
+    if (newTokenIds.length === 0) return
+    for (const id of newTokenIds) known[id] = true
+    this.walletLocalDataDirty = true
+    this.currencyEngineCallbacks.onNewTokens(Object.keys(known))
   }
 
   updateConfirmations(tx: EdgeTransaction): boolean {
