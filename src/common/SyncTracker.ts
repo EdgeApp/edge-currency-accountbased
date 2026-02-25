@@ -43,6 +43,7 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
   // Each tokenId can be a 0-1 value:
   const balanceRatios = new Map<EdgeTokenId, number>()
   const historyRatios = new Map<EdgeTokenId, number>()
+  let lastSyncStatus: EdgeSyncStatus | undefined
 
   function getSyncStatus(): EdgeSyncStatus {
     const activeTokenIds = [null, ...engine.enabledTokenIds]
@@ -66,10 +67,22 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
     return { totalRatio }
   }
 
+  function sendSyncStatusIfChanged(): void {
+    const currentStatus = getSyncStatus()
+    if (
+      lastSyncStatus == null ||
+      lastSyncStatus.totalRatio !== currentStatus.totalRatio
+    ) {
+      lastSyncStatus = currentStatus
+      engine.sendSyncStatus(currentStatus)
+    }
+  }
+
   const out: TokenSyncTracker = {
     resetSync() {
       balanceRatios.clear()
       historyRatios.clear()
+      lastSyncStatus = undefined
     },
 
     balanceComplete(tokenId) {
@@ -78,12 +91,12 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
 
     setBalanceRatios(tokenIds, ratio) {
       for (const tokenId of tokenIds) balanceRatios.set(tokenId, ratio)
-      engine.sendSyncStatus(getSyncStatus())
+      sendSyncStatusIfChanged()
     },
 
     setHistoryRatios(tokenIds, ratio) {
       for (const tokenId of tokenIds) historyRatios.set(tokenId, ratio)
-      engine.sendSyncStatus(getSyncStatus())
+      sendSyncStatusIfChanged()
     },
 
     updateBalanceRatio(tokenId, ratio) {
@@ -94,7 +107,7 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
       if (ratio <= lastRatio) return
 
       balanceRatios.set(tokenId, ratio)
-      engine.sendSyncStatus(getSyncStatus())
+      sendSyncStatusIfChanged()
     },
 
     updateHistoryRatio(tokenId, ratio, minStep) {
@@ -108,7 +121,7 @@ export function makeTokenSyncTracker(engine: SyncEngine): TokenSyncTracker {
       if (minStep != null && ratio - lastRatio < minStep && ratio < 1) return
 
       historyRatios.set(tokenId, ratio)
-      engine.sendSyncStatus(getSyncStatus())
+      sendSyncStatusIfChanged()
     }
   }
 
