@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -10,25 +9,6 @@ import {
   EthereumNetworkInfo
 } from '../ethereumTypes'
 import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  '8c97f94b2cdbf7dc0098057334d9908c4dc0a885': {
-    currencyCode: 'iFIL',
-    displayName: 'iFIL Inifinity Pool',
-    denominations: [{ name: 'iFIL', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x8c97F94b2cDbF7Dc0098057334d9908C4dC0a885'
-    }
-  },
-  ac26a4ab9cf2a8c5dbab6fb4351ec0f4b07356c4: {
-    currencyCode: 'WFIL',
-    displayName: 'Wrapped FIL',
-    denominations: [{ name: 'wFIL', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0xaC26a4Ab9cF2A8c5DBaB6fb4351ec0F4b07356c4'
-    }
-  }
-}
 
 const networkFees: EthereumFees = {
   default: {
@@ -91,7 +71,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'tFIL',
   evmChainId: 314159,
   customFeeTemplate: evmCustomFeeTemplate,
-  // customTokenTemplate: evmCustomTokenTemplate,
+  customTokenTemplate: [],
   assetDisplayName: 'Filecoin FEVM (Calibration Testnet)',
   chainDisplayName: 'Filecoin FEVM (Calibration Testnet)',
   memoOptions: evmMemoOptions,
@@ -144,8 +124,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   usesChangeServer: true,
 
   // Deprecated:
-  displayName: 'Filecoin FEVM (Calibration Testnet)',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Filecoin FEVM (Calibration Testnet)'
 }
 
 export const filecoinfevmcalibration = makeOuterPlugin<
@@ -153,10 +132,8 @@ export const filecoinfevmcalibration = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
-  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {

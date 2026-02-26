@@ -9,7 +9,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -38,7 +37,6 @@ const {
 } = TronWeb
 
 export class TronTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   initOptions: TronInitOptions
   io: EdgeIo
@@ -46,9 +44,7 @@ export class TronTools implements EdgeCurrencyTools {
   networkInfo: TronNetworkInfo
 
   constructor(env: PluginEnvironment<TronNetworkInfo>) {
-    const { builtinTokens, currencyInfo, initOptions, io, log, networkInfo } =
-      env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, initOptions, io, log, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.initOptions = asTronInitOptions(initOptions)
     this.io = io
@@ -137,7 +133,6 @@ export class TronTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     })
@@ -153,14 +148,28 @@ export class TronTools implements EdgeCurrencyTools {
 
     // Look for PIX addresses if currency code is undefined or 'USDT'
     if (currencyCode == null || currencyCode === 'USDT') {
-      const pixResults = await parsePixKey(
-        this.io,
-        this.builtinTokens,
-        uri,
-        smartPayPublicAddress,
-        smartPayUserId
+      const token = customTokens?.find(
+        token =>
+          token.currencyCode === 'USDT' &&
+          token.contractAddress === 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
       )
-      if (pixResults != null) return pixResults
+      if (token != null) {
+        const pixResults = await parsePixKey(
+          this.io,
+          {
+            currencyCode: 'USDT',
+            displayName: 'USDT',
+            denominations: token.denominations,
+            networkLocation: {
+              contractAddress: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
+            }
+          },
+          uri,
+          smartPayPublicAddress,
+          smartPayUserId
+        )
+        if (pixResults != null) return pixResults
+      }
     }
 
     throw new Error('InvalidPublicAddressError')
@@ -180,8 +189,7 @@ export class TronTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

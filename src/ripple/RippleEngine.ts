@@ -26,6 +26,7 @@ import {
   EdgeGetActivationAssetsResults,
   EdgeMemo,
   EdgeSpendInfo,
+  EdgeTokenMap,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -68,6 +69,7 @@ import {
 import { DIVIDE_PRECISION, EST_BLOCK_TIME_MS } from './rippleInfo'
 import { RippleTools } from './RippleTools'
 import {
+  asCustomXrpNetworkLocation,
   asFinalFieldsCanceledOffer,
   asMaybeActivateTokenParams,
   asRipplePrivateKeys,
@@ -81,7 +83,7 @@ import {
   XrpTransaction,
   XrpWalletOtherData
 } from './rippleTypes'
-import { makeTokenId } from './rippleUtils'
+import { convertCurrencyCodeToHex, makeTokenId } from './rippleUtils'
 
 type AccountTransaction = AccountTxResponse['result']['transactions'][number]
 
@@ -338,7 +340,7 @@ export class XrpEngine extends CurrencyEngine<
     if (tokenId == null) {
       takerDenom = this.currencyInfo.denominations[0]
     } else {
-      const builtinToken = this.builtinTokens[tokenId]
+      const builtinToken = this.allTokensMap[tokenId]
       if (builtinToken == null) return
       takerDenom = builtinToken.denominations[0]
     }
@@ -813,6 +815,29 @@ export class XrpEngine extends CurrencyEngine<
       throw new InsufficientFundsError({ tokenId })
 
     return spendableBalance
+  }
+
+  changeCustomTokensSync(customTokens: EdgeTokenMap): void {
+    const tokens: EdgeTokenMap = {}
+
+    for (const [tokenId, token] of Object.entries(customTokens)) {
+      try {
+        const { currency: rawCurrency, issuer } = asCustomXrpNetworkLocation(
+          token.networkLocation
+        )
+        let currency = rawCurrency
+        if (rawCurrency == null) {
+          currency = convertCurrencyCodeToHex(token.currencyCode)
+        }
+        tokens[tokenId] = { ...token, networkLocation: { currency, issuer } }
+      } catch (e) {
+        this.log.warn(
+          `Dropping custom token "${token.currencyCode}" / ${tokenId}`,
+          e
+        )
+      }
+    }
+    super.changeCustomTokensSync(tokens)
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {

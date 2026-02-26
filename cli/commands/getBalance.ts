@@ -11,15 +11,11 @@ export class GetBalance extends Command<CurrencyContext> {
   async execute(): Promise<number> {
     const { tokenId = null } = this
     const { settings, stdout } = this.context
-    const { engine, plugin, pluginId, currencyInfo } = await getCliEngine(
-      this.context
-    )
+    const { engine, pluginId, currencyInfo } = await getCliEngine(this.context)
 
     // Get the currency code:
-    const builtinTokens =
-      plugin.getBuiltinTokens == null ? {} : await plugin.getBuiltinTokens()
     const customTokens = settings.customTokens[pluginId] ?? {}
-    const allTokens = { ...builtinTokens, ...customTokens }
+    const allTokens = { ...customTokens }
     const { currencyCode } = tokenId == null ? currencyInfo : allTokens[tokenId]
 
     const nativeBalance = await engine.getBalance({ tokenId })

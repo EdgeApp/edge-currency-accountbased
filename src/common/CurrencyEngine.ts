@@ -13,7 +13,6 @@ import {
   EdgeGetTransactionsOptions,
   EdgeIo,
   EdgeLog,
-  EdgeMetaToken,
   EdgeSpendInfo,
   EdgeSubscribedAddress,
   EdgeSyncStatus,
@@ -31,7 +30,7 @@ import {
 import { PluginEnvironment } from './innerPlugin'
 import { makePeriodicTask, PeriodicTask } from './periodicTask'
 import type { SyncEngine, SyncTracker } from './SyncTracker'
-import { makeMetaTokens, validateToken } from './tokenHelpers'
+import { validateToken } from './tokenHelpers'
 import {
   asMaybeOtherParamsLastSeenTime,
   asWalletLocalData,
@@ -111,9 +110,7 @@ export class CurrencyEngine<
   minimumAddressBalance: string
 
   // Tokens:
-  allTokens: EdgeMetaToken[] = []
   allTokensMap: EdgeTokenMap = {}
-  builtinTokens: EdgeTokenMap = {}
   customTokens: EdgeTokenMap = {}
   enabledTokenIds: string[] = []
 
@@ -136,7 +133,7 @@ export class CurrencyEngine<
     opts: EdgeCurrencyEngineOptions,
     makeSyncTracker: (engine: SyncEngine) => SyncTrackerT
   ) {
-    const { builtinTokens, currencyInfo } = env
+    const { currencyInfo } = env
     const {
       callbacks,
       customTokens,
@@ -171,7 +168,6 @@ export class CurrencyEngine<
     this.txIdList = { '': [] }
 
     // Configure tokens:
-    this.builtinTokens = builtinTokens
     this.changeCustomTokensSync(customTokens)
     this.changeEnabledTokenIdsSync(enabledTokenIds)
 
@@ -999,7 +995,7 @@ export class CurrencyEngine<
     return this.walletLocalData.blockHeight
   }
 
-  private changeCustomTokensSync(customTokens: EdgeTokenMap): void {
+  protected changeCustomTokensSync(customTokens: EdgeTokenMap): void {
     this.customTokens = {}
     for (const tokenId of Object.keys(customTokens)) {
       const token = customTokens[tokenId]
@@ -1014,8 +1010,7 @@ export class CurrencyEngine<
       this.customTokens[tokenId] = token
     }
 
-    this.allTokensMap = { ...this.customTokens, ...this.builtinTokens }
-    this.allTokens = makeMetaTokens(this.allTokensMap)
+    this.allTokensMap = this.customTokens
   }
 
   async changeCustomTokens(tokens: EdgeTokenMap): Promise<void> {

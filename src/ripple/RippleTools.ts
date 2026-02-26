@@ -8,7 +8,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -23,7 +22,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asyncWaterfall } from '../common/promiseUtils'
-import { makeMetaTokens, validateToken } from '../common/tokenHelpers'
+import { validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   getLegacyDenomination,
@@ -41,7 +40,6 @@ import {
 import { makeTokenId } from './rippleUtils'
 
 export class RippleTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: XrpNetworkInfo
@@ -54,8 +52,7 @@ export class RippleTools implements EdgeCurrencyTools {
   makeWallet: (keys: RipplePrivateKeys) => Wallet
 
   constructor(env: PluginEnvironment<XrpNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
@@ -170,7 +167,11 @@ export class RippleTools implements EdgeCurrencyTools {
     }
   }
 
-  async parseUri(uri: string): Promise<EdgeParsedUri> {
+  async parseUri(
+    uri: string,
+    currencyCode?: string,
+    customTokens?: EdgeMetaToken[]
+  ): Promise<EdgeParsedUri> {
     const networks = {
       ripple: true,
       'xrp-ledger': true,
@@ -200,7 +201,8 @@ export class RippleTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens
     })
     const valid = isValidAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
@@ -226,8 +228,7 @@ export class RippleTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

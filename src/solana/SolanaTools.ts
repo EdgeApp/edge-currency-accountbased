@@ -23,7 +23,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -45,7 +44,6 @@ import {
 } from './solanaTypes'
 
 export class SolanaTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   log: EdgeLog
@@ -58,8 +56,7 @@ export class SolanaTools implements EdgeCurrencyTools {
   token2022ProgramPublicKey: PublicKey
 
   constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, log, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, log, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.log = log
@@ -180,7 +177,6 @@ export class SolanaTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens,
       testPrivateKeys: this.importPrivateKey.bind(this)
@@ -216,8 +212,7 @@ export class SolanaTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

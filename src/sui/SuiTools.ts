@@ -16,7 +16,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -31,7 +30,6 @@ import { asSuiPrivateKeys, SuiInfoPayload, SuiNetworkInfo } from './suiTypes'
 
 export class SuiTools implements EdgeCurrencyTools {
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: SuiNetworkInfo
   initOptions: JsonObject
@@ -39,10 +37,9 @@ export class SuiTools implements EdgeCurrencyTools {
   suiClient: SuiClient
 
   constructor(env: PluginEnvironment<SuiNetworkInfo>) {
-    const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
+    const { currencyInfo, initOptions, io, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
-    this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
     this.initOptions = initOptions
 
@@ -167,7 +164,6 @@ export class SuiTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens,
       testPrivateKeys: async (input: string) => {
@@ -215,8 +211,7 @@ export class SuiTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

@@ -8,7 +8,6 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -29,15 +28,13 @@ import {
 } from './cardanoTypes'
 
 export class CardanoTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   networkInfo: CardanoNetworkInfo
   epochParams?: EpochParams
 
   constructor(env: PluginEnvironment<CardanoNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
@@ -186,7 +183,6 @@ export class CardanoTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? 'ADA',
       customTokens
     })
@@ -210,8 +206,7 @@ export class CardanoTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

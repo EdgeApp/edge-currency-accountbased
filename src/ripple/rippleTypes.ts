@@ -52,10 +52,15 @@ export const asXrpTransaction = asObject({
 
 export type XrpTransaction = ReturnType<typeof asXrpTransaction>
 
+export const asCustomXrpNetworkLocation = asObject({
+  currency: asMaybe(asString),
+  issuer: asString
+})
 export const asXrpNetworkLocation = asObject({
   currency: asString,
   issuer: asString
 })
+export type XrpNetworkLocation = ReturnType<typeof asXrpNetworkLocation>
 
 export type SafeRippleWalletInfo = ReturnType<typeof asSafeRippleWalletInfo>
 export const asSafeRippleWalletInfo = asSafeCommonWalletInfo

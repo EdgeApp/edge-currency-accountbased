@@ -15,7 +15,6 @@ import {
   EdgeFetchOptions,
   EdgeIo,
   EdgeMetaToken,
-  EdgeTokenMap,
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js/types'
@@ -104,8 +103,7 @@ export function bufToHex(buf: Buffer): string {
 export function getLegacyDenomination(
   name: string,
   currencyInfo: EdgeCurrencyInfo,
-  legacyTokens: EdgeMetaToken[],
-  builtinTokens: EdgeTokenMap
+  legacyTokens: EdgeMetaToken[]
 ): EdgeDenomination | undefined {
   // Look in the primary currency info:
   if (currencyInfo.currencyCode === name) {
@@ -115,11 +113,6 @@ export function getLegacyDenomination(
   // Look in the custom tokens:
   for (const metaToken of legacyTokens) {
     if (metaToken.currencyCode === name) return metaToken.denominations[0]
-  }
-
-  // Look in the builtin tokens:
-  for (const token of Object.values(builtinTokens)) {
-    if (token.currencyCode === name) return token.denominations[0]
   }
 }
 

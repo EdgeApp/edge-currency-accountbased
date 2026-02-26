@@ -3,16 +3,14 @@ import { asEither } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
-import {
-  builtinTokens,
-  currencyInfo
-} from '../../../src/ethereum/info/ethereumInfo'
+import { currencyInfo } from '../../../src/ethereum/info/ethereumInfo'
 import {
   asEvmScanInternalTransaction,
   asEvmScanTransaction,
   processEvmScanTransaction,
   TransactionProcessingContext
 } from '../../../src/ethereum/networkAdapters/EvmScanAdapter'
+import { allTokensMapFixture } from './allTokensMapFixture'
 
 export interface TestCase {
   input: {
@@ -27,7 +25,7 @@ export const testCases: TestCase[] = [
   {
     input: {
       context: {
-        allTokensMap: builtinTokens,
+        allTokensMap: allTokensMapFixture,
         currencyInfo: currencyInfo,
         forWhichAddress: '0x036639F209f2Ebcde65a3f7896d05a4941d20373',
         forWhichTokenId: null,
@@ -92,7 +90,7 @@ export const testCases: TestCase[] = [
   {
     input: {
       context: {
-        allTokensMap: builtinTokens,
+        allTokensMap: allTokensMapFixture,
         currencyInfo: currencyInfo,
         forWhichAddress: '0x036639F209f2Ebcde65a3f7896d05a4941d20373',
         forWhichTokenId: null,
@@ -157,7 +155,7 @@ export const testCases: TestCase[] = [
   {
     input: {
       context: {
-        allTokensMap: builtinTokens,
+        allTokensMap: allTokensMapFixture,
         currencyInfo: currencyInfo,
         forWhichAddress: '0x036639F209f2Ebcde65a3f7896d05a4941d20373',
         forWhichTokenId: null,
@@ -222,7 +220,7 @@ export const testCases: TestCase[] = [
   {
     input: {
       context: {
-        allTokensMap: builtinTokens,
+        allTokensMap: allTokensMapFixture,
         currencyInfo: currencyInfo,
         forWhichAddress: '0x036639F209f2Ebcde65a3f7896d05a4941d20373',
         forWhichTokenId: null,

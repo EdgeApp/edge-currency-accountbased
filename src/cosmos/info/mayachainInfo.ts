@@ -1,20 +1,9 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
 import { asCosmosInfoPayload, CosmosInfoPayload } from '../cosmosTypes'
 import { MidgardNetworkInfo } from '../midgardTypes'
-
-const builtinTokens: EdgeTokenMap = {
-  maya: {
-    currencyCode: 'MAYA',
-    displayName: 'MAYA',
-    denominations: [{ name: 'MAYA', multiplier: '10000' }], // 4 decimals per xchainjs
-    networkLocation: {
-      contractAddress: 'maya'
-    }
-  }
-}
 
 const networkInfo: MidgardNetworkInfo = {
   bech32AddressPrefix: 'maya',
@@ -70,7 +59,6 @@ export const mayachain = makeOuterPlugin<
   currencyInfo,
   asInfoPayload: asCosmosInfoPayload,
   networkInfo,
-  builtinTokens,
 
   checkEnvironment() {
     if (global.BigInt == null) {

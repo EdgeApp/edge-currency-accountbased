@@ -8,7 +8,6 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import stellarApi, { Server as StellarServer } from 'stellar-sdk'
@@ -16,7 +15,6 @@ import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { makeMetaTokens } from '../common/tokenHelpers'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
@@ -30,7 +28,6 @@ import {
 const URI_PREFIX = 'web+stellar'
 
 export class StellarTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: StellarNetworkInfo
@@ -39,8 +36,7 @@ export class StellarTools implements EdgeCurrencyTools {
   stellarApiServers: StellarServer[]
 
   constructor(env: PluginEnvironment<StellarNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
@@ -140,8 +136,7 @@ export class StellarTools implements EdgeCurrencyTools {
     const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
-      networks,
-      builtinTokens: this.builtinTokens
+      networks
     })
 
     const valid = this.checkAddress(edgeParsedUri.publicAddress ?? '')
@@ -194,8 +189,7 @@ export class StellarTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

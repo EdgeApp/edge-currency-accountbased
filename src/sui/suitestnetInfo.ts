@@ -1,21 +1,8 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { SuiTools } from './SuiTools'
 import { asSuiInfoPayload, SuiInfoPayload, SuiNetworkInfo } from './suiTypes'
-
-const builtinTokens: EdgeTokenMap = {
-  '0xcf9856788a9738fe7b679f57e2aace7e7226cca1acb2298c457d2e0687806e92wispWISP':
-    {
-      currencyCode: 'WISP',
-      denominations: [{ multiplier: '1000000000', name: 'Wisp' }],
-      displayName: 'Wisp',
-      networkLocation: {
-        contractAddress:
-          '0xcf9856788a9738fe7b679f57e2aace7e7226cca1acb2298c457d2e0687806e92::wisp::WISP'
-      }
-    }
-}
 
 const networkInfo: SuiNetworkInfo = {
   network: 'testnet',
@@ -32,6 +19,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   // Explorers:
   addressExplorer: 'https://testnet.suivision.xyz/account/%s',
   transactionExplorer: 'https://testnet.suivision.xyz/txblock/%s',
+
+  customTokenTemplate: [],
 
   denominations: [
     {
@@ -52,7 +41,6 @@ export const suitestnet = makeOuterPlugin<
   SuiTools,
   SuiInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asSuiInfoPayload,
   networkInfo,

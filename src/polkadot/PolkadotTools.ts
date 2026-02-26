@@ -14,7 +14,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -36,7 +35,6 @@ const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret, encodeAddress } =
 
 export class PolkadotTools implements EdgeCurrencyTools {
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: PolkadotNetworkInfo
 
@@ -45,8 +43,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
   polkadotApiSubscribers: Set<string>
 
   constructor(env: PluginEnvironment<PolkadotNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
@@ -137,7 +134,6 @@ export class PolkadotTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens,
       testPrivateKeys: this.importPrivateKey.bind(this)
@@ -172,8 +168,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

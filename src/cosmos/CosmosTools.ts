@@ -14,7 +14,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -38,7 +37,6 @@ import { createCosmosClients, rpcWithApiKey } from './cosmosUtils'
 
 export class CosmosTools implements EdgeCurrencyTools {
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: CosmosNetworkInfo
   clients?: CosmosClients
@@ -49,10 +47,9 @@ export class CosmosTools implements EdgeCurrencyTools {
   chainData: CosmosChainData
 
   constructor(env: PluginEnvironment<CosmosNetworkInfo>) {
-    const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
+    const { currencyInfo, initOptions, io, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
-    this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
     this.initOptions = initOptions
     this.clientCount = 0
@@ -175,7 +172,6 @@ export class CosmosTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     })
@@ -208,8 +204,7 @@ export class CosmosTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

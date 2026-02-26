@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -15,17 +14,6 @@ import {
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  '9e5aac1ba1a2e6aed6b32689dfcf62a509ca96f3': {
-    currencyCode: 'USDT',
-    displayName: 'Tether USD',
-    denominations: [{ name: 'USDT', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x9e5aac1ba1a2e6aed6b32689dfcf62a509ca96f3'
-    }
-  }
-}
 
 // Fees are in Wei
 const networkFees: EthereumFees = {
@@ -120,8 +108,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'opBNB',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'opBNB'
 }
 
 export const opbnb = makeOuterPlugin<
@@ -129,10 +116,8 @@ export const opbnb = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
-  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {

@@ -1,24 +1,12 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { PolkadotTools } from '../PolkadotTools'
 import {
   asPolkadotInfoPayload,
   PolkadotInfoPayload,
   PolkadotNetworkInfo
 } from '../polkadotTypes'
-
-const builtinTokens: EdgeTokenMap = {
-  '1': {
-    currencyCode: 'LKN',
-    displayName: 'Liberland Merit Testnet',
-    denominations: [{ name: 'LKN', multiplier: '1000000000000' }],
-    networkLocation: {
-      contractAddress: '1' // Assets pallet ID
-    }
-  }
-}
 
 const networkInfo: PolkadotNetworkInfo = {
   rpcNodes: ['wss://testchain.liberland.org/'],
@@ -41,6 +29,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: '',
   transactionExplorer: '',
 
+  customTokenTemplate: [],
+
   denominations: [
     {
       name: 'LDN',
@@ -50,8 +40,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
-  displayName: 'Liberland Testnet',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Liberland Testnet'
 }
 
 export const liberlandtestnet = makeOuterPlugin<
@@ -59,7 +48,6 @@ export const liberlandtestnet = makeOuterPlugin<
   PolkadotTools,
   PolkadotInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asPolkadotInfoPayload,
   networkInfo,

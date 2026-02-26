@@ -10,7 +10,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -34,15 +33,13 @@ import {
 export class ZanoTools implements EdgeCurrencyTools {
   zano: CppBridge
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   log: EdgeLog
   networkInfo: ZanoNetworkInfo
 
   constructor(env: PluginEnvironment<ZanoNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, log, nativeIo, networkInfo } = env
+    const { currencyInfo, io, log, nativeIo, networkInfo } = env
     this.io = io
-    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
     this.log = log
     this.networkInfo = networkInfo
@@ -180,21 +177,26 @@ export class ZanoTools implements EdgeCurrencyTools {
       if (amountStr != null && typeof amountStr === 'string') {
         // Validate that the currency in the deeplink matches the requested
         // currency code:
-        let deeplinkCurrencyCode: string
+        let deeplinkCurrencyCode: string | undefined
         if (zanoDeeplink.asset_id == null) {
           deeplinkCurrencyCode = this.currencyInfo.currencyCode
         } else {
-          deeplinkCurrencyCode =
-            this.builtinTokens[zanoDeeplink.asset_id]?.currencyCode
+          deeplinkCurrencyCode = customTokens?.find(
+            token =>
+              token.contractAddress?.toLowerCase() ===
+              zanoDeeplink.asset_id?.toLowerCase()
+          )?.currencyCode
         }
-        if (currencyCode != null && currencyCode !== deeplinkCurrencyCode) {
+        if (
+          deeplinkCurrencyCode == null ||
+          (currencyCode != null && currencyCode !== deeplinkCurrencyCode)
+        ) {
           throw new Error('InvalidCurrencyCodeError')
         }
         const denom = getLegacyDenomination(
           deeplinkCurrencyCode,
           this.currencyInfo,
-          customTokens ?? [],
-          this.builtinTokens
+          customTokens ?? []
         )
         if (denom == null) {
           throw new Error('InternalErrorInvalidCurrencyCode')
@@ -213,7 +215,6 @@ export class ZanoTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode,
       customTokens
     })
@@ -246,8 +247,7 @@ export class ZanoTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

@@ -11,7 +11,6 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
@@ -50,7 +49,6 @@ export function checkAddress(address: string): boolean {
 }
 
 export class FioTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: FioNetworkInfo
@@ -62,8 +60,7 @@ export class FioTools implements EdgeCurrencyTools {
   tpid: string
 
   constructor(env: PluginEnvironment<FioNetworkInfo>) {
-    const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, initOptions, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
@@ -162,7 +159,6 @@ export class FioTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks: { fio: true },
-      builtinTokens: this.builtinTokens,
       currencyCode: FIO_CURRENCY_CODE,
       testPrivateKeys: this.importPrivateKey.bind(this)
     })
@@ -194,8 +190,7 @@ export class FioTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

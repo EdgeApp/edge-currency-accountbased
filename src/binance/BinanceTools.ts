@@ -12,7 +12,6 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
@@ -29,13 +28,11 @@ import {
 
 export class BinanceTools implements EdgeCurrencyTools {
   io: EdgeIo
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: BinanceNetworkInfo
 
   constructor(env: PluginEnvironment<BinanceNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
@@ -129,7 +126,6 @@ export class BinanceTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? 'BNB',
       customTokens
     })
@@ -158,8 +154,7 @@ export class BinanceTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? 'BNB',
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

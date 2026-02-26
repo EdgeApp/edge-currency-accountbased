@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -15,17 +14,6 @@ import {
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  a1077a294dde1b09bb078844df40758a5d0f9a27: {
-    currencyCode: 'WPLS',
-    displayName: 'Wrapped Pulse',
-    denominations: [{ name: 'WPLS', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'
-    }
-  }
-}
 
 const networkFees: EthereumFees = {
   default: {
@@ -125,8 +113,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'PulseChain',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'PulseChain'
 }
 
 export const pulsechain = makeOuterPlugin<
@@ -134,10 +121,8 @@ export const pulsechain = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
-  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {

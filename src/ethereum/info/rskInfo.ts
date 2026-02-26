@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -15,17 +14,6 @@ import {
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  '2acc95758f8b5f583470ba265eb685a8f45fc9d5': {
-    currencyCode: 'RIF',
-    displayName: 'RIF Token',
-    denominations: [{ name: 'RIF', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5'
-    }
-  }
-}
 
 const networkFees: EthereumFees = {
   default: {
@@ -112,8 +100,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'Rootstock',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Rootstock'
 }
 
 export const rsk = makeOuterPlugin<
@@ -121,10 +108,8 @@ export const rsk = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
-  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {

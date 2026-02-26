@@ -10,7 +10,6 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -38,15 +37,13 @@ import {
 import { RpcAdapterConfig } from './networkAdapters/RpcAdapter'
 
 export class EthereumTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: EthereumNetworkInfo
   initOptions: EthereumInitOptions
 
   constructor(env: PluginEnvironment<EthereumNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo, initOptions } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo, initOptions } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
@@ -189,7 +186,6 @@ export class EthereumTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens,
       testPrivateKeys: this.importPrivateKey.bind(this)
@@ -306,10 +302,8 @@ export class EthereumTools implements EdgeCurrencyTools {
               : edgeParsedUri.nativeAmount
 
           // Get token from contract address
-          const edgeToken = Object.values(this.builtinTokens).find(
-            token =>
-              token.networkLocation?.contractAddress.toLowerCase() ===
-              contractAddress
+          const edgeToken = customTokens?.find(
+            token => token?.contractAddress?.toLowerCase() === contractAddress
           )
 
           // If there is a currencyCode param, the token must be found
@@ -369,8 +363,7 @@ export class EthereumTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens,
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

@@ -17,6 +17,7 @@ import {
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSpendInfo,
+  EdgeTokenMap,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -116,7 +117,6 @@ export class EosEngine extends CurrencyEngine<
     this.engineFetch = makeEngineFetch(env.io)
     this.networkInfo = networkInfo
     this.activatedAccountsCache = {}
-    const { currencyCode, denominations } = this.currencyInfo
     this.referenceBlock = {
       ref_block_num: 0,
       ref_block_prefix: 0
@@ -127,13 +127,6 @@ export class EosEngine extends CurrencyEngine<
     }
     this.accountNameChecked = false
     this.getResourcesMutex = false
-    this.allTokens.push({
-      ...denominations[0],
-      currencyCode,
-      currencyName: currencyCode,
-      contractAddress: 'eosio.token',
-      denominations
-    })
     this.otherMethods = {
       getAccountActivationQuote: async (params: {
         requestedAccountName: string
@@ -198,6 +191,19 @@ export class EosEngine extends CurrencyEngine<
     this.otherData = asEosWalletOtherData(raw)
   }
 
+  changeCustomTokensSync(customTokens: EdgeTokenMap): void {
+    const { currencyCode, denominations } = this.currencyInfo
+    super.changeCustomTokensSync(customTokens)
+    this.allTokensMap['eosio.token'] = {
+      currencyCode,
+      displayName: currencyCode,
+      denominations,
+      networkLocation: {
+        contractAddress: 'eosio.token'
+      }
+    }
+  }
+
   // Poll on the blockheight
   async checkBlockchainInnerLoop(): Promise<void> {
     try {
@@ -230,9 +236,9 @@ export class EosEngine extends CurrencyEngine<
     const { from, to, memo, symbol } = act.data
     const exchangeAmount = act.data.amount.toString()
     const currencyCode = symbol
-    const contractAddress = this.allTokens.find(
-      token => token.currencyCode === currencyCode
-    )?.contractAddress
+    const contractAddress = Object.keys(this.allTokensMap).find(
+      tokenId => this.allTokensMap[tokenId].currencyCode === currencyCode
+    )
     if (contractAddress == null) {
       return 0
     }
@@ -321,9 +327,9 @@ export class EosEngine extends CurrencyEngine<
       const { from, to, memo, amount, symbol } = action.act.data
       const exchangeAmount = amount.toString()
       const currencyCode = symbol
-      const contractAddress = this.allTokens.find(
-        token => token.currencyCode === currencyCode
-      )?.contractAddress
+      const contractAddress = Object.keys(this.allTokensMap).find(
+        tokenId => this.allTokensMap[tokenId].currencyCode === currencyCode
+      )
       if (contractAddress == null) {
         return 0
       }

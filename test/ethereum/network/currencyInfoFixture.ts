@@ -1,8 +1,5 @@
 import { EdgeCurrencyInfo } from 'edge-core-js'
 
-import { makeMetaTokens } from '../../../src/common/tokenHelpers'
-import { allTokensMapFixture } from './allTokensMapFixture'
-
 export const currencyInfoFixture: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
@@ -73,7 +70,6 @@ export const currencyInfoFixture: EdgeCurrencyInfo = {
       ]
     }
   },
-  metaTokens: makeMetaTokens(allTokensMapFixture),
 
   // Deprecated
   displayName: 'Ethereum'

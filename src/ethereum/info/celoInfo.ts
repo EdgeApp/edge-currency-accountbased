@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -15,25 +14,6 @@ import {
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  '765de816845861e75a25fca122bb6898b8b1282a': {
-    currencyCode: 'CUSD',
-    displayName: 'Celo Dollar',
-    denominations: [{ name: 'CUSD', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x765DE816845861e75A25fCA122bb6898B8B1282a'
-    }
-  },
-  d8763cba276a3738e6de85b4b3bf5fded6d6ca73: {
-    currencyCode: 'CEUR',
-    displayName: 'Celo Euro',
-    denominations: [{ name: 'CEUR', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73'
-    }
-  }
-}
 
 // Fees are in Wei
 const networkFees: EthereumFees = {
@@ -128,8 +108,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'Celo',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Celo'
 }
 
 export const celo = makeOuterPlugin<
@@ -137,10 +116,8 @@ export const celo = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
-  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {

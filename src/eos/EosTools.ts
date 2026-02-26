@@ -19,17 +19,12 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asyncWaterfall } from '../common/promiseUtils'
-import {
-  asMaybeContractLocation,
-  makeMetaTokens,
-  validateToken
-} from '../common/tokenHelpers'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   getLegacyDenomination,
@@ -61,7 +56,6 @@ export function getClient(fetch: EdgeFetchFunction, server: string): APIClient {
 }
 
 export class EosTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   engineFetch: EdgeFetchFunction
   io: EdgeIo
@@ -69,8 +63,7 @@ export class EosTools implements EdgeCurrencyTools {
   networkInfo: EosNetworkInfo
 
   constructor(env: PluginEnvironment<EosNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, log, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, log, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.engineFetch = makeEngineFetch(env.io)
     this.io = io
@@ -154,14 +147,19 @@ export class EosTools implements EdgeCurrencyTools {
     return { publicKey, ownerPublicKey }
   }
 
-  async parseUri(uri: string): Promise<EdgeParsedUri> {
+  async parseUri(
+    uri: string,
+    currencyCode?: string,
+    customTokens?: EdgeMetaToken[]
+  ): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks: {
         [this.networkInfo.uriProtocol]: true
       },
-      builtinTokens: this.builtinTokens
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens
     })
 
     if (!checkAddress(edgeParsedUri.publicAddress ?? '')) {
@@ -185,8 +183,7 @@ export class EosTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
-        this.builtinTokens
+        customTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

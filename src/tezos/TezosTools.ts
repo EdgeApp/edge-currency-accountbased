@@ -7,7 +7,6 @@ import {
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
-  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
@@ -24,7 +23,6 @@ import {
 } from './tezosTypes'
 
 export class TezosTools implements EdgeCurrencyTools {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: TezosNetworkInfo
@@ -33,8 +31,7 @@ export class TezosTools implements EdgeCurrencyTools {
   tezosApiServers: string[]
 
   constructor(env: PluginEnvironment<TezosNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
-    this.builtinTokens = builtinTokens
+    const { currencyInfo, io, networkInfo } = env
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
@@ -108,7 +105,6 @@ export class TezosTools implements EdgeCurrencyTools {
       currencyInfo: this.currencyInfo,
       uri,
       networks,
-      builtinTokens: this.builtinTokens,
       currencyCode
     })
 

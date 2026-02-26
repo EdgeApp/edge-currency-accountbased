@@ -1,8 +1,6 @@
 import { gt, lt } from 'biggystring'
 import { asMaybe, asObject, asString } from 'cleaners'
-import { EdgeMetaToken, EdgeToken, EdgeTokenMap } from 'edge-core-js/types'
-
-import { normalizeAddress } from './utils'
+import { EdgeToken } from 'edge-core-js/types'
 
 /**
  * The `networkLocation` field is untyped,
@@ -13,27 +11,6 @@ export const asMaybeContractLocation = asMaybe(
     contractAddress: asString
   })
 )
-
-/**
- * Downgrades EdgeToken objects to the legacy EdgeMetaToken format.
- */
-export function makeMetaTokens(tokens: EdgeTokenMap): EdgeMetaToken[] {
-  const out: EdgeMetaToken[] = []
-  for (const tokenId of Object.keys(tokens)) {
-    const { currencyCode, displayName, denominations, networkLocation } =
-      tokens[tokenId]
-
-    const cleanLocation = asMaybeContractLocation(networkLocation)
-    if (cleanLocation == null) continue
-    out.push({
-      currencyCode,
-      currencyName: displayName,
-      denominations,
-      contractAddress: cleanLocation.contractAddress
-    })
-  }
-  return out
-}
 
 /**
  * Validates common things about a token, such as its currency code.
@@ -70,16 +47,4 @@ export const validateToken = (token: EdgeToken): void => {
  */
 export const isCurrencyCode = (code: string): boolean => {
   return typeof code === 'string' && code.length > 0 && code.trim() === code
-}
-
-export const createTokenIdFromContractAddress = (token: EdgeToken): string => {
-  const cleanLocation = asMaybeContractLocation(token.networkLocation)
-  if (cleanLocation == null) {
-    throw new Error('ErrorInvalidContractAddress')
-  }
-  return cleanLocation.contractAddress
-}
-
-export const createEvmTokenId = (token: EdgeToken): string => {
-  return normalizeAddress(createTokenIdFromContractAddress(token))
 }

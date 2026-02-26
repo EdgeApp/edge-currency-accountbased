@@ -1289,7 +1289,7 @@ export class EthereumEngine extends CurrencyEngine<
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
-    const edgeToken = tokenId != null ? this.builtinTokens[tokenId] : null
+    const edgeToken = tokenId != null ? this.allTokensMap[tokenId] : null
     const useCachedFees =
       this.optimismRollupParams != null &&
       tokenId == null &&

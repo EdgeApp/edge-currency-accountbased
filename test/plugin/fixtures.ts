@@ -655,7 +655,15 @@ export default [
       'uri eip681 transfer contract invocation': {
         args: [
           'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
-          'USDC'
+          'USDC',
+          [
+            {
+              currencyCode: 'USDC',
+              currencyName: 'USD Coin',
+              contractAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+              denominations: [{ name: 'USDC', multiplier: '1000000' }]
+            }
+          ]
         ],
         output: {
           publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
@@ -666,7 +674,15 @@ export default [
       'uri eip681 transfer contract invocation with decimal chainId': {
         args: [
           'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48@1/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
-          'USDC'
+          'USDC',
+          [
+            {
+              currencyCode: 'USDC',
+              currencyName: 'USD Coin',
+              contractAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+              denominations: [{ name: 'USDC', multiplier: '1000000' }]
+            }
+          ]
         ],
         output: {
           publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',

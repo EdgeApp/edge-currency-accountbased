@@ -7,20 +7,15 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeOtherMethods,
-  EdgeToken,
-  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-
-import { asEdgeToken, asInfoServerTokens } from './types'
 
 /**
  * We pass a more complete plugin environment to the inner plugin,
  * so we can share the same instance between sibling networks.
  */
 export interface PluginEnvironment<NetworkInfo> extends EdgeCorePluginOptions {
-  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
 }
@@ -69,8 +64,6 @@ export interface OuterPlugin<
   InfoPayload
 > {
   asInfoPayload: Cleaner<InfoPayload>
-  createTokenId?: (token: EdgeToken) => string
-  builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
   otherMethodNames?: ReadonlyArray<string & keyof Tools>
@@ -90,20 +83,15 @@ export function makeOuterPlugin<
 ): EdgeCorePluginFactory {
   return (env: EdgeCorePluginOptions): EdgeCurrencyPlugin => {
     const {
-      builtinTokens = {},
       currencyInfo,
       networkInfo: defaultNetworkInfo,
       asInfoPayload,
-      createTokenId,
       otherMethodNames = [],
       checkEnvironment = () => {}
     } = template
 
-    updateBuiltinTokens(env.infoPayload)
-
     const innerEnv: PluginEnvironment<NetworkInfo> = {
       ...env,
-      builtinTokens,
       currencyInfo,
       networkInfo: defaultNetworkInfo
     }
@@ -137,28 +125,6 @@ export function makeOuterPlugin<
       return { plugin, tools }
     }
 
-    function updateBuiltinTokens(payload: JsonObject = {}): void {
-      if (createTokenId != null) {
-        const { infoServerTokens = [] } = asInfoServerTokens(payload)
-
-        for (const rawToken of infoServerTokens) {
-          try {
-            const edgeToken = asEdgeToken(rawToken)
-            const tokenId = createTokenId(edgeToken)
-
-            // Check if there are any conflicts
-            if (builtinTokens[tokenId] != null) continue
-
-            builtinTokens[tokenId] = edgeToken
-          } catch (e) {}
-        }
-      }
-    }
-
-    async function getBuiltinTokens(): Promise<EdgeTokenMap> {
-      return builtinTokens
-    }
-
     async function makeCurrencyTools(): Promise<Tools> {
       const { tools } = await loadInnerPlugin()
       return tools
@@ -182,12 +148,10 @@ export function makeOuterPlugin<
 
       const infoPayload = asInfoPayload(payload)
       await plugin.updateInfoPayload(innerEnv, infoPayload)
-      updateBuiltinTokens(payload)
     }
 
     return {
       currencyInfo,
-      getBuiltinTokens,
       makeCurrencyTools,
       makeCurrencyEngine,
       otherMethods,

@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -15,79 +14,6 @@ import {
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  a320d9f65ec992eff38622c63627856382db726c: {
-    currencyCode: 'HFUN',
-    displayName: 'Hypurr Fun',
-    denominations: [
-      {
-        name: 'HFUN',
-        multiplier: '1000000000000000000',
-        symbol: 'HFUN'
-      }
-    ],
-    networkLocation: {
-      contractAddress: '0xa320D9f65ec992EfF38622c63627856382Db726c'
-    }
-  },
-  '1ecd15865d7f8019d546f76d095d9c93cc34edfa': {
-    currencyCode: 'LIQD',
-    displayName: 'LiquidLaunch',
-    denominations: [
-      {
-        name: 'LiquidLaunch',
-        multiplier: '1000000000000000000',
-        symbol: 'LIQD'
-      }
-    ],
-    networkLocation: {
-      contractAddress: '0x1Ecd15865D7F8019D546f76d095d9c93cc34eDFa'
-    }
-  },
-  '1bee6762f0b522c606dc2ffb106c0bb391b2e309': {
-    currencyCode: 'PiP',
-    displayName: 'PiP',
-    denominations: [
-      {
-        name: 'PiP',
-        multiplier: '1000000000000000000',
-        symbol: 'PiP'
-      }
-    ],
-    networkLocation: {
-      contractAddress: '0x1bEe6762F0B522c606DC2Ffb106C0BB391b2E309'
-    }
-  },
-  '9b498c3c8a0b8cd8ba1d9851d40d186f1872b44e': {
-    currencyCode: 'PURR',
-    displayName: 'Purr',
-    denominations: [
-      {
-        name: 'PURR',
-        multiplier: '1000000000000000000',
-        symbol: 'PURR'
-      }
-    ],
-    networkLocation: {
-      contractAddress: '0x9b498C3c8A0b8CD8BA1D9851d40D186F1872b44E'
-    }
-  },
-  b8ce59fc3717ada4c02eadf9682a9e934f625ebb: {
-    currencyCode: 'USD₮0',
-    displayName: 'USD₮0',
-    denominations: [
-      {
-        name: 'USD₮0',
-        multiplier: '1000000',
-        symbol: 'USD₮0'
-      }
-    ],
-    networkLocation: {
-      contractAddress: '0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb'
-    }
-  }
-}
 
 // Fees are in Wei
 const networkFees: EthereumFees = {
@@ -176,8 +102,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'HyperEVM',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'HyperEVM'
 }
 
 export const hyperevm = makeOuterPlugin<
@@ -185,10 +110,8 @@ export const hyperevm = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
-  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {

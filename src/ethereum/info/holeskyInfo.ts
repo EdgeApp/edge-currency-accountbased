@@ -1,7 +1,6 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -15,17 +14,6 @@ import {
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
-
-const builtinTokens: EdgeTokenMap = {
-  '94373a4919b3240d86ea41593d5eba789fef3848': {
-    currencyCode: 'WETH',
-    displayName: 'Wrapped Ethereum',
-    denominations: [{ name: 'WETH', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x94373a4919B3240D86eA41593D5eBa789FEF3848'
-    }
-  }
-}
 
 const networkFees: EthereumFees = {
   default: {
@@ -132,8 +120,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'Holesky Testnet',
-  metaTokens: makeMetaTokens(builtinTokens)
+  displayName: 'Holesky Testnet'
 }
 
 export const holesky = makeOuterPlugin<
@@ -141,10 +128,8 @@ export const holesky = makeOuterPlugin<
   EthereumTools,
   EthereumInfoPayload
 >({
-  builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
-  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {
