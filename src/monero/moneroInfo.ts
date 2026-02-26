@@ -10,7 +10,7 @@ import {
 } from './moneroTypes'
 
 const networkInfo: MoneroNetworkInfo = {
-  networkType: 0
+  networkType: 'MAINNET'
 }
 
 const defaultSettings: MoneroUserSettings = {
