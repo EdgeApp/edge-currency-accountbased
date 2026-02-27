@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Enhanced EthereumEngine `dumpData()` to include active network adapter configuration
+
 ## 4.75.3 (2026-03-06)
 
 - fixed: Mayachain: Use network constants for fees
