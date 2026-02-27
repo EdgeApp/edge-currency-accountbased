@@ -251,6 +251,28 @@ export function safeErrorMessage(e?: Error): string {
 }
 
 /**
+ * Deep-clones a JSON-like value.
+ *
+ * This intentionally only handles plain objects & arrays, since plugin
+ * configuration data is expected to be JSON-serializable.
+ */
+export function cloneDeeply<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(item => cloneDeeply(item)) as any
+  }
+
+  if (value != null && typeof value === 'object') {
+    const out: any = {}
+    for (const key of Object.keys(value as any)) {
+      out[key] = cloneDeeply((value as any)[key])
+    }
+    return out
+  }
+
+  return value
+}
+
+/**
  * Merges several JSON objects deeply,
  * preferring the items from later objects.
  */

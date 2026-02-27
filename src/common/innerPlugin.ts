@@ -14,6 +14,7 @@ import {
 } from 'edge-core-js/types'
 
 import { asEdgeToken, asInfoServerTokens } from './types'
+import { cloneDeeply } from './utils'
 
 /**
  * We pass a more complete plugin environment to the inner plugin,
@@ -22,6 +23,7 @@ import { asEdgeToken, asInfoServerTokens } from './types'
 export interface PluginEnvironment<NetworkInfo> extends EdgeCorePluginOptions {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  defaultNetworkInfo: NetworkInfo
   networkInfo: NetworkInfo
 }
 
@@ -105,7 +107,8 @@ export function makeOuterPlugin<
       ...env,
       builtinTokens,
       currencyInfo,
-      networkInfo: defaultNetworkInfo
+      defaultNetworkInfo,
+      networkInfo: cloneDeeply(defaultNetworkInfo)
     }
 
     // Logic to load the inner plugin:
