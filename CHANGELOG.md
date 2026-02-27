@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Ethereum) Add XAUt (Tether Gold) ERC-20 builtin token
+
 ## 4.76.1 (2026-03-10)
 
 - changed: Update chain-registry package

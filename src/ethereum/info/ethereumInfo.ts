@@ -629,6 +629,14 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x45804880De22913dAFE09f4980848ECE6EcbAf78'
     }
   },
+  '68749665ff8d2d112fa859aa293f07a622782f38': {
+    currencyCode: 'XAUt',
+    displayName: 'Tether Gold',
+    denominations: [{ name: 'XAUt', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x68749665FF8D2d112Fa859AA293F07A622782F38'
+    }
+  },
   '6982508145454ce325ddbe47a25d4ec3d2311933': {
     currencyCode: 'PEPE',
     displayName: 'Pepe',
