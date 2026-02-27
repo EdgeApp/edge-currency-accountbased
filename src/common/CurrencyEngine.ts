@@ -103,6 +103,7 @@ export class CurrencyEngine<
   currencyInfo: EdgeCurrencyInfo
   currentSettings: any
   private readonly tasks = new Map<string, PeriodicTask>()
+  pluginEnvironment: PluginEnvironment<{}>
   walletId: string
   log: EdgeLog
   warn: (message: string, e?: Error) => void
@@ -162,6 +163,7 @@ export class CurrencyEngine<
     this.walletInfo = walletInfo
     this.walletId = walletInfo.id
     this.currencyInfo = currencyInfo
+    this.pluginEnvironment = env
     this.otherData = undefined
     this.minimumAddressBalance = '0'
 
@@ -1082,12 +1084,24 @@ export class CurrencyEngine<
   }
 
   async dumpData(): Promise<EdgeDataDump> {
+    const defaultNetworkInfo = this.pluginEnvironment.defaultNetworkInfo as
+      | { networkAdapterConfigs?: unknown[] }
+      | undefined
+    const activeNetworkInfo = this.pluginEnvironment.networkInfo as
+      | { networkAdapterConfigs?: unknown[] }
+      | undefined
+
     const dataDump: EdgeDataDump = {
       walletId: this.walletId.split(' - ')[0],
       walletType: this.walletInfo.type,
       data: {
         pluginType: { pluginId: this.currencyInfo.pluginId },
-        walletLocalData: this.walletLocalData
+        walletLocalData: this.walletLocalData,
+        networkConfig: {
+          defaultAdapters: defaultNetworkInfo?.networkAdapterConfigs ?? [],
+          activeAdapters: activeNetworkInfo?.networkAdapterConfigs ?? [],
+          userSettings: this.currentSettings?.network ?? {}
+        }
       }
     }
     return dataDump

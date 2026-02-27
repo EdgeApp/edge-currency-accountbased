@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: Enhanced `dumpData()` to include network adapter configuration
+  (default adapters, active adapters, and user settings)
+
 ## 4.75.2 (2026-02-24)
 
 - changed: Update chain-registry package
