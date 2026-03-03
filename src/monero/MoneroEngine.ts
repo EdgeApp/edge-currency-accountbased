@@ -508,7 +508,7 @@ export class MoneroEngine extends CurrencyEngine<
     if (isReceive) {
       nativeAmount = tx.amount.toString()
     } else {
-      nativeAmount = `-${tx.amount.toString()}`
+      nativeAmount = `-${(tx.amount + tx.fee).toString()}`
     }
 
     const blockHeight = tx.isPending ? 0 : tx.blockHeight
