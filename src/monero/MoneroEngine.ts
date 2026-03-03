@@ -185,7 +185,7 @@ export class MoneroEngine extends CurrencyEngine<
       },
 
       onError: error => {
-        this.log.error('Wallet lifecycle error:', String(error))
+        this.log.error('Monero lifecycle error:', String(error))
       }
     })
   }
