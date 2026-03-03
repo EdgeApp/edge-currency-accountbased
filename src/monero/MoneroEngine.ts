@@ -539,7 +539,7 @@ export class MoneroEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
-    this.nativeWalletId.stop()
+    await this.nativeWalletId.stop()
     this.syncStartHeight = undefined
     this.unlockedBalance = '0'
     this.txSortOrder = 'asc'
