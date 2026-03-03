@@ -57,7 +57,7 @@ export type GetBlockCountResponse = ReturnType<typeof asGetBlockCountResponse>
 export interface MoneroPrivateKeys {
   dataKey: string
   moneroKey: string
-  birthdayHeight: number
+  birthdayHeight?: number
   moneroSpendKeyPrivate: string
   moneroSpendKeyPublic: string
 }
@@ -68,7 +68,7 @@ export const asMoneroPrivateKeys = (
   const asKeys = asObject({
     dataKey: asString,
     [`${pluginId}Key`]: asString,
-    [`${pluginId}BirthdayHeight`]: asOptional(asNumber, 0),
+    [`${pluginId}BirthdayHeight`]: asOptional(asNumber),
     [`${pluginId}SpendKeyPrivate`]: asString,
     [`${pluginId}SpendKeyPublic`]: asString
   })

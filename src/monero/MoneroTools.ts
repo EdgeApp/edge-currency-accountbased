@@ -77,7 +77,7 @@ export class MoneroTools implements EdgeCurrencyTools {
       privateWalletInfo.keys
     )
     const birthdayHeightString =
-      birthdayHeight > 0
+      birthdayHeight != null
         ? `\n\nBirthday Height:\n${birthdayHeight.toString()}`
         : ''
     return `Seed Phrase:\n${moneroKey}${birthdayHeightString}`

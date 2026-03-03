@@ -200,13 +200,13 @@ export class MoneroEngine extends CurrencyEngine<
    * response or getAddressInfo endpoint is used as a fallback.
    */
   private async resolveBirthdayHeight(
-    height: number,
+    height: number | undefined,
     backend: WalletBackend,
     daemonAddress: string,
     edgeLwsServer: string,
     loginResult?: LoginResponse
   ): Promise<number> {
-    if (height !== 0) return height
+    if (height != null) return height
 
     // For Edge LWS, the login response may already have it
     if (loginResult?.start_height != null) {
