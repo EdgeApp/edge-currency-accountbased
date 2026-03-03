@@ -41,7 +41,6 @@ import {
   asMoneroWalletOtherData,
   asMoneroWalletSettings,
   asSafeMoneroWalletInfo,
-  EDGE_MONERO_LWS_SERVER,
   LoginResponse,
   MoneroInitOptions,
   MoneroNetworkInfo,
@@ -117,7 +116,7 @@ export class MoneroEngine extends CurrencyEngine<
           // LWS-specific setup: API key and login
           let loginResult: LoginResponse | undefined
           if (backend === 'lws') {
-            const isEdgeLws = daemonAddress === EDGE_MONERO_LWS_SERVER
+            const isEdgeLws = daemonAddress === this.networkInfo.edgeLwsServer
             await this.tools.cppBridge.setLwsApiKey(
               isEdgeLws ? this.initOptions.edgeApiKey : ''
             )

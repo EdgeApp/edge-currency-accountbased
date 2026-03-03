@@ -26,6 +26,8 @@ export const asMoneroInitOptions = asObject({
 export type MoneroInitOptions = ReturnType<typeof asMoneroInitOptions>
 
 export interface MoneroNetworkInfo {
+  edgeLwsServer: string
+  edgeMonerodServer: string
   networkType: NetworkType
 }
 

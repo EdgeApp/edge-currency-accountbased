@@ -21,7 +21,6 @@ import {
   asMoneroKeyOptions,
   asMoneroPrivateKeys,
   asSafeMoneroWalletInfo,
-  EDGE_MONERO_SERVER,
   MoneroIo,
   MoneroNetworkInfo
 } from './moneroTypes'
@@ -103,7 +102,9 @@ export class MoneroTools implements EdgeCurrencyTools {
 
     const { birthdayHeight } = asMoneroKeyOptions(opts)
 
-    const currentNetworkHeight = await this.getBlockCount(EDGE_MONERO_SERVER)
+    const currentNetworkHeight = await this.getBlockCount(
+      this.networkInfo.edgeMonerodServer
+    )
     if (birthdayHeight > currentNetworkHeight) {
       throw new Error('InvalidBirthdayHeight') // must be less than current block height
     }
@@ -124,7 +125,9 @@ export class MoneroTools implements EdgeCurrencyTools {
 
     const generatedWallet = await this.cppBridge.generateWallet(networkType)
 
-    const birthdayHeight = await this.getBlockCount(EDGE_MONERO_SERVER)
+    const birthdayHeight = await this.getBlockCount(
+      this.networkInfo.edgeMonerodServer
+    )
 
     return await this.importPrivateKey(generatedWallet.mnemonic, {
       birthdayHeight
