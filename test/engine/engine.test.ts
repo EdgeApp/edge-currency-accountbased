@@ -308,7 +308,6 @@ describe('Engine', function () {
 
     builtinTokens: {},
     currencyInfo: {} as any,
-    defaultNetworkInfo: {},
     networkInfo: {}
   }
 

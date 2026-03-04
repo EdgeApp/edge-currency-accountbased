@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-- changed: Enhanced `dumpData()` to include network adapter configuration
-  (default adapters, active adapters, and user settings)
+- changed: Enhanced EthereumEngine `dumpData()` to include active network adapter configuration
 
 ## 4.75.2 (2026-02-24)
 
