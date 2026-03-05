@@ -6,6 +6,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
+  EdgeDataDump,
   EdgeEngineSyncNetworkOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -841,6 +842,23 @@ export class EthereumEngine extends CurrencyEngine<
 
     await super.killEngine()
     this.ethNetwork.stop()
+  }
+
+  async dumpData(): Promise<EdgeDataDump> {
+    const dataDump = await super.dumpData()
+
+    const secrets = Object.values(this.initOptions)
+      .flatMap(v => (Array.isArray(v) ? v : typeof v === 'string' ? [v] : []))
+      .filter(s => s.length > 0)
+    let json = JSON.stringify(this.networkInfo.networkAdapterConfigs)
+    for (const secret of secrets) {
+      json = json.split(secret).join('***')
+    }
+
+    dataDump.data.networkConfig = {
+      networkAdapterConfigs: JSON.parse(json)
+    }
+    return dataDump
   }
 
   async changeUserSettings(userSettings: object): Promise<void> {

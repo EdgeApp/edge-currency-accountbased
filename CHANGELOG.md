@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Enhanced EthereumEngine `dumpData()` to include active network adapter configuration
+
 ## 4.75.2 (2026-02-24)
 
 - changed: Update chain-registry package
