@@ -1,26 +1,14 @@
-import { HttpEndpoint } from '@cosmjs/stargate'
-import { asObject, asString } from 'cleaners'
+import { asNumber, asObject, asString } from 'cleaners'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { CosmosNetworkInfo } from './cosmosTypes'
 import { MidgardNetworkInfo } from './midgardTypes'
 
-/**
- * Thorchain-specific network info that extends MidgardNetworkInfo.
- * Adds the thornode fee API endpoint.
- */
-export interface ThorchainNetworkInfo extends MidgardNetworkInfo {
-  transactionFeeConnectionInfo: HttpEndpoint
-}
-
-type AnyCosmosNetworkInfo =
-  | CosmosNetworkInfo
-  | MidgardNetworkInfo
-  | ThorchainNetworkInfo
+type AnyCosmosNetworkInfo = CosmosNetworkInfo | MidgardNetworkInfo
 
 export function isThorchainEnvironment(
   env: PluginEnvironment<AnyCosmosNetworkInfo>
-): env is PluginEnvironment<ThorchainNetworkInfo> {
+): env is PluginEnvironment<MidgardNetworkInfo> {
   return (
     env.currencyInfo.pluginId === 'thorchainrune' ||
     env.currencyInfo.pluginId === 'thorchainrunestagenet'
@@ -47,4 +35,12 @@ export const asThornodeNetwork = asObject({
   // total_bond_units: asString, // '22182160',
   // total_reserve: asString, // '8596638591565880',
   // vaults_migrating: false
+})
+
+// https://midgard.mayachain.info/v2/mayachain/constants
+export const asMayachainConstants = asObject({
+  int_64_values: asObject({
+    NativeTransactionFee: asNumber,
+    OutboundTransactionFee: asNumber
+  })
 })

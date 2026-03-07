@@ -3,7 +3,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
 import { asCosmosInfoPayload, CosmosInfoPayload } from '../cosmosTypes'
-import { ThorchainNetworkInfo } from '../thorchainTypes'
+import { MidgardNetworkInfo } from '../midgardTypes'
 import { makeCosmosDefaultSettings } from './cosmosCommonInfo'
 // import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
 
@@ -18,7 +18,7 @@ const builtinTokens: EdgeTokenMap = {
   }
 }
 
-const networkInfo: ThorchainNetworkInfo = {
+const networkInfo: MidgardNetworkInfo = {
   bech32AddressPrefix: 'sthor',
   bip39Path: `m/44'/931'/0'/0/0`,
   chainInfo: {
@@ -84,7 +84,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const thorchainrunestagenet = makeOuterPlugin<
-  ThorchainNetworkInfo,
+  MidgardNetworkInfo,
   CosmosTools,
   CosmosInfoPayload
 >({

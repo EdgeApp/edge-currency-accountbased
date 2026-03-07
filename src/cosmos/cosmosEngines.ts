@@ -11,17 +11,14 @@ import { CosmosEngine } from './engine/CosmosEngine'
 import { MayachainEngine } from './engine/MayachainEngine'
 import { ThorchainEngine } from './engine/ThorchainEngine'
 import { isMidgardEnvironment, MidgardNetworkInfo } from './midgardTypes'
-import { isThorchainEnvironment, ThorchainNetworkInfo } from './thorchainTypes'
+import { isThorchainEnvironment } from './thorchainTypes'
 
 export { CosmosEngine } from './engine/CosmosEngine'
 export { MayachainEngine } from './engine/MayachainEngine'
 export { MidgardEngine } from './engine/MidgardEngine'
 export { ThorchainEngine } from './engine/ThorchainEngine'
 
-type AllNetworkInfo =
-  | CosmosNetworkInfo
-  | MidgardNetworkInfo
-  | ThorchainNetworkInfo
+type AllNetworkInfo = CosmosNetworkInfo | MidgardNetworkInfo
 
 export async function makeCurrencyEngine(
   env: PluginEnvironment<AllNetworkInfo>,

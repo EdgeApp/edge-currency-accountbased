@@ -25,6 +25,10 @@ const networkInfo: MidgardNetworkInfo = {
   },
   defaultChainId: 'mayachain-mainnet-v1',
   chainIdUpdateUrl: 'https://tendermint.mayachain.info/status',
+  transactionFeeConnectionInfo: {
+    url: 'https://midgard.mayachain.info/v2/mayachain/constants',
+    headers: {}
+  },
   midgardConnectionInfo: {
     url: 'https://midgard.mayachain.info',
     headers: {}
