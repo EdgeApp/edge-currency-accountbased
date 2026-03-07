@@ -1,6 +1,6 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { coin } from '@cosmjs/stargate'
-import { add, mul } from 'biggystring'
+import { add } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
 
@@ -75,10 +75,7 @@ export class ThorchainEngine extends MidgardEngine {
     return {
       gasFeeCoin: coin('1', this.networkInfo.nativeDenom),
       gasLimit: '60000000',
-      // For Thorchain, the exact fee isn't known until the transaction is confirmed.
-      // This would most commonly be an issue for max spends but we should overestimate
-      // the fee for all spends.
-      networkFee: mul(networkFee, '1.01')
+      networkFee
     }
   }
 }
