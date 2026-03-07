@@ -217,7 +217,7 @@ export class SolanaEngine extends CurrencyEngine<
       }
 
       if (detectedTokenIds.length > 0) {
-        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+        this.reportDetectedTokens(detectedTokenIds)
       }
     } catch (e: any) {
       // Nodes will return 0 for uninitiated accounts so thrown errors should be logged

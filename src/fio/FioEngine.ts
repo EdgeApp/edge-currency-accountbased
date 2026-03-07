@@ -318,9 +318,7 @@ export class FioEngine extends CurrencyEngine<
     super.doInitialBalanceCallback()
 
     try {
-      this.currencyEngineCallbacks.onStakingStatusChanged({
-        ...this.otherData.stakingStatus
-      })
+      this.reportStakingStatus({ ...this.otherData.stakingStatus })
     } catch (e: any) {
       this.error(`doInitialBalanceCallback onStakingStatusChanged`, e)
     }
@@ -428,9 +426,7 @@ export class FioEngine extends CurrencyEngine<
     }
     this.localDataDirty()
     try {
-      this.currencyEngineCallbacks.onStakingStatusChanged({
-        ...this.otherData.stakingStatus
-      })
+      this.reportStakingStatus({ ...this.otherData.stakingStatus })
     } catch (e: any) {
       this.error('onStakingStatusChanged error')
     }
