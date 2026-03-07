@@ -4298,10 +4298,10 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^2.42.0:
-  version "2.42.0"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-2.42.0.tgz#2bf9ebf18eaddce3806b0c8cd8fb13f1fef19324"
-  integrity sha512-jnbrat8EFIfk5v4NR0nixUbBqlqQOsAY9r9hhwUgJq3qRZupWzirdMDPeg8NMNu4Gk/KBnigij0AWgA2DODY4w==
+edge-core-js@2.42.1-beta.0:
+  version "2.42.1-beta.0"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-2.42.1-beta.0.tgz#474eea52be94efb8dfd20ef7b67926f61c4430bd"
+  integrity sha512-3iD38X9auUCZkmKiOGGuw+pMgkMSQEHN4hSWgl+Us+StEvhFqApmTVB3LpoBAAwU5HxSKDWrnd5T9pRga5+foQ==
   dependencies:
     "@nymproject/mix-fetch" "^1.4.1"
     aes-js "^3.1.0"
@@ -7797,6 +7797,13 @@ raw-body@2.5.1:
     http-errors "2.0.0"
     iconv-lite "0.4.24"
     unpipe "1.0.0"
+
+react-native-monero-lwsf@0.1.0-beta.0:
+  version "0.1.0-beta.0"
+  resolved "https://registry.yarnpkg.com/react-native-monero-lwsf/-/react-native-monero-lwsf-0.1.0-beta.0.tgz#5db7b2c17b072b084ba63e316cadafa7043a8dbd"
+  integrity sha512-sA0MXjhld+Fw2empyETYRVs0qHaAw3qifkAa8aotQG3xxEUOndWQjFeGmpXBPPFAyc8JC1oH3PBzCREm2Htjag==
+  dependencies:
+    cleaners "^0.3.17"
 
 react-native-piratechain@0.5.0:
   version "0.5.0"
