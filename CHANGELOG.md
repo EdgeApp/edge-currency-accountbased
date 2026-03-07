@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.75.3 (2026-03-06)
+
 - fixed: Mayachain: Use network constants for fees
 
 ## 4.75.2 (2026-02-24)
