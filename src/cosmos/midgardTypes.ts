@@ -7,6 +7,7 @@ import { CosmosNetworkInfo } from './cosmosTypes'
 export interface MidgardNetworkInfo extends CosmosNetworkInfo {
   chainIdUpdateUrl: string
   midgardConnectionInfo: HttpEndpoint
+  transactionFeeConnectionInfo: HttpEndpoint
 }
 
 export function isMidgardEnvironment(

@@ -1,6 +1,6 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { coin } from '@cosmjs/stargate'
-import { add, mul } from 'biggystring'
+import { add } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
 
@@ -9,23 +9,22 @@ import { CosmosTools } from '../CosmosTools'
 import { CosmosFee, SafeCosmosWalletInfo } from '../cosmosTypes'
 import { rpcWithApiKey } from '../cosmosUtils'
 import { MidgardNetworkInfo } from '../midgardTypes'
-import { asThornodeNetwork, ThorchainNetworkInfo } from '../thorchainTypes'
+import { asThornodeNetwork } from '../thorchainTypes'
 import { MidgardEngine } from './MidgardEngine'
 
 /**
  * Thorchain-specific engine that uses the thornode API for fee calculation.
  */
 export class ThorchainEngine extends MidgardEngine {
-  networkInfo: ThorchainNetworkInfo
+  networkInfo: MidgardNetworkInfo
 
   constructor(
-    env: PluginEnvironment<ThorchainNetworkInfo>,
+    env: PluginEnvironment<MidgardNetworkInfo>,
     tools: CosmosTools,
     walletInfo: SafeCosmosWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    // Cast to MidgardNetworkInfo for parent constructor
-    super(env as PluginEnvironment<MidgardNetworkInfo>, tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
   }
 
@@ -58,6 +57,10 @@ export class ThorchainEngine extends MidgardEngine {
       method: 'GET',
       headers
     })
+    if (res.status !== 200) {
+      const text = await res.text()
+      throw new Error(`Thorchain calculateFee error: ${text}`)
+    }
     const raw = await res.json()
     const clean = asThornodeNetwork(raw)
 
@@ -75,10 +78,7 @@ export class ThorchainEngine extends MidgardEngine {
     return {
       gasFeeCoin: coin('1', this.networkInfo.nativeDenom),
       gasLimit: '60000000',
-      // For Thorchain, the exact fee isn't known until the transaction is confirmed.
-      // This would most commonly be an issue for max spends but we should overestimate
-      // the fee for all spends.
-      networkFee: mul(networkFee, '1.01')
+      networkFee
     }
   }
 }
