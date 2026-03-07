@@ -163,7 +163,8 @@ export class PiratechainTools implements EdgeCurrencyTools {
 
     const {
       edgeParsedUri,
-      edgeParsedUri: { publicAddress }
+      edgeParsedUri: { publicAddress },
+      parsedUri
     } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
@@ -175,6 +176,12 @@ export class PiratechainTools implements EdgeCurrencyTools {
 
     if (publicAddress == null || !(await this.isValidAddress(publicAddress))) {
       throw new Error('InvalidPublicAddressError')
+    }
+
+    // ZIP-321 memo support
+    const memo = parsedUri.query.memo
+    if (memo != null) {
+      edgeParsedUri.uniqueIdentifier = memo
     }
 
     return edgeParsedUri
