@@ -324,8 +324,8 @@ export class MoneroEngine extends CurrencyEngine<
           status.networkHeight
         )
 
-        const balance = status.balance.toString()
-        this.unlockedBalance = status.unlockedBalance.toString()
+        const balance = status.balance
+        this.unlockedBalance = status.unlockedBalance
         this.updateBalance(null, balance)
         this.syncTracker.updateBalanceRatio(1)
 
@@ -476,8 +476,8 @@ export class MoneroEngine extends CurrencyEngine<
     direction: TransactionDirection
     isPending: boolean
     isFailed: boolean
-    amount: number
-    fee: number
+    amount: string
+    fee: string
     blockHeight: number
     timestamp: number
     paymentId: string
@@ -503,12 +503,12 @@ export class MoneroEngine extends CurrencyEngine<
       : []
 
     let nativeAmount: string
-    const networkFee = tx.fee.toString()
+    const networkFee = tx.fee
 
     if (isReceive) {
-      nativeAmount = tx.amount.toString()
+      nativeAmount = tx.amount
     } else {
-      nativeAmount = `-${(tx.amount + tx.fee).toString()}`
+      nativeAmount = `-${add(tx.amount, tx.fee)}`
     }
 
     const blockHeight = tx.isPending ? 0 : tx.blockHeight
