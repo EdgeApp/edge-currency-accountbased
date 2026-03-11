@@ -614,7 +614,7 @@ export class MoneroEngine extends CurrencyEngine<
       return maxSpendable
     } catch (error: unknown) {
       this.log.error(`getMaxSpendable error: ${String(error)}`)
-      return this.unlockedBalance
+      throw error
     }
   }
 
