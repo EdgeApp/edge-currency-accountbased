@@ -81,7 +81,9 @@ export const asMoneroPrivateKeys = (
       return {
         dataKey: clean.dataKey,
         moneroKey: clean[`${pluginId}Key`] as string,
-        birthdayHeight: clean[`${pluginId}BirthdayHeight`] as number,
+        birthdayHeight: clean[`${pluginId}BirthdayHeight`] as
+          | number
+          | undefined,
         moneroSpendKeyPrivate: clean[`${pluginId}SpendKeyPrivate`] as string,
         moneroSpendKeyPublic: clean[`${pluginId}SpendKeyPublic`] as string
       }
