@@ -151,6 +151,7 @@ export class MoneroEngine extends CurrencyEngine<
             'walletEvent',
             event => {
               if (event.walletId !== base64UrlWalletId) return
+              if (event.eventName !== 'pendingTransactionReceived') return
               this.log(`Wallet event: ${event.eventName} data=${event.data}`)
               this.queryTransactions(base64UrlWalletId).catch(err =>
                 this.log.error(
