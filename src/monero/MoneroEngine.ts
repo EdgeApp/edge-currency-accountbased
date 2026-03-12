@@ -66,6 +66,7 @@ export class MoneroEngine extends CurrencyEngine<
   private syncStartHeight: number | undefined
   private txSortOrder: 'asc' | 'desc' = 'asc'
   private unsubscribeWalletEvent?: () => void
+  private abortKeysWait?: () => void
 
   constructor(
     env: PluginEnvironment<MoneroNetworkInfo>,
@@ -93,7 +94,13 @@ export class MoneroEngine extends CurrencyEngine<
 
     this.nativeWalletId = makeLifecycleManager({
       onStart: async () => {
-        const keys = await keysPromise
+        let abortKeysWait: (() => void) | undefined
+        const abortPromise = new Promise<never>((resolve, reject) => {
+          abortKeysWait = () => reject(new Error('Engine stopped'))
+        })
+        this.abortKeysWait = abortKeysWait
+        const keys = await Promise.race([keysPromise, abortPromise])
+        this.abortKeysWait = undefined
         const base64UrlWalletId = base64url.stringify(
           base64.parse(this.walletId)
         )
@@ -538,6 +545,7 @@ export class MoneroEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
+    this.abortKeysWait?.()
     await this.nativeWalletId.stop()
     this.syncStartHeight = undefined
     this.unlockedBalance = '0'
