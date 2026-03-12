@@ -20,7 +20,8 @@ export interface WeightedSyncTracker extends SyncTracker {
 }
 
 /**
- * Creates a Sync
+ * Creates a weighted sync tracker that blends block, balance,
+ * and history progress into a single ratio.
  */
 export function makeWeightedSyncTracker(
   engine: SyncEngine
