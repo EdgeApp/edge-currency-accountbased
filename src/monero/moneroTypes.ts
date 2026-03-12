@@ -11,10 +11,10 @@ import {
 } from 'cleaners'
 import type {
   NetworkType,
-  TransactionPriority,
   WalletBackend,
   WalletEventData
 } from 'react-native-monero-lwsf'
+import { TransactionPriority } from 'react-native-monero-lwsf'
 import type { Subscriber } from 'yaob'
 
 export const EDGE_MONERO_LWS_SERVER = 'https://monerolws1.edge.app'
@@ -152,9 +152,9 @@ export const asSafeMoneroWalletInfo: Cleaner<SafeMoneroWalletInfo> = asCodec(
 )
 
 export function translateFee(fee?: string): TransactionPriority {
-  if (fee === 'low') return 1
-  if (fee === 'high') return 3
-  return 2 // Default to medium
+  if (fee === 'low') return TransactionPriority.Low
+  if (fee === 'high') return TransactionPriority.High
+  return TransactionPriority.Medium
 }
 
 export const asMoneroWalletOtherData = asObject({

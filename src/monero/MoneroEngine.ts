@@ -89,6 +89,8 @@ export class MoneroEngine extends CurrencyEngine<
       opts.walletSettings ?? {}
     )
 
+    // Singleton promise resolved once by the first syncNetwork call.
+    // Stays resolved across restarts so onStart gets keys immediately.
     const keysPromise = new Promise<MoneroPrivateKeys>(resolve => {
       this.sendKeysToNative = resolve
     })
