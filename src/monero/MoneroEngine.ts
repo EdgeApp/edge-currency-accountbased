@@ -67,6 +67,7 @@ export class MoneroEngine extends CurrencyEngine<
   private txSortOrder: 'asc' | 'desc' = 'asc'
   private unsubscribeWalletEvent?: () => void
   private abortKeysWait?: () => void
+  private settingsChangeQueue: Promise<void> = Promise.resolve()
 
   constructor(
     env: PluginEnvironment<MoneroNetworkInfo>,
@@ -570,9 +571,12 @@ export class MoneroEngine extends CurrencyEngine<
       return
     }
 
-    this.currentSettings = newSettings
-    await this.killEngine()
-    await this.startEngine()
+    this.settingsChangeQueue = this.settingsChangeQueue.then(async () => {
+      this.currentSettings = newSettings
+      await this.killEngine()
+      await this.startEngine()
+    })
+    await this.settingsChangeQueue
   }
 
   async changeWalletSettings(walletSettings: JsonObject): Promise<void> {
@@ -584,10 +588,13 @@ export class MoneroEngine extends CurrencyEngine<
       return
     }
 
-    this.currentWalletSettings = newSettings
-    await this.killEngine()
-    await this.clearBlockchainCache()
-    await this.startEngine()
+    this.settingsChangeQueue = this.settingsChangeQueue.then(async () => {
+      this.currentWalletSettings = newSettings
+      await this.killEngine()
+      await this.clearBlockchainCache()
+      await this.startEngine()
+    })
+    await this.settingsChangeQueue
   }
 
   async getMaxSpendable(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
