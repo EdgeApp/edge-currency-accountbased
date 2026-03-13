@@ -162,7 +162,7 @@ export class MoneroEngine extends CurrencyEngine<
             event => {
               if (event.walletId !== base64UrlWalletId) return
               if (event.eventName !== 'pendingTransactionReceived') return
-              this.log(`Wallet event: ${event.eventName} data=${event.data}`)
+              this.log(`Wallet event: ${event.eventName}`)
               this.queryTransactions(base64UrlWalletId).catch(err =>
                 this.log.error(
                   `Event-triggered queryTransactions error: ${String(err)}`
@@ -344,8 +344,9 @@ export class MoneroEngine extends CurrencyEngine<
         return 20000
       } else {
         const range = status.networkHeight - this.syncStartHeight
-        const ratio =
+        const rawRatio =
           range > 0 ? (status.syncedHeight - this.syncStartHeight) / range : 0
+        const ratio = Math.max(0, Math.min(1, rawRatio))
 
         this.syncTracker.updateBlockRatio(
           ratio,
@@ -524,7 +525,7 @@ export class MoneroEngine extends CurrencyEngine<
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight,
-      currencyCode: 'XMR',
+      currencyCode: this.currencyInfo.currencyCode,
       date: tx.timestamp,
       isSend: !isReceive,
       memos,
