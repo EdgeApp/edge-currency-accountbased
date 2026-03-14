@@ -456,7 +456,7 @@ export class EthereumNetwork {
       for (const [tokenId, bal] of tokenBal) {
         this.ethEngine.updateBalance(tokenId, bal)
       }
-      this.ethEngine.currencyEngineCallbacks.onNewTokens(
+      this.ethEngine.reportDetectedTokens(
         ethereumNetworkUpdate.detectedTokenIds ?? []
       )
     }
@@ -723,7 +723,7 @@ function makeThrottledFunction<Args extends any[], Rtn>(
   fn: (...args: Args) => Promise<Rtn>
 ): () => Promise<Rtn> {
   let lastTime = 0
-  let lastTimeout: NodeJS.Timeout | undefined
+  let lastTimeout: ReturnType<typeof setTimeout> | undefined
   return async (...args: Args) => {
     return await new Promise((resolve, reject) => {
       const timeSinceLast = Date.now() - lastTime

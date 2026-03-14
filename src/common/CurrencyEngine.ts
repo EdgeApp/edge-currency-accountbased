@@ -15,6 +15,7 @@ import {
   EdgeLog,
   EdgeMetaToken,
   EdgeSpendInfo,
+  EdgeStakingStatus,
   EdgeSubscribedAddress,
   EdgeSyncStatus,
   EdgeToken,
@@ -196,6 +197,7 @@ export class CurrencyEngine<
       publicKey: '',
       totalBalances: {},
       numTransactions: {},
+      detectedTokenIds: {},
       unactivatedTokenIds: [],
       otherData: undefined
     }
@@ -655,6 +657,24 @@ export class CurrencyEngine<
     this.syncTracker.balanceComplete?.(tokenId)
   }
 
+  private lastStakingStatusJson: string = ''
+
+  protected reportStakingStatus(status: EdgeStakingStatus): void {
+    const json = JSON.stringify(status)
+    if (json === this.lastStakingStatusJson) return
+    this.lastStakingStatusJson = json
+    this.currencyEngineCallbacks.onStakingStatusChanged(status)
+  }
+
+  reportDetectedTokens(tokenIds: string[]): void {
+    const known = this.walletLocalData.detectedTokenIds
+    const newTokenIds = tokenIds.filter(id => known[id] == null)
+    if (newTokenIds.length === 0) return
+    for (const id of newTokenIds) known[id] = true
+    this.walletLocalDataDirty = true
+    this.currencyEngineCallbacks.onNewTokens(Object.keys(known))
+  }
+
   updateConfirmations(tx: EdgeTransaction): boolean {
     // No update needed for these status
     switch (tx.confirmations) {
@@ -717,10 +737,12 @@ export class CurrencyEngine<
 
     this.walletLocalData.blockHeight = blockHeight
     this.walletLocalDataDirty = true
-    this.currencyEngineCallbacks.onBlockHeightChanged(blockHeight)
 
+    // Update confirmations directly on all in-memory transactions and emit
+    // any that changed via onTransactions. Confirmations are owned by the engine;
+    // core-js learns of changes only when we send txs with updated confirmations
+    // via onTransactions (i.e. the deprecated onBlockHeightChanged is not called).
     const activeTokenIds = [null, ...this.enabledTokenIds]
-
     for (const tokenId of activeTokenIds) {
       const txList = this.transactionList[tokenId ?? ''] ?? []
       for (let i = 0; i < txList.length; i++) {
