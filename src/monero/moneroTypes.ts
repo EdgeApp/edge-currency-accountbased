@@ -11,7 +11,6 @@ import {
   Cleaner
 } from 'cleaners'
 import type {
-  NetworkType,
   TransactionPriority,
   WalletBackend,
   WalletEventData
@@ -30,7 +29,7 @@ export type MoneroInitOptions = ReturnType<typeof asMoneroInitOptions>
 
 export interface MoneroNetworkInfo {
   edgeLwsServer: string
-  networkType: NetworkType
+  networkType: 'MAINNET' | 'TESTNET' | 'STAGENET'
 }
 
 export const asMoneroUserSettings = asObject({
