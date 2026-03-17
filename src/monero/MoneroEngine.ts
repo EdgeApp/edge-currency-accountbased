@@ -216,7 +216,7 @@ export class MoneroEngine extends CurrencyEngine<
     edgeLwsServer: string,
     loginResult?: LoginResponse
   ): Promise<number> {
-    if (height != null) return height
+    if (height != null && height > 0) return height
 
     // For Edge LWS, the login response may already have it
     if (loginResult?.start_height != null) {
