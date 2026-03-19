@@ -6,6 +6,7 @@ import { add, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeEngineSyncNetworkOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -48,6 +49,7 @@ import {
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const SYNC_NETWORK_INTERVAL = 10000
 
 const makeSpendMutex = makeMutex()
 
@@ -265,7 +267,39 @@ export class TezosEngine extends CurrencyEngine<
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+
+    if (this.subscribedAddresses.length === 0) {
+      this.subscribedAddresses.push({
+        address: this.walletLocalData.publicKey,
+        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+      })
+    }
+    this.currencyEngineCallbacks.onSubscribeAddresses(this.subscribedAddresses)
+
     await super.startEngine()
+  }
+
+  async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
+    const { subscribeParam } = opts
+
+    if (subscribeParam == null) {
+      await this.checkAccountInnerLoop()
+      await this.checkTransactionsInnerLoop()
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    const { needsSync = true } = subscribeParam
+
+    if (!needsSync) {
+      if (!this.syncComplete) {
+        this.setOneHundoSyncRatio()
+      }
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    await this.checkAccountInnerLoop()
+    await this.checkTransactionsInnerLoop()
+    return SYNC_NETWORK_INTERVAL
   }
 
   async resyncBlockchain(): Promise<void> {

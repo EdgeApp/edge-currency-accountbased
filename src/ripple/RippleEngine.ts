@@ -23,6 +23,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeEngineActivationOptions,
   EdgeEngineGetActivationAssetsOptions,
+  EdgeEngineSyncNetworkOptions,
   EdgeGetActivationAssetsResults,
   EdgeMemo,
   EdgeSpendInfo,
@@ -88,6 +89,7 @@ type AccountTransaction = AccountTxResponse['result']['transactions'][number]
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKHEIGHT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const SYNC_NETWORK_INTERVAL = 10000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 
 // How long to wait before a transaction is accepted into a ledge close (block)
@@ -784,7 +786,39 @@ export class XrpEngine extends CurrencyEngine<
     this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+
+    if (this.subscribedAddresses.length === 0) {
+      this.subscribedAddresses.push({
+        address: this.walletLocalData.publicKey,
+        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+      })
+    }
+    this.currencyEngineCallbacks.onSubscribeAddresses(this.subscribedAddresses)
+
     await super.startEngine()
+  }
+
+  async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
+    const { subscribeParam } = opts
+
+    if (subscribeParam == null) {
+      await this.checkAccountInnerLoop()
+      await this.checkTransactionsInnerLoop()
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    const { needsSync = true } = subscribeParam
+
+    if (!needsSync) {
+      if (!this.syncComplete) {
+        this.setOneHundoSyncRatio()
+      }
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    await this.checkAccountInnerLoop()
+    await this.checkTransactionsInnerLoop()
+    return SYNC_NETWORK_INTERVAL
   }
 
   async killEngine(): Promise<void> {

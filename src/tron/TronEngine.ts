@@ -3,6 +3,7 @@ import { asMaybe, Cleaner } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeEngineSyncNetworkOptions,
   EdgeFetchFunction,
   EdgeMemo,
   EdgeSpendInfo,
@@ -91,6 +92,7 @@ const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const NETWORKFEES_POLL_MILLISECONDS = getRandomDelayMs(60 * 60 * 1000) // 1 hour
+const SYNC_NETWORK_INTERVAL = 10000
 const DEFAULT_ENERGY_NO_BALANCE = 130000
 
 type TronFunction =
@@ -1418,7 +1420,39 @@ export class TronEngine extends CurrencyEngine<
     this.addToLoop('checkTokenBalances', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
+
+    if (this.subscribedAddresses.length === 0) {
+      this.subscribedAddresses.push({
+        address: this.walletLocalData.publicKey,
+        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+      })
+    }
+    this.currencyEngineCallbacks.onSubscribeAddresses(this.subscribedAddresses)
+
     await super.startEngine()
+  }
+
+  async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
+    const { subscribeParam } = opts
+
+    if (subscribeParam == null) {
+      await this.checkAccountInnerLoop()
+      await this.queryTransactions()
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    const { needsSync = true } = subscribeParam
+
+    if (!needsSync) {
+      if (!this.syncComplete) {
+        this.setOneHundoSyncRatio()
+      }
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    await this.checkAccountInnerLoop()
+    await this.queryTransactions()
+    return SYNC_NETWORK_INTERVAL
   }
 
   async getStakingStatus(): Promise<EdgeStakingStatus> {
