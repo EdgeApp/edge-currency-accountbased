@@ -1415,11 +1415,19 @@ export class TronEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
-    this.addToLoop('checkTokenBalances', ACCOUNT_POLL_MILLISECONDS)
+    // When change-server is active, syncNetwork drives all sync work.
+    // Polling loops are only needed as fallback when change-server is off.
+    // Block height is not polled separately because:
+    // - requiredConfirmations defaults to 1, so txs confirm immediately
+    // - block height is updated as a side effect of account/transaction queries
+    if (!this.currencyInfo.usesChangeServer) {
+      this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+      this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
+      this.addToLoop('checkTokenBalances', ACCOUNT_POLL_MILLISECONDS)
+      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
+    }
+    // Fee updates always run regardless of change-server (matches Ethereum pattern)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
 
     if (this.subscribedAddresses.length === 0) {
       this.subscribedAddresses.push({
@@ -1436,7 +1444,9 @@ export class TronEngine extends CurrencyEngine<
     const { subscribeParam } = opts
 
     if (subscribeParam == null) {
+      await this.checkBlockchainInnerLoop()
       await this.checkAccountInnerLoop()
+      await this.checkTokenBalances()
       await this.queryTransactions()
       return SYNC_NETWORK_INTERVAL
     }
@@ -1450,7 +1460,9 @@ export class TronEngine extends CurrencyEngine<
       return SYNC_NETWORK_INTERVAL
     }
 
+    await this.checkBlockchainInnerLoop()
     await this.checkAccountInnerLoop()
+    await this.checkTokenBalances()
     await this.queryTransactions()
     return SYNC_NETWORK_INTERVAL
   }

@@ -783,9 +783,19 @@ export class XrpEngine extends CurrencyEngine<
       }, 10000)
       return
     }
-    this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    // When change-server is active, syncNetwork drives all sync work.
+    // Polling loops are only needed as fallback when change-server is off.
+    // Block height is not polled separately because:
+    // - requiredConfirmations defaults to 1, so txs confirm immediately
+    // - block height is updated as a side effect of account/transaction queries
+    if (!this.currencyInfo.usesChangeServer) {
+      this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
+      this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+      this.addToLoop(
+        'checkTransactionsInnerLoop',
+        TRANSACTION_POLL_MILLISECONDS
+      )
+    }
 
     if (this.subscribedAddresses.length === 0) {
       this.subscribedAddresses.push({
@@ -802,6 +812,7 @@ export class XrpEngine extends CurrencyEngine<
     const { subscribeParam } = opts
 
     if (subscribeParam == null) {
+      await this.checkServerInfoInnerLoop()
       await this.checkAccountInnerLoop()
       await this.checkTransactionsInnerLoop()
       return SYNC_NETWORK_INTERVAL
@@ -816,6 +827,7 @@ export class XrpEngine extends CurrencyEngine<
       return SYNC_NETWORK_INTERVAL
     }
 
+    await this.checkServerInfoInnerLoop()
     await this.checkAccountInnerLoop()
     await this.checkTransactionsInnerLoop()
     return SYNC_NETWORK_INTERVAL
