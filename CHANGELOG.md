@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Zano) Add sweep support for Zano and tokens
+
 ## 4.77.0 (2026-03-12)
 
 - added: (Ethereum) Add XAUt (Tether Gold) ERC-20 builtin token

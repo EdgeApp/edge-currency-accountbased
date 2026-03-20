@@ -215,8 +215,13 @@ export class ZanoTools implements EdgeCurrencyTools {
       networks,
       builtinTokens: this.builtinTokens,
       currencyCode,
-      customTokens
+      customTokens,
+      testPrivateKeys: this.importPrivateKey.bind(this)
     })
+
+    if (edgeParsedUri.privateKeys != null) {
+      return edgeParsedUri
+    }
 
     let address = ''
 
