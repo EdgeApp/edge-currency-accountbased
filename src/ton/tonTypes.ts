@@ -12,6 +12,7 @@ import {
 export interface TonNetworkInfo {
   defaultWalletContract: string
   drpcUrl: string
+  jettonTransferGas: string
   minimumAddressBalance: string
   pluginMnemonicKeyName: string
   tonCenterUrl: string
@@ -26,8 +27,23 @@ export const asTonInfoPayload = asObject({
 })
 export type TonInfoPayload = ReturnType<typeof asTonInfoPayload>
 
+const asStringRecord: Cleaner<Record<string, string>> = (
+  raw: unknown
+): Record<string, string> => {
+  if (raw == null || typeof raw !== 'object') return {}
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'string') out[k] = v
+  }
+  return out
+}
+
 export const asTonWalletOtherData = asObject({
   contractState: asOptional(asString, 'uninitialized'), //  "active" | "uninitialized" | "frozen";
+  jettonWalletAddresses: asOptional(
+    asStringRecord,
+    (): Record<string, string> => ({})
+  ),
   mostRecentLogicalTime: asOptional(asString),
   mostRecentHash: asOptional(asString)
 })
@@ -73,10 +89,25 @@ const asBigInt = (val: any): BigInt => {
   return val
 }
 
+const asNullableString = (raw: unknown): string | null => {
+  if (raw == null) return null
+  if (typeof raw !== 'string') throw new Error('Expected string or null')
+  return raw
+}
+
+export const asJettonTransferInfo = asObject({
+  jettonAmount: asBigInt,
+  message: asNullableString
+})
+export type JettonTransferInfo = ReturnType<typeof asJettonTransferInfo>
+
 const asMessage = asObject({
+  jetton_notify: asOptional(asJettonTransferInfo),
+  jetton_req: asOptional(asJettonTransferInfo),
   message: asOptional(asString),
   recipient: asString,
   sender: asOptional(asString),
+  txType: asOptional(asString),
   value: asOptional(asBigInt)
 })
 

@@ -44,7 +44,9 @@ import {
   asDrpcGetTransactions,
   asDrpcRunGetMethod,
   asDrpcSendBoc,
-  parseSeqnoFromStack
+  parseSeqnoFromStack,
+  parseStackAddress,
+  parseStackNumber
 } from './tonDrpc'
 import { TonTools } from './TonTools'
 import {
@@ -52,6 +54,7 @@ import {
   asTonPrivateKeys,
   asTonTxOtherParams,
   asTonWalletOtherData,
+  JettonTransferInfo,
   ParsedTx,
   TonNetworkInfo,
   TonWalletOtherData
@@ -70,6 +73,7 @@ export class TonEngine extends CurrencyEngine<
 
   wallet: WalletContractV5R1
   archiveTransactions: boolean
+  jettonWalletToTokenId: Map<string, string> = new Map()
 
   constructor(
     env: PluginEnvironment<TonNetworkInfo>,
@@ -93,6 +97,45 @@ export class TonEngine extends CurrencyEngine<
     this.otherData = asTonWalletOtherData(raw)
   }
 
+  async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
+    await super.changeEnabledTokenIds(tokenIds)
+    await this.resolveJettonWalletAddresses()
+  }
+
+  async resolveJettonWalletAddresses(): Promise<void> {
+    for (const tokenId of this.enabledTokenIds) {
+      if (this.otherData.jettonWalletAddresses[tokenId] == null) {
+        try {
+          const addrCell = beginCell()
+            .storeAddress(this.wallet.address)
+            .endCell()
+          const addrBoc = base64.stringify(addrCell.toBoc())
+
+          const raw = await this.tools.fetchDrpc('/runGetMethod', {
+            address: tokenId,
+            method: 'get_wallet_address',
+            stack: [['tvm.Slice', addrBoc]]
+          })
+          const { result } = asDrpcRunGetMethod(raw)
+          if (result.exit_code !== 0) {
+            throw new Error(`get_wallet_address exit_code ${result.exit_code}`)
+          }
+          const jettonWalletAddr = parseStackAddress(result.stack, 0)
+          this.otherData.jettonWalletAddresses[tokenId] =
+            jettonWalletAddr.toRawString()
+          this.walletLocalDataDirty = true
+        } catch (e) {
+          this.log.warn(`resolveJettonWalletAddresses error for ${tokenId}:`, e)
+        }
+      }
+
+      const walletAddr = this.otherData.jettonWalletAddresses[tokenId]
+      if (walletAddr != null) {
+        this.jettonWalletToTokenId.set(walletAddr, tokenId)
+      }
+    }
+  }
+
   async queryBalance(): Promise<void> {
     try {
       const addr = encodeURIComponent(this.wallet.address.toRawString())
@@ -109,6 +152,30 @@ export class TonEngine extends CurrencyEngine<
       }
     } catch (e) {
       this.log.warn('queryBalance error:', e)
+    }
+  }
+
+  async queryJettonBalances(): Promise<void> {
+    for (const tokenId of this.enabledTokenIds) {
+      const walletAddr = this.otherData.jettonWalletAddresses[tokenId]
+      if (walletAddr == null) continue
+
+      try {
+        const raw = await this.tools.fetchDrpc('/runGetMethod', {
+          address: walletAddr,
+          method: 'get_wallet_data',
+          stack: []
+        })
+        const { result } = asDrpcRunGetMethod(raw)
+        if (result.exit_code !== 0) {
+          this.updateBalance(tokenId, '0')
+          continue
+        }
+        const balance = parseStackNumber(result.stack, 0)
+        this.updateBalance(tokenId, balance)
+      } catch (e) {
+        this.log.warn(`queryJettonBalances error for ${tokenId}:`, e)
+      }
     }
   }
 
@@ -173,6 +240,9 @@ export class TonEngine extends CurrencyEngine<
 
     this.sendTransactionEvents()
     this.syncTracker.updateHistoryRatio(null, 1)
+    for (const tokenId of this.enabledTokenIds) {
+      this.syncTracker.updateHistoryRatio(tokenId, 1)
+    }
   }
 
   processTonTransaction(tx: ParsedTx): void {
@@ -229,6 +299,74 @@ export class TonEngine extends CurrencyEngine<
       walletId: this.walletId
     }
     this.addTransaction(null, edgeTransaction)
+
+    this.processJettonTransaction(tx)
+  }
+
+  processJettonTransaction(tx: ParsedTx): void {
+    const { inMessage, outMessages } = tx
+
+    if (
+      inMessage.txType === 'jetton_notification' &&
+      inMessage.jetton_notify != null
+    ) {
+      const senderAddr = inMessage.sender
+      if (senderAddr != null) {
+        const senderRaw = Address.parse(senderAddr).toRawString()
+        const tokenId = this.jettonWalletToTokenId.get(senderRaw)
+        if (tokenId != null) {
+          this.addJettonTransaction(tx, tokenId, inMessage.jetton_notify, false)
+        }
+      }
+    }
+
+    for (const outMsg of outMessages) {
+      if (outMsg.txType === 'jetton_request' && outMsg.jetton_req != null) {
+        const recipientRaw = Address.parse(outMsg.recipient).toRawString()
+        const tokenId = this.jettonWalletToTokenId.get(recipientRaw)
+        if (tokenId != null) {
+          this.addJettonTransaction(tx, tokenId, outMsg.jetton_req, true)
+        }
+      }
+    }
+  }
+
+  addJettonTransaction(
+    tx: ParsedTx,
+    tokenId: string,
+    jettonInfo: JettonTransferInfo,
+    isSend: boolean
+  ): void {
+    const memos: EdgeMemo[] = []
+    if (jettonInfo.message != null && jettonInfo.message !== '') {
+      memos.push({ type: 'text', value: jettonInfo.message })
+    }
+
+    const jettonAmount = jettonInfo.jettonAmount.toString()
+    const nativeAmount = isSend ? `-${jettonAmount}` : jettonAmount
+    const currencyCode = this.allTokensMap[tokenId]?.currencyCode ?? 'UNKNOWN'
+    const networkFee = tx.originalTx.totalFees.coins.toString()
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 1,
+      confirmations: 'confirmed',
+      currencyCode,
+      date: tx.now,
+      isSend,
+      nativeAmount,
+      networkFee: '0',
+      networkFees: [],
+      memos,
+      ourReceiveAddresses: isSend
+        ? []
+        : [this.wallet.address.toString({ bounceable: false })],
+      parentNetworkFee: isSend ? networkFee : undefined,
+      tokenId,
+      txid: tx.hash,
+      signedTx: '',
+      walletId: this.walletId
+    }
+    this.addTransaction(tokenId, edgeTransaction)
   }
 
   getTxCheckpoint(edgeTransaction: EdgeTransaction): string {
@@ -241,7 +379,9 @@ export class TonEngine extends CurrencyEngine<
 
   async startEngine(): Promise<void> {
     this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('queryJettonBalances', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS)
+    await this.resolveJettonWalletAddresses()
     await super.startEngine()
   }
 
@@ -252,10 +392,23 @@ export class TonEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    // TON allows sending the entire balance but we need to be able to craft the entire transaction here instead of just an amount
-    const spendInfoCopy = { ...spendInfo }
+    const { tokenId } = spendInfo
 
-    const balance = this.getBalance({ tokenId: spendInfoCopy.tokenId })
+    if (tokenId != null) {
+      const tokenBalance = this.getBalance({ tokenId })
+      const nativeBalance = this.getBalance({ tokenId: null })
+      const requiredNative = add(
+        this.networkInfo.jettonTransferGas,
+        this.networkInfo.minimumAddressBalance
+      )
+      if (gt(requiredNative, nativeBalance)) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
+      return tokenBalance
+    }
+
+    const spendInfoCopy = { ...spendInfo }
+    const balance = this.getBalance({ tokenId: null })
     spendInfoCopy.spendTargets[0].nativeAmount = balance
     spendInfoCopy.skipChecks = true
 
@@ -280,33 +433,65 @@ export class TonEngine extends CurrencyEngine<
       throw new Error('makeSpend Missing publicAddress')
     }
 
-    let memoCell: Cell | undefined
-    if (memo != null) {
-      memoCell = beginCell().storeUint(0, 32).storeStringTail(memo).endCell()
-    }
-
     const needsInit = this.otherData.contractState === 'uninitialized'
+    let transferMessage: MessageRelaxed
 
-    const transferMessage: MessageRelaxed = internal({
-      value: fromNano(nativeAmount),
-      to: Address.parse(publicAddress),
-      body: memoCell,
-      init: needsInit ? this.wallet.init : null,
-      bounce: false
-    })
+    if (tokenId != null) {
+      // Jetton transfer (TEP-74)
+      const jettonWalletAddr = this.otherData.jettonWalletAddresses[tokenId]
+      if (jettonWalletAddr == null) {
+        throw new Error('Jetton wallet address not resolved')
+      }
+
+      const forwardPayload =
+        memo != null
+          ? beginCell().storeUint(0, 32).storeStringTail(memo).endCell()
+          : null
+
+      const jettonBody = beginCell()
+        .storeUint(0x0f8a7ea5, 32)
+        .storeUint(0, 64)
+        .storeCoins(BigInt(nativeAmount))
+        .storeAddress(Address.parse(publicAddress))
+        .storeAddress(this.wallet.address)
+        .storeMaybeRef(null)
+        .storeCoins(BigInt(1))
+        .storeMaybeRef(forwardPayload)
+        .endCell()
+
+      transferMessage = internal({
+        value: fromNano(this.networkInfo.jettonTransferGas),
+        to: Address.parse(jettonWalletAddr),
+        body: jettonBody,
+        init: needsInit ? this.wallet.init : null,
+        bounce: true
+      })
+    } else {
+      // Native TON transfer
+      let memoCell: Cell | undefined
+      if (memo != null) {
+        memoCell = beginCell().storeUint(0, 32).storeStringTail(memo).endCell()
+      }
+
+      transferMessage = internal({
+        value: fromNano(nativeAmount),
+        to: Address.parse(publicAddress),
+        body: memoCell,
+        init: needsInit ? this.wallet.init : null,
+        bounce: false
+      })
+    }
 
     const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
       sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
       messages: [transferMessage],
-
-      // Fake data that doesn't impact fee calc
       seqno: 0,
       secretKey: Buffer.alloc(64)
     }
     const transfer = this.wallet.createTransfer(transferArgs)
 
     let networkFee = '0'
-    if (nativeAmount !== '0') {
+    if (tokenId != null || nativeAmount !== '0') {
       const addr = this.wallet.address.toRawString()
       const bodyBoc = base64.stringify(transfer.toBoc())
       const initCodeBoc = needsInit
@@ -331,15 +516,32 @@ export class TonEngine extends CurrencyEngine<
       networkFee = totalFee.toString()
     }
 
-    const total = add(nativeAmount, networkFee)
-    const balance = this.getBalance({ tokenId })
-    if (
-      edgeSpendInfoIn.skipChecks !== true &&
-      gt(add(total, this.networkInfo.minimumAddressBalance), balance)
-    ) {
-      throw new InsufficientFundsError({
-        tokenId: null
-      })
+    if (tokenId != null) {
+      // Token sufficiency checks
+      const tokenBalance = this.getBalance({ tokenId })
+      const nativeBalance = this.getBalance({ tokenId: null })
+      if (edgeSpendInfoIn.skipChecks !== true) {
+        if (gt(nativeAmount, tokenBalance)) {
+          throw new InsufficientFundsError({ tokenId })
+        }
+        const requiredNative = add(
+          this.networkInfo.jettonTransferGas,
+          this.networkInfo.minimumAddressBalance
+        )
+        if (gt(requiredNative, nativeBalance)) {
+          throw new InsufficientFundsError({ tokenId: null })
+        }
+      }
+    } else {
+      // Native sufficiency check
+      const total = add(nativeAmount, networkFee)
+      const balance = this.getBalance({ tokenId: null })
+      if (
+        edgeSpendInfoIn.skipChecks !== true &&
+        gt(add(total, this.networkInfo.minimumAddressBalance), balance)
+      ) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
     }
 
     // Serialize transferMessage
@@ -350,7 +552,27 @@ export class TonEngine extends CurrencyEngine<
       unsignedTxBase64: base64.stringify(messageSlice.asCell().toBoc())
     }
 
-    const edgeTransaction: EdgeTransaction = {
+    if (tokenId != null) {
+      return {
+        blockHeight: 0,
+        currencyCode,
+        date: 0,
+        isSend: true,
+        memos,
+        nativeAmount: `-${nativeAmount}`,
+        networkFee: '0',
+        networkFees: [],
+        otherParams,
+        ourReceiveAddresses: [],
+        parentNetworkFee: networkFee,
+        signedTx: '',
+        tokenId,
+        txid: '',
+        walletId: this.walletId
+      }
+    }
+
+    return {
       blockHeight: 0,
       currencyCode,
       date: 0,
@@ -366,7 +588,6 @@ export class TonEngine extends CurrencyEngine<
       txid: '',
       walletId: this.walletId
     }
-    return edgeTransaction
   }
 
   async signTx(

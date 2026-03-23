@@ -21,6 +21,7 @@ import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asyncStaggeredRace } from '../common/promiseUtils'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
@@ -224,7 +225,12 @@ export class TonTools implements EdgeCurrencyTools {
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
-    throw new Error('Method not implemented.')
+    validateToken(token)
+    const cleanLocation = asMaybeContractLocation(token.networkLocation)
+    if (cleanLocation == null) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    return cleanLocation.contractAddress
   }
 }
 

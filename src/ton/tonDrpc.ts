@@ -1,5 +1,7 @@
+import { Address, Cell } from '@ton/ton'
 import { asArray, asNumber, asObject, asString } from 'cleaners'
 import { EdgeIo } from 'edge-core-js/types'
+import { base64 } from 'rfc4648'
 
 // ---------------------------------------------------------------------------
 // Low-level dRPC / Toncenter HTTP helper
@@ -108,17 +110,65 @@ export const asDrpcGetTransactions = asObject({
 // Stack helpers for runGetMethod responses
 // ---------------------------------------------------------------------------
 
-export function parseSeqnoFromStack(stack: unknown[]): number {
-  if (stack.length === 0) {
-    throw new Error('Empty stack for seqno')
+function extractCellBytes(val: unknown): string {
+  if (typeof val === 'string') return val
+  if (typeof val === 'object' && val != null && 'bytes' in val) {
+    return (val as any).bytes
   }
-  const entry = stack[0]
-  if (!Array.isArray(entry) || entry.length < 2) {
-    throw new Error('Unexpected seqno stack format')
+  throw new Error('Cannot extract cell bytes')
+}
+
+function parseStackEntry(entry: unknown): { type: string; value: any } {
+  if (Array.isArray(entry)) {
+    const [entryType, val] = entry
+    if (entryType === 'num') return { type: 'num', value: val }
+    if (entryType === 'cell' || entryType === 'tvm.Cell') {
+      return { type: 'cell', value: extractCellBytes(val) }
+    }
+    if (entryType === 'tvm.Slice') {
+      return { type: 'slice', value: extractCellBytes(val) }
+    }
+    return { type: String(entryType), value: val }
   }
-  const [type, value] = entry
+  if (typeof entry === 'object' && entry != null) {
+    const obj = entry as any
+    if (obj['@type'] === 'tvm.stackEntryNumber') {
+      return { type: 'num', value: obj.number?.value ?? obj.number }
+    }
+    if (obj['@type'] === 'tvm.stackEntryCell') {
+      return {
+        type: 'cell',
+        value: extractCellBytes(obj.cell?.bytes ?? obj.cell)
+      }
+    }
+  }
+  throw new Error(`Unknown stack entry format: ${JSON.stringify(entry)}`)
+}
+
+export function parseStackNumber(stack: unknown[], index: number): string {
+  if (index >= stack.length) {
+    throw new Error(`Index ${index} out of bounds (len=${stack.length})`)
+  }
+  const { type, value } = parseStackEntry(stack[index])
   if (type !== 'num') {
-    throw new Error(`Unexpected seqno stack type: ${String(type)}`)
+    throw new Error(`Expected num at index ${index}, got ${type}`)
   }
-  return Number(value)
+  return BigInt(value).toString()
+}
+
+export function parseStackAddress(stack: unknown[], index: number): Address {
+  if (index >= stack.length) {
+    throw new Error(`Index ${index} out of bounds (len=${stack.length})`)
+  }
+  const { type, value } = parseStackEntry(stack[index])
+  if (type !== 'cell' && type !== 'slice') {
+    throw new Error(`Expected cell/slice at index ${index}, got ${type}`)
+  }
+  const cellBoc = base64.parse(value)
+  const cell = Cell.fromBoc(Buffer.from(cellBoc))[0]
+  return cell.beginParse().loadAddress()
+}
+
+export function parseSeqnoFromStack(stack: unknown[]): number {
+  return Number(parseStackNumber(stack, 0))
 }
