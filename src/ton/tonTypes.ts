@@ -11,10 +11,10 @@ import {
 
 export interface TonNetworkInfo {
   defaultWalletContract: string
+  drpcUrl: string
   minimumAddressBalance: string
   pluginMnemonicKeyName: string
   tonCenterUrl: string
-  tonOrbsServers: string[]
 }
 
 //
@@ -22,7 +22,7 @@ export interface TonNetworkInfo {
 //
 
 export const asTonInfoPayload = asObject({
-  tonOrbsServers: asOptional(asArray(asString))
+  drpcUrl: asOptional(asString)
 })
 export type TonInfoPayload = ReturnType<typeof asTonInfoPayload>
 
@@ -99,6 +99,7 @@ export const asTonTxOtherParams = asObject({
 })
 
 export const asTonInitOptions = asObject({
+  drpcApiKey: asOptional(asString),
   tonCenterApiKeys: asOptional(asArray(asString), () => [])
 })
 export type TonInitOptions = ReturnType<typeof asTonInitOptions>
