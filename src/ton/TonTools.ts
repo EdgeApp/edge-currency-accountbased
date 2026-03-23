@@ -20,13 +20,11 @@ import {
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asyncStaggeredRace } from '../common/promiseUtils'
 import { asSafeCommonWalletInfo } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import {
-  getLegacyDenomination,
-  mergeDeeply,
-  shuffleArray
-} from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import { fetchDrpc as fetchDrpcRequest } from './tonDrpc'
 import {
   asTonInitOptions,
   asTonPrivateKeys,
@@ -46,7 +44,6 @@ export class TonTools implements EdgeCurrencyTools {
 
   fetchAdaptor: ReturnType<typeof createFetchAdapter>
   getTonCenterClients: () => TonClient[]
-  getOrbsClients: () => TonClient[]
 
   constructor(env: PluginEnvironment<TonNetworkInfo>) {
     const { builtinTokens, currencyInfo, initOptions, io } = env
@@ -100,15 +97,23 @@ export class TonTools implements EdgeCurrencyTools {
       })
       return clients
     }
-    this.getOrbsClients = () => {
-      const clients = [...env.networkInfo.tonOrbsServers].map(url => {
-        return new TonClient({
-          endpoint: url,
-          httpAdapter: this.fetchAdaptor
-        })
-      })
-      return shuffleArray(clients)
+  }
+
+  async fetchDrpc(path: string, body?: object): Promise<unknown> {
+    const funcs: Array<() => Promise<unknown>> = [
+      async () =>
+        await fetchDrpcRequest(this.io, this.networkInfo.drpcUrl, path, body)
+    ]
+
+    const { drpcApiKey } = this.initOptions
+    if (drpcApiKey != null && drpcApiKey !== '') {
+      const paidBaseUrl = `https://lb.drpc.org/rest/${drpcApiKey}/ton`
+      funcs.push(
+        async () => await fetchDrpcRequest(this.io, paidBaseUrl, path, body)
+      )
     }
+
+    return await asyncStaggeredRace(funcs)
   }
 
   async getDisplayPrivateKey(
