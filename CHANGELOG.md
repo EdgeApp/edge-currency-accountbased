@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.77.1 (2026-03-23)
+
 - added: (Zano) Add sweep support for Zano and tokens
 
 ## 4.77.0 (2026-03-12)
