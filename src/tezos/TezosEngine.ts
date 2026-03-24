@@ -269,7 +269,7 @@ export class TezosEngine extends CurrencyEngine<
     // Block height is not polled separately because:
     // - requiredConfirmations defaults to 1, so txs confirm immediately
     // - block height is updated as a side effect of account/transaction queries
-    if (!this.currencyInfo.usesChangeServer) {
+    if (this.currencyInfo.usesChangeServer !== true) {
       this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
       this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
       this.addToLoop(
