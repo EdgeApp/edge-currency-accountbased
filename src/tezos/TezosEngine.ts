@@ -287,6 +287,15 @@ export class TezosEngine extends CurrencyEngine<
     this.currencyEngineCallbacks.onSubscribeAddresses(this.subscribedAddresses)
 
     await super.startEngine()
+
+    // Legacy engine startup implicitly performed an immediate first block
+    // height check because polling tasks start running right away. Preserve
+    // that startup signal in change-server mode without re-enabling polling.
+    if (this.currencyInfo.usesChangeServer === true) {
+      this.checkBlockchainInnerLoop().catch(error => {
+        this.error('Initial block height check failed:', error)
+      })
+    }
   }
 
   async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
