@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (Zano) Add ETHx BNBx DAIx and BCHx tokens
 - fixed: (ZEC) Fix missing incoming transaction notifications
 
 ## 4.78.1 (2026-04-08)

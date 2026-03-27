@@ -38,6 +38,62 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress:
         '040a180aca4194a158c17945dd115db42086f6f074c1f77838621a4927fffa91'
     }
+  },
+  '93da681503353509367e241cda3234299dedbbad9ec851de31e900490807bf0c': {
+    currencyCode: 'ETHx',
+    displayName: 'Ethereum',
+    denominations: [
+      {
+        name: 'ETHx',
+        multiplier: '1000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        '93da681503353509367e241cda3234299dedbbad9ec851de31e900490807bf0c'
+    }
+  },
+  '6ca3fa07f1b6a75b6e195d2918c32228765968b54ea691c75958affa1c4073fb': {
+    currencyCode: 'BNBx',
+    displayName: 'Binance Coin',
+    denominations: [
+      {
+        name: 'BNBx',
+        multiplier: '1000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        '6ca3fa07f1b6a75b6e195d2918c32228765968b54ea691c75958affa1c4073fb'
+    }
+  },
+  '24819c4b65786c3ac424e05d9ef4ab212de6222cc73bc5c4b012df5a3107eea4': {
+    currencyCode: 'DAIx',
+    displayName: 'Dai Stablecoin',
+    denominations: [
+      {
+        name: 'DAIx',
+        multiplier: '1000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        '24819c4b65786c3ac424e05d9ef4ab212de6222cc73bc5c4b012df5a3107eea4'
+    }
+  },
+  '3de9ad7243afa49e0ade6839e97a9f10a527c4958ece2fc9cb1b87a44032167d': {
+    currencyCode: 'BCHx',
+    displayName: 'Bitcoin Cash',
+    denominations: [
+      {
+        name: 'BCHx',
+        multiplier: '100000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        '3de9ad7243afa49e0ade6839e97a9f10a527c4958ece2fc9cb1b87a44032167d'
+    }
   }
 }
 
