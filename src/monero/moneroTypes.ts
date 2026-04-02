@@ -1,0 +1,203 @@
+import {
+  asBoolean,
+  asCodec,
+  asEither,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  asValue,
+  Cleaner
+} from 'cleaners'
+import type {
+  TransactionPriority,
+  WalletBackend,
+  WalletEventData
+} from 'react-native-monero-lwsf'
+import type { Subscriber } from 'yaob'
+
+import { asIntegerString } from '../common/types'
+
+export const EDGE_MONERO_LWS_SERVER = 'https://monerolws1.edge.app'
+export const EDGE_MONERO_SERVER = `https://monerod.edge.app`
+
+export const asMoneroInitOptions = asObject({
+  edgeApiKey: asOptional(asString, '')
+})
+export type MoneroInitOptions = ReturnType<typeof asMoneroInitOptions>
+
+export interface MoneroNetworkInfo {
+  edgeLwsServer: string
+  networkType: 'MAINNET' | 'TESTNET' | 'STAGENET'
+}
+
+export const asMoneroUserSettings = asObject({
+  enableCustomServers: asMaybe(asBoolean, false),
+  enableCustomMonerod: asMaybe(asBoolean, false),
+  moneroLightwalletServer: asMaybe(asString, EDGE_MONERO_LWS_SERVER),
+  monerodServer: asMaybe(asString, EDGE_MONERO_SERVER)
+})
+export type MoneroUserSettings = ReturnType<typeof asMoneroUserSettings>
+
+export const asMoneroWalletSettings = asObject({
+  backend: asMaybe<WalletBackend>(asValue('lws', 'monerod'), 'lws')
+})
+export type MoneroWalletSettings = ReturnType<typeof asMoneroWalletSettings>
+
+const asBirthdayHeight = (raw: unknown): number =>
+  parseInt(asEither(asNumber, asIntegerString)(raw).toString())
+
+export const asMoneroKeyOptions = asObject({
+  birthdayHeight: asBirthdayHeight
+})
+export type MoneroKeyOptions = ReturnType<typeof asMoneroKeyOptions>
+
+export const asGetBlockCountResponse = asObject({
+  result: asObject({
+    count: asNumber
+  })
+})
+export type GetBlockCountResponse = ReturnType<typeof asGetBlockCountResponse>
+
+export interface MoneroPrivateKeys {
+  dataKey: string
+  moneroKey: string
+  birthdayHeight?: number
+  moneroSpendKeyPrivate: string
+  moneroSpendKeyPublic: string
+}
+
+export const asMoneroPrivateKeys = (
+  pluginId: string
+): Cleaner<MoneroPrivateKeys> => {
+  const asKeys = asObject({
+    dataKey: asString,
+    [`${pluginId}Key`]: asString,
+    [`${pluginId}BirthdayHeight`]: asOptional(asNumber),
+    [`${pluginId}SpendKeyPrivate`]: asString,
+    [`${pluginId}SpendKeyPublic`]: asString
+  })
+
+  return asCodec(
+    raw => {
+      const clean = asKeys(raw)
+      return {
+        dataKey: clean.dataKey,
+        moneroKey: clean[`${pluginId}Key`] as string,
+        birthdayHeight: clean[`${pluginId}BirthdayHeight`] as
+          | number
+          | undefined,
+        moneroSpendKeyPrivate: clean[`${pluginId}SpendKeyPrivate`] as string,
+        moneroSpendKeyPublic: clean[`${pluginId}SpendKeyPublic`] as string
+      }
+    },
+    clean => ({
+      dataKey: clean.dataKey,
+      [`${pluginId}Key`]: clean.moneroKey,
+      [`${pluginId}BirthdayHeight`]: clean.birthdayHeight,
+      [`${pluginId}SpendKeyPrivate`]: clean.moneroSpendKeyPrivate,
+      [`${pluginId}SpendKeyPublic`]: clean.moneroSpendKeyPublic
+    })
+  )
+}
+
+const asMoneroPublicKeysRaw = asObject({
+  moneroAddress: asString,
+  moneroViewKeyPrivate: asString,
+  moneroViewKeyPublic: asString,
+  moneroSpendKeyPublic: asString
+})
+
+interface MoneroPublicKeys {
+  publicKey: string
+  moneroAddress: string
+  moneroViewKeyPrivate: string
+  moneroViewKeyPublic: string
+  moneroSpendKeyPublic: string
+}
+
+const asMoneroPublicKeys: Cleaner<MoneroPublicKeys> = asCodec(
+  (raw): MoneroPublicKeys => {
+    const clean = asMoneroPublicKeysRaw(raw)
+    return {
+      ...clean,
+      publicKey: clean.moneroAddress
+    }
+  },
+  (clean): ReturnType<typeof asMoneroPublicKeysRaw> => ({
+    moneroAddress: clean.moneroAddress,
+    moneroViewKeyPrivate: clean.moneroViewKeyPrivate,
+    moneroViewKeyPublic: clean.moneroViewKeyPublic,
+    moneroSpendKeyPublic: clean.moneroSpendKeyPublic
+  })
+)
+
+export interface SafeMoneroWalletInfo {
+  id: string
+  type: string
+  keys: MoneroPublicKeys
+}
+
+export const asSafeMoneroWalletInfo: Cleaner<SafeMoneroWalletInfo> = asCodec(
+  (raw): SafeMoneroWalletInfo => {
+    const obj = asObject({
+      id: asString,
+      type: asString,
+      keys: asMoneroPublicKeys
+    })(raw)
+    return obj
+  },
+  clean => ({
+    id: clean.id,
+    type: clean.type,
+    keys: asMoneroPublicKeys(clean.keys)
+  })
+)
+
+export function translateFee(fee?: string): TransactionPriority {
+  if (fee === 'low') return 1
+  if (fee === 'high') return 3
+  return 2
+}
+
+export const asMoneroWalletOtherData = asObject({
+  processedTransactionCount: asMaybe(asNumber, 0),
+  mostRecentTxid: asMaybe(asString)
+})
+export type MoneroWalletOtherData = ReturnType<typeof asMoneroWalletOtherData>
+
+export const asLoginResponse = asObject({
+  new_address: asBoolean,
+  generated_locally: asOptional(asBoolean),
+  start_height: asOptional(asNumber)
+})
+export type LoginResponse = ReturnType<typeof asLoginResponse>
+
+export const asAddressInfoResponse = asObject({
+  blockchain_height: asNumber,
+  locked_funds: asString,
+  scanned_block_height: asNumber,
+  scanned_height: asNumber,
+  start_height: asNumber,
+  total_received: asString,
+  total_sent: asString,
+  transaction_height: asNumber
+})
+export type AddressInfoResponse = ReturnType<typeof asAddressInfoResponse>
+
+// --- yaob-compatible IO interface for bridging events across webview ---
+
+export interface MoneroWalletEvents {
+  walletEvent: WalletEventData
+}
+
+export interface MoneroIo {
+  on: Subscriber<MoneroWalletEvents>
+  readonly callMonero: (
+    name: string,
+    jsonArguments: string[]
+  ) => Promise<string>
+  readonly methodNames: string[]
+  readonly documentDirectory: string
+}
