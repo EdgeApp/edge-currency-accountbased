@@ -15,8 +15,11 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import type { RecentTransaction, TransferParams } from 'react-native-zano'
-import { CppBridge } from 'react-native-zano'
+import type {
+  CppBridge,
+  RecentTransaction,
+  TransferParams
+} from 'react-native-zano'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -35,6 +38,7 @@ import {
   asZanoPrivateKeys,
   asZanoTransferParams,
   asZanoWalletOtherData,
+  MakeMaxSpendParams,
   SafeZanoWalletInfo,
   ZanoNetworkInfo,
   ZanoOtherMethods,
@@ -597,6 +601,85 @@ export class ZanoEngine extends CurrencyEngine<
 
   otherMethods: ZanoOtherMethods = {
     resolveName: this.resolveName.bind(this),
+    makeMaxSpend: async (
+      params: MakeMaxSpendParams
+    ): Promise<EdgeTransaction> => {
+      const { metadata } = params
+      const publicAddress = params.spendTargets[0]?.publicAddress
+      if (publicAddress == null) throw new Error('Missing publicAddress')
+
+      const tokenIdsSet = new Set<EdgeTokenId>(
+        params.tokenIds.map(tokenId =>
+          tokenId === this.networkInfo.nativeAssetId ? null : tokenId
+        )
+      )
+      const tokenIds = Array.from(tokenIdsSet)
+      if (tokenIds.length === 0) {
+        throw new Error('No tokenIds provided')
+      }
+
+      const feeNumber = await this.tools.zano.getCurrentTxFee(2)
+      const networkFee = feeNumber.toFixed()
+      const zanoBalance = this.unlockedBalanceMap.get(null) ?? '0'
+      if (lt(zanoBalance, networkFee)) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
+
+      const transfers: TransferParams['transfers'] = []
+      const includesNative = tokenIds.includes(null)
+      if (includesNative) {
+        const zanoSendAmount = sub(zanoBalance, networkFee)
+        if (!gt(zanoSendAmount, '0')) {
+          throw new InsufficientFundsError({ tokenId: null })
+        }
+        transfers.push({
+          assetId: this.networkInfo.nativeAssetId,
+          nativeAmount: parseInt(zanoSendAmount),
+          recipient: publicAddress
+        })
+      }
+
+      for (const tokenId of tokenIds) {
+        if (tokenId == null) continue
+        const tokenBalance = this.unlockedBalanceMap.get(tokenId) ?? '0'
+        if (eq(tokenBalance, '0')) {
+          throw new InsufficientFundsError({ tokenId })
+        }
+        transfers.push({
+          assetId: tokenId,
+          nativeAmount: parseInt(tokenBalance),
+          recipient: publicAddress
+        })
+      }
+
+      if (transfers.length === 0) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
+
+      const out: EdgeTransaction = {
+        blockHeight: 0,
+        currencyCode: this.currencyInfo.currencyCode,
+        date: Date.now() / 1000,
+        isSend: true,
+        memos: [],
+        metadata,
+        nativeAmount: includesNative
+          ? mul(zanoBalance, '-1')
+          : mul(networkFee, '-1'),
+        networkFee,
+        networkFees: [{ tokenId: null, nativeAmount: networkFee }],
+        otherParams: {
+          transfers,
+          fee: feeNumber
+        },
+        ourReceiveAddresses: [],
+        signedTx: '',
+        tokenId: null,
+        txid: '',
+        walletId: this.walletId
+      }
+      return out
+    },
     makeTx: async (makeTxParams: MakeTxParams): Promise<EdgeTransaction> => {
       if (makeTxParams.type === 'MakeTx') {
         const { unsignedTx, metadata } = makeTxParams

@@ -7,7 +7,12 @@ import {
   asString,
   Cleaner
 } from 'cleaners'
-import { EdgeToken, EdgeTransaction } from 'edge-core-js/types'
+import {
+  EdgeMetadata,
+  EdgeToken,
+  EdgeTokenId,
+  EdgeTransaction
+} from 'edge-core-js/types'
 import type { BurnAssetParams, TransferParams } from 'react-native-zano'
 
 import { createTokenIdFromContractAddress } from '../common/tokenHelpers'
@@ -123,6 +128,13 @@ export const asGetAliasDetailsResponse = asObject({
 export interface ZanoOtherMethods {
   resolveName: (alias: string) => Promise<string>
   makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>
+  makeMaxSpend: (params: MakeMaxSpendParams) => Promise<EdgeTransaction>
+}
+
+export interface MakeMaxSpendParams {
+  tokenIds: EdgeTokenId[]
+  spendTargets: Array<{ publicAddress: string }>
+  metadata?: EdgeMetadata
 }
 
 export const asZanoBurnAssetParams = asObject<BurnAssetParams>({

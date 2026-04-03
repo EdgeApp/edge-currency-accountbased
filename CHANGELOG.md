@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Zano) Add makeMaxSpend otherMethod to build single-transaction multi-asset max spends.
+
 ## 4.77.2 (2026-03-24)
 
 - changed: Update chain-registry package
