@@ -13,6 +13,11 @@ import {
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
+export const asPolkadotInitOptions = asObject({
+  subscanApiKey: asOptional(asString, '')
+})
+export type PolkadotInitOptions = ReturnType<typeof asPolkadotInitOptions>
+
 export interface PolkadotNetworkInfo {
   rpcNodes: string[]
   ss58Format: number

@@ -39,12 +39,14 @@ import { PolkadotTools } from './PolkadotTools'
 import {
   asLiberlandMeritsResponse,
   asLiberlandTransfersResponse,
+  asPolkadotInitOptions,
   asPolkadotWalletOtherData,
   asPolkapolkadotPrivateKeys,
   asSafePolkadotWalletInfo,
   asSubscanResponse,
   asTransactions,
   LiberlandTransfer,
+  PolkadotInitOptions,
   PolkadotNetworkInfo,
   PolkadotWalletOtherData,
   SafePolkadotWalletInfo,
@@ -64,6 +66,7 @@ export class PolkadotEngine extends CurrencyEngine<
   TokenSyncTracker
 > {
   engineFetch: EdgeFetchFunction
+  initOptions: PolkadotInitOptions
   networkInfo: PolkadotNetworkInfo
   otherData!: PolkadotWalletOtherData
   api!: ApiPromise
@@ -78,6 +81,7 @@ export class PolkadotEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts, makeTokenSyncTracker)
     this.engineFetch = makeEngineFetch(env.io)
+    this.initOptions = asPolkadotInitOptions(env.initOptions)
     this.networkInfo = env.networkInfo
     this.nonce = 0
   }
@@ -130,16 +134,20 @@ export class PolkadotEngine extends CurrencyEngine<
     endpoint: string,
     body: JsonObject
   ): Promise<SubscanResponse> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    }
+    if (this.initOptions.subscanApiKey !== '') {
+      headers['X-API-Key'] = this.initOptions.subscanApiKey
+    }
     const options = {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify(body)
     }
     const response = await this.engineFetch(baseSubscanUrl + endpoint, options)
-    if (!response.ok || response.status === 429) {
+    if (!response.ok) {
       throw new Error(`Subscan ${endpoint} failed with ${response.status}`)
     }
     const out = await response.json()
@@ -577,10 +585,13 @@ export class PolkadotEngine extends CurrencyEngine<
         TRANSACTION_POLL_MILLISECONDS
       )
     }
-    if (this.networkInfo.subscanBaseUrls.length > 0) {
+    if (
+      this.networkInfo.subscanBaseUrls.length > 0 &&
+      this.initOptions.subscanApiKey !== ''
+    ) {
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     } else {
-      this.syncTracker.setHistoryRatios(this.enabledTokenIds, 1)
+      this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
     }
     await super.startEngine()
   }
