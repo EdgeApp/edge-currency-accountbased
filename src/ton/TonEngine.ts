@@ -603,19 +603,24 @@ export class TonEngine extends CurrencyEngine<
     )[0].asSlice()
     const transferMessage = loadMessageRelaxed(messageSlice)
 
-    const addr = this.wallet.address.toRawString()
-    const seqnoRaw = await this.tools.fetchDrpc('/runGetMethod', {
-      address: addr,
-      method: 'seqno',
-      stack: []
-    })
-    const { result: seqnoResult } = asDrpcRunGetMethod(seqnoRaw)
-    if (seqnoResult.exit_code !== 0) {
-      throw new Error(
-        `seqno query failed with exit_code ${seqnoResult.exit_code}`
-      )
+    let seqno: number
+    if (this.otherData.contractState === 'uninitialized') {
+      seqno = 0
+    } else {
+      const addr = this.wallet.address.toRawString()
+      const seqnoRaw = await this.tools.fetchDrpc('/runGetMethod', {
+        address: addr,
+        method: 'seqno',
+        stack: []
+      })
+      const { result: seqnoResult } = asDrpcRunGetMethod(seqnoRaw)
+      if (seqnoResult.exit_code !== 0) {
+        throw new Error(
+          `seqno query failed with exit_code ${seqnoResult.exit_code}`
+        )
+      }
+      seqno = parseSeqnoFromStack(seqnoResult.stack)
     }
-    const seqno = parseSeqnoFromStack(seqnoResult.stack)
 
     const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
       sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
