@@ -54,7 +54,7 @@ export const asSubscanResponse = asObject({
 export type SubscanResponse = ReturnType<typeof asSubscanResponse>
 
 // https://docs.api.subscan.io/#transfers
-export const asTransfer = asObject({
+const asTransfer = asObject({
   from: asString,
   to: asString,
   success: asBoolean,
@@ -70,7 +70,7 @@ export type SubscanTx = ReturnType<typeof asTransfer>
 
 export const asTransactions = asObject({
   count: asNumber,
-  transfers: asMaybe(asArray(asTransfer), () => [])
+  transfers: asMaybe(asArray(asMaybe(asTransfer)), () => [])
 })
 
 export type SafePolkadotWalletInfo = ReturnType<typeof asSafePolkadotWalletInfo>

@@ -44,7 +44,6 @@ import {
   asSafePolkadotWalletInfo,
   asSubscanResponse,
   asTransactions,
-  asTransfer,
   LiberlandTransfer,
   PolkadotNetworkInfo,
   PolkadotWalletOtherData,
@@ -536,15 +535,9 @@ export class PolkadotEngine extends CurrencyEngine<
 
       // Process txs (newest first)
       transfers.forEach(tx => {
-        try {
-          this.processPolkadotTransaction(asTransfer(tx), isActiveChain)
-        } catch (e: any) {
-          const hash = tx != null && typeof tx.hash === 'string' ? tx.hash : ''
-          this.warn(`Ignoring invalid transfer ${hash}`)
-        }
+        if (tx == null) return
+        this.processPolkadotTransaction(tx, isActiveChain)
       })
-
-      if (count === this.otherData.subscanUrlMap[subscanBaseUrl].txCount) break
 
       // If we haven't reached the end, Update local txCount and progress and then query the next page
       this.otherData.subscanUrlMap[subscanBaseUrl].txCount =
