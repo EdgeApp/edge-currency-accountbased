@@ -1,22 +1,27 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { TonTools } from './TonTools'
 import { asTonInfoPayload, TonInfoPayload, TonNetworkInfo } from './tonTypes'
 
+const builtinTokens: EdgeTokenMap = {
+  EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs: {
+    currencyCode: 'USDT',
+    displayName: 'Tether USD',
+    denominations: [{ name: 'USDT', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
+    }
+  }
+}
+
 const networkInfo: TonNetworkInfo = {
   defaultWalletContract: 'v5r1',
+  drpcUrl: 'https://toncenter.com/api/v2',
+  jettonTransferGas: '100000000',
   minimumAddressBalance: '50000000', // 0.5 TON There isn't a hardcoded minimum but the user needs to keep something left
   pluginMnemonicKeyName: 'tonMnemonic',
-  tonCenterUrl: 'https://toncenter.com/api/v2/jsonRPC',
-  tonOrbsServers: [
-    'https://ton.access.orbs.network/4410c0ff5Bd3F8B62C092Ab4D238bEE463E64410/1/mainnet/toncenter-api-v2/jsonRPC',
-    'https://ton.access.orbs.network/4411c0ff5Bd3F8B62C092Ab4D238bEE463E64411/1/mainnet/toncenter-api-v2/jsonRPC',
-    'https://ton.access.orbs.network/4412c0ff5Bd3F8B62C092Ab4D238bEE463E64412/1/mainnet/toncenter-api-v2/jsonRPC',
-    'https://ton.access.orbs.network/55013c0ff5Bd3F8B62C092Ab4D238bEE463E5501/1/mainnet/toncenter-api-v2/jsonRPC',
-    'https://ton.access.orbs.network/55023c0ff5Bd3F8B62C092Ab4D238bEE463E5502/1/mainnet/toncenter-api-v2/jsonRPC',
-    'https://ton.access.orbs.network/55033c0ff5Bd3F8B62C092Ab4D238bEE463E5503/1/mainnet/toncenter-api-v2/jsonRPC'
-  ]
+  tonCenterUrl: 'https://toncenter.com/api/v2/jsonRPC'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -45,6 +50,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const ton = makeOuterPlugin<TonNetworkInfo, TonTools, TonInfoPayload>({
+  builtinTokens,
   currencyInfo,
   asInfoPayload: asTonInfoPayload,
   networkInfo,

@@ -34,20 +34,27 @@ import { parse_tx } from 'ton-watcher/build/modules/txs/Transaction'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import {
-  asyncWaterfall,
-  formatAggregateError,
-  promiseAny
-} from '../common/promiseUtils'
+import { asyncWaterfall } from '../common/promiseUtils'
 import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
 import { snooze } from '../common/utils'
+import {
+  asDrpcAddressInfo,
+  asDrpcEstimateFee,
+  asDrpcGetTransactions,
+  asDrpcRunGetMethod,
+  asDrpcSendBoc,
+  parseSeqnoFromStack,
+  parseStackAddress,
+  parseStackNumber
+} from './tonDrpc'
 import { TonTools } from './TonTools'
 import {
   asParsedTx,
   asTonPrivateKeys,
   asTonTxOtherParams,
   asTonWalletOtherData,
+  JettonTransferInfo,
   ParsedTx,
   TonNetworkInfo,
   TonWalletOtherData
@@ -66,6 +73,7 @@ export class TonEngine extends CurrencyEngine<
 
   wallet: WalletContractV5R1
   archiveTransactions: boolean
+  jettonWalletToTokenId: Map<string, string> = new Map()
 
   constructor(
     env: PluginEnvironment<TonNetworkInfo>,
@@ -89,23 +97,85 @@ export class TonEngine extends CurrencyEngine<
     this.otherData = asTonWalletOtherData(raw)
   }
 
+  async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
+    await super.changeEnabledTokenIds(tokenIds)
+    await this.resolveJettonWalletAddresses()
+  }
+
+  async resolveJettonWalletAddresses(): Promise<void> {
+    for (const tokenId of this.enabledTokenIds) {
+      if (this.otherData.jettonWalletAddresses[tokenId] == null) {
+        try {
+          const addrCell = beginCell()
+            .storeAddress(this.wallet.address)
+            .endCell()
+          const addrBoc = base64.stringify(addrCell.toBoc())
+
+          const raw = await this.tools.fetchDrpc('/runGetMethod', {
+            address: tokenId,
+            method: 'get_wallet_address',
+            stack: [['tvm.Slice', addrBoc]]
+          })
+          const { result } = asDrpcRunGetMethod(raw)
+          if (result.exit_code !== 0) {
+            throw new Error(`get_wallet_address exit_code ${result.exit_code}`)
+          }
+          const jettonWalletAddr = parseStackAddress(result.stack, 0)
+          this.otherData.jettonWalletAddresses[tokenId] =
+            jettonWalletAddr.toRawString()
+          this.walletLocalDataDirty = true
+        } catch (e) {
+          this.log.warn(`resolveJettonWalletAddresses error for ${tokenId}:`, e)
+        }
+      }
+
+      const walletAddr = this.otherData.jettonWalletAddresses[tokenId]
+      if (walletAddr != null) {
+        this.jettonWalletToTokenId.set(walletAddr, tokenId)
+      }
+    }
+  }
+
   async queryBalance(): Promise<void> {
     try {
-      const clients = this.tools.getOrbsClients()
-      const funcs = clients.map(async client => {
-        return await client.getContractState(this.wallet.address)
-      })
-      const contractState: Awaited<ReturnType<TonClient['getContractState']>> =
-        await promiseAny(funcs)
+      const addr = encodeURIComponent(this.wallet.address.toRawString())
+      const raw = await this.tools.fetchDrpc(
+        `/getAddressInformation?address=${addr}`
+      )
+      const { result } = asDrpcAddressInfo(raw)
 
-      this.updateBalance(null, contractState.balance.toString())
+      this.updateBalance(null, result.balance)
 
-      if (contractState.state !== this.otherData.contractState) {
-        this.otherData.contractState = contractState.state
+      if (result.state !== this.otherData.contractState) {
+        this.otherData.contractState = result.state
         this.walletLocalDataDirty = true
       }
     } catch (e) {
       this.log.warn('queryBalance error:', e)
+    }
+  }
+
+  async queryJettonBalances(): Promise<void> {
+    for (const tokenId of this.enabledTokenIds) {
+      const walletAddr = this.otherData.jettonWalletAddresses[tokenId]
+      if (walletAddr == null) continue
+
+      try {
+        const raw = await this.tools.fetchDrpc('/runGetMethod', {
+          address: walletAddr,
+          method: 'get_wallet_data',
+          stack: []
+        })
+        const { result } = asDrpcRunGetMethod(raw)
+        if (result.exit_code !== 0) {
+          this.updateBalance(tokenId, '0')
+          continue
+        }
+        const balance = parseStackNumber(result.stack, 0)
+        this.updateBalance(tokenId, balance)
+      } catch (e) {
+        this.log.warn(`queryJettonBalances error for ${tokenId}:`, e)
+      }
     }
   }
 
@@ -170,6 +240,9 @@ export class TonEngine extends CurrencyEngine<
 
     this.sendTransactionEvents()
     this.syncTracker.updateHistoryRatio(null, 1)
+    for (const tokenId of this.enabledTokenIds) {
+      this.syncTracker.updateHistoryRatio(tokenId, 1)
+    }
   }
 
   processTonTransaction(tx: ParsedTx): void {
@@ -226,6 +299,74 @@ export class TonEngine extends CurrencyEngine<
       walletId: this.walletId
     }
     this.addTransaction(null, edgeTransaction)
+
+    this.processJettonTransaction(tx)
+  }
+
+  processJettonTransaction(tx: ParsedTx): void {
+    const { inMessage, outMessages } = tx
+
+    if (
+      inMessage.txType === 'jetton_notification' &&
+      inMessage.jetton_notify != null
+    ) {
+      const senderAddr = inMessage.sender
+      if (senderAddr != null) {
+        const senderRaw = Address.parse(senderAddr).toRawString()
+        const tokenId = this.jettonWalletToTokenId.get(senderRaw)
+        if (tokenId != null) {
+          this.addJettonTransaction(tx, tokenId, inMessage.jetton_notify, false)
+        }
+      }
+    }
+
+    for (const outMsg of outMessages) {
+      if (outMsg.txType === 'jetton_request' && outMsg.jetton_req != null) {
+        const recipientRaw = Address.parse(outMsg.recipient).toRawString()
+        const tokenId = this.jettonWalletToTokenId.get(recipientRaw)
+        if (tokenId != null) {
+          this.addJettonTransaction(tx, tokenId, outMsg.jetton_req, true)
+        }
+      }
+    }
+  }
+
+  addJettonTransaction(
+    tx: ParsedTx,
+    tokenId: string,
+    jettonInfo: JettonTransferInfo,
+    isSend: boolean
+  ): void {
+    const memos: EdgeMemo[] = []
+    if (jettonInfo.message != null && jettonInfo.message !== '') {
+      memos.push({ type: 'text', value: jettonInfo.message })
+    }
+
+    const jettonAmount = jettonInfo.jettonAmount.toString()
+    const nativeAmount = isSend ? `-${jettonAmount}` : jettonAmount
+    const currencyCode = this.allTokensMap[tokenId]?.currencyCode ?? 'UNKNOWN'
+    const networkFee = tx.originalTx.totalFees.coins.toString()
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 1,
+      confirmations: 'confirmed',
+      currencyCode,
+      date: tx.now,
+      isSend,
+      nativeAmount,
+      networkFee: '0',
+      networkFees: [],
+      memos,
+      ourReceiveAddresses: isSend
+        ? []
+        : [this.wallet.address.toString({ bounceable: false })],
+      parentNetworkFee: isSend ? networkFee : undefined,
+      tokenId,
+      txid: tx.hash,
+      signedTx: '',
+      walletId: this.walletId
+    }
+    this.addTransaction(tokenId, edgeTransaction)
   }
 
   getTxCheckpoint(edgeTransaction: EdgeTransaction): string {
@@ -238,7 +379,9 @@ export class TonEngine extends CurrencyEngine<
 
   async startEngine(): Promise<void> {
     this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('queryJettonBalances', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS)
+    await this.resolveJettonWalletAddresses()
     await super.startEngine()
   }
 
@@ -249,10 +392,23 @@ export class TonEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    // TON allows sending the entire balance but we need to be able to craft the entire transaction here instead of just an amount
-    const spendInfoCopy = { ...spendInfo }
+    const { tokenId } = spendInfo
 
-    const balance = this.getBalance({ tokenId: spendInfoCopy.tokenId })
+    if (tokenId != null) {
+      const tokenBalance = this.getBalance({ tokenId })
+      const nativeBalance = this.getBalance({ tokenId: null })
+      const requiredNative = add(
+        this.networkInfo.jettonTransferGas,
+        this.networkInfo.minimumAddressBalance
+      )
+      if (gt(requiredNative, nativeBalance)) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
+      return tokenBalance
+    }
+
+    const spendInfoCopy = { ...spendInfo }
+    const balance = this.getBalance({ tokenId: null })
     spendInfoCopy.spendTargets[0].nativeAmount = balance
     spendInfoCopy.skipChecks = true
 
@@ -277,63 +433,115 @@ export class TonEngine extends CurrencyEngine<
       throw new Error('makeSpend Missing publicAddress')
     }
 
-    let memoCell: Cell | undefined
-    if (memo != null) {
-      memoCell = beginCell().storeUint(0, 32).storeStringTail(memo).endCell()
-    }
-
     const needsInit = this.otherData.contractState === 'uninitialized'
+    let transferMessage: MessageRelaxed
 
-    const transferMessage: MessageRelaxed = internal({
-      value: fromNano(nativeAmount),
-      to: Address.parse(publicAddress),
-      body: memoCell,
-      init: needsInit ? this.wallet.init : null,
-      bounce: false
-    })
+    if (tokenId != null) {
+      // Jetton transfer (TEP-74)
+      const jettonWalletAddr = this.otherData.jettonWalletAddresses[tokenId]
+      if (jettonWalletAddr == null) {
+        throw new Error('Jetton wallet address not resolved')
+      }
+
+      const forwardPayload =
+        memo != null
+          ? beginCell().storeUint(0, 32).storeStringTail(memo).endCell()
+          : null
+
+      const jettonBody = beginCell()
+        .storeUint(0x0f8a7ea5, 32)
+        .storeUint(0, 64)
+        .storeCoins(BigInt(nativeAmount))
+        .storeAddress(Address.parse(publicAddress))
+        .storeAddress(this.wallet.address)
+        .storeMaybeRef(null)
+        .storeCoins(BigInt(1))
+        .storeMaybeRef(forwardPayload)
+        .endCell()
+
+      transferMessage = internal({
+        value: fromNano(this.networkInfo.jettonTransferGas),
+        to: Address.parse(jettonWalletAddr),
+        body: jettonBody,
+        init: needsInit ? this.wallet.init : null,
+        bounce: true
+      })
+    } else {
+      // Native TON transfer
+      let memoCell: Cell | undefined
+      if (memo != null) {
+        memoCell = beginCell().storeUint(0, 32).storeStringTail(memo).endCell()
+      }
+
+      transferMessage = internal({
+        value: fromNano(nativeAmount),
+        to: Address.parse(publicAddress),
+        body: memoCell,
+        init: needsInit ? this.wallet.init : null,
+        bounce: false
+      })
+    }
 
     const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
       sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
       messages: [transferMessage],
-
-      // Fake data that doesn't impact fee calc
       seqno: 0,
       secretKey: Buffer.alloc(64)
     }
     const transfer = this.wallet.createTransfer(transferArgs)
 
     let networkFee = '0'
-    if (nativeAmount !== '0') {
-      // Only estimate fee if we're sending something
-      const clients = this.tools.getOrbsClients()
-      const feeFuncs = clients.map(async client => {
-        return await client.estimateExternalMessageFee(this.wallet.address, {
-          body: transfer,
-          initCode: needsInit ? this.wallet.init.code : null,
-          initData: needsInit ? this.wallet.init.data : null,
-          ignoreSignature: false
-        })
-      })
-      const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
-        await promiseAny(feeFuncs)
+    if (tokenId != null || nativeAmount !== '0') {
+      const addr = this.wallet.address.toRawString()
+      const bodyBoc = base64.stringify(transfer.toBoc())
+      const initCodeBoc = needsInit
+        ? base64.stringify(this.wallet.init.code.toBoc())
+        : ''
+      const initDataBoc = needsInit
+        ? base64.stringify(this.wallet.init.data.toBoc())
+        : ''
 
+      const feeRaw = await this.tools.fetchDrpc('/estimateFee', {
+        address: addr,
+        body: bodyBoc,
+        init_code: initCodeBoc,
+        init_data: initDataBoc
+      })
+      const { result: feeResult } = asDrpcEstimateFee(feeRaw)
       const totalFee =
-        fees.source_fees.fwd_fee +
-        fees.source_fees.gas_fee +
-        fees.source_fees.in_fwd_fee +
-        fees.source_fees.storage_fee
+        feeResult.source_fees.fwd_fee +
+        feeResult.source_fees.gas_fee +
+        feeResult.source_fees.in_fwd_fee +
+        feeResult.source_fees.storage_fee
       networkFee = totalFee.toString()
     }
 
-    const total = add(nativeAmount, networkFee)
-    const balance = this.getBalance({ tokenId })
-    if (
-      edgeSpendInfoIn.skipChecks !== true &&
-      gt(add(total, this.networkInfo.minimumAddressBalance), balance)
-    ) {
-      throw new InsufficientFundsError({
-        tokenId: null
-      })
+    if (tokenId != null) {
+      // Token sufficiency checks
+      const tokenBalance = this.getBalance({ tokenId })
+      const nativeBalance = this.getBalance({ tokenId: null })
+      if (edgeSpendInfoIn.skipChecks !== true) {
+        if (gt(nativeAmount, tokenBalance)) {
+          throw new InsufficientFundsError({ tokenId })
+        }
+        const requiredNative = add(
+          this.networkInfo.jettonTransferGas,
+          this.networkInfo.minimumAddressBalance
+        )
+        if (gt(requiredNative, nativeBalance)) {
+          throw new InsufficientFundsError({ tokenId: null })
+        }
+      }
+    } else {
+      // Native sufficiency check
+      const total = add(nativeAmount, networkFee)
+      const balance = this.getBalance({ tokenId: null })
+      if (
+        edgeSpendInfoIn.skipChecks !== true &&
+        gt(add(total, this.networkInfo.minimumAddressBalance), balance)
+      ) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
     }
 
     // Serialize transferMessage
@@ -344,7 +552,27 @@ export class TonEngine extends CurrencyEngine<
       unsignedTxBase64: base64.stringify(messageSlice.asCell().toBoc())
     }
 
-    const edgeTransaction: EdgeTransaction = {
+    if (tokenId != null) {
+      return {
+        blockHeight: 0,
+        currencyCode,
+        date: 0,
+        isSend: true,
+        memos,
+        nativeAmount: `-${nativeAmount}`,
+        networkFee: '0',
+        networkFees: [],
+        otherParams,
+        ourReceiveAddresses: [],
+        parentNetworkFee: networkFee,
+        signedTx: '',
+        tokenId,
+        txid: '',
+        walletId: this.walletId
+      }
+    }
+
+    return {
       blockHeight: 0,
       currencyCode,
       date: 0,
@@ -360,7 +588,6 @@ export class TonEngine extends CurrencyEngine<
       txid: '',
       walletId: this.walletId
     }
-    return edgeTransaction
   }
 
   async signTx(
@@ -376,13 +603,19 @@ export class TonEngine extends CurrencyEngine<
     )[0].asSlice()
     const transferMessage = loadMessageRelaxed(messageSlice)
 
-    const clients = this.tools.getOrbsClients()
-    const seqnoFuncs = clients.map(async client => {
-      const contract = client.open(this.wallet)
-      return await contract.getSeqno()
+    const addr = this.wallet.address.toRawString()
+    const seqnoRaw = await this.tools.fetchDrpc('/runGetMethod', {
+      address: addr,
+      method: 'seqno',
+      stack: []
     })
-    const seqno: Awaited<ReturnType<typeof this.wallet['getSeqno']>> =
-      await promiseAny(seqnoFuncs)
+    const { result: seqnoResult } = asDrpcRunGetMethod(seqnoRaw)
+    if (seqnoResult.exit_code !== 0) {
+      throw new Error(
+        `seqno query failed with exit_code ${seqnoResult.exit_code}`
+      )
+    }
+    const seqno = parseSeqnoFromStack(seqnoResult.stack)
 
     const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
       sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
@@ -404,53 +637,46 @@ export class TonEngine extends CurrencyEngine<
       const txBoc = base64.parse(edgeTransaction.signedTx)
       const txCell = Cell.fromBoc(Buffer.from(txBoc))[0]
 
-      const clients = this.tools.getOrbsClients()
-      const broadcastFuncs = clients.map(async client => {
-        const contract = client.open(this.wallet)
-        return await contract.send(txCell)
+      const externalMessage = external({
+        to: this.wallet.address,
+        body: txCell
       })
-      await formatAggregateError(
-        promiseAny(broadcastFuncs),
-        'Broadcast failed:'
-      )
+      const externalBoc = beginCell()
+        .store(storeMessage(externalMessage))
+        .endCell()
+      const bocBase64 = base64.stringify(externalBoc.toBoc())
+
+      const sendRaw = await this.tools.fetchDrpc('/sendBoc', {
+        boc: bocBase64
+      })
+      asDrpcSendBoc(sendRaw)
 
       if (this.otherData.contractState === 'uninitialized') {
         // It's not possible to calculate the txid for a wallet's first send so we need to look for it once it's confirmed
+        const addr = encodeURIComponent(this.wallet.address.toRawString())
         let attempts = 0
         do {
           attempts++
           await snooze(1000)
-          const txidFuncs = clients.map(async client => {
-            return await client.getTransactions(this.wallet.address, {
-              limit: 50
-            })
-          })
-          const transactions: Awaited<
-            ReturnType<TonClient['getTransactions']>
-          > = await promiseAny(txidFuncs)
-
-          const tx = transactions.find(tx => {
-            return tx.oldStatus === 'uninitialized' && tx.endStatus === 'active'
-          })
-          if (tx != null) {
-            const txid = base16.stringify(tx.hash()).toLowerCase()
-            edgeTransaction.txid = txid
-            edgeTransaction.date = Date.now() / 1000
-            this.otherData.contractState = 'active'
-            this.walletLocalDataDirty = true
-            return edgeTransaction
+          try {
+            const raw = await this.tools.fetchDrpc(
+              `/getTransactions?address=${addr}&limit=1`
+            )
+            const { result: txs } = asDrpcGetTransactions(raw)
+            if (txs.length > 0) {
+              const hashBytes = base64.parse(txs[0].transaction_id.hash)
+              edgeTransaction.txid = base16.stringify(hashBytes).toLowerCase()
+              edgeTransaction.date = Date.now() / 1000
+              this.otherData.contractState = 'active'
+              this.walletLocalDataDirty = true
+              return edgeTransaction
+            }
+          } catch (e) {
+            // retry
           }
         } while (attempts <= 30) // In testing, the tx was found after ~10 seconds
         throw new Error('Transaction broadcast but unable to find txid')
       } else {
-        // We can calculate the txid from the signedTx
-        const externalMessage = external({
-          to: this.wallet.address,
-          body: txCell
-        })
-        const externalBoc = beginCell()
-          .store(storeMessage(externalMessage))
-          .endCell()
         const txid = base16.stringify(externalBoc.hash()).toLowerCase()
         edgeTransaction.txid = txid
         edgeTransaction.date = Date.now() / 1000

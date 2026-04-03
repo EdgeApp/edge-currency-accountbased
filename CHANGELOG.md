@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (TON) Add Jetton support
+- changed: (TON) Replace Orbs servers with dRPC
+
 ## 4.77.2 (2026-03-24)
 
 - changed: Update chain-registry package
