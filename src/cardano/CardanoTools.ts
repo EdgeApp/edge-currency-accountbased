@@ -27,6 +27,7 @@ import {
   SafeCardanoWalletInfo,
   wasCardanoPrivateKeys
 } from './cardanoTypes'
+import { parseOutputAddress } from './cardanoUtils'
 
 export class CardanoTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
@@ -191,7 +192,7 @@ export class CardanoTools implements EdgeCurrencyTools {
       customTokens
     })
 
-    Cardano.Address.from_bech32(edgeParsedUri.publicAddress ?? '')
+    parseOutputAddress(edgeParsedUri.publicAddress ?? '')
 
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
     return edgeParsedUri
@@ -203,7 +204,7 @@ export class CardanoTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    Cardano.Address.from_bech32(publicAddress ?? '')
+    parseOutputAddress(publicAddress ?? '')
 
     let amount
     if (typeof nativeAmount === 'string') {
