@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.78.0 (2026-04-06)
+
 - added: (Zano) Add makeMaxSpend otherMethod to build single-transaction multi-asset max spends.
 
 ## 4.77.2 (2026-03-24)
