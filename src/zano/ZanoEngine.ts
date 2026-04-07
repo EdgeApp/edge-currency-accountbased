@@ -28,7 +28,7 @@ import {
   makeLifecycleManager
 } from '../common/lifecycleManager'
 import { MakeTxParams } from '../common/types'
-import { cleanTxLogs } from '../common/utils'
+import { cleanTxLogs, safeParseInt } from '../common/utils'
 import { makeZanoSyncTracker, ZanoSyncTracker } from './ZanoSyncTracker'
 import { ZanoTools } from './ZanoTools'
 import {
@@ -494,7 +494,7 @@ export class ZanoEngine extends CurrencyEngine<
     const otherParams: TransferParams = {
       transfers: cleanTargets.map(st => ({
         assetId,
-        nativeAmount: parseInt(abs(st.nativeAmount)),
+        nativeAmount: safeParseInt(abs(st.nativeAmount)),
         recipient: st.publicAddress
       })),
 
@@ -634,7 +634,7 @@ export class ZanoEngine extends CurrencyEngine<
         }
         transfers.push({
           assetId: this.networkInfo.nativeAssetId,
-          nativeAmount: parseInt(zanoSendAmount),
+          nativeAmount: safeParseInt(zanoSendAmount),
           recipient: publicAddress
         })
       }
@@ -647,7 +647,7 @@ export class ZanoEngine extends CurrencyEngine<
         }
         transfers.push({
           assetId: tokenId,
-          nativeAmount: parseInt(tokenBalance),
+          nativeAmount: safeParseInt(tokenBalance),
           recipient: publicAddress
         })
       }

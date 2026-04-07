@@ -415,3 +415,11 @@ export async function exponentialBackoff<T>(
     }
   }
 }
+
+export const safeParseInt = (value: string): number => {
+  const num = Number(value)
+  if (!Number.isSafeInteger(num)) {
+    throw new Error(`Amount exceeds safe integer precision: ${value}`)
+  }
+  return num
+}
