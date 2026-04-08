@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.78.1 (2026-04-08)
+
 - added: (DOT) Add Subscan API key support
 - changed: (TON) Replace Orbs servers with dRPC
 
