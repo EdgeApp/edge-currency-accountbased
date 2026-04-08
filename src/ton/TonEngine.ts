@@ -34,14 +34,18 @@ import { parse_tx } from 'ton-watcher/build/modules/txs/Transaction'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import {
-  asyncWaterfall,
-  formatAggregateError,
-  promiseAny
-} from '../common/promiseUtils'
+import { asyncWaterfall } from '../common/promiseUtils'
 import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
 import { snooze } from '../common/utils'
+import {
+  asDrpcAddressInfo,
+  asDrpcEstimateFee,
+  asDrpcGetTransactions,
+  asDrpcRunGetMethod,
+  asDrpcSendBoc,
+  parseSeqnoFromStack
+} from './tonDrpc'
 import { TonTools } from './TonTools'
 import {
   asParsedTx,
@@ -91,17 +95,16 @@ export class TonEngine extends CurrencyEngine<
 
   async queryBalance(): Promise<void> {
     try {
-      const clients = this.tools.getOrbsClients()
-      const funcs = clients.map(async client => {
-        return await client.getContractState(this.wallet.address)
-      })
-      const contractState: Awaited<ReturnType<TonClient['getContractState']>> =
-        await promiseAny(funcs)
+      const addr = encodeURIComponent(this.wallet.address.toRawString())
+      const raw = await this.tools.fetchDrpc(
+        `/getAddressInformation?address=${addr}`
+      )
+      const { result } = asDrpcAddressInfo(raw)
 
-      this.updateBalance(null, contractState.balance.toString())
+      this.updateBalance(null, String(result.balance))
 
-      if (contractState.state !== this.otherData.contractState) {
-        this.otherData.contractState = contractState.state
+      if (result.state !== this.otherData.contractState) {
+        this.otherData.contractState = result.state
         this.walletLocalDataDirty = true
       }
     } catch (e) {
@@ -288,7 +291,6 @@ export class TonEngine extends CurrencyEngine<
       value: fromNano(nativeAmount),
       to: Address.parse(publicAddress),
       body: memoCell,
-      init: needsInit ? this.wallet.init : null,
       bounce: false
     })
 
@@ -304,24 +306,27 @@ export class TonEngine extends CurrencyEngine<
 
     let networkFee = '0'
     if (nativeAmount !== '0') {
-      // Only estimate fee if we're sending something
-      const clients = this.tools.getOrbsClients()
-      const feeFuncs = clients.map(async client => {
-        return await client.estimateExternalMessageFee(this.wallet.address, {
-          body: transfer,
-          initCode: needsInit ? this.wallet.init.code : null,
-          initData: needsInit ? this.wallet.init.data : null,
-          ignoreSignature: false
-        })
-      })
-      const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
-        await promiseAny(feeFuncs)
+      const addr = this.wallet.address.toRawString()
+      const bodyBoc = base64.stringify(transfer.toBoc())
+      const initCodeBoc = needsInit
+        ? base64.stringify(this.wallet.init.code.toBoc())
+        : ''
+      const initDataBoc = needsInit
+        ? base64.stringify(this.wallet.init.data.toBoc())
+        : ''
 
+      const feeRaw = await this.tools.fetchDrpc('/estimateFee', {
+        address: addr,
+        body: bodyBoc,
+        init_code: initCodeBoc,
+        init_data: initDataBoc
+      })
+      const { result: feeResult } = asDrpcEstimateFee(feeRaw)
       const totalFee =
-        fees.source_fees.fwd_fee +
-        fees.source_fees.gas_fee +
-        fees.source_fees.in_fwd_fee +
-        fees.source_fees.storage_fee
+        feeResult.source_fees.fwd_fee +
+        feeResult.source_fees.gas_fee +
+        feeResult.source_fees.in_fwd_fee +
+        feeResult.source_fees.storage_fee
       networkFee = totalFee.toString()
     }
 
@@ -376,13 +381,24 @@ export class TonEngine extends CurrencyEngine<
     )[0].asSlice()
     const transferMessage = loadMessageRelaxed(messageSlice)
 
-    const clients = this.tools.getOrbsClients()
-    const seqnoFuncs = clients.map(async client => {
-      const contract = client.open(this.wallet)
-      return await contract.getSeqno()
+    const addr = this.wallet.address.toRawString()
+    const seqnoRaw = await this.tools.fetchDrpc('/runGetMethod', {
+      address: addr,
+      method: 'seqno',
+      stack: []
     })
-    const seqno: Awaited<ReturnType<typeof this.wallet['getSeqno']>> =
-      await promiseAny(seqnoFuncs)
+    const { result: seqnoResult } = asDrpcRunGetMethod(seqnoRaw)
+    let seqno: number
+    if (seqnoResult.exit_code === -13) {
+      // Account not initialized — first outgoing tx deploys the contract
+      seqno = 0
+    } else if (seqnoResult.exit_code !== 0) {
+      throw new Error(
+        `seqno query failed with exit_code ${seqnoResult.exit_code}`
+      )
+    } else {
+      seqno = parseSeqnoFromStack(seqnoResult.stack)
+    }
 
     const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
       sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
@@ -404,53 +420,53 @@ export class TonEngine extends CurrencyEngine<
       const txBoc = base64.parse(edgeTransaction.signedTx)
       const txCell = Cell.fromBoc(Buffer.from(txBoc))[0]
 
-      const clients = this.tools.getOrbsClients()
-      const broadcastFuncs = clients.map(async client => {
-        const contract = client.open(this.wallet)
-        return await contract.send(txCell)
+      const needsInit = this.otherData.contractState === 'uninitialized'
+      const externalMessage = external({
+        to: this.wallet.address,
+        body: txCell,
+        init: needsInit ? this.wallet.init : undefined
       })
-      await formatAggregateError(
-        promiseAny(broadcastFuncs),
-        'Broadcast failed:'
-      )
+      const externalBoc = beginCell()
+        .store(storeMessage(externalMessage))
+        .endCell()
+      const bocBase64 = base64.stringify(externalBoc.toBoc())
+
+      const sendRaw = await this.tools.fetchDrpc('/sendBoc', {
+        boc: bocBase64
+      })
+      asDrpcSendBoc(sendRaw)
 
       if (this.otherData.contractState === 'uninitialized') {
-        // It's not possible to calculate the txid for a wallet's first send so we need to look for it once it's confirmed
+        // The txid for a wallet's deploy tx can't be calculated locally,
+        // so poll for the transaction whose inbound external message
+        // carries a StateInit (init_state) — that's the deploy.
+        const addr = encodeURIComponent(this.wallet.address.toRawString())
         let attempts = 0
         do {
           attempts++
           await snooze(1000)
-          const txidFuncs = clients.map(async client => {
-            return await client.getTransactions(this.wallet.address, {
-              limit: 50
-            })
-          })
-          const transactions: Awaited<
-            ReturnType<TonClient['getTransactions']>
-          > = await promiseAny(txidFuncs)
-
-          const tx = transactions.find(tx => {
-            return tx.oldStatus === 'uninitialized' && tx.endStatus === 'active'
-          })
-          if (tx != null) {
-            const txid = base16.stringify(tx.hash()).toLowerCase()
-            edgeTransaction.txid = txid
-            edgeTransaction.date = Date.now() / 1000
-            this.otherData.contractState = 'active'
-            this.walletLocalDataDirty = true
-            return edgeTransaction
+          try {
+            const raw = await this.tools.fetchDrpc(
+              `/getTransactions?address=${addr}&limit=100`
+            )
+            const { result: txs } = asDrpcGetTransactions(raw)
+            for (const tx of txs) {
+              const { in_msg: inMsg } = tx
+              if (inMsg.source === '' && inMsg.msg_data.init_state != null) {
+                const hashBytes = base64.parse(tx.transaction_id.hash)
+                edgeTransaction.txid = base16.stringify(hashBytes).toLowerCase()
+                edgeTransaction.date = Date.now() / 1000
+                this.otherData.contractState = 'active'
+                this.walletLocalDataDirty = true
+                return edgeTransaction
+              }
+            }
+          } catch (e) {
+            // retry
           }
         } while (attempts <= 30) // In testing, the tx was found after ~10 seconds
         throw new Error('Transaction broadcast but unable to find txid')
       } else {
-        // We can calculate the txid from the signedTx
-        const externalMessage = external({
-          to: this.wallet.address,
-          body: txCell
-        })
-        const externalBoc = beginCell()
-          .store(storeMessage(externalMessage))
-          .endCell()
         const txid = base16.stringify(externalBoc.hash()).toLowerCase()
         edgeTransaction.txid = txid
         edgeTransaction.date = Date.now() / 1000

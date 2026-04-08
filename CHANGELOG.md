@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (DOT) Add Subscan API key support
+- changed: (TON) Replace Orbs servers with dRPC
+
 ## 4.78.0 (2026-04-06)
 
 - added: (Zano) Add makeMaxSpend otherMethod to build single-transaction multi-asset max spends.
