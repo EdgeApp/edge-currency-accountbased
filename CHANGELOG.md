@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (ZEC) Fix missing incoming transaction notifications
+
 ## 4.78.1 (2026-04-08)
 
 - added: (DOT) Add Subscan API key support

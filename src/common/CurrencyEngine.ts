@@ -289,7 +289,8 @@ export class CurrencyEngine<
     return out
   }
 
-  private isTransactionNew(edgeTransaction: EdgeTransaction): boolean {
+  // This method is protected because it's used in the ZcashEngine to handle unconfirmed txs. It should revert to private once unconfirmed txs are properly handled in the seenTxCheckpoint API
+  protected isTransactionNew(edgeTransaction: EdgeTransaction): boolean {
     const txCheckpoint = this.getTxCheckpoint(edgeTransaction)
     if (
       // Undefined seenTxCheckpoint means we're syncing for the very first time
