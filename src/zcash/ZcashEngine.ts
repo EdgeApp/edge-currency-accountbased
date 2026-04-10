@@ -171,6 +171,19 @@ export class ZcashEngine extends CurrencyEngine<
     })
   }
 
+  // This is a partial fix for handling unconfirmed txs in the seenTxCheckpoint API. It solves the problem for a single device, but multi-devices syncing the same account may still see incorrect notifications.
+  isTransactionNew(edgeTransaction: EdgeTransaction): boolean {
+    if (
+      edgeTransaction.blockHeight === 0 &&
+      edgeTransaction.confirmations === 'unconfirmed' &&
+      this.seenTxCheckpoint != null &&
+      !edgeTransaction.isSend
+    ) {
+      return true
+    }
+    return super.isTransactionNew(edgeTransaction)
+  }
+
   isSynced(): boolean {
     // Synchronizer status is updated regularly and should be checked before accessing the db to avoid errors
     return this.synchronizerStatus === 'SYNCED'
