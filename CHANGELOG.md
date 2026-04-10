@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.79.1 (2026-04-10)
+
+- changed: Update chain-registry
+
 ## 4.79.0 (2026-04-10)
 
 - added: (Zano) Add ETHx BNBx DAIx and BCHx tokens
