@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_SIZE,
   createAssociatedTokenAccountInstruction,
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync
@@ -87,6 +88,7 @@ export class SolanaEngine extends CurrencyEngine<
   progressRatio: number
   addressCache: Map<string, boolean>
   getMinimumAddressBalance: () => Promise<string>
+  getTokenAccountRent: () => Promise<string>
   usedTokenIdSet: Set<EdgeTokenId> = new Set()
 
   constructor(
@@ -108,6 +110,10 @@ export class SolanaEngine extends CurrencyEngine<
     this.addressCache = new Map()
     this.getMinimumAddressBalance = cache(
       this.queryMinimumBalance.bind(this),
+      30000
+    )
+    this.getTokenAccountRent = cache(
+      this.queryTokenAccountRent.bind(this),
       30000
     )
     this.usedTokenIdSet = new Set()
@@ -236,6 +242,58 @@ export class SolanaEngine extends CurrencyEngine<
     const minimumBalance: number = await asyncWaterfall(funcs)
     this.minimumAddressBalance = minimumBalance.toString()
     return this.minimumAddressBalance
+  }
+
+  async queryTokenAccountRent(): Promise<string> {
+    const funcs = this.tools.connections.map(connection => async () => {
+      return await connection.getMinimumBalanceForRentExemption(ACCOUNT_SIZE)
+    })
+    const tokenAccountRent: number = await asyncWaterfall(funcs)
+    return tokenAccountRent.toString()
+  }
+
+  async getRecipientTokenAccountInfo(
+    publicAddress: string,
+    tokenId: EdgeTokenId
+  ): Promise<{
+    associatedTokenAddress: PublicKey
+    tokenAddressExists: boolean
+  }> {
+    if (tokenId == null) {
+      throw new Error('Token account lookup requires a tokenId')
+    }
+
+    const payee = new PublicKey(publicAddress)
+    const tokenPubkey = new PublicKey(tokenId)
+    const token = this.allTokensMap[tokenId]
+    const tokenOwnerPubkey = this.tools.getTokenOwnerPublicKey(token)
+    const associatedTokenProgramId = new PublicKey(
+      this.networkInfo.associatedTokenPublicKey
+    )
+
+    const associatedTokenAddress = getAssociatedTokenAddressSync(
+      tokenPubkey,
+      payee,
+      true, // payee may be a Program Derived Address
+      tokenOwnerPubkey,
+      associatedTokenProgramId
+    )
+
+    const addressCacheKey = `${publicAddress}:${tokenId}`
+    let tokenAddressExists = this.addressCache.get(addressCacheKey)
+    if (tokenAddressExists == null) {
+      const funcs = this.tools.connections.map(connection => async () => {
+        return await connection.getAccountInfo(
+          associatedTokenAddress,
+          this.networkInfo.commitment
+        )
+      })
+      const accountRes: AccountInfo<Buffer> | null = await asyncWaterfall(funcs)
+      tokenAddressExists = accountRes != null
+      this.addressCache.set(addressCacheKey, tokenAddressExists)
+    }
+
+    return { associatedTokenAddress, tokenAddressExists }
   }
 
   async queryFee(): Promise<string> {
@@ -604,10 +662,10 @@ export class SolanaEngine extends CurrencyEngine<
       const solBalance = this.getBalance({
         tokenId: null
       })
-      const solRequired = sub(solBalance, edgeTx.networkFee)
-      if (lt(sub(solRequired, minimumAddressBalance), '0')) {
+      const solNetworkFee = edgeTx.parentNetworkFee ?? edgeTx.networkFee
+      if (gt(add(solNetworkFee, minimumAddressBalance), solBalance)) {
         throw new InsufficientFundsError({
-          networkFee: this.feePerSignature,
+          networkFee: solNetworkFee,
           tokenId: null
         })
       }
@@ -643,6 +701,7 @@ export class SolanaEngine extends CurrencyEngine<
     let totalTxAmount = '0'
     let nativeNetworkFee = this.feePerSignature
     let parentNetworkFee: string | undefined
+    let recipientAtaRent = '0'
     const balance = this.getBalance({ tokenId })
 
     // pubkeys
@@ -701,28 +760,12 @@ export class SolanaEngine extends CurrencyEngine<
         associatedTokenProgramId
       )
 
-      // check if recipient exists
-      let tokenAddressExists = this.addressCache.get(publicAddress)
-      if (tokenAddressExists === undefined) {
-        const funcs = this.tools.connections.map(connection => async () => {
-          return await connection.getAccountInfo(
-            associatedDestinationTokenAddrPayee,
-            this.networkInfo.commitment
-          )
-        })
-        const accountRes: AccountInfo<Buffer> | null = await asyncWaterfall(
-          funcs
-        )
-        if (accountRes == null) {
-          tokenAddressExists = false
-          this.addressCache.set(publicAddress, false)
-        } else {
-          tokenAddressExists = true
-          this.addressCache.set(publicAddress, true)
-        }
-      }
+      const { tokenAddressExists } = await this.getRecipientTokenAccountInfo(
+        publicAddress,
+        tokenId
+      )
 
-      // Add token account creation instruction and bump fee
+      // Add token account creation instruction and fund its rent
       if (!tokenAddressExists) {
         const tokenCreationInstruction =
           createAssociatedTokenAccountInstruction(
@@ -734,7 +777,7 @@ export class SolanaEngine extends CurrencyEngine<
             associatedTokenProgramId
           )
         instructions.push(tokenCreationInstruction)
-        nativeNetworkFee = add(nativeNetworkFee, this.feePerSignature)
+        recipientAtaRent = await this.getTokenAccountRent()
       }
 
       parentNetworkFee = nativeNetworkFee
@@ -745,12 +788,18 @@ export class SolanaEngine extends CurrencyEngine<
       }
 
       const balanceSol = this.getBalance({ tokenId: null })
-      if (gt(add(parentNetworkFee, minimumAddressBalance), balanceSol)) {
+      const totalSolRequired = add(
+        add(parentNetworkFee, recipientAtaRent),
+        minimumAddressBalance
+      )
+      if (gt(totalSolRequired, balanceSol)) {
         throw new InsufficientFundsError({
-          networkFee: parentNetworkFee,
+          networkFee: add(parentNetworkFee, recipientAtaRent),
           tokenId: null
         })
       }
+
+      parentNetworkFee = add(parentNetworkFee, recipientAtaRent)
 
       // derive our address
       const associatedDestinationTokenAddrPayer = getAssociatedTokenAddressSync(
