@@ -136,7 +136,8 @@ export class MoneroEngine extends CurrencyEngine<
               loginResult = await this.loginToLwsServer(
                 daemonAddress,
                 this.walletInfo.keys.moneroAddress,
-                this.walletInfo.keys.moneroViewKeyPrivate
+                this.walletInfo.keys.moneroViewKeyPrivate,
+                keys.birthdayHeight // pass it along in case we have it already
               )
             }
           }
@@ -253,7 +254,8 @@ export class MoneroEngine extends CurrencyEngine<
   async loginToLwsServer(
     serverUrl: string,
     address: string,
-    viewKey: string
+    viewKey: string,
+    birthdayHeight?: number
   ): Promise<LoginResponse> {
     const url = `${serverUrl}/login`
     const response = await this.tools.io.fetch(url, {
@@ -267,7 +269,8 @@ export class MoneroEngine extends CurrencyEngine<
         api_key: this.initOptions.edgeApiKey,
         create_account: true,
         generated_locally: true,
-        view_key: viewKey
+        view_key: viewKey,
+        birthday_height: birthdayHeight
       })
     })
     if (!response.ok) {
