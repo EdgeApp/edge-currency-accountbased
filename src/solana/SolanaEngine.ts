@@ -422,6 +422,18 @@ export class SolanaEngine extends CurrencyEngine<
 
     const solAmount = (postBalances[index] - preBalances[index]).toString()
     const isSend = index === 0
+    const mainPubkey = new PublicKey(this.base58PublicKey)
+    const mainIndex = tx.transaction.message.staticAccountKeys.findIndex(
+      account => account.equals(mainPubkey)
+    )
+    const mainSolAmount =
+      mainIndex < 0
+        ? '0'
+        : (postBalances[mainIndex] - preBalances[mainIndex]).toString()
+    const isMainFeePayer = mainIndex === 0
+    const totalSolSpent = lt(mainSolAmount, '0')
+      ? mul(mainSolAmount, '-1')
+      : '0'
     if (solAmount !== '0') {
       let solFee = networkFee
       if (isTokenTransaction && isSend) {
@@ -460,10 +472,17 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     tokenBalanceChangeMap.forEach((balanceChange, tokenId) => {
+      const isTokenSend = lt(balanceChange, '0')
       out.push({
         amount: balanceChange,
         networkFee: '0',
-        parentNetworkFee: isSend ? networkFee : undefined,
+        parentNetworkFee: isTokenSend
+          ? gt(totalSolSpent, '0')
+            ? totalSolSpent
+            : isMainFeePayer
+            ? networkFee
+            : undefined
+          : undefined,
         tokenId
       })
     })
