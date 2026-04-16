@@ -109,6 +109,7 @@
     "@ton/core": "^0.59.0",
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^15.1.0",
+    "@zano-project/zano-utils-js": "https://github.com/EdgeApp/zano-utils-js/releases/download/v0.0.4-edge.1/zano-project-zano-utils-js-0.0.4.tgz",
     "@zondax/izari-filecoin": "^1.2.6",
     "algosdk": "^2.1.0",
     "assert-log": "^0.2.2",

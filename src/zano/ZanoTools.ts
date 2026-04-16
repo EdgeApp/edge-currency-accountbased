@@ -1,4 +1,6 @@
+import { seedToMnemonic } from '@zano-project/zano-utils-js'
 import { div, mul, toFixed } from 'biggystring'
+import bs58 from 'bs58'
 import { asMaybe, asString } from 'cleaners'
 import {
   EdgeCurrencyInfo,
@@ -166,46 +168,52 @@ export class ZanoTools implements EdgeCurrencyTools {
 
     // Handle Zano Deeplink URIs:
     if (uri.startsWith('zano:')) {
-      const zanoDeeplink = parseZanoDeeplink(uri)
-      if (zanoDeeplink.action !== 'send') {
-        throw new Error('Invalid Zano URI: only send action is supported')
-      }
-      if (!(await this.isValidAddress(zanoDeeplink.address))) {
-        throw new Error('InvalidPublicAddressError')
-      }
-      const edgeParsedUri: EdgeParsedUri = {
-        publicAddress: zanoDeeplink.address
-      }
-      const amountStr = zanoDeeplink.amount
-      if (amountStr != null && typeof amountStr === 'string') {
-        // Validate that the currency in the deeplink matches the requested
-        // currency code:
-        let deeplinkCurrencyCode: string
-        if (zanoDeeplink.asset_id == null) {
-          deeplinkCurrencyCode = this.currencyInfo.currencyCode
-        } else {
-          deeplinkCurrencyCode =
-            this.builtinTokens[zanoDeeplink.asset_id]?.currencyCode
-        }
-        if (currencyCode != null && currencyCode !== deeplinkCurrencyCode) {
-          throw new Error('InvalidCurrencyCodeError')
-        }
-        const denom = getLegacyDenomination(
-          deeplinkCurrencyCode,
-          this.currencyInfo,
-          customTokens ?? [],
-          this.builtinTokens
-        )
-        if (denom == null) {
-          throw new Error('InternalErrorInvalidCurrencyCode')
-        }
-        let nativeAmount = mul(amountStr, denom.multiplier)
-        nativeAmount = toFixed(nativeAmount, 0, 0)
+      let zanoDeeplink: ReturnType<typeof parseZanoDeeplink> | undefined
+      try {
+        zanoDeeplink = parseZanoDeeplink(uri)
+      } catch {}
 
-        edgeParsedUri.nativeAmount = nativeAmount
-        edgeParsedUri.currencyCode = deeplinkCurrencyCode
+      if (zanoDeeplink != null) {
+        if (zanoDeeplink.action !== 'send') {
+          throw new Error('Invalid Zano URI: only send action is supported')
+        }
+        if (!(await this.isValidAddress(zanoDeeplink.address))) {
+          throw new Error('InvalidPublicAddressError')
+        }
+        const edgeParsedUri: EdgeParsedUri = {
+          publicAddress: zanoDeeplink.address
+        }
+        const amountStr = zanoDeeplink.amount
+        if (amountStr != null && typeof amountStr === 'string') {
+          // Validate that the currency in the deeplink matches the requested
+          // currency code:
+          let deeplinkCurrencyCode: string
+          if (zanoDeeplink.asset_id == null) {
+            deeplinkCurrencyCode = this.currencyInfo.currencyCode
+          } else {
+            deeplinkCurrencyCode =
+              this.builtinTokens[zanoDeeplink.asset_id]?.currencyCode
+          }
+          if (currencyCode != null && currencyCode !== deeplinkCurrencyCode) {
+            throw new Error('InvalidCurrencyCodeError')
+          }
+          const denom = getLegacyDenomination(
+            deeplinkCurrencyCode,
+            this.currencyInfo,
+            customTokens ?? [],
+            this.builtinTokens
+          )
+          if (denom == null) {
+            throw new Error('InternalErrorInvalidCurrencyCode')
+          }
+          let nativeAmount = mul(amountStr, denom.multiplier)
+          nativeAmount = toFixed(nativeAmount, 0, 0)
+
+          edgeParsedUri.nativeAmount = nativeAmount
+          edgeParsedUri.currencyCode = deeplinkCurrencyCode
+        }
+        return edgeParsedUri
       }
-      return edgeParsedUri
     }
 
     // Handle standard URIs:
@@ -221,6 +229,25 @@ export class ZanoTools implements EdgeCurrencyTools {
 
     if (edgeParsedUri.privateKeys != null) {
       return edgeParsedUri
+    }
+
+    // Some scanners provide the mnemonic as base58-encoded raw seed bytes,
+    // with or without a `zano:` prefix. The bytes are either a 32-byte seed
+    // or a full seed with appended timestamp/checksum word indices.
+    const base58Candidates = [uri]
+    if (uri.startsWith('zano:')) {
+      base58Candidates.push(uri.slice('zano:'.length).replace(/^\/\//, ''))
+    }
+    for (const candidate of base58Candidates) {
+      if (candidate === '') continue
+      try {
+        const seedHex = base16.stringify(bs58.decode(candidate))
+        const decodedMnemonic = seedToMnemonic(seedHex)
+        await this.importPrivateKey(decodedMnemonic)
+        edgeParsedUri.privateKeys = [decodedMnemonic]
+        edgeParsedUri.publicAddress = undefined
+        return edgeParsedUri
+      } catch {}
     }
 
     let address = ''
