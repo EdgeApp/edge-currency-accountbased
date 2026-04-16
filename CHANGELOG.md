@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Zano) Support base58-encoded raw seed imports in `parseUri`, with and without a `zano:` prefix
+
 ## 4.79.1 (2026-04-10)
 
 - changed: Update chain-registry
