@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Migrate THORChain mainnet endpoints (RPC, thornode, Midgard, archive) off NineRealms to gateway.liquify.com.
+
 ## 4.80.0 (2026-04-16)
 
 - added: (Zano) Support base58-encoded raw seed imports in `parseUri`, with and without a `zano:` prefix

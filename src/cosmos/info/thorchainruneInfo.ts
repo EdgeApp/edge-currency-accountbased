@@ -26,19 +26,19 @@ const networkInfo: MidgardNetworkInfo = {
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/thorchain/chain.json'
   },
   defaultChainId: 'thorchain-mainnet-v1',
-  chainIdUpdateUrl: 'https://rpc.ninerealms.com/status',
+  chainIdUpdateUrl: 'https://gateway.liquify.com/chain/thorchain_rpc/status',
   transactionFeeConnectionInfo: {
-    url: 'https://thornode.ninerealms.com/thorchain/network',
+    url: 'https://gateway.liquify.com/chain/thorchain_api/thorchain/network',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
   midgardConnectionInfo: {
-    url: 'https://midgard.ninerealms.com',
+    url: 'https://gateway.liquify.com/chain/thorchain_midgard',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
   nativeDenom: 'rune',
   pluginMnemonicKeyName: 'thorchainruneMnemonic',
   rpcNode: {
-    url: 'https://rpc.ninerealms.com',
+    url: 'https://gateway.liquify.com/chain/thorchain_rpc',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
   archiveNodes: [
@@ -48,7 +48,7 @@ const networkInfo: MidgardNetworkInfo = {
         // end: TBD
       },
       endpoint: {
-        url: 'https://rpc-v1.ninerealms.com',
+        url: 'https://gateway.liquify.com/chain/thorchain_v1_rpc',
         headers: { 'x-client-id': '{{ninerealmsClientId}}' }
       }
     }
