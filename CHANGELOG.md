@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.81.0 (2026-04-18)
+
 - changed: Migrate THORChain mainnet endpoints (RPC, thornode, Midgard, archive) off NineRealms to gateway.liquify.com.
 
 ## 4.80.0 (2026-04-16)
