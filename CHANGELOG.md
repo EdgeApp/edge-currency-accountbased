@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 4.81.1 (2026-04-23)
+
+- added: (Cardano) Support parsing Byron addresses
+- fixed: (Solana) Fix SOL calculation spent to fund new accounts
+
 ## 4.81.0 (2026-04-18)
 
 - changed: Migrate THORChain mainnet endpoints (RPC, thornode, Midgard, archive) off NineRealms to gateway.liquify.com.
