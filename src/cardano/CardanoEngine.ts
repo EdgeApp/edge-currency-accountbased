@@ -45,6 +45,7 @@ import {
   KoiosUtxo,
   SafeCardanoWalletInfo
 } from './cardanoTypes'
+import { parseOutputAddress } from './cardanoUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
@@ -365,7 +366,7 @@ export class CardanoEngine extends CurrencyEngine<
       .build()
     const txBuilder = Cardano.TransactionBuilder.new(txBuilderConfig)
 
-    const outputAddr = Cardano.Address.from_bech32(outputAddress)
+    const outputAddr = parseOutputAddress(outputAddress)
     const changeAddr = Cardano.Address.from_bech32(
       this.walletInfo.keys.bech32Address
     )

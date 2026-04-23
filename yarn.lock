@@ -378,15 +378,15 @@
   resolved "https://registry.yarnpkg.com/@eivifj/dot/-/dot-1.0.3.tgz#b3a6d9662cd84ff4105e0f05620d1045e9d0d9fc"
   integrity sha512-UE2x9N7XD/1qqtXA+4CZPD1RQAlM0lEdXdy09CJ/wNR+mgGKqwLRH4BGGfOAWwwz06pIT3c2tC4gvXbntGAeMA==
 
-"@emurgo/cardano-serialization-lib-asmjs@^14.1.1":
-  version "14.1.1"
-  resolved "https://registry.yarnpkg.com/@emurgo/cardano-serialization-lib-asmjs/-/cardano-serialization-lib-asmjs-14.1.1.tgz#e2914b2e40935c279854eb36eb175b2e3fa991e6"
-  integrity sha512-Q2HVpPRt417Quxv3qagGWbkJQU8SiQCl1K/344ZtQMwsLoqTfRlCNzmSWMBN7jyBxbtKoh+vdbSiLqwG1NAjYg==
+"@emurgo/cardano-serialization-lib-asmjs@^14.1.2":
+  version "14.1.2"
+  resolved "https://registry.yarnpkg.com/@emurgo/cardano-serialization-lib-asmjs/-/cardano-serialization-lib-asmjs-14.1.2.tgz#c80567ee087f5d11710738308bd07cd6a69c7ae7"
+  integrity sha512-sE8y+9iz9bgWeJQKmVeuSRGc9LAXlwR0M3W9+AOa370CN4rzVhoSlpHzkK6zKQSL4iu+yQHWpz/4e1b/o95a1w==
 
-"@emurgo/cardano-serialization-lib-nodejs@^14.1.1":
-  version "14.1.1"
-  resolved "https://registry.yarnpkg.com/@emurgo/cardano-serialization-lib-nodejs/-/cardano-serialization-lib-nodejs-14.1.1.tgz#4f36e1f688f2e76ba2077732c62ef9ccde766ee8"
-  integrity sha512-UpQzrDOolgssJHeaaMUS+ShDTNBHCnzgKd95G/2Hg9+l8i3zTJ7dlGQDEk/35LgLt8twCHWZDCytrpx7PY12ww==
+"@emurgo/cardano-serialization-lib-nodejs@^14.1.2":
+  version "14.1.2"
+  resolved "https://registry.yarnpkg.com/@emurgo/cardano-serialization-lib-nodejs/-/cardano-serialization-lib-nodejs-14.1.2.tgz#c788fee446c624b6d9f974ec40599d66b058b79b"
+  integrity sha512-g8sxCEaQXqRt4A3zmhebuo+pMucVDs/4FlkUD+J+awJCJMAkK7eCFBEb09d8+jREec687D5fY+FG9NemExSQhQ==
 
 "@esbuild/android-arm@0.15.18":
   version "0.15.18"
