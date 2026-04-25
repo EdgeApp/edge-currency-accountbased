@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: zcash - Honor the ZIP-321 `memo` query parameter when parsing payment URIs (base64url decoded), unblocking ZNS claim flows.
+
 ## 4.80.0 (2026-04-16)
 
 - added: (Zano) Support base58-encoded raw seed imports in `parseUri`, with and without a `zano:` prefix
