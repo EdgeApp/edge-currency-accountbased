@@ -237,6 +237,22 @@ export class ZcashEngine extends CurrencyEngine<
         ? Math.max(blockTimeInSeconds, Date.now() / 1000)
         : blockTimeInSeconds
 
+    // For outgoing transactions, carry the recipient address onto
+    // `spendTargets` so the GUI can drive reverse address lookups (e.g. ZNS).
+    // Shielded receives leave `toAddress` null, so no spendTargets there.
+    const spendTargets =
+      toAddress != null
+        ? [
+            {
+              currencyCode: this.currencyInfo.currencyCode,
+              nativeAmount: value,
+              publicAddress: toAddress,
+              memo: undefined,
+              uniqueIdentifier: undefined
+            }
+          ]
+        : undefined
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: minedHeight,
       confirmations,
@@ -251,6 +267,7 @@ export class ZcashEngine extends CurrencyEngine<
       otherParams: {},
       ourReceiveAddresses: [], // Not accessible from SDK and unified addresses are deterministic
       signedTx: raw ?? '',
+      spendTargets,
       tokenId: null,
       txid: rawTransactionId,
       walletId: this.walletId
