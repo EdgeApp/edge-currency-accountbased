@@ -196,7 +196,7 @@ export class ZanoEngine extends CurrencyEngine<
     }
 
     if (detectedTokenIds.length > 0) {
-      this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+      this.reportDetectedTokens(detectedTokenIds)
     }
 
     this.syncTracker.updateBalanceRatio(1)

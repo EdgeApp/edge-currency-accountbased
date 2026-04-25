@@ -1,5 +1,6 @@
 import {
   asArray,
+  asBoolean,
   asCodec,
   asEither,
   asMaybe,
@@ -60,6 +61,7 @@ export const asWalletLocalData = asObject({
     asObject(asNumber),
     () => ({})
   ),
+  detectedTokenIds: asMaybe(asObject(asBoolean), () => ({})),
   unactivatedTokenIds: asMaybe(asArray(asString), () => []),
   otherData: asOptional(asUnknown, () => ({}))
 })
