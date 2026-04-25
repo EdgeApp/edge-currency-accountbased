@@ -227,10 +227,10 @@
     bfs-path "^1.0.2"
     cross-fetch "^3.1.5"
 
-"@chain-registry/types@^2.0.185":
-  version "2.0.185"
-  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.185.tgz#308a861b31f7522bbe8dcb46c6cb04ca8c40b1c3"
-  integrity sha512-WSTvMnwkyc75ea1cS0nBIdcEoKJmNVUroqJZUNI1vkCM4Z6m6AMWiQ1HBJfKusFlGwDz24JtMjaYu4Nu+1dCZw==
+"@chain-registry/types@^2.0.191":
+  version "2.0.191"
+  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.191.tgz#68b1d1e66c15f33f82575dbb73df6315a44507dc"
+  integrity sha512-BEfpmDc7Ef599pXkEnBa8Vnkri10ru+zyZMyHC4x7rni4AzkDa8tXRQrDdKcydjrIMCan6iSfjxNj+pKfNPtsg==
 
 "@chain-registry/types@^2.0.28":
   version "2.0.28"
@@ -3600,12 +3600,12 @@ chai@^4.2.0:
     pathval "^1.1.1"
     type-detect "^4.0.5"
 
-chain-registry@^2.0.185:
-  version "2.0.185"
-  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.185.tgz#51c5e48189afc26ede11e65ce83406ebaaa43fc0"
-  integrity sha512-Z6VcLx4AYfiaktiUV7RbQc7qdJlXrfJ+7JPAFcKw3/DVJQ8bux/zAn8oGE82RnMGtTikl+1/+AGXakoGlCsTXA==
+chain-registry@^2.0.191:
+  version "2.0.191"
+  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.191.tgz#b17f9070e15507c432c274ae71a32cc7908d14f5"
+  integrity sha512-i8vLNfTdDLpVEAev6W9mMPuHdYnrT8v2O7dIGZHB3TR6TQQ0nNpCwjwioXSflbz0hqB04sWDHPdvdO4DDsJvCw==
   dependencies:
-    "@chain-registry/types" "^2.0.185"
+    "@chain-registry/types" "^2.0.191"
 
 chain-registry@^2.0.28:
   version "2.0.28"

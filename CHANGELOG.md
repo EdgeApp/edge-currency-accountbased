@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.81.2 (2026-04-24)
+
+- changed: Update chain-registry
+
 ## 4.81.1 (2026-04-23)
 
 - added: (Cardano) Support parsing Byron addresses
