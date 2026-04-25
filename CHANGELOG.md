@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: zcash - Honor the ZIP-321 `memo` query parameter when parsing payment URIs (base64url decoded), unblocking ZNS claim flows.
+
 ## 4.81.2 (2026-04-24)
 
 - changed: Update chain-registry

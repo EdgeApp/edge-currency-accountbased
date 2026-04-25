@@ -13,6 +13,7 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 import { Tools as ToolsType } from 'react-native-zcash'
+import { base64url } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
@@ -26,6 +27,15 @@ import {
   ZcashInfoPayload,
   ZcashNetworkInfo
 } from './zcashTypes'
+
+/**
+ * Decode a ZIP-321 base64url memo string (no `=` padding) into raw bytes.
+ * Per https://zips.z.cash/zip-0321: memo uses base64url alphabet, no padding,
+ * decoded ≤ 512 bytes. `loose: true` permits the missing `=` padding.
+ */
+export function decodeZip321Memo(b64url: string): Buffer {
+  return Buffer.from(base64url.parse(b64url, { loose: true }))
+}
 
 export class ZcashTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
@@ -160,7 +170,8 @@ export class ZcashTools implements EdgeCurrencyTools {
 
     const {
       edgeParsedUri,
-      edgeParsedUri: { publicAddress }
+      edgeParsedUri: { publicAddress },
+      parsedUri
     } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
@@ -172,6 +183,26 @@ export class ZcashTools implements EdgeCurrencyTools {
 
     if (publicAddress == null || !(await this.isValidAddress(publicAddress))) {
       throw new Error('InvalidPublicAddressError')
+    }
+
+    // ZIP-321 `memo` query parameter — base64url without padding, ≤ 512 bytes
+    // decoded. https://zips.z.cash/zip-0321
+    // Surface as `uniqueIdentifier`, which the GUI threads through to
+    // EdgeSpendInfo.memos (and the legacy `spendTarget.memo`).
+    const memoB64Url = parsedUri.query.memo
+    if (memoB64Url != null && memoB64Url !== '') {
+      const memoBytes = decodeZip321Memo(memoB64Url)
+      const memoOption = this.currencyInfo.memoOptions?.[0]
+      if (
+        memoOption?.type === 'text' &&
+        memoOption.maxLength != null &&
+        memoBytes.length > memoOption.maxLength
+      ) {
+        throw new Error(
+          `ZIP-321 memo exceeds ${memoOption.maxLength} byte limit`
+        )
+      }
+      edgeParsedUri.uniqueIdentifier = memoBytes.toString('utf8')
     }
 
     return edgeParsedUri
