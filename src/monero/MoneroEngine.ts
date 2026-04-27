@@ -4,6 +4,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEnginePrivateKeyOptions,
+  EdgeFetchFunction,
   EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -25,7 +26,7 @@ import {
   LifecycleManager,
   makeLifecycleManager
 } from '../common/lifecycleManager'
-import { cleanTxLogs, matchJson } from '../common/utils'
+import { cleanTxLogs, makeEngineFetch, matchJson } from '../common/utils'
 import {
   makeWeightedSyncTracker,
   WeightedSyncTracker
@@ -68,11 +69,13 @@ export class MoneroEngine extends CurrencyEngine<
   otherData!: MoneroWalletOtherData
   initOptions: MoneroInitOptions
   unlockedBalance: string
+  private readonly engineFetch: EdgeFetchFunction
   private readonly nativeWalletId: LifecycleManager<string>
   private sendKeysToNative?: (keys: MoneroPrivateKeys) => void
   private syncStartHeight: number | undefined
   private txSortOrder: 'asc' | 'desc' = 'asc'
   private unsubscribeWalletEvent?: () => void
+  private unsubscribeNymFetch?: () => Promise<void>
   private abortKeysWait?: () => void
   private settingsChangeQueue: Promise<void> = Promise.resolve()
 
@@ -96,8 +99,20 @@ export class MoneroEngine extends CurrencyEngine<
       opts.walletSettings ?? {}
     )
 
-    // Singleton promise resolved once by the first syncNetwork call.
-    // Stays resolved across restarts so onStart gets keys immediately.
+    // Fetch wrapper that re-evaluates the user's networkPrivacy choice
+    // on every request, so changes via Currency Settings take effect
+    // without restarting the engine.
+    this.engineFetch = makeEngineFetch(env.io, () => {
+      return this.currentSettings.networkPrivacy === 'nym'
+        ? { privacy: 'nym' }
+        : {}
+    })
+
+    // Singleton promise resolved once by the first syncNetwork call. The
+    // lifecycle closure captures this already-resolved promise, so onStart gets
+    // keys immediately across engine restarts. If killEngine runs before
+    // syncNetwork ever resolves it, the abortKeysWait race in onStart rejects
+    // the wait so stop() does not hang.
     const keysPromise = new Promise<MoneroPrivateKeys>(resolve => {
       this.sendKeysToNative = resolve
     })
@@ -154,6 +169,13 @@ export class MoneroEngine extends CurrencyEngine<
             loginResult
           )
 
+          // Hook up the Nym mixnet proxy (before openWallet so the
+          // very first LWSF request is already routed through it).
+          this.unsubscribeNymFetch = await this.tools.setupNymFetch(
+            this.currentSettings.networkPrivacy === 'nym',
+            daemonAddress
+          )
+
           await this.tools.cppBridge.openWallet(
             base64UrlWalletId,
             backend,
@@ -182,6 +204,14 @@ export class MoneroEngine extends CurrencyEngine<
 
           return base64UrlWalletId
         } catch (error: unknown) {
+          if (this.unsubscribeNymFetch != null) {
+            try {
+              await this.unsubscribeNymFetch()
+            } catch (cleanupError: unknown) {
+              this.log.error(`Error disabling nym: ${String(cleanupError)}`)
+            }
+            this.unsubscribeNymFetch = undefined
+          }
           if (!(error instanceof Error)) throw error
           this.log.error(`Failed to open wallet: ${error.message}`)
           throw error
@@ -192,6 +222,14 @@ export class MoneroEngine extends CurrencyEngine<
         if (this.unsubscribeWalletEvent != null) {
           this.unsubscribeWalletEvent()
           this.unsubscribeWalletEvent = undefined
+        }
+        if (this.unsubscribeNymFetch != null) {
+          try {
+            await this.unsubscribeNymFetch()
+          } catch (error: unknown) {
+            this.log.error(`Error disabling nym: ${String(error)}`)
+          }
+          this.unsubscribeNymFetch = undefined
         }
         try {
           await this.tools.cppBridge.closeWallet(nativeWalletId)
@@ -254,14 +292,23 @@ export class MoneroEngine extends CurrencyEngine<
     return addressInfo.start_height
   }
 
-  async loginToLwsServer(
+  // The Edge API key must only be sent to the Edge LWS (never a custom or
+  // third-party server) and never as an empty string:
+  private edgeApiKeyBody(serverUrl: string): { api_key?: string } {
+    const { edgeApiKey } = this.initOptions
+    return serverUrl === this.networkInfo.edgeLwsServer && edgeApiKey !== ''
+      ? { api_key: edgeApiKey }
+      : {}
+  }
+
+  private async loginToLwsServer(
     serverUrl: string,
     address: string,
     viewKey: string,
     birthdayHeight?: number
   ): Promise<LoginResponse> {
     const url = `${serverUrl}/login`
-    const response = await this.tools.io.fetch(url, {
+    const response = await this.engineFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -269,7 +316,7 @@ export class MoneroEngine extends CurrencyEngine<
       },
       body: JSON.stringify({
         address,
-        api_key: this.initOptions.edgeApiKey,
+        ...this.edgeApiKeyBody(serverUrl),
         create_account: true,
         generated_locally: true,
         view_key: viewKey,
@@ -284,13 +331,13 @@ export class MoneroEngine extends CurrencyEngine<
     return asLoginResponse(json)
   }
 
-  async getAddressInfo(
+  private async getAddressInfo(
     serverUrl: string,
     address: string,
     viewKey: string
   ): Promise<AddressInfoResponse> {
     const url = `${serverUrl}/get_address_info`
-    const response = await this.tools.io.fetch(url, {
+    const response = await this.engineFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -298,7 +345,7 @@ export class MoneroEngine extends CurrencyEngine<
       },
       body: JSON.stringify({
         address,
-        api_key: this.initOptions.edgeApiKey,
+        ...this.edgeApiKeyBody(serverUrl),
         view_key: viewKey
       })
     })

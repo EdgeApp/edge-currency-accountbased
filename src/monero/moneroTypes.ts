@@ -36,7 +36,8 @@ export const asMoneroUserSettings = asObject({
   enableCustomServers: asMaybe(asBoolean, false),
   enableCustomMonerod: asMaybe(asBoolean, false),
   moneroLightwalletServer: asMaybe(asString, EDGE_MONERO_LWS_SERVER),
-  monerodServer: asMaybe(asString, EDGE_MONERO_SERVER)
+  monerodServer: asMaybe(asString, EDGE_MONERO_SERVER),
+  networkPrivacy: asOptional(asValue('none', 'nym'), 'none')
 })
 export type MoneroUserSettings = ReturnType<typeof asMoneroUserSettings>
 
