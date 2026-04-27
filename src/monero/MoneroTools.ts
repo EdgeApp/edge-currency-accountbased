@@ -3,6 +3,7 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
+  EdgeFetchFunction,
   EdgeIo,
   EdgeLog,
   EdgeMetaToken,
@@ -12,10 +13,15 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 import { CppBridge } from 'react-native-monero/lib/src/CppBridge'
+import { base64 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import {
+  getLegacyDenomination,
+  makeEngineFetch,
+  mergeDeeply
+} from '../common/utils'
 import {
   asGetBlockCountResponse,
   asMoneroKeyOptions,
@@ -26,18 +32,32 @@ import {
   MoneroNetworkInfo
 } from './moneroTypes'
 
+interface NymCppBridge {
+  setNymEnabled: (enabled: boolean, baseUrl: string) => Promise<void>
+  resolveFetch: (
+    requestId: string,
+    status: number,
+    bodyBase64: string
+  ) => Promise<void>
+  rejectFetch: (requestId: string, errorMessage: string) => Promise<void>
+}
+
 export class MoneroTools implements EdgeCurrencyTools {
   cppBridge: CppBridge
   moneroIo: MoneroIo
   io: EdgeIo
+  engineFetch: EdgeFetchFunction
   log: EdgeLog
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: MoneroNetworkInfo
+  private nymFetchUsers = 0
+  private unsubscribeNymFetch?: () => void
 
   constructor(env: PluginEnvironment<MoneroNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, log, nativeIo, networkInfo } = env
     this.io = io
+    this.engineFetch = makeEngineFetch(io)
     this.log = log
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
@@ -49,9 +69,113 @@ export class MoneroTools implements EdgeCurrencyTools {
     this.cppBridge = new CppBridge(moneroIo)
   }
 
+  private get nymCppBridge(): NymCppBridge {
+    return this.cppBridge as unknown as NymCppBridge
+  }
+
+  async setupNymFetch(
+    enabled: boolean,
+    daemonAddress: string
+  ): Promise<() => Promise<void>> {
+    if (!enabled) {
+      if (this.nymFetchUsers === 0) {
+        await this.nymCppBridge.setNymEnabled(false, '')
+      }
+      return async () => {}
+    }
+
+    if (this.unsubscribeNymFetch == null) {
+      this.unsubscribeNymFetch = this.moneroIo.on('walletEvent', event => {
+        if (event.eventName !== 'nymFetchRequest') return
+
+        // The native layer reuses the walletId field as the request id for
+        // this event type. A single shared listener prevents duplicate
+        // fetches when multiple Monero engines are active.
+        this.handleNymFetchRequest(event.walletId, event.data).catch(() => {
+          // handleNymFetchRequest reports failures through rejectFetch.
+        })
+      })
+    }
+
+    this.nymFetchUsers += 1
+    try {
+      await this.nymCppBridge.setNymEnabled(
+        true,
+        daemonAddress.replace(/\/$/, '')
+      )
+    } catch (error: unknown) {
+      this.nymFetchUsers -= 1
+      if (this.nymFetchUsers === 0 && this.unsubscribeNymFetch != null) {
+        this.unsubscribeNymFetch()
+        this.unsubscribeNymFetch = undefined
+      }
+      throw error
+    }
+
+    let released = false
+    return async () => {
+      if (released) return
+      released = true
+
+      if (this.nymFetchUsers > 0) this.nymFetchUsers -= 1
+      if (this.nymFetchUsers === 0) {
+        try {
+          await this.nymCppBridge.setNymEnabled(false, '')
+        } finally {
+          if (this.unsubscribeNymFetch != null) {
+            this.unsubscribeNymFetch()
+            this.unsubscribeNymFetch = undefined
+          }
+        }
+      }
+    }
+  }
+
+  private async handleNymFetchRequest(
+    requestId: string,
+    payloadJson: string
+  ): Promise<void> {
+    try {
+      const payload = JSON.parse(payloadJson) as {
+        url: string
+        method: string
+        headers: Record<string, string>
+        bodyBase64: string
+      }
+
+      const bodyBytes = base64.parse(payload.bodyBase64)
+      let body: ArrayBuffer | undefined
+      if (bodyBytes.length > 0) {
+        body = new ArrayBuffer(bodyBytes.length)
+        new Uint8Array(body).set(bodyBytes)
+      }
+
+      const response = await this.io.fetch(payload.url, {
+        method: payload.method,
+        headers: payload.headers,
+        body,
+        privacy: 'nym'
+      })
+
+      const responseBytes = new Uint8Array(await response.arrayBuffer())
+      await this.nymCppBridge.resolveFetch(
+        requestId,
+        response.status,
+        responseBytes.length > 0 ? base64.stringify(responseBytes) : ''
+      )
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      try {
+        await this.nymCppBridge.rejectFetch(requestId, message)
+      } catch (rejectError: unknown) {
+        this.log.error(`rejectFetch failed: ${String(rejectError)}`)
+      }
+    }
+  }
+
   async getBlockCount(monerodUrl: string): Promise<number> {
     const url = `${monerodUrl.replace(/\/$/, '')}/json_rpc`
-    const response = await this.io.fetch(url, {
+    const response = await this.engineFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

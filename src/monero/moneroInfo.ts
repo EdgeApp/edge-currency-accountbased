@@ -18,7 +18,8 @@ const defaultSettings: MoneroUserSettings = {
   enableCustomServers: false,
   enableCustomMonerod: false,
   moneroLightwalletServer: EDGE_MONERO_LWS_SERVER,
-  monerodServer: EDGE_MONERO_SERVER
+  monerodServer: EDGE_MONERO_SERVER,
+  networkPrivacy: 'none'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
