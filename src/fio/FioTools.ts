@@ -1,5 +1,6 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { AvailabilityResponse } from '@fioprotocol/fiosdk/lib/entities/AvailabilityResponse'
+import type { PublicAddressResponse } from '@fioprotocol/fiosdk/lib/entities/PublicAddressResponse'
 import { PrivateKey } from '@greymass/eosio'
 import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
@@ -16,7 +17,7 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asyncWaterfall } from '../common/promiseUtils'
+import { asyncWaterfall, promisesAgree, timeout } from '../common/promiseUtils'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   getLegacyDenomination,
@@ -530,43 +531,66 @@ export class FioTools implements EdgeCurrencyTools {
     actionName: string,
     params?: any
   ): Promise<any> {
-    const res = await asyncWaterfall(
-      shuffleArray(
-        this.networkInfo.apiUrls.map(apiUrl => async () => {
-          let out
+    const requestServer = async (apiUrl: string): Promise<any> => {
+      let out
 
-          const connection = new FIOSDK(
-            '',
-            '',
-            apiUrl,
-            this.engineFetch,
-            undefined,
-            this.tpid
-          )
+      const connection = new FIOSDK(
+        '',
+        '',
+        apiUrl,
+        this.engineFetch,
+        undefined,
+        this.tpid
+      )
 
-          try {
-            out = await connection.genericAction(actionName, params)
-          } catch (e: any) {
-            // handle FIO API error
-            if (e.errorCode != null && fioApiErrorCodes.includes(e.errorCode)) {
-              out = {
-                isError: true,
-                data: {
-                  code: e.errorCode,
-                  message: safeErrorMessage(e),
-                  json: e.json,
-                  list: e.list
-                }
-              }
-            } else {
-              throw e
+      try {
+        out = await connection.genericAction(actionName, params)
+      } catch (e: any) {
+        // handle FIO API error
+        if (e.errorCode != null && fioApiErrorCodes.includes(e.errorCode)) {
+          out = {
+            isError: true,
+            data: {
+              code: e.errorCode,
+              message: safeErrorMessage(e),
+              json: e.json,
+              list: e.list
             }
           }
+        } else {
+          throw e
+        }
+      }
 
-          return out
-        })
-      )
-    )
+      return out
+    }
+
+    const res =
+      actionName === 'getPublicAddress'
+        ? await promisesAgree(
+            this.networkInfo.apiUrls.map(async apiUrl => {
+              const out = await timeout(requestServer(apiUrl), 10000)
+              if (out.isError != null) {
+                const error = new FioError(out.data.message)
+                error.json = out.data.json
+                error.list = out.data.list
+                error.errorCode = out.data.code
+                throw error
+              }
+              return out
+            }),
+            (result: PublicAddressResponse) => {
+              return result.public_address
+            },
+            3
+          )
+        : await asyncWaterfall(
+            shuffleArray(
+              this.networkInfo.apiUrls.map(apiUrl => async () => {
+                return await requestServer(apiUrl)
+              })
+            )
+          )
 
     if (res.isError != null) {
       const error = new FioError(res.errorMessage)
