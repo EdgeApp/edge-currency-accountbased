@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.80.0-1 (2026-04-28)
+
 - added: zcash - Populate `EdgeTransaction.spendTargets` with the recipient address for outgoing transactions, enabling reverse address lookups (e.g. ZNS) in the GUI.
 - changed: Migrate THORChain mainnet endpoints (RPC, thornode, Midgard, archive) off NineRealms to gateway.liquify.com.
 - changed: (FIO) Use `promisesAgree` on public address resolution
