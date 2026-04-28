@@ -105,6 +105,7 @@ import {
   comparisonFioBalanceString,
   comparisonFioNameString,
   FioActionFees,
+  FioGetPubAddressesResponse,
   FioNetworkInfo,
   FioRefBlock,
   FioRequestTypes,
@@ -904,6 +905,30 @@ export class FioEngine extends CurrencyEngine<
           return comparisonFioBalanceString(result)
         },
         2
+      )
+    } else if (actionName === 'getPublicAddresses') {
+      res = await promisesAgree(
+        this.networkInfo.apiUrls.map(async apiUrl => {
+          const apiRes = await timeout(
+            this.fioApiRequest(apiUrl, actionName, params),
+            10000
+          )
+          if (apiRes.isError != null) {
+            const error = new FioError(apiRes.data.message)
+            error.json = apiRes.data.json
+            error.list = apiRes.data.list
+            error.errorCode = apiRes.data.code
+            throw error
+          }
+          return apiRes
+        }),
+        (result: FioGetPubAddressesResponse) => {
+          return result.public_addresses
+            .map(r => `${r.chain_code}${r.token_code}${r.public_address}`)
+            .sort((a, b) => a.localeCompare(b))
+            .join()
+        },
+        3
       )
     } else if (actionName === 'getFees') {
       res = await asyncWaterfall(

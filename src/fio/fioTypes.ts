@@ -1,5 +1,6 @@
 import type { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
 import type { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesResponse'
+import type { PublicAddress } from '@fioprotocol/fiosdk/lib/entities/PublicAddress'
 import {
   asArray,
   asBoolean,
@@ -44,6 +45,14 @@ export interface FioNetworkInfo {
 }
 
 export type FioRequestTypes = 'PENDING' | 'SENT'
+
+// The FIO chain/get_pub_addresses endpoint returns `public_addresses`, but
+// the SDK's `PublicAddressesResponse` type incorrectly names the field
+// `requests`. Define a local interface that matches the actual API response.
+export interface FioGetPubAddressesResponse {
+  public_addresses: PublicAddress[]
+  more: boolean
+}
 
 export interface FioRefBlock {
   expiration: string
