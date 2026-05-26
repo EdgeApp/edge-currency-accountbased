@@ -62,26 +62,6 @@
   "lint-staged": {
     "*.{js,ts,json}": "eslint"
   },
-  "resolutions": {
-    "@greymass/eosio": "^0.6.8",
-    "bn.js": "5.2.1",
-    "browserify-aes": "1.2.0",
-    "bs58": "4.0.1",
-    "bs58check": "2.1.2",
-    "create-hash": "1.2.0",
-    "create-hmac": "1.1.7",
-    "ecurve": "1.0.6",
-    "elliptic": "6.5.4",
-    "hdkey": "1.1.1",
-    "long": "4.0.0",
-    "randombytes": "2.1.0",
-    "readable-stream": "2.3.7",
-    "regenerator-runtime": "0.13.11",
-    "safe-buffer": "5.2.1",
-    "scrypt-js": "3.0.1",
-    "scrypt.js": "0.3.0",
-    "uuid": "3.3.3"
-  },
   "dependencies": {
     "@chain-registry/client": "^2.0.28",
     "@chain-registry/types": "^2.0.28",
@@ -203,5 +183,25 @@
     "react-native-piratechain": "v0.5.0",
     "react-native-zano": "^0.2.7",
     "react-native-zcash": "^0.10.1"
+  },
+  "overrides": {
+    "@greymass/eosio": "^0.6.8",
+    "bn.js": "5.2.1",
+    "browserify-aes": "1.2.0",
+    "bs58": "4.0.1",
+    "bs58check": "2.1.2",
+    "create-hash": "1.2.0",
+    "create-hmac": "1.1.7",
+    "ecurve": "1.0.6",
+    "elliptic": "6.5.4",
+    "hdkey": "1.1.1",
+    "long": "4.0.0",
+    "randombytes": "2.1.0",
+    "readable-stream": "2.3.7",
+    "regenerator-runtime": "0.13.11",
+    "safe-buffer": "5.2.1",
+    "scrypt-js": "3.0.1",
+    "scrypt.js": "0.3.0",
+    "uuid": "3.3.3"
   }
 }
