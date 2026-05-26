@@ -6,7 +6,7 @@ CAUTION: This CLI stores it's keys in plain text. This is not meant to be a secu
 
 ## Overview
 
-To use the tool, first do `yarn cli`. This will start an interactive session. You can use `--help` to get information about commands - many accept useful parameters.
+To use the tool, first do `npm run cli`. This will start an interactive session. You can use `--help` to get information about commands - many accept useful parameters.
 
 To select a particular plugin, use `list-plugins` and `select-plugin`. This choice will be saved for the next time you run the tool.
 

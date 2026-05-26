@@ -1152,7 +1152,7 @@ changed: Upgrade @polkadot/api to v12.1.1
 
 ## 2.10.0 (2023-11-07)
 
-- added: Add a `yarn cli` command for debugging and testing plugins from the command line.
+- added: Add a `npm run cli` command for debugging and testing plugins from the command line.
 - added: Batch balance query via smart contract
 
 ## 2.9.4 (2023-11-06)

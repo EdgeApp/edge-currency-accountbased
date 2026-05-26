@@ -1,7 +1,11 @@
 dist: focal
 language: node_js
 node_js:
-  - 18
+  - 20
+env:
+  global:
+    # Applies to the install phase too: `npm ci` runs the `prepare` hook
+    # (which invokes webpack), and webpack needs more than the default heap.
+    - NODE_OPTIONS=--max_old_space_size=8192
 script:
-  - export NODE_OPTIONS=--max_old_space_size=8192 
-  - yarn verify
+  - npm run verify

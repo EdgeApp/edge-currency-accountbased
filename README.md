@@ -44,7 +44,7 @@ The bundle located in `dist/edge-currency-accountbased.js` will automatically re
 <script src='https://example.com/app/dist/edge-currency-accountbased.js'>
 ```
 
-If you want to debug this project, run `yarn start` to start a Webpack server,
+If you want to debug this project, run `npm run start` to start a Webpack server,
 and then adjust your script URL to http://localhost:8082/edge-currency-accountbased.js.
 
 ### React Native
@@ -63,7 +63,7 @@ import { pluginUri, makePluginIo } from 'edge-currency-accountbased/rn'
 />
 ```
 
-To debug this project, run `yarn start` to start a Webpack server, and then use `debugUri` instead of `pluginUri`.
+To debug this project, run `npm run start` to start a Webpack server, and then use `debugUri` instead of `pluginUri`.
 
 Notice the `/rn` suffix on the `import` statement. If you leave this off (which is deprecated), react-native-piratechain and react-native-zcash will both be mandatory, and the instructions below won't apply.
 
@@ -104,13 +104,12 @@ To set up this project, just do:
 ```sh
 git clone git@github.com:EdgeApp/edge-currency-accountbased.git`
 cd edge-currency-accountbased
-yarn
-yarn prepare
+npm run npm install prepare
 ```
 
-Run `yarn test` to run the unit tests.
+Run `npm run test` to run the unit tests.
 
-To test your changes in the full Edge wallet app, run `yarn start` to start a web server, and then set `DEBUG_ACCOUNTBASED` in your env.json to use the web server instead of the bundled library.
+To test your changes in the full Edge wallet app, run `npm run start` to start a web server, and then set `DEBUG_ACCOUNTBASED` in your env.json to use the web server instead of the bundled library.
 
 You can also do `updot edge-currency-accountbased` from within `edge-react-gui` to copy your edits in to `node_modules`. Re-build and re-launch the app to use the updated plugins.
 
