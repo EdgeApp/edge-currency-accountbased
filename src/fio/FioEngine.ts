@@ -1,13 +1,15 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
+import { Account } from '@fioprotocol/fiosdk/lib/entities/Account'
+import { Action } from '@fioprotocol/fiosdk/lib/entities/Action'
 import { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
+import { ContentType } from '@fioprotocol/fiosdk/lib/entities/ContentType'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
 import { GetEncryptKeyResponse } from '@fioprotocol/fiosdk/lib/entities/GetEncryptKeyResponse'
-import { GetObtDataResponse } from '@fioprotocol/fiosdk/lib/entities/GetObtDataResponse'
+import { GetObtDataDecryptedResponse } from '@fioprotocol/fiosdk/lib/entities/GetObtDataResponse'
 import {
   PendingFioRequests,
   SentFioRequests
 } from '@fioprotocol/fiosdk/lib/transactions/queries'
-import { Query } from '@fioprotocol/fiosdk/lib/transactions/queries/Query'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import AbortController from 'abort-controller'
 import { add, div, gt, lt, lte, max, mul, sub } from 'biggystring'
@@ -255,7 +257,7 @@ export class FioEngine extends CurrencyEngine<
         let requestsLastPage = 1
         const decryptedObtDataRecords: ObtData[] = []
         while (lastPageAmount === ITEMS_PER_PAGE) {
-          let response: GetObtDataResponse
+          let response: GetObtDataDecryptedResponse
           try {
             response = await fioSdk.getObtData({
               limit: ITEMS_PER_PAGE,
@@ -682,7 +684,7 @@ export class FioEngine extends CurrencyEngine<
         case 'getPendingFioRequests':
         case 'getSentFioRequests': {
           const { endpoint, body } = params
-          res = await fioSdk.transactions.executeCall({
+          res = await new Transactions(fioSdk.config).executeCall({
             baseUrl: apiUrl,
             endPoint: endpoint,
             body: JSON.stringify(body),
@@ -711,7 +713,10 @@ export class FioEngine extends CurrencyEngine<
           break
         }
         default:
-          res = await fioSdk.genericAction(actionName, params)
+          res = await fioSdk.genericAction(
+            actionName as Parameters<FIOSDK['genericAction']>[0],
+            params
+          )
       }
     } catch (e: any) {
       // handle FIO API error
@@ -748,7 +753,7 @@ export class FioEngine extends CurrencyEngine<
 
   async executePreparedTrx(
     apiUrl: string,
-    endpoint: string,
+    endpoint: EndPoint,
     preparedTrx: PreparedTrx
   ): Promise<any> {
     const fioSdk = new FIOSDK(
@@ -1153,7 +1158,7 @@ export class FioEngine extends CurrencyEngine<
 
   async fetchEncryptedFioRequests(
     type: string,
-    decoder: Query<PendingFioRequests | SentFioRequests>
+    decoder: PendingFioRequests | SentFioRequests
   ): Promise<EncryptedFioRequest[]> {
     const ITEMS_PER_PAGE = 100
     const action =
@@ -1240,16 +1245,21 @@ export class FioEngine extends CurrencyEngine<
 
     const checkFioRequests = async (
       type: FioRequestTypes,
-      decoder: Query<PendingFioRequests | SentFioRequests>
+      decoder: PendingFioRequests | SentFioRequests
     ): Promise<void> => {
       const encryptedReqs = await this.fetchEncryptedFioRequests(type, decoder)
+      // @ts-expect-error - privateKey is protected on the SDK's Transactions class
       decoder.privateKey = fioPrivateKeys.fioKey
+      // @ts-expect-error - publicKey is protected on the SDK's Transactions class
       decoder.publicKey = this.walletInfo.keys.publicKey
 
       const decryptedRequestRes: { requests: FioRequest[] } =
-        (await decoder.decrypt({
-          requests: encryptedReqs
-        })) ?? { requests: [] }
+        ((await decoder.decrypt({
+          requests: encryptedReqs as any,
+          more: 0
+        })) as unknown as { requests: FioRequest[] } | undefined) ?? {
+          requests: []
+        }
       const { requests } = decryptedRequestRes
 
       if (
@@ -1260,16 +1270,23 @@ export class FioEngine extends CurrencyEngine<
       }
     }
 
+    const sdkConfig = new FIOSDK(
+      '',
+      this.walletInfo.keys.publicKey,
+      this.networkInfo.apiUrls,
+      this.engineFetch
+    ).config
+
     await checkFioRequests(
       'PENDING',
-      new PendingFioRequests({
+      new PendingFioRequests(sdkConfig, {
         fioPublicKey: this.walletInfo.keys.publicKey,
         getEncryptKey: this.defaultGetEncryptKey
       })
     )
     await checkFioRequests(
       'SENT',
-      new SentFioRequests({
+      new SentFioRequests(sdkConfig, {
         fioPublicKey: this.walletInfo.keys.publicKey,
         getEncryptKey: this.defaultGetEncryptKey
       })
@@ -1371,7 +1388,7 @@ export class FioEngine extends CurrencyEngine<
     let txParams: FioTxParams | undefined
     switch (name) {
       case ACTIONS.transferTokens: {
-        fee = await this.getFee(EndPoint.transferTokens)
+        fee = await this.getFee(EndPoint.transferTokensPublicKey)
         txParams = {
           account: 'fio.token',
           action: ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
@@ -1465,7 +1482,7 @@ export class FioEngine extends CurrencyEngine<
       case ACTIONS.addPublicAddresses: {
         const { fioAddress, publicAddresses } =
           asFioConnectAddressesParams(params)
-        fee = await this.getFee(EndPoint.addPubAddress, fioAddress)
+        fee = await this.getFee(EndPoint.addPublicAddress, fioAddress)
         txParams = {
           account: 'fio.address',
           action: 'addaddress',
@@ -1481,7 +1498,7 @@ export class FioEngine extends CurrencyEngine<
       case ACTIONS.removePublicAddresses: {
         const { fioAddress, publicAddresses } =
           asFioConnectAddressesParams(params)
-        fee = await this.getFee(EndPoint.removePubAddress, fioAddress)
+        fee = await this.getFee(EndPoint.removePublicAddress, fioAddress)
         txParams = {
           account: 'fio.address',
           action: 'remaddress',
@@ -1643,7 +1660,14 @@ export class FioEngine extends CurrencyEngine<
     const fioPrivateKeys = asFioPrivateKeys(privateKeys)
     const otherParams = getOtherParams(edgeTransaction)
     let txParams = asMaybe(asFioTxParams)(otherParams.txParams)
-    const transactions = new Transactions()
+    const transactions = new Transactions(
+      new FIOSDK(
+        fioPrivateKeys.fioKey,
+        this.walletInfo.keys.publicKey,
+        this.networkInfo.apiUrls,
+        this.engineFetch
+      ).config
+    )
 
     if (txParams == null) {
       const { name, params } = asFioAction(otherParams.action)
@@ -1689,7 +1713,7 @@ export class FioEngine extends CurrencyEngine<
             await fioSdk.getEncryptKey(payeeFioAddress)
 
           const cipherContent = transactions.getCipherContent(
-            'record_obt_data_content',
+            ContentType.recordObtDataContent,
             content,
             fioPrivateKeys.fioKey,
             encryptPublicKey
@@ -1730,7 +1754,7 @@ export class FioEngine extends CurrencyEngine<
             offline_url: undefined
           }
           const cipherContent = transactions.getCipherContent(
-            'new_funds_content',
+            ContentType.newFundsContent,
             content,
             fioPrivateKeys.fioKey,
             payerFioPublicKey
@@ -1765,8 +1789,8 @@ export class FioEngine extends CurrencyEngine<
         : this.tpid
 
     const rawTx = await transactions.createRawTransaction({
-      action: txParams.action,
-      account: txParams.account,
+      action: txParams.action as Action,
+      account: txParams.account as Account,
       data: { ...txParams.data, tpid },
       publicKey: this.walletInfo.keys.publicKey,
       chainData: this.refBlock

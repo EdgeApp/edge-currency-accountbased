@@ -528,7 +528,7 @@ export class FioTools implements EdgeCurrencyTools {
   //
 
   private async multicastServers(
-    actionName: string,
+    actionName: Parameters<FIOSDK['genericAction']>[0],
     params?: any
   ): Promise<any> {
     const requestServer = async (apiUrl: string): Promise<any> => {
