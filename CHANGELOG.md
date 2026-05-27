@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.82.1 (2026-05-27)
+
+- changed: (FIO) Replace forked `@fioprotocol/fiosdk` with official npm 1.10.3.
+
 ## 4.82.0 (2026-04-28)
 
 - added: zcash - Populate `EdgeTransaction.spendTargets` with the recipient address for outgoing transactions, enabling reverse address lookups (e.g. ZNS) in the GUI.
