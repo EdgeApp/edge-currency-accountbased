@@ -229,14 +229,17 @@ export const calcOptimismRollupFees = (
   } = params
 
   const common = Common.custom(chainParams)
+  // @ethereumjs/util v9 tightened address/value/data inputs from `string` to
+  // template-literal `0x${string}`; these runtime values arrive as
+  // 0x-prefixed hex strings from upstream callers.
   const tx = TransactionFactory.fromTxData(
     {
       nonce: nonce != null ? decimalToHex(nonce) : undefined,
       gasPrice: decimalToHex(baseFee),
       gasLimit: decimalToHex(gasLimit),
-      to,
-      value,
-      data: data === null ? undefined : data
+      to: to as `0x${string}`,
+      value: value as `0x${string}`,
+      data: data == null ? undefined : (data as `0x${string}`)
     },
     { common }
   )

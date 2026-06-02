@@ -42,21 +42,29 @@ declare module 'stellar-sdk' {
     build: () => Transaction
   }
 
-  export class Server {
-    constructor(server: string)
-    serverName: string
+  export namespace Horizon {
+    class Server {
+      constructor(server: string)
+      serverName: string
+    }
   }
+
+  export const Networks: {
+    PUBLIC: string
+    TESTNET: string
+  }
+
+  export const TimeoutInfinite: number
 
   interface StellarApi {
     Account: typeof Account
     Asset: typeof Asset
+    Horizon: typeof Horizon
     Keypair: typeof Keypair
     Memo: typeof Memo
-    Network: {
-      usePublicNetwork: () => void
-    }
+    Networks: typeof Networks
     Operation: typeof Operation
-    Server: typeof Server
+    TimeoutInfinite: typeof TimeoutInfinite
     TransactionBuilder: typeof TransactionBuilder
   }
 

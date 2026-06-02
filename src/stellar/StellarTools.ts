@@ -11,7 +11,7 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import stellarApi, { Server as StellarServer } from 'stellar-sdk'
+import stellarApi, { Horizon } from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
@@ -36,7 +36,7 @@ export class StellarTools implements EdgeCurrencyTools {
   networkInfo: StellarNetworkInfo
 
   highestTxHeight: number = 0
-  stellarApiServers: StellarServer[]
+  stellarApiServers: Horizon.Server[]
 
   constructor(env: PluginEnvironment<StellarNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -45,10 +45,12 @@ export class StellarTools implements EdgeCurrencyTools {
     this.io = io
     this.networkInfo = networkInfo
 
-    stellarApi.Network.usePublicNetwork()
+    // stellar-sdk v13 removed the global Network singleton; the network
+    // passphrase is now passed per-transaction in StellarEngine's
+    // TransactionBuilder options.
     this.stellarApiServers = []
     for (const server of this.networkInfo.stellarServers) {
-      const stellarServer = new stellarApi.Server(server)
+      const stellarServer = new stellarApi.Horizon.Server(server)
       stellarServer.serverName = server
       this.stellarApiServers.push(stellarServer)
     }

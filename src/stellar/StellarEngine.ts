@@ -537,9 +537,13 @@ export class StellarEngine extends CurrencyEngine<
         ? this.fees[edgeSpendInfo.networkFeeOption]
         : this.fees.standard
 
+    // stellar-sdk v13: the network passphrase moved from the removed global
+    // Network singleton into per-transaction options, and transactions must
+    // declare timebounds (TimeoutInfinite preserves the old no-bounds behavior).
     let txBuilder = new stellarApi.TransactionBuilder(account, {
-      fee: feeSetting
-    })
+      fee: String(feeSetting),
+      networkPassphrase: stellarApi.Networks.PUBLIC
+    }).setTimeout(stellarApi.TimeoutInfinite)
 
     if (mustCreateAccount) {
       txBuilder = txBuilder.addOperation(

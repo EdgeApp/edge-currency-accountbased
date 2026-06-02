@@ -1,8 +1,9 @@
+import * as ecc from '@bitcoinerlab/secp256k1'
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { div } from 'biggystring'
-import * as bip32 from 'bip32'
+import BIP32Factory from 'bip32'
 import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
@@ -26,6 +27,8 @@ import {
   BinanceInfoPayload,
   BinanceNetworkInfo
 } from './binanceTypes'
+
+const bip32 = BIP32Factory(ecc)
 
 export class BinanceTools implements EdgeCurrencyTools {
   io: EdgeIo

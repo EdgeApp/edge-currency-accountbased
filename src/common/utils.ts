@@ -56,8 +56,8 @@ export function isHex(h: string): boolean {
   return out
 }
 
-export function toHex(num: string): string {
-  return add(num, '0', 16)
+export function toHex(num: string): `0x${string}` {
+  return add(num, '0', 16) as `0x${string}`
 }
 
 export function hexToBuf(hex: string): Buffer {
@@ -87,8 +87,8 @@ export function hexToDecimal(num: string): string {
   return add(hexNum, '0', 10)
 }
 
-export function decimalToHex(num: string): string {
-  return add(num, '0', 16)
+export function decimalToHex(num: string): `0x${string}` {
+  return add(num, '0', 16) as `0x${string}`
 }
 
 export function uint8ArrayToHex(bytes: Uint8Array): string {

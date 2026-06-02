@@ -569,10 +569,12 @@ export class EthereumNetwork {
   qualifyNetworkAdapters<Method extends keyof NetworkAdapter>(
     ...methods: Method[]
   ): Array<NotNull<Pick<NetworkAdapter, Method>> & NetworkAdapter> {
-    return this.networkAdapters.filter((adapter): adapter is NotNull<
-      Pick<NetworkAdapter, Method>
-    > &
-      NetworkAdapter => methods.every(method => adapter[method] != null))
+    return this.networkAdapters.filter(
+      (
+        adapter
+      ): adapter is NotNull<Pick<NetworkAdapter, Method>> & NetworkAdapter =>
+        methods.every(method => adapter[method] != null)
+    )
   }
 
   /**
