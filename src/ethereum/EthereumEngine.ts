@@ -1702,19 +1702,26 @@ export class EthereumEngine extends CurrencyEngine<
     const txFeeParams =
       this.networkInfo.supportsEIP1559 === true
         ? {
-            maxFeePerGas: otherParams.gasPrice,
-            maxPriorityFeePerGas: otherParams.minerTip
+            maxFeePerGas: otherParams.gasPrice as `0x${string}`,
+            maxPriorityFeePerGas: otherParams.minerTip as
+              | `0x${string}`
+              | undefined
           }
-        : { gasPrice: otherParams.gasPrice }
+        : { gasPrice: otherParams.gasPrice as `0x${string}` }
 
     // Transaction Parameters
+    // @ethereumjs/util v9 tightened the address/value/data types from `string`
+    // to template-literal `0x${string}` / Uint8Array — these runtime values are
+    // already 0x-prefixed hex strings (otherParams.to[0] is an EVM address;
+    // txValue is a hex-encoded biggystring; data is "" or "0x..."). The casts
+    // re-affirm that contract without changing runtime behavior.
     const txParams: TypedTxData = {
       nonce: nonceHex,
       ...txFeeParams,
       gasLimit: gasLimitHex,
-      to: otherParams.to[0],
-      value: txValue,
-      data,
+      to: otherParams.to[0] as `0x${string}`,
+      value: txValue as `0x${string}`,
+      data: data as `0x${string}` | undefined,
       type: txType
     }
 

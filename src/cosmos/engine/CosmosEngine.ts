@@ -757,7 +757,7 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async queryTransactionsInner(
-    queryString: typeof txQueryStrings[number],
+    queryString: (typeof txQueryStrings)[number],
     clients: CosmosClients
   ): Promise<{ newestTxid: string | undefined; lastTimestamp: number }> {
     const txSearchParams = {

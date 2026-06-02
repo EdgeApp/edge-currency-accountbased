@@ -1,3 +1,4 @@
+import * as ecc from '@bitcoinerlab/secp256k1'
 import {
   Address,
   NetworkPrefix,
@@ -5,7 +6,7 @@ import {
   Wallet
 } from '@zondax/izari-filecoin'
 import { div } from 'biggystring'
-import { fromSeed } from 'bip32'
+import BIP32Factory from 'bip32'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { asMaybe } from 'cleaners'
 import {
@@ -31,6 +32,8 @@ import {
   FilecoinInfoPayload,
   FilecoinNetworkInfo
 } from './filecoinTypes'
+
+const bip32 = BIP32Factory(ecc)
 
 export class FilecoinTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
@@ -135,7 +138,7 @@ export class FilecoinTools implements EdgeCurrencyTools {
 
     // TODO: Figure out how to use the accountData.privateKey Buffer to gen xpub
     const seed = await mnemonicToSeed(filecoinPrivateKeys.mnemonic)
-    const inter = fromSeed(seed)
+    const inter = bip32.fromSeed(seed)
     const xprivDerivation = inter
       .deriveHardened(44)
       .deriveHardened(hdPathCoinType)

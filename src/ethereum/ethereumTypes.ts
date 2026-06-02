@@ -469,10 +469,9 @@ export const asEthereumPrivateKeys = (
   type PluginId = 'x'
   type FromKeys = {
     [key in `${PluginId}Key`]: string
-  } &
-    {
-      [key in `${PluginId}Mnemonic`]?: string
-    }
+  } & {
+    [key in `${PluginId}Mnemonic`]?: string
+  }
   const _pluginId = pluginId as PluginId
   // Derived cleaners from the generic parameter:
   const asFromKeys: Cleaner<FromKeys> = asObject({
