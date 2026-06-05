@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (ARRR) Reimplement the Pirate Chain plugin over the unified `react-native-pirate-wallet` SDK, replacing `react-native-piratechain`.
+
 ## 4.82.1 (2026-05-27)
 
 - changed: (FIO) Replace forked `@fioprotocol/fiosdk` with official npm 1.10.3.

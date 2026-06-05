@@ -7843,13 +7843,6 @@ raw-body@2.5.1:
     iconv-lite "0.4.24"
     unpipe "1.0.0"
 
-react-native-piratechain@0.5.0:
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/react-native-piratechain/-/react-native-piratechain-0.5.0.tgz#74519d6983d6281eda9b0b788081eb2221a08204"
-  integrity sha512-cCYNGll6Zye+2oIABBLMSg6DEuIEUJomZkODXKnEDvG8SSIByz2w00Crt6Ol3UjIaDlA69Y10Ty4SiKvLTy2EQ==
-  dependencies:
-    rfc4648 "^1.3.0"
-
 react-native-zano@^0.2.7:
   version "0.2.7"
   resolved "https://registry.yarnpkg.com/react-native-zano/-/react-native-zano-0.2.7.tgz#5305a08f67b582ac024eb53317bcb50b45444a0b"
