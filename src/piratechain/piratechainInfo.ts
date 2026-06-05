@@ -16,8 +16,7 @@ const networkInfo: PiratechainNetworkInfo = {
     defaultHost: 'lightd1.pirate.black',
     defaultPort: 443
   },
-  defaultNetworkFee: '10000',
-  transactionQueryLimit: 999
+  defaultNetworkFee: '10000'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
