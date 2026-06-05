@@ -8,33 +8,23 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import type { BlockRange } from 'react-native-piratechain'
 
 import { asWalletInfo } from '../common/types'
 
 type PiratechainNetworkName = 'mainnet' | 'testnet'
 
 export interface PiratechainNetworkInfo {
+  /** Unused by the unified SDK (endpoints live in the native core); kept for
+   * info-server payload compatibility. */
   rpcNode: {
     networkName: PiratechainNetworkName
     defaultHost: string
     defaultPort: number
   }
   defaultNetworkFee: string
-  transactionQueryLimit: number
 }
 
-const asPiratechainBlockRange = asObject<BlockRange>({
-  first: asNumber,
-  last: asNumber
-})
-
 export const asPiratechainWalletOtherData = asObject({
-  alias: asMaybe(asString),
-  blockRange: asMaybe(asPiratechainBlockRange, () => ({
-    first: 0,
-    last: 0
-  })),
   cachedAddress: asMaybe(asString)
 })
 
