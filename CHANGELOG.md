@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: ton - Resolve duplicate transactions by reading the broadcast tx's real on-chain hash back from the chain, so the pending tx reconciles into the confirmed one instead of being orphaned.
+
 ## 4.83.0 (2026-06-12)
 
 - changed: Convert the build tooling from Yarn to npm.

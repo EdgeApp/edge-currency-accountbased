@@ -436,42 +436,42 @@ export class TonEngine extends CurrencyEngine<
       })
       asDrpcSendBoc(sendRaw)
 
-      if (this.otherData.contractState === 'uninitialized') {
-        // The txid for a wallet's deploy tx can't be calculated locally,
-        // so poll for the transaction whose inbound external message
-        // carries a StateInit (init_state) — that's the deploy.
-        const addr = encodeURIComponent(this.wallet.address.toRawString())
-        let attempts = 0
-        do {
-          attempts++
-          await snooze(1000)
-          try {
-            const raw = await this.tools.fetchDrpc(
-              `/getTransactions?address=${addr}&limit=100`
-            )
-            const { result: txs } = asDrpcGetTransactions(raw)
-            for (const tx of txs) {
-              const { in_msg: inMsg } = tx
-              if (inMsg.source === '' && inMsg.msg_data.init_state != null) {
-                const hashBytes = base64.parse(tx.transaction_id.hash)
-                edgeTransaction.txid = base16.stringify(hashBytes).toLowerCase()
-                edgeTransaction.date = Date.now() / 1000
-                this.otherData.contractState = 'active'
-                this.walletLocalDataDirty = true
-                return edgeTransaction
-              }
+      // The on-chain transaction hash is unrelated to any locally-computable
+      // hash (e.g. the external-message BOC hash), so the txid must be read
+      // back from the chain — otherwise the pending tx is keyed by a hash the
+      // chain never reports and queryTransactions records the confirmed tx as
+      // a separate duplicate. Poll for the transaction whose inbound message
+      // body matches the signed transfer we broadcast, then adopt its on-chain
+      // transaction hash — the same hash processTonTransaction records, so the
+      // pending tx reconciles into the confirmed one.
+      const bodyHash = base64.stringify(txCell.hash())
+      const addr = encodeURIComponent(this.wallet.address.toRawString())
+      let attempts = 0
+      do {
+        attempts++
+        await snooze(1000)
+        try {
+          const raw = await this.tools.fetchDrpc(
+            `/getTransactions?address=${addr}&limit=100`
+          )
+          const { result: txs } = asDrpcGetTransactions(raw)
+          for (const tx of txs) {
+            if (tx.in_msg.body_hash !== bodyHash) continue
+            const hashBytes = base64.parse(tx.transaction_id.hash)
+            edgeTransaction.txid = base16.stringify(hashBytes).toLowerCase()
+            edgeTransaction.date = Date.now() / 1000
+            if (needsInit) {
+              // The first outgoing tx deploys the wallet contract.
+              this.otherData.contractState = 'active'
+              this.walletLocalDataDirty = true
             }
-          } catch (e) {
-            // retry
+            return edgeTransaction
           }
-        } while (attempts <= 30) // In testing, the tx was found after ~10 seconds
-        throw new Error('Transaction broadcast but unable to find txid')
-      } else {
-        const txid = base16.stringify(externalBoc.hash()).toLowerCase()
-        edgeTransaction.txid = txid
-        edgeTransaction.date = Date.now() / 1000
-        return edgeTransaction
-      }
+        } catch (e) {
+          // retry
+        }
+      } while (attempts <= 30) // In testing, the tx was found after ~10 seconds
+      throw new Error('Transaction broadcast but unable to find txid')
     } catch (e) {
       this.log.warn('FAILURE broadcastTx failed: ', e)
       throw e

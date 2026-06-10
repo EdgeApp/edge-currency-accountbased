@@ -3,7 +3,6 @@ import {
   asEither,
   asNumber,
   asObject,
-  asOptional,
   asString,
   asUnknown
 } from 'cleaners'
@@ -94,13 +93,11 @@ const asDrpcTransactionId = asObject({
   hash: asString
 })
 
-const asDrpcMsgData = asObject({
-  init_state: asOptional(asString)
-})
-
 const asDrpcInMsg = asObject({
-  source: asString,
-  msg_data: asDrpcMsgData
+  // base64 hash of the inbound message body. For an outgoing tx this is the
+  // hash of the signed transfer cell we broadcast, letting us match the
+  // on-chain transaction back to the one we sent.
+  body_hash: asString
 })
 
 export const asDrpcGetTransactions = asObject({
