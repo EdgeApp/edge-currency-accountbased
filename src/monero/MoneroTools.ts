@@ -1,4 +1,5 @@
 import { mul, toFixed } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -26,6 +27,7 @@ import {
   asGetBlockCountResponse,
   asMoneroKeyOptions,
   asMoneroPrivateKeys,
+  asMoneroUserSettings,
   asSafeMoneroWalletInfo,
   EDGE_MONERO_SERVER,
   MoneroIo,
@@ -51,13 +53,16 @@ export class MoneroTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: MoneroNetworkInfo
+  private networkPrivacy: 'none' | 'nym' = 'none'
   private nymFetchUsers = 0
   private unsubscribeNymFetch?: () => void
 
   constructor(env: PluginEnvironment<MoneroNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, log, nativeIo, networkInfo } = env
     this.io = io
-    this.engineFetch = makeEngineFetch(io)
+    this.engineFetch = makeEngineFetch(io, () =>
+      this.networkPrivacy === 'nym' ? { privacy: 'nym' } : {}
+    )
     this.log = log
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
@@ -67,6 +72,11 @@ export class MoneroTools implements EdgeCurrencyTools {
     if (moneroIo == null) throw new Error('Need monero native IO')
     this.moneroIo = moneroIo
     this.cppBridge = new CppBridge(moneroIo)
+  }
+
+  changeUserSettings(userSettings: JsonObject): void {
+    const settings = asMaybe(asMoneroUserSettings)(userSettings)
+    this.networkPrivacy = settings?.networkPrivacy === 'nym' ? 'nym' : 'none'
   }
 
   private get nymCppBridge(): NymCppBridge {
