@@ -26,6 +26,7 @@ import {
   asGetBlockCountResponse,
   asMoneroKeyOptions,
   asMoneroPrivateKeys,
+  asNetworkPrivacy,
   asSafeMoneroWalletInfo,
   EDGE_MONERO_SERVER,
   MoneroIo,
@@ -173,7 +174,10 @@ export class MoneroTools implements EdgeCurrencyTools {
     }
   }
 
-  async getBlockCount(monerodUrl: string): Promise<number> {
+  async getBlockCount(
+    monerodUrl: string,
+    networkPrivacy: 'none' | 'nym' = 'none'
+  ): Promise<number> {
     const url = `${monerodUrl.replace(/\/$/, '')}/json_rpc`
     const response = await this.engineFetch(url, {
       method: 'POST',
@@ -182,7 +186,8 @@ export class MoneroTools implements EdgeCurrencyTools {
         jsonrpc: '2.0',
         id: '0',
         method: 'get_block_count'
-      })
+      }),
+      ...(networkPrivacy === 'nym' ? { privacy: 'nym' as const } : {})
     })
     if (!response.ok) {
       const text = await response.text()
@@ -226,8 +231,12 @@ export class MoneroTools implements EdgeCurrencyTools {
     )
 
     const { birthdayHeight } = asMoneroKeyOptions(opts)
+    const networkPrivacy = asNetworkPrivacy(opts?.networkPrivacy)
 
-    const currentNetworkHeight = await this.getBlockCount(EDGE_MONERO_SERVER)
+    const currentNetworkHeight = await this.getBlockCount(
+      EDGE_MONERO_SERVER,
+      networkPrivacy
+    )
     if (birthdayHeight > currentNetworkHeight) {
       throw new Error('InvalidBirthdayHeight') // must be less than current block height
     }
@@ -240,18 +249,26 @@ export class MoneroTools implements EdgeCurrencyTools {
     }
   }
 
-  async createPrivateKey(walletType: string): Promise<JsonObject> {
+  async createPrivateKey(
+    walletType: string,
+    opts?: JsonObject
+  ): Promise<JsonObject> {
     if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
     const { networkType } = this.networkInfo
+    const networkPrivacy = asNetworkPrivacy(opts?.networkPrivacy)
 
     const generatedWallet = await this.cppBridge.generateWallet(networkType)
 
-    const birthdayHeight = await this.getBlockCount(EDGE_MONERO_SERVER)
+    const birthdayHeight = await this.getBlockCount(
+      EDGE_MONERO_SERVER,
+      networkPrivacy
+    )
 
     return await this.importPrivateKey(generatedWallet.mnemonic, {
-      birthdayHeight
+      birthdayHeight,
+      networkPrivacy
     })
   }
 

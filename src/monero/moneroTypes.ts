@@ -54,6 +54,11 @@ export const asMoneroKeyOptions = asObject({
 })
 export type MoneroKeyOptions = ReturnType<typeof asMoneroKeyOptions>
 
+// The network-privacy choice the core forwards per-call through key options.
+// Read on its own (rather than via asMoneroKeyOptions) so it works for the
+// create flow, where no birthdayHeight is present yet:
+export const asNetworkPrivacy = asOptional(asValue('none', 'nym'), 'none')
+
 export const asGetBlockCountResponse = asObject({
   result: asObject({
     count: asNumber
