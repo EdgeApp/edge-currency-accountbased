@@ -47,7 +47,16 @@ declare module 'react-native' {
         sourceUri: string
       }
     }
+    MoneroLwsfModule: NativeMoneroModule
     ZanoModule: NativeZanoModule
+  }
+
+  export class NativeEventEmitter {
+    constructor(nativeModule?: any)
+    addListener(
+      eventType: string,
+      listener: (event: any) => void
+    ): { remove: () => void }
   }
 }
 
