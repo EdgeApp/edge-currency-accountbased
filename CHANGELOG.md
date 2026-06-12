@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- changed: Convert the build tooling from Yarn to npm.
+- changed: Migrate to bip32 v4 (using the WASM-free @bitcoinerlab/secp256k1), @ethereumjs/util v9, and stellar-sdk v13.
+- security: Upgrade dependencies per Socket security recommendations.
+
 ## 4.82.1 (2026-05-27)
 
 - changed: (FIO) Replace forked `@fioprotocol/fiosdk` with official npm 1.10.3.
