@@ -322,7 +322,10 @@ export class MoneroTools implements EdgeCurrencyTools {
 
         return edgeParsedUri
       } catch (e) {
-        // Fall through to common parser if native fails
+        // Fall through to the common parser if native parsing fails:
+        this.log.warn(
+          `Native parseUri failed, using common parser: ${String(e)}`
+        )
       }
     }
 

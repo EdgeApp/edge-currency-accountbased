@@ -157,6 +157,7 @@ export const asSafeMoneroWalletInfo: Cleaner<SafeMoneroWalletInfo> = asCodec(
 )
 
 export function translateFee(fee?: string): TransactionPriority {
+  // monerod priority levels: 1 = Low, 2 = Normal/Default, 3 = High
   if (fee === 'low') return 1
   if (fee === 'high') return 3
   return 2

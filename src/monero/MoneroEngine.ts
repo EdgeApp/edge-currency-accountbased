@@ -53,6 +53,11 @@ import {
   translateFee
 } from './moneroTypes'
 
+// Poll intervals (ms) returned by syncNetwork:
+const SYNC_POLL_MS = 1000 // actively syncing / backfilling
+const SYNCED_POLL_MS = 20000 // caught up to chain tip
+const ERROR_POLL_MS = 5000 // back off after a sync error
+
 export class MoneroEngine extends CurrencyEngine<
   MoneroTools,
   SafeMoneroWalletInfo,
@@ -103,8 +108,11 @@ export class MoneroEngine extends CurrencyEngine<
         : {}
     })
 
-    // Singleton promise resolved once by the first syncNetwork call.
-    // Stays resolved across restarts so onStart gets keys immediately.
+    // Singleton promise resolved once by the first syncNetwork call. The
+    // lifecycle closure captures this already-resolved promise, so onStart gets
+    // keys immediately across engine restarts. If killEngine runs before
+    // syncNetwork ever resolves it, the abortKeysWait race in onStart rejects
+    // the wait so stop() does not hang.
     const keysPromise = new Promise<MoneroPrivateKeys>(resolve => {
       this.sendKeysToNative = resolve
     })
@@ -123,7 +131,7 @@ export class MoneroEngine extends CurrencyEngine<
         )
 
         const { backend } = this.currentWalletSettings
-        this.log.warn('Using backend:', backend)
+        this.log('Using backend:', backend)
         const defaults = asMoneroUserSettings({})
         const daemonAddress =
           backend === 'lws'
@@ -252,15 +260,23 @@ export class MoneroEngine extends CurrencyEngine<
     edgeLwsServer: string,
     loginResult?: LoginResponse
   ): Promise<number> {
-    if (height != null) return height
+    if (height != null && height > 0) return height
 
-    // For Edge LWS, the login response may already have it
-    if (loginResult?.start_height != null) {
+    // For Edge LWS, the login response may already have it (a zero here is
+    // not a valid creation height, so fall through to recovery):
+    if (loginResult?.start_height != null && loginResult.start_height > 0) {
       return loginResult.start_height
     }
 
-    // For monerod wallets, fall back to the Edge LWS server
-    const serverUrl = backend === 'lws' ? daemonAddress : edgeLwsServer
+    // monerod cannot report a wallet's creation height, so recover it from
+    // whichever LWS the user has enabled (their custom LWS if configured,
+    // otherwise the Edge LWS) rather than always crossing to the Edge server:
+    const serverUrl =
+      backend === 'lws'
+        ? daemonAddress
+        : this.currentSettings.enableCustomServers
+        ? this.currentSettings.moneroLightwalletServer
+        : edgeLwsServer
     const addressInfo = await this.getAddressInfo(
       serverUrl,
       this.walletInfo.keys.moneroAddress,
@@ -276,7 +292,16 @@ export class MoneroEngine extends CurrencyEngine<
     return addressInfo.start_height
   }
 
-  async loginToLwsServer(
+  // The Edge API key must only be sent to the Edge LWS (never a custom or
+  // third-party server) and never as an empty string:
+  private edgeApiKeyBody(serverUrl: string): { api_key?: string } {
+    const { edgeApiKey } = this.initOptions
+    return serverUrl === this.networkInfo.edgeLwsServer && edgeApiKey !== ''
+      ? { api_key: edgeApiKey }
+      : {}
+  }
+
+  private async loginToLwsServer(
     serverUrl: string,
     address: string,
     viewKey: string,
@@ -291,7 +316,7 @@ export class MoneroEngine extends CurrencyEngine<
       },
       body: JSON.stringify({
         address,
-        api_key: this.initOptions.edgeApiKey,
+        ...this.edgeApiKeyBody(serverUrl),
         create_account: true,
         generated_locally: true,
         view_key: viewKey,
@@ -306,7 +331,7 @@ export class MoneroEngine extends CurrencyEngine<
     return asLoginResponse(json)
   }
 
-  async getAddressInfo(
+  private async getAddressInfo(
     serverUrl: string,
     address: string,
     viewKey: string
@@ -320,7 +345,7 @@ export class MoneroEngine extends CurrencyEngine<
       },
       body: JSON.stringify({
         address,
-        api_key: this.initOptions.edgeApiKey,
+        ...this.edgeApiKeyBody(serverUrl),
         view_key: viewKey
       })
     })
@@ -335,7 +360,7 @@ export class MoneroEngine extends CurrencyEngine<
   }
 
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
-    if (!this.engineOn) return 1000
+    if (!this.engineOn) return SYNC_POLL_MS
 
     if (this.sendKeysToNative != null) {
       this.sendKeysToNative(
@@ -346,13 +371,13 @@ export class MoneroEngine extends CurrencyEngine<
 
     const nativeWalletId = await this.nativeWalletId.get()
     if (nativeWalletId == null) {
-      return 1000
+      return SYNC_POLL_MS
     }
 
     try {
       const status = await this.tools.cppBridge.getWalletStatus(nativeWalletId)
       if (status.networkHeight === 0) {
-        return 1000
+        return SYNC_POLL_MS
       }
 
       this.updateBlockHeight(status.networkHeight)
@@ -379,24 +404,34 @@ export class MoneroEngine extends CurrencyEngine<
         this.syncTracker.updateBalanceRatio(1)
 
         await this.queryTransactions(nativeWalletId)
-        this.syncTracker.updateHistoryRatio(1)
 
-        return 20000
+        // Only report history as complete once the ascending backfill has
+        // ingested every page (it flips txSortOrder to 'desc' when done).
+        // While still backfilling, poll quickly to pull the next page.
+        if (this.txSortOrder === 'desc') {
+          this.syncTracker.updateHistoryRatio(1)
+          return SYNCED_POLL_MS
+        }
+        return SYNC_POLL_MS
       } else {
         const range = status.networkHeight - this.syncStartHeight
+        // Clamp to 0 so a reorg (syncedHeight < syncStartHeight) can't feed a
+        // negative ratio into the weighted sync tracker:
         const ratio =
-          range > 0 ? (status.syncedHeight - this.syncStartHeight) / range : 0
+          range > 0
+            ? Math.max(0, (status.syncedHeight - this.syncStartHeight) / range)
+            : 0
 
         this.syncTracker.updateBlockRatio(
           ratio,
           status.syncedHeight,
           status.networkHeight
         )
-        return 1000
+        return SYNC_POLL_MS
       }
     } catch (error: unknown) {
       this.log.error(`syncNetwork error: ${String(error)}`)
-      return 5000
+      return ERROR_POLL_MS
     }
   }
 
@@ -440,6 +475,8 @@ export class MoneroEngine extends CurrencyEngine<
     )
 
     if (txPage.totalCount === 0) {
+      // No history to backfill, so treat the ascending pass as complete:
+      this.txSortOrder = 'desc'
       return false
     }
 
@@ -546,6 +583,7 @@ export class MoneroEngine extends CurrencyEngine<
       })
     }
 
+    // TransactionDirection from react-native-monero-lwsf: 0 = incoming, 1 = outgoing
     const isReceive = tx.direction === 0
     const ourReceiveAddresses: string[] = isReceive
       ? [this.walletInfo.keys.moneroAddress]
@@ -613,12 +651,15 @@ export class MoneroEngine extends CurrencyEngine<
       return
     }
 
-    this.settingsChangeQueue = this.settingsChangeQueue.then(async () => {
+    const run = this.settingsChangeQueue.then(async () => {
       this.currentSettings = newSettings
       await this.killEngine()
       await this.startEngine()
     })
-    await this.settingsChangeQueue
+    // Keep the queue usable for later changes even if this one throws, while
+    // still surfacing the error to this caller:
+    this.settingsChangeQueue = run.catch(() => {})
+    await run
   }
 
   async changeWalletSettings(walletSettings: JsonObject): Promise<void> {
@@ -630,13 +671,14 @@ export class MoneroEngine extends CurrencyEngine<
       return
     }
 
-    this.settingsChangeQueue = this.settingsChangeQueue.then(async () => {
+    const run = this.settingsChangeQueue.then(async () => {
       this.currentWalletSettings = newSettings
       await this.killEngine()
       await this.clearBlockchainCache()
       await this.startEngine()
     })
-    await this.settingsChangeQueue
+    this.settingsChangeQueue = run.catch(() => {})
+    await run
   }
 
   async getMaxSpendable(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
