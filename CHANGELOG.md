@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.83.0 (2026-06-12)
+
 - changed: Convert the build tooling from Yarn to npm.
 - changed: Migrate to bip32 v4 (using the WASM-free @bitcoinerlab/secp256k1), @ethereumjs/util v9, and stellar-sdk v13.
 - security: Upgrade dependencies per Socket security recommendations.
