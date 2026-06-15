@@ -3,7 +3,6 @@ import {
   asEither,
   asNumber,
   asObject,
-  asOptional,
   asString,
   asUnknown
 } from 'cleaners'
@@ -86,37 +85,6 @@ export const asDrpcRunGetMethod = asObject({
 export const asDrpcSendBoc = asObject({
   // ok: asBoolean,
   result: asUnknown
-})
-
-const asDrpcTransactionId = asObject({
-  // @type: asString,
-  lt: asString,
-  hash: asString
-})
-
-const asDrpcMsgData = asObject({
-  init_state: asOptional(asString)
-})
-
-const asDrpcInMsg = asObject({
-  source: asString,
-  msg_data: asDrpcMsgData
-})
-
-export const asDrpcGetTransactions = asObject({
-  // ok: asBoolean,
-  result: asArray(
-    asObject({
-      transaction_id: asDrpcTransactionId,
-      // utime: asNumber,
-      // data: asString,
-      // fee: asString,
-      // storage_fee: asString,
-      // other_fee: asString,
-      in_msg: asDrpcInMsg
-      // out_msgs: asArray(...)
-    })
-  )
 })
 
 // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import {
   fromNano,
   internal,
   loadMessageRelaxed,
+  Message,
   MessageRelaxed,
   SendMode,
   storeMessage,
@@ -41,7 +42,6 @@ import { snooze } from '../common/utils'
 import {
   asDrpcAddressInfo,
   asDrpcEstimateFee,
-  asDrpcGetTransactions,
   asDrpcRunGetMethod,
   asDrpcSendBoc,
   parseSeqnoFromStack
@@ -156,7 +156,11 @@ export class TonEngine extends CurrencyEngine<
 
           try {
             const parsedTx = asParsedTx(parse_tx(tx, false))
-            this.processTonTransaction(parsedTx)
+            const inMessageHash =
+              tx.inMessage != null
+                ? this.getInMessageHash(tx.inMessage)
+                : undefined
+            this.processTonTransaction(parsedTx, inMessageHash)
           } catch (e) {
             // unknown transaction type
           }
@@ -175,7 +179,20 @@ export class TonEngine extends CurrencyEngine<
     this.syncTracker.updateHistoryRatio(null, 1)
   }
 
-  processTonTransaction(tx: ParsedTx): void {
+  /**
+   * Hash of an in-message as the chain indexes it: the message cell hash, in
+   * lowercase hex. For our own sends the in-message is the external message we
+   * signed, so `broadcastTx` can derive the identical hash from the message it
+   * builds. This is the value the block explorer resolves at `/tx/<hash>`, and
+   * the value a pending send shares with its confirmed copy so the two
+   * reconcile into a single transaction.
+   */
+  getInMessageHash(message: Message): string {
+    const cell = beginCell().store(storeMessage(message)).endCell()
+    return base16.stringify(cell.hash()).toLowerCase()
+  }
+
+  processTonTransaction(tx: ParsedTx, inMessageHash?: string): void {
     const memos: EdgeMemo[] = []
     const ourReceiveAddresses = new Set<string>()
     let nativeAmount: string = '0'
@@ -224,7 +241,14 @@ export class TonEngine extends CurrencyEngine<
       memos,
       ourReceiveAddresses: [...ourReceiveAddresses],
       tokenId: null,
-      txid: tx.hash,
+      // For our own sends, key the transaction on the external in-message hash.
+      // `broadcastTx` derives the identical hash locally for an already-deployed
+      // wallet (and looks it up once for the very first send, which deploys the
+      // contract), so the pending send reconciles into this single confirmed
+      // entry. It is also the hash the block explorer resolves. Received
+      // transactions have no locally-created counterpart, so they keep the
+      // on-chain transaction hash.
+      txid: isSend && inMessageHash != null ? inMessageHash : tx.hash,
       signedTx: '',
       walletId: this.walletId
     }
@@ -436,42 +460,56 @@ export class TonEngine extends CurrencyEngine<
       })
       asDrpcSendBoc(sendRaw)
 
-      if (this.otherData.contractState === 'uninitialized') {
-        // The txid for a wallet's deploy tx can't be calculated locally,
-        // so poll for the transaction whose inbound external message
-        // carries a StateInit (init_state) — that's the deploy.
-        const addr = encodeURIComponent(this.wallet.address.toRawString())
+      if (needsInit) {
+        // The very first send also deploys the wallet contract, so the external
+        // message we just signed carries a StateInit. That changes its hash
+        // relative to how the deploy is indexed once mined, so we cannot key on
+        // a locally derived hash here. Poll for the confirmed deploy (its
+        // in-message body matches the cell we signed) and key on its on-chain
+        // in-message hash, which is exactly what `queryTransactions` records, so
+        // the pending send reconciles with it. This network lookup happens only
+        // once per wallet, for the very first send.
+        const clients = this.tools.getTonCenterClients()
         let attempts = 0
         do {
           attempts++
           await snooze(1000)
           try {
-            const raw = await this.tools.fetchDrpc(
-              `/getTransactions?address=${addr}&limit=100`
+            const funcs = clients.map(client => async () => {
+              return await client.getTransactions(this.wallet.address, {
+                limit: 50,
+                archival: true
+              })
+            })
+            const txs: Awaited<ReturnType<TonClient['getTransactions']>> =
+              await asyncWaterfall(funcs)
+            const deployTx = txs.find(
+              tx =>
+                tx.inMessage != null &&
+                tx.inMessage.info.type === 'external-in' &&
+                tx.inMessage.body.hash().equals(txCell.hash())
             )
-            const { result: txs } = asDrpcGetTransactions(raw)
-            for (const tx of txs) {
-              const { in_msg: inMsg } = tx
-              if (inMsg.source === '' && inMsg.msg_data.init_state != null) {
-                const hashBytes = base64.parse(tx.transaction_id.hash)
-                edgeTransaction.txid = base16.stringify(hashBytes).toLowerCase()
-                edgeTransaction.date = Date.now() / 1000
-                this.otherData.contractState = 'active'
-                this.walletLocalDataDirty = true
-                return edgeTransaction
-              }
+            if (deployTx?.inMessage != null) {
+              edgeTransaction.txid = this.getInMessageHash(deployTx.inMessage)
+              edgeTransaction.date = Date.now() / 1000
+              this.otherData.contractState = 'active'
+              this.walletLocalDataDirty = true
+              return edgeTransaction
             }
           } catch (e) {
             // retry
           }
         } while (attempts <= 30) // In testing, the tx was found after ~10 seconds
         throw new Error('Transaction broadcast but unable to find txid')
-      } else {
-        const txid = base16.stringify(externalBoc.hash()).toLowerCase()
-        edgeTransaction.txid = txid
-        edgeTransaction.date = Date.now() / 1000
-        return edgeTransaction
       }
+
+      // An already-deployed wallet produces an external in-message whose hash we
+      // derive locally with no network call. It equals the on-chain in-message
+      // hash `queryTransactions` records, so the pending send reconciles into a
+      // single confirmed entry, and it is the hash the block explorer resolves.
+      edgeTransaction.txid = base16.stringify(externalBoc.hash()).toLowerCase()
+      edgeTransaction.date = Date.now() / 1000
+      return edgeTransaction
     } catch (e) {
       this.log.warn('FAILURE broadcastTx failed: ', e)
       throw e
