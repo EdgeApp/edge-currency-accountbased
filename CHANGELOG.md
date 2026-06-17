@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (HyperEVM) Use Etherscan V2 (api.etherscan.io) as the primary transaction-history source and increase the query lookback to 5 minutes, fixing slow/missing transaction list syncing.
+
 ## 4.83.0 (2026-06-12)
 
 - changed: Convert the build tooling from Yarn to npm.

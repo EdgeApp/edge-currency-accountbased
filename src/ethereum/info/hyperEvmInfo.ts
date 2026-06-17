@@ -118,7 +118,7 @@ const networkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  addressQueryLookbackBlocks: 120, // 2 minutes
+  addressQueryLookbackBlocks: 300, // 5 minutes
   networkAdapterConfigs: [
     {
       type: 'rpc',
@@ -132,7 +132,10 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.routescan.io/v2/network/mainnet/evm/999/etherscan']
+      servers: [
+        'https://api.etherscan.io',
+        'https://api.routescan.io/v2/network/mainnet/evm/999/etherscan'
+      ]
     }
   ],
   uriNetworks: [],
