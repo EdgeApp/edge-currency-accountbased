@@ -32,6 +32,8 @@
     "/LICENSE",
     "/package.json",
     "/README.md",
+    "/rn-monero.d.ts",
+    "/rn-monero.js",
     "/rn-piratechain.d.ts",
     "/rn-piratechain.js",
     "/rn-zano.d.ts",
@@ -141,7 +143,7 @@
     "chai": "^4.2.0",
     "clipanion": "^4.0.0-rc.2",
     "crypto-browserify": "^3.12.0",
-    "edge-core-js": "^2.42.0",
+    "edge-core-js": "2.46.0",
     "esbuild-loader": "^2.20.0",
     "eslint": "^8.19.0",
     "eslint-config-standard-kit": "0.15.1",
@@ -165,6 +167,7 @@
     "prettier": "^2.2.0",
     "process": "^0.11.10",
     "querystring": "^0.2.1",
+    "react-native-monero": "0.1.0",
     "react-native-piratechain": "0.5.0",
     "react-native-zano": "^0.2.7",
     "react-native-zcash": "0.10.1",
@@ -182,6 +185,7 @@
     "webpack-dev-server": "^5.2.4"
   },
   "peerDependencies": {
+    "react-native-monero": "^0.1.0",
     "react-native-piratechain": "v0.5.0",
     "react-native-zano": "^0.2.7",
     "react-native-zcash": "^0.10.1"
