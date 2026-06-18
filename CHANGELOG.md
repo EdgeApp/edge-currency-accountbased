@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.84.0 (2026-06-18)
+
 - added: Add monero plugin
 - fixed: (HyperEVM) Use Etherscan V2 (api.etherscan.io) as the primary transaction-history source and increase the query lookback to 5 minutes, fixing slow/missing transaction list syncing.
 
