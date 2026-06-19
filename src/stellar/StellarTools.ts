@@ -11,7 +11,7 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import stellarApi, { Horizon } from 'stellar-sdk'
+import { Horizon, Keypair } from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
@@ -50,7 +50,7 @@ export class StellarTools implements EdgeCurrencyTools {
     // TransactionBuilder options.
     this.stellarApiServers = []
     for (const server of this.networkInfo.stellarServers) {
-      const stellarServer = new stellarApi.Horizon.Server(server)
+      const stellarServer = new Horizon.Server(server)
       stellarServer.serverName = server
       this.stellarApiServers.push(stellarServer)
     }
@@ -73,7 +73,7 @@ export class StellarTools implements EdgeCurrencyTools {
   checkAddress(address: string): boolean {
     // TODO: check address
     try {
-      stellarApi.Keypair.fromPublicKey(address)
+      Keypair.fromPublicKey(address)
       return true
     } catch (e: any) {
       return false
@@ -97,7 +97,7 @@ export class StellarTools implements EdgeCurrencyTools {
         "m/44'/148'/0'",
         seed.toString('hex')
       ).key
-      const keypair = stellarApi.Keypair.fromRawEd25519Seed(
+      const keypair = Keypair.fromRawEd25519Seed(
         Uint8Array.from(derivedSeed) as unknown as number[]
       )
 
@@ -107,7 +107,7 @@ export class StellarTools implements EdgeCurrencyTools {
       }
     } else {
       userInput = userInput.replace(/ /g, '')
-      stellarApi.Keypair.fromSecret(userInput)
+      Keypair.fromSecret(userInput)
       if (userInput.length !== 56) throw new Error('Private key wrong length')
 
       return {
@@ -122,7 +122,7 @@ export class StellarTools implements EdgeCurrencyTools {
       throw new Error('InvalidWalletType')
     }
 
-    const keypair = stellarApi.Keypair.fromSecret(walletInfo.keys.stellarKey)
+    const keypair = Keypair.fromSecret(walletInfo.keys.stellarKey)
     return { publicKey: keypair.publicKey() }
   }
 

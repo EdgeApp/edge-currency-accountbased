@@ -12,7 +12,17 @@ import {
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
-import stellarApi, { Transaction } from 'stellar-sdk'
+import {
+  Account,
+  Asset,
+  Keypair,
+  Memo,
+  Networks,
+  Operation,
+  TimeoutInfinite,
+  Transaction,
+  TransactionBuilder
+} from 'stellar-sdk'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -526,7 +536,7 @@ export class StellarEngine extends CurrencyEngine<
 
     const exchangeAmount = div(nativeAmount, denom.multiplier, 7)
 
-    const account = new stellarApi.Account(
+    const account = new Account(
       this.walletLocalData.publicKey,
       this.otherData.accountSequence
     )
@@ -540,23 +550,23 @@ export class StellarEngine extends CurrencyEngine<
     // stellar-sdk v13: the network passphrase moved from the removed global
     // Network singleton into per-transaction options, and transactions must
     // declare timebounds (TimeoutInfinite preserves the old no-bounds behavior).
-    let txBuilder = new stellarApi.TransactionBuilder(account, {
+    let txBuilder = new TransactionBuilder(account, {
       fee: String(feeSetting),
-      networkPassphrase: stellarApi.Networks.PUBLIC
-    }).setTimeout(stellarApi.TimeoutInfinite)
+      networkPassphrase: Networks.PUBLIC
+    }).setTimeout(TimeoutInfinite)
 
     if (mustCreateAccount) {
       txBuilder = txBuilder.addOperation(
-        stellarApi.Operation.createAccount({
+        Operation.createAccount({
           destination: publicAddress,
           startingBalance: exchangeAmount
         })
       )
     } else {
       txBuilder = txBuilder.addOperation(
-        stellarApi.Operation.payment({
+        Operation.payment({
           destination: publicAddress,
-          asset: stellarApi.Asset.native(),
+          asset: Asset.native(),
           amount: exchangeAmount
         })
       )
@@ -564,13 +574,13 @@ export class StellarEngine extends CurrencyEngine<
     for (const memo of memos) {
       switch (memo.type) {
         case 'hex':
-          txBuilder = txBuilder.addMemo(stellarApi.Memo.hash(memo.value))
+          txBuilder = txBuilder.addMemo(Memo.hash(memo.value))
           break
         case 'number':
-          txBuilder = txBuilder.addMemo(stellarApi.Memo.id(memo.value))
+          txBuilder = txBuilder.addMemo(Memo.id(memo.value))
           break
         case 'text':
-          txBuilder = txBuilder.addMemo(stellarApi.Memo.text(memo.value))
+          txBuilder = txBuilder.addMemo(Memo.text(memo.value))
           break
       }
     }
@@ -648,9 +658,7 @@ export class StellarEngine extends CurrencyEngine<
         throw new Error('ErrorInvalidTransaction')
       }
       this.warn('Signing...')
-      const keypair = stellarApi.Keypair.fromSecret(
-        stellarPrivateKeys.stellarKey
-      )
+      const keypair = Keypair.fromSecret(stellarPrivateKeys.stellarKey)
       await transaction.sign(keypair)
     } catch (e: any) {
       this.error(
