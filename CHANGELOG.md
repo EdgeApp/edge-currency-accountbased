@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Stellar) Resolve the "undefined is not an object (evaluating 'Horizon')" crash on login by importing stellar-sdk v13 symbols (Horizon, Keypair, Account, TransactionBuilder, etc.) as named exports. The plugin's WebView uses stellar-sdk's browser build, whose default export is undefined, so the previous default-namespace access (stellarApi.Horizon.Server) threw.
+
 ## 4.84.0 (2026-06-18)
 
 - added: Add monero plugin
