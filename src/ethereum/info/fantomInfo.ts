@@ -282,7 +282,7 @@ const networkFees: EthereumFees = {
 }
 
 // Exported for fee provider test
-const networkInfo: EthereumNetworkInfo = {
+export const networkInfo: EthereumNetworkInfo = {
   addressQueryLookbackBlocks: 60, // 2 minutes
   networkAdapterConfigs: [
     {
@@ -322,7 +322,7 @@ const networkInfo: EthereumNetworkInfo = {
   }
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'FTM',
   evmChainId: 250,

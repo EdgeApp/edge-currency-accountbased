@@ -145,6 +145,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   // https://developers.tron.network/v3.7/docs/how-to-build-a-transaction-locally
   memoOptions: [{ type: 'text', memoName: 'note' }],
 
+  usesChangeServer: true,
+
   // Deprecated:
   displayName: 'Tron',
   metaTokens: makeMetaTokens(builtinTokens)
