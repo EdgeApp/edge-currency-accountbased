@@ -266,6 +266,21 @@ export class TonEngine extends CurrencyEngine<
     )
   }
 
+  async makeMaxSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    // Compute the max spendable amount and build the transaction back-to-back
+    // so network state cannot change between the two steps:
+    const maxNativeAmount = await this.getMaxSpendable(edgeSpendInfoIn)
+    const edgeSpendInfo: EdgeSpendInfo = {
+      ...edgeSpendInfoIn,
+      spendTargets: edgeSpendInfoIn.spendTargets.map((spendTarget, index) =>
+        index === 0
+          ? { ...spendTarget, nativeAmount: maxNativeAmount }
+          : spendTarget
+      )
+    }
+    return await this.makeSpend(edgeSpendInfo)
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
