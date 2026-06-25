@@ -17,7 +17,6 @@ import { AmberdataAdapter } from './networkAdapters/AmberdataAdapter'
 import { BlockbookAdapter } from './networkAdapters/BlockbookAdapter'
 import { BlockbookWsAdapter } from './networkAdapters/BlockbookWsAdapter'
 import { BlockchairAdapter } from './networkAdapters/BlockchairAdapter'
-import { BlockcypherAdapter } from './networkAdapters/BlockcypherAdapter'
 import { EvmScanAdapter } from './networkAdapters/EvmScanAdapter'
 import { FilfoxAdapter } from './networkAdapters/FilfoxAdapter'
 import {
@@ -707,8 +706,6 @@ const makeNetworkAdapter = (
       return new BlockbookWsAdapter(ethEngine, config)
     case 'blockchair':
       return new BlockchairAdapter(ethEngine, config)
-    case 'blockcypher':
-      return new BlockcypherAdapter(ethEngine, config)
     case 'evmscan':
       return new EvmScanAdapter(ethEngine, config)
     case 'filfox':

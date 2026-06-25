@@ -214,7 +214,6 @@ const networkInfo: SolanaNetworkInfo = {
   ],
   rpcNodesArchival: [
     'https://api.mainnet-beta.solana.com',
-    // 'https://solana-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}',
     'https://mainnet.helius-rpc.com/?api-key={{heliusApiKey}}'
   ],
   stakedConnectionRpcNodes: [

@@ -24,10 +24,8 @@ import { FeeAlgorithmConfig } from './feeAlgorithms/feeAlgorithmTypes'
 import type { NetworkAdapterConfig } from './networkAdapters/networkAdapterTypes'
 
 export interface EthereumInitOptions {
-  alchemyApiKey?: string
   amberdataApiKey?: string
   blockchairApiKey?: string
-  blockcypherApiKey?: string
   drpcApiKey?: string
   /** For Etherscan v2 API */
   etherscanApiKey?: string | string[]
@@ -41,10 +39,8 @@ export interface EthereumInitOptions {
 }
 
 export const asEthereumInitOptions = asObject<EthereumInitOptions>({
-  alchemyApiKey: asOptional(asString),
   amberdataApiKey: asOptional(asString),
   blockchairApiKey: asOptional(asString),
-  blockcypherApiKey: asOptional(asString),
   drpcApiKey: asOptional(asString),
   etherscanApiKey: asOptional(asEither(asString, asArray(asString))),
   evmScanApiKey: asOptional(asEither(asString, asArray(asString))),
@@ -122,7 +118,6 @@ const asNetworkAdaptorConfigType = asValue(
   'blockbook',
   'blockbook-ws',
   'blockchair',
-  'blockcypher',
   'evmscan',
   'filfox',
   'pulsechain-scan',

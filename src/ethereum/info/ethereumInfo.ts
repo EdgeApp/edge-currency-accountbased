@@ -1168,7 +1168,6 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://eth-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}',
         'https://mainnet.infura.io/v3/{{infuraProjectId}}',
         'https://rpc.ankr.com/eth',
         'https://eth.api.pocket.network',
@@ -1213,10 +1212,6 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'blockchair',
       servers: ['https://api.blockchair.com']
-    },
-    {
-      type: 'blockcypher',
-      servers: ['https://api.blockcypher.com']
     }
   ],
 
