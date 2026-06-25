@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Ethereum) Remove the deprecated BlockCypher network adapter and the deprecated Alchemy RPC server endpoints, which were triggering irrelevant errors.
+
 ## 4.84.1 (2026-06-23)
 
 - fixed: (Stellar) Resolve the "undefined is not an object (evaluating 'Horizon')" crash on login by importing stellar-sdk v13 symbols (Horizon, Keypair, Account, TransactionBuilder, etc.) as named exports. The plugin's WebView uses stellar-sdk's browser build, whose default export is undefined, so the previous default-namespace access (stellarApi.Horizon.Server) threw.

@@ -19,7 +19,6 @@ import { AmberdataAdapterConfig } from './AmberdataAdapter'
 import { BlockbookAdapterConfig } from './BlockbookAdapter'
 import { BlockbookWsAdapterConfig } from './BlockbookWsAdapter'
 import { BlockchairAdapterConfig } from './BlockchairAdapter'
-import { BlockcypherAdapterConfig } from './BlockcypherAdapter'
 import { EvmScanAdapterConfig } from './EvmScanAdapter'
 import { FilfoxAdapterConfig } from './FilfoxAdapter'
 import { PulsechainScanAdapterConfig } from './PulsechainScanAdapter'
@@ -36,7 +35,6 @@ export type NetworkAdapterConfig =
   | BlockbookAdapterConfig
   | BlockbookWsAdapterConfig
   | BlockchairAdapterConfig
-  | BlockcypherAdapterConfig
   | EvmScanAdapterConfig
   | FilfoxAdapterConfig
   | PulsechainScanAdapterConfig
@@ -205,7 +203,6 @@ export abstract class NetworkAdapter<
       }
       default: {
         // amberdata
-        // alchemy
         if (isRateLimitError(resBody)) {
           throw new RateLimitError(`Rate limit exceeded for ${url}`)
         }

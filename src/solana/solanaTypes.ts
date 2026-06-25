@@ -117,7 +117,6 @@ export interface ParsedTxAmount {
 }
 
 export const asSolanaInitOptions = asObject({
-  alchemyApiKey: asOptional(asString),
   heliusApiKey: asOptional(asString),
   poktPortalApiKey: asOptional(asString)
 })
