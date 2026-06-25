@@ -120,7 +120,7 @@
     "url-parse": "^1.4.1",
     "ws": "^7.5.10",
     "xrpl": "^2.10.0",
-    "yaob": "^0.3.6"
+    "yaob": "^0.4.0"
   },
   "devDependencies": {
     "@babel/core": "^7.17.8",
