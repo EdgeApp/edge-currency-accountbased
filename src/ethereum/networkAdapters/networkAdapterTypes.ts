@@ -20,7 +20,6 @@ import { AmberdataAdapterConfig } from './AmberdataAdapter'
 import { BlockbookAdapterConfig } from './BlockbookAdapter'
 import { BlockbookWsAdapterConfig } from './BlockbookWsAdapter'
 import { BlockchairAdapterConfig } from './BlockchairAdapter'
-import { BlockcypherAdapterConfig } from './BlockcypherAdapter'
 import { BlockscoutAdapterConfig } from './BlockscoutAdapter'
 import { EvmScanAdapterConfig } from './EvmScanAdapter'
 import { FilfoxAdapterConfig } from './FilfoxAdapter'
@@ -39,7 +38,6 @@ export type NetworkAdapterConfig =
   | BlockbookAdapterConfig
   | BlockbookWsAdapterConfig
   | BlockchairAdapterConfig
-  | BlockcypherAdapterConfig
   | BlockscoutAdapterConfig
   | EvmScanAdapterConfig
   | FilfoxAdapterConfig
