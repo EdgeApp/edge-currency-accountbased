@@ -197,11 +197,17 @@ export class MoneroEngine extends CurrencyEngine<
               if (event.walletId !== base64UrlWalletId) return
               if (event.eventName !== 'pendingTransactionReceived') return
 
-              this.queryTransactions(base64UrlWalletId).catch(err =>
-                this.log.error(
-                  `Event-triggered queryTransactions error: ${String(err)}`
+              this.queryTransactions(base64UrlWalletId)
+                .then(async () => {
+                  // Refresh the balance immediately so a pending incoming tx
+                  // shows up without waiting for the next synced poll.
+                  await this.refreshBalance(base64UrlWalletId)
+                })
+                .catch(err =>
+                  this.log.error(
+                    `Event-triggered refresh error: ${String(err)}`
+                  )
                 )
-              )
             }
           )
           this.unsubscribeWalletEvent = unsubscribeWalletEvent
@@ -386,6 +392,13 @@ export class MoneroEngine extends CurrencyEngine<
 
       this.updateBlockHeight(status.networkHeight)
 
+      // Refresh the balance on every poll, not only once fully synced, so a
+      // pending incoming tx or the pending change after a send is reflected
+      // promptly instead of lagging until a new block advances syncedHeight.
+      // updateBalance no-ops when the value is unchanged.
+      this.unlockedBalance = status.unlockedBalance
+      this.updateBalance(null, status.balance)
+
       // Capture the first reported synced height as our baseline for
       // progress tracking. This is reset when the wallet restarts
       // (settings change, resync, daemon change).
@@ -402,9 +415,6 @@ export class MoneroEngine extends CurrencyEngine<
           status.networkHeight
         )
 
-        const balance = status.balance
-        this.unlockedBalance = status.unlockedBalance
-        this.updateBalance(null, balance)
         this.syncTracker.updateBalanceRatio(1)
 
         await this.queryTransactions(nativeWalletId)
@@ -437,6 +447,15 @@ export class MoneroEngine extends CurrencyEngine<
       this.log.error(`syncNetwork error: ${String(error)}`)
       return ERROR_POLL_MS
     }
+  }
+
+  // Pull the latest balances from the native wallet and publish them. Used by
+  // the pending-tx event handler so a received/sent amount is reflected without
+  // waiting for the next syncNetwork poll. updateBalance no-ops when unchanged.
+  private async refreshBalance(nativeWalletId: string): Promise<void> {
+    const status = await this.tools.cppBridge.getWalletStatus(nativeWalletId)
+    this.unlockedBalance = status.unlockedBalance
+    this.updateBalance(null, status.balance)
   }
 
   private async queryTransactions(nativeWalletId: string): Promise<void> {
