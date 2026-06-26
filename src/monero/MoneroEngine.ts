@@ -722,13 +722,23 @@ export class MoneroEngine extends CurrencyEngine<
     }
 
     try {
+      // Read the live unlocked balance instead of this.unlockedBalance, which
+      // starts at '0' and is reset to '0' on every engine restart (settings or
+      // daemon change, resync) and only repopulated on a fully-synced poll.
+      // That staleness made Max intermittently return 0 (sub('0', fee) < 0) or
+      // an amount that then failed to actually send.
+      const status = await this.tools.cppBridge.getWalletStatus(nativeWalletId)
+      // We fetched a fresh status, so keep the cached balances in sync with it.
+      this.unlockedBalance = status.unlockedBalance
+      this.updateBalance(null, status.balance)
+
       const result = await this.tools.cppBridge.createTransaction(
         nativeWalletId,
         [{ address: spendTarget.publicAddress, amount: '0' }],
         translateFee(edgeSpendInfo.networkFeeOption)
       )
 
-      const maxSpendable = sub(this.unlockedBalance, result.fee)
+      const maxSpendable = sub(status.unlockedBalance, result.fee)
       if (lt(maxSpendable, '0')) {
         return '0'
       }
