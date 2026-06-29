@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (TON) Prevent duplicate transactions by keying a sent transaction on its external in-message hash. The broadcast and the transaction-list sync derive the same hash, so the pending send reconciles with the confirmed transaction, and the hash resolves on the block explorer. An already-deployed wallet derives this locally with no network lookup; only a wallet's very first send looks the hash up once, after the contract deploys.
+
 ## 4.84.1 (2026-06-23)
 
 - fixed: (Stellar) Resolve the "undefined is not an object (evaluating 'Horizon')" crash on login by importing stellar-sdk v13 symbols (Horizon, Keypair, Account, TransactionBuilder, etc.) as named exports. The plugin's WebView uses stellar-sdk's browser build, whose default export is undefined, so the previous default-namespace access (stellarApi.Horizon.Server) threw.
