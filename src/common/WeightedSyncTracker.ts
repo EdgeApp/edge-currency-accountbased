@@ -6,6 +6,12 @@ const SYNC_PROGRESS_WEIGHT = 0.85
 const BALANCE_PROGRESS_WEIGHT = 0.05
 const TRANSACTION_PROGRESS_WEIGHT = 0.1
 
+// Push a sync-status update at least this often while progress is still moving,
+// even within a single 1% step. Without this, a slow chain (e.g. monerod over
+// the Nym mixnet, where 1% can be many thousands of blocks) looks frozen for
+// minutes between whole-percent boundaries.
+const SYNC_STATUS_INTERVAL_MS = 1000
+
 /**
  * A sync status tracker that works block-by-block.
  */
@@ -31,6 +37,7 @@ export function makeWeightedSyncTracker(
   let blockRatioDetail: [number, number] = [0, 1]
   let historyRatio = 0
   let lastTotalRatio = 0
+  let lastSentTime = 0
 
   function calculateStatus(): EdgeSyncStatus {
     // Avoid rounding issues by treating 1 as special:
@@ -52,13 +59,22 @@ export function makeWeightedSyncTracker(
 
   function maybeSendUpdate(): void {
     const status = calculateStatus()
+    const now = Date.now()
 
-    // Update every 1% change
+    // Update on completion, on every 1% change, or — when progress is still
+    // moving — at least once per SYNC_STATUS_INTERVAL_MS so slow syncs show
+    // steady movement instead of appearing frozen between 1% boundaries.
     const flooredPrevProgress = Math.floor(lastTotalRatio * 100)
     const flooredNewProgress = Math.floor(status.totalRatio * 100)
+    const progressMoved = status.totalRatio > lastTotalRatio
 
-    if (status.totalRatio === 1 || flooredNewProgress > flooredPrevProgress) {
+    if (
+      status.totalRatio === 1 ||
+      flooredNewProgress > flooredPrevProgress ||
+      (progressMoved && now - lastSentTime >= SYNC_STATUS_INTERVAL_MS)
+    ) {
       engine.sendSyncStatus(status)
+      lastSentTime = now
     }
 
     lastTotalRatio = status.totalRatio

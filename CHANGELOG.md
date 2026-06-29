@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: (Monero, Zano) Report sync progress at least once a second while it is still advancing, so a slow chain shows steady movement instead of appearing frozen between whole-percent updates.
 - fixed: (TON) Prevent duplicate transactions by keying a sent transaction on its external in-message hash. The broadcast and the transaction-list sync derive the same hash, so the pending send reconciles with the confirmed transaction, and the hash resolves on the block explorer. An already-deployed wallet derives this locally with no network lookup; only a wallet's very first send looks the hash up once, after the contract deploys.
 - fixed: (Monero) Update the wallet balance as soon as a pending transaction is received and on every sync poll, instead of only after a new block, so an incoming pending amount appears immediately.
 - fixed: (Monero) Calculate the max sendable amount from the wallet's live unlocked balance instead of a stale cached value, so tapping Max no longer intermittently returns 0 or an unsendable amount.
