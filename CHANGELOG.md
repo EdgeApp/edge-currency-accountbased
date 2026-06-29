@@ -3,10 +3,10 @@
 ## Unreleased
 
 - changed: (Monero, Zano) Report sync progress at least once a second while it is still advancing, so a slow chain shows steady movement instead of appearing frozen between whole-percent updates.
+- changed: Upgrade yaob to v0.4.0 to dedupe the bridge instance shared with edge-core-js (mismatched yaob copies cross-wire native plugin IO).
 - fixed: (TON) Prevent duplicate transactions by keying a sent transaction on its external in-message hash. The broadcast and the transaction-list sync derive the same hash, so the pending send reconciles with the confirmed transaction, and the hash resolves on the block explorer. An already-deployed wallet derives this locally with no network lookup; only a wallet's very first send looks the hash up once, after the contract deploys.
 - fixed: (Monero) Update the wallet balance as soon as a pending transaction is received and on every sync poll, instead of only after a new block, so an incoming pending amount appears immediately.
 - fixed: (Monero) Calculate the max sendable amount from the wallet's live unlocked balance instead of a stale cached value, so tapping Max no longer intermittently returns 0 or an unsendable amount.
-
 ## 4.84.1 (2026-06-23)
 
 - fixed: (Stellar) Resolve the "undefined is not an object (evaluating 'Horizon')" crash on login by importing stellar-sdk v13 symbols (Horizon, Keypair, Account, TransactionBuilder, etc.) as named exports. The plugin's WebView uses stellar-sdk's browser build, whose default export is undefined, so the previous default-namespace access (stellarApi.Horizon.Server) threw.
