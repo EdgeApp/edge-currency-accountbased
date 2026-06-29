@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.85.0 (2026-06-29)
+
 - changed: (Monero, Zano) Report sync progress at least once a second while it is still advancing, so a slow chain shows steady movement instead of appearing frozen between whole-percent updates.
 - changed: Upgrade yaob to v0.4.0 to dedupe the bridge instance shared with edge-core-js (mismatched yaob copies cross-wire native plugin IO).
 - fixed: (TON) Prevent duplicate transactions by keying a sent transaction on its external in-message hash. The broadcast and the transaction-list sync derive the same hash, so the pending send reconciles with the confirmed transaction, and the hash resolves on the block explorer. An already-deployed wallet derives this locally with no network lookup; only a wallet's very first send looks the hash up once, after the contract deploys.
