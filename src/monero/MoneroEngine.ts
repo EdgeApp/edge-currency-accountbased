@@ -401,7 +401,15 @@ export class MoneroEngine extends CurrencyEngine<
         return SYNC_POLL_MS
       }
 
-      this.updateBlockHeight(status.networkHeight)
+      // Clamp the reported height monotonic. lwsf seeds daemonBlockChainHeight
+      // with the stored account scan height until its first refresh completes,
+      // and a load-balanced daemon can report a height a block behind the
+      // previous poll. The base engine re-stamps every tx's confirmation count
+      // on ANY height change, so a regressing height makes the displayed
+      // confirmations bounce downward and back up.
+      this.updateBlockHeight(
+        Math.max(status.networkHeight, this.walletLocalData.blockHeight)
+      )
 
       // Refresh the balance on every poll, not only once fully synced, so a
       // pending incoming tx or the pending change after a send is reflected

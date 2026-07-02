@@ -5,6 +5,7 @@
 - added: (Monero) Mark transactions that leave the mempool without confirming as dropped, instead of leaving them displayed as unconfirmed forever. A tx must stay missing for 30 minutes before it is declared dropped, since a just-mined tx briefly disappears from both the mempool and confirmed history while the LWS server indexes its block.
 - fixed: (Monero) Pending (unconfirmed) transactions now appear in the transaction list as soon as the wallet sees them, instead of only after their first confirmation. Pending entries sort behind all confirmed history in the native transaction list, so the newest-known-txid history scan never reached them — on LWS the balance would move with no transaction row to explain it. Requires react-native-monero with `getPendingTransactions`.
 - fixed: (Monero) Repair transactions stuck displaying as unconfirmed because the history-scan cursor was recorded while they were still pending.
+- fixed: (Monero) Confirmation counts no longer bounce up and down. The network height reported by the native layer can briefly regress (the LWS client reports the stored account scan height until its first refresh completes, and a load-balanced daemon can answer a block behind the previous poll), and every height change re-stamps every transaction's confirmation count — clamp the height monotonic so counts only ever advance.
 
 ## 4.85.0 (2026-06-29)
 
