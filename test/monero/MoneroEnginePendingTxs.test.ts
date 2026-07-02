@@ -136,6 +136,9 @@ async function makeEngine(chain: FakeChain): Promise<TestEngine> {
     customTokens: {},
     enabledTokenIds: [],
     log: fakeLog,
+    // A non-null checkpoint means "not the first-ever sync", so
+    // new-transaction notifications are armed:
+    seenTxCheckpoint: '0',
     userSettings: {},
     walletLocalDisklet: fakeIo.disklet,
     walletLocalEncryptedDisklet: fakeIo.disklet,
@@ -178,6 +181,9 @@ async function makeEngine(chain: FakeChain): Promise<TestEngine> {
     opts
   )
   await engine.loadEngine()
+  // queryTransactions refuses to run on a stopped engine; the tests drive it
+  // directly without the full startEngine plumbing:
+  ;(engine as any).engineOn = true
 
   return {
     engine,
@@ -268,7 +274,7 @@ describe('MoneroEngine pending transactions', function () {
     await queryTransactions()
     assert.hasAllKeys(engine.otherData.pendingTxSeen, ['p1'])
 
-    // The tx leaves the pool. Within the grace window nothing changes — this
+    // The tx leaves the pool. Within the grace window nothing changes; this
     // is also what a just-mined tx looks like before the server indexes it:
     chain.pending = []
     await queryTransactions()
@@ -355,7 +361,7 @@ describe('MoneroEngine pending transactions', function () {
     // The coalesced re-run picked up the tx that arrived mid-pass, instead of
     // leaving it invisible until the next sync poll:
     assert.equal(storedTx('p1')?.blockHeight, 0)
-    // And the coalesced caller's promise did not resolve early — the tx was
+    // And the coalesced caller's promise did not resolve early: the tx was
     // already stored by the time it settled:
     assert.equal(storedWhenInnerResolved?.blockHeight, 0)
   })
@@ -384,6 +390,86 @@ describe('MoneroEngine pending transactions', function () {
     // The queued re-run still ran after the error and picked up the tx,
     // instead of the error exiting the loop and stranding the queued caller:
     assert.equal(storedTx('p1')?.blockHeight, 0)
+  })
+
+  it('emits a new-transaction notification for a first-sighted pending receive', async function () {
+    const chain: FakeChain = {
+      confirmed: [makeTx('c1', 100)],
+      pending: [makeTx('p1', null)]
+    }
+    const { queryTransactions, events } = await makeEngine(chain)
+
+    await queryTransactions()
+
+    // A receive now enters the store while pending; the base checkpoint math
+    // alone would report isNew false forever (checkpoint '0', then the
+    // confirmation takes the update path):
+    const p1Event = events.find(e => e.transaction.txid === 'p1')
+    assert.equal(p1Event?.isNew, true)
+  })
+
+  it('heals stuck-pending txs behind a healed anchor', async function () {
+    const chain: FakeChain = {
+      confirmed: [],
+      pending: []
+    }
+    const { queryTransactions, storedTx, engine } = await makeEngine(chain)
+
+    // Old-code migration state: two receives stored while pending, with the
+    // newer one recorded as the scan anchor.
+    ;(engine as any).txSortOrder = 'desc'
+    ;(engine as any).processTransaction(makeTx('x1', null))
+    ;(engine as any).processTransaction(makeTx('x2', null))
+    engine.otherData.mostRecentTxid = 'x1'
+
+    // Both have long since confirmed on-chain:
+    chain.confirmed.push(makeTx('x2', 105), makeTx('x1', 106))
+    await queryTransactions()
+
+    assert.equal(storedTx('x1')?.blockHeight, 106)
+    // The scan continued past the healed anchor and repaired the older one:
+    assert.equal(storedTx('x2')?.blockHeight, 105)
+  })
+
+  it('does not count time while the engine was stopped toward the drop grace', async function () {
+    const chain: FakeChain = {
+      confirmed: [makeTx('c1', 100)],
+      pending: []
+    }
+    const { queryTransactions, storedTx, engine } = await makeEngine(chain)
+
+    // Persisted state from a previous session: a tx stored pending whose watch
+    // stamp is far older than the grace (the app was closed meanwhile).
+    ;(engine as any).txSortOrder = 'desc'
+    ;(engine as any).processTransaction(makeTx('z1', null))
+    engine.otherData.pendingTxSeen = {
+      z1: Date.now() - DROPPED_TX_GRACE_MS - 60000
+    }
+
+    await queryTransactions()
+
+    // First pass of the session restarts the clock instead of dropping:
+    assert.equal(storedTx('z1')?.blockHeight, 0)
+    assert.notEqual(storedTx('z1')?.confirmations, 'dropped')
+  })
+
+  it('ignores passes after killEngine', async function () {
+    const chain: FakeChain = {
+      confirmed: [makeTx('c1', 100)],
+      pending: []
+    }
+    const { queryTransactions, storedTx, engine } = await makeEngine(chain)
+    await queryTransactions()
+    assert.equal(storedTx('c1')?.blockHeight, 100)
+
+    await engine.killEngine()
+
+    chain.confirmed.push(makeTx('c2', 101))
+    await queryTransactions()
+
+    // The stopped engine does not ingest (a queued stale pass cannot write
+    // into freshly wiped state after a resync):
+    assert.isUndefined(storedTx('c2'))
   })
 
   it('does not emit change events when re-processing an unchanged pending tx', async function () {
