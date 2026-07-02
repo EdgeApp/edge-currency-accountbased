@@ -1,5 +1,5 @@
 import { add, eq, gt, lt, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asMaybe, asNumber } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -23,7 +23,12 @@ import {
   LifecycleManager,
   makeLifecycleManager
 } from '../common/lifecycleManager'
-import { cleanTxLogs, makeEngineFetch, matchJson } from '../common/utils'
+import {
+  cleanTxLogs,
+  makeEngineFetch,
+  matchJson,
+  normalizeAddress
+} from '../common/utils'
 import {
   makeWeightedSyncTracker,
   WeightedSyncTracker
@@ -463,18 +468,15 @@ export class MoneroEngine extends CurrencyEngine<
 
     try {
       if (this.txSortOrder === 'asc') {
-        const shouldSendEvents = await this.queryTransactionsAsc(
-          nativeWalletId,
-          PAGE_SIZE
-        )
-        if (!shouldSendEvents) {
-          return
-        }
-        this.sendTransactionEvents()
-        return
+        await this.queryTransactionsAsc(nativeWalletId, PAGE_SIZE)
+      } else {
+        await this.queryTransactionsDesc(nativeWalletId, PAGE_SIZE)
       }
 
-      await this.queryTransactionsDesc(nativeWalletId, PAGE_SIZE)
+      // Pending transactions live outside the cursor protocol above: they sort
+      // behind all confirmed history, so neither scan reaches them. Process
+      // them on every pass so they appear before their first confirmation.
+      await this.queryPendingTransactions(nativeWalletId, PAGE_SIZE)
 
       this.sendTransactionEvents()
     } catch (error: unknown) {
@@ -482,10 +484,38 @@ export class MoneroEngine extends CurrencyEngine<
     }
   }
 
+  /** Look up the engine's stored copy of a transaction, if any. */
+  private storedTransaction(txid: string): EdgeTransaction | undefined {
+    const idx = this.findTransaction(null, normalizeAddress(txid))
+    if (idx < 0) return undefined
+    return this.transactionList['']?.[idx]
+  }
+
+  // Read the pending set directly and process every entry (addTransaction
+  // ignores unchanged data).
+  private async queryPendingTransactions(
+    nativeWalletId: string,
+    pageSize: number
+  ): Promise<void> {
+    let page = 0
+    while (true) {
+      const txPage = await this.tools.cppBridge.getPendingTransactions(
+        nativeWalletId,
+        page,
+        pageSize
+      )
+      for (const tx of txPage.transactions) {
+        this.processTransaction(tx)
+      }
+      if ((page + 1) * pageSize >= txPage.totalCount) break
+      page++
+    }
+  }
+
   private async queryTransactionsAsc(
     nativeWalletId: string,
     pageSize: number
-  ): Promise<boolean> {
+  ): Promise<void> {
     const startPage = Math.floor(
       this.otherData.processedTransactionCount / pageSize
     )
@@ -500,7 +530,7 @@ export class MoneroEngine extends CurrencyEngine<
     if (txPage.totalCount === 0) {
       // No history to backfill, so treat the ascending pass as complete:
       this.txSortOrder = 'desc'
-      return false
+      return
     }
 
     const onPageBoundary =
@@ -513,6 +543,10 @@ export class MoneroEngine extends CurrencyEngine<
         }
         continue
       }
+      // Pending rows are handled by queryPendingTransactions and must never
+      // become the cursor anchor: only a confirmed transaction is immutable,
+      // so only a confirmed hash can safely mark where the scan left off.
+      if (tx.isPending) continue
       this.processTransaction(tx)
       this.otherData.mostRecentTxid = tx.hash
     }
@@ -528,8 +562,6 @@ export class MoneroEngine extends CurrencyEngine<
     if (this.otherData.processedTransactionCount >= txPage.totalCount) {
       this.txSortOrder = 'desc'
     }
-
-    return true
   }
 
   private async queryTransactionsDesc(
@@ -548,15 +580,30 @@ export class MoneroEngine extends CurrencyEngine<
         'desc'
       )
 
-      if (page === 0 && txPage.transactions.length > 0) {
-        newestTxid = txPage.transactions[0].hash
+      if (page === 0) {
+        // Anchor only on a confirmed transaction: a pending hash recorded here
+        // would match this same tx after it confirms and stop the scan from
+        // ever re-processing it with its block height.
+        newestTxid = txPage.transactions.find(tx => !tx.isPending)?.hash
       }
 
       for (const tx of txPage.transactions) {
         if (tx.hash === this.otherData.mostRecentTxid) {
+          // Heal a stale stored copy before stopping: if the anchor tx is
+          // confirmed on-chain but our copy never saw the confirmation (a
+          // cursor recorded while the tx was still pending), process it once
+          // more so it stops displaying as unconfirmed.
+          if (!tx.isPending) {
+            const stored = this.storedTransaction(tx.hash)
+            if (stored == null || stored.blockHeight < 1) {
+              this.processTransaction(tx)
+            }
+          }
           foundKnownTx = true
           break
         }
+        // Pending rows are handled by queryPendingTransactions:
+        if (tx.isPending) continue
         this.processTransaction(tx)
       }
 
@@ -645,7 +692,16 @@ export class MoneroEngine extends CurrencyEngine<
       edgeTransaction.confirmations = 'failed'
     }
 
-    this.addTransaction(null, edgeTransaction)
+    if (tx.isPending) {
+      // Pending txs are re-processed on every pass. Without a lastSeenTime the
+      // base engine stamps a fresh one on each add, which reads as a change
+      // and emits a spurious update event per poll — keep the first-seen time.
+      const stored = this.storedTransaction(tx.hash)
+      const lastSeenTime = asMaybe(asNumber)(stored?.otherParams?.lastSeenTime)
+      this.addTransaction(null, edgeTransaction, lastSeenTime)
+    } else {
+      this.addTransaction(null, edgeTransaction)
+    }
   }
 
   async killEngine(): Promise<void> {
