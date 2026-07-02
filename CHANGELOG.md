@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (Monero) Mark transactions that leave the mempool without confirming as dropped, instead of leaving them displayed as unconfirmed forever. A tx must stay missing for 30 minutes before it is declared dropped, since a just-mined tx briefly disappears from both the mempool and confirmed history while the LWS server indexes its block.
 - fixed: (Hedera) HBAR sends failed with an "[object Object]" error. The npm conversion re-resolved `@hashgraph/sdk` to 2.81, whose account-ID serialization calls `Long.fromBigInt` — a method missing from the pinned `long@4.0.0` override. Bump the `long` override to the `5.3.1` the SDK declares so transactions serialize, sign, and broadcast.
 - fixed: (Monero) Pending (unconfirmed) transactions now appear in the transaction list as soon as the wallet sees them, instead of only after their first confirmation. Pending entries sort behind all confirmed history in the native transaction list, so the newest-known-txid history scan never reached them — on LWS the balance would move with no transaction row to explain it. Requires react-native-monero with `getPendingTransactions`.
 - fixed: (Monero) Repair transactions stuck displaying as unconfirmed because the history-scan cursor was recorded while they were still pending.

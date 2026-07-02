@@ -165,7 +165,15 @@ export function translateFee(fee?: string): TransactionPriority {
 
 export const asMoneroWalletOtherData = asObject({
   processedTransactionCount: asMaybe(asNumber, 0),
-  mostRecentTxid: asMaybe(asString)
+  mostRecentTxid: asMaybe(asString),
+  // Last time (ms) each pool txid was seen in the pending set, so a tx that
+  // stays missing without ever confirming can be marked dropped. Absence alone
+  // is not enough: a just-mined tx briefly vanishes from both the pending set
+  // and the confirmed list while the LWS server indexes its block.
+  pendingTxSeen: asMaybe(
+    asObject(asNumber),
+    (): { [txid: string]: number } => ({})
+  )
 })
 export type MoneroWalletOtherData = ReturnType<typeof asMoneroWalletOtherData>
 
