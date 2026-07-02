@@ -9,7 +9,10 @@ import { describe, it } from 'mocha'
 import type { TransactionInfo, TransactionsPage } from 'react-native-monero'
 
 import { PluginEnvironment } from '../../src/common/innerPlugin'
-import { MoneroEngine } from '../../src/monero/MoneroEngine'
+import {
+  DROPPED_TX_GRACE_MS,
+  MoneroEngine
+} from '../../src/monero/MoneroEngine'
 import { currencyInfo } from '../../src/monero/moneroInfo'
 import { MoneroTools } from '../../src/monero/MoneroTools'
 import {
@@ -27,6 +30,10 @@ const PENDING_HEIGHT_SENTINEL = 18446744073709552000
 interface FakeChain {
   confirmed: TransactionInfo[]
   pending: TransactionInfo[]
+  // Called after each getPendingTransactions snapshots its page (so mutations
+  // affect the next pass, not this one). Used to simulate an event arriving
+  // mid-pass.
+  onPendingQuery?: () => Promise<void>
 }
 
 function makeTx(hash: string, blockHeight: number | null): TransactionInfo {
@@ -86,7 +93,9 @@ function makeFakeBridge(chain: FakeChain): unknown {
       page: number,
       pageSize: number
     ): Promise<TransactionsPage> {
-      return pageOf(chain.pending, page, pageSize)
+      const result = pageOf(chain.pending, page, pageSize)
+      if (chain.onPendingQuery != null) await chain.onPendingQuery()
+      return result
     }
   }
 }
@@ -248,6 +257,133 @@ describe('MoneroEngine pending transactions', function () {
     await queryTransactions()
 
     assert.equal(storedTx('x1')?.blockHeight, 105)
+  })
+
+  it('marks a tx dropped only after a sustained absence from the pool', async function () {
+    const chain: FakeChain = {
+      confirmed: [makeTx('c1', 100)],
+      pending: [makeTx('p1', null)]
+    }
+    const { queryTransactions, storedTx, engine } = await makeEngine(chain)
+    await queryTransactions()
+    assert.hasAllKeys(engine.otherData.pendingTxSeen, ['p1'])
+
+    // The tx leaves the pool. Within the grace window nothing changes — this
+    // is also what a just-mined tx looks like before the server indexes it:
+    chain.pending = []
+    await queryTransactions()
+    assert.equal(storedTx('p1')?.blockHeight, 0)
+
+    // Still missing once the grace window has passed: dropped.
+    engine.otherData.pendingTxSeen.p1 = Date.now() - DROPPED_TX_GRACE_MS - 1
+    await queryTransactions()
+
+    assert.equal(storedTx('p1')?.blockHeight, -1)
+    assert.deepEqual(engine.otherData.pendingTxSeen, {})
+  })
+
+  it('does not relabel a failed tx as dropped when it leaves the pool', async function () {
+    const chain: FakeChain = {
+      confirmed: [makeTx('c1', 100)],
+      pending: [{ ...makeTx('f1', null), isFailed: true }]
+    }
+    const { queryTransactions, storedTx, engine } = await makeEngine(chain)
+    await queryTransactions()
+    assert.equal(storedTx('f1')?.confirmations, 'failed')
+
+    // The failed tx leaves the pool and stays gone past the grace window:
+    chain.pending = []
+    engine.otherData.pendingTxSeen.f1 = Date.now() - DROPPED_TX_GRACE_MS - 1
+    await queryTransactions()
+
+    // Still 'failed', not relabeled 'dropped', and no longer watched:
+    assert.equal(storedTx('f1')?.confirmations, 'failed')
+    assert.equal(storedTx('f1')?.blockHeight, 0)
+    assert.deepEqual(engine.otherData.pendingTxSeen, {})
+  })
+
+  it('confirms (not drops) a tx that reappears confirmed after briefly vanishing', async function () {
+    const chain: FakeChain = {
+      confirmed: [makeTx('c1', 100)],
+      pending: [makeTx('p1', null)]
+    }
+    const { queryTransactions, storedTx, engine } = await makeEngine(chain)
+    await queryTransactions()
+
+    // Mined: gone from the pool, but not yet indexed as confirmed.
+    chain.pending = []
+    await queryTransactions()
+    assert.equal(storedTx('p1')?.blockHeight, 0)
+
+    // The server indexes the block:
+    chain.confirmed.push(makeTx('p1', 102))
+    await queryTransactions()
+
+    assert.equal(storedTx('p1')?.blockHeight, 102)
+    assert.deepEqual(engine.otherData.pendingTxSeen, {})
+  })
+
+  it('re-runs instead of dropping a call that arrives mid-pass', async function () {
+    const chain: FakeChain = {
+      confirmed: [makeTx('c1', 100)],
+      pending: []
+    }
+    const { engine, queryTransactions, storedTx } = await makeEngine(chain)
+
+    let fired = false
+    let storedWhenInnerResolved: EdgeTransaction | undefined
+    let innerCall: Promise<void> = Promise.resolve()
+    chain.onPendingQuery = async () => {
+      if (fired) return
+      fired = true
+      // A pending tx arrives after this pass already snapshotted an empty
+      // pool, and the event fires a second query while the first is still in
+      // flight. The call must coalesce into a re-run rather than run
+      // concurrently or be dropped, and its promise must not resolve until
+      // that re-run has ingested the new tx.
+      chain.pending.push(makeTx('p1', null))
+      innerCall = (
+        (engine as any).queryTransactions(WALLET_ID) as Promise<void>
+      ).then(() => {
+        storedWhenInnerResolved = storedTx('p1')
+      })
+    }
+
+    await queryTransactions()
+    await innerCall
+
+    // The coalesced re-run picked up the tx that arrived mid-pass, instead of
+    // leaving it invisible until the next sync poll:
+    assert.equal(storedTx('p1')?.blockHeight, 0)
+    // And the coalesced caller's promise did not resolve early — the tx was
+    // already stored by the time it settled:
+    assert.equal(storedWhenInnerResolved?.blockHeight, 0)
+  })
+
+  it('still honors a queued call when the in-flight pass throws', async function () {
+    const chain: FakeChain = {
+      confirmed: [makeTx('c1', 100)],
+      pending: []
+    }
+    const { engine, queryTransactions, storedTx } = await makeEngine(chain)
+
+    let fired = false
+    let innerCall: Promise<void> = Promise.resolve()
+    chain.onPendingQuery = async () => {
+      if (fired) return
+      fired = true
+      // A call arrives mid-pass, and then the in-flight pass itself fails:
+      chain.pending.push(makeTx('p1', null))
+      innerCall = (engine as any).queryTransactions(WALLET_ID) as Promise<void>
+      throw new Error('bridge exploded')
+    }
+
+    await queryTransactions()
+    await innerCall
+
+    // The queued re-run still ran after the error and picked up the tx,
+    // instead of the error exiting the loop and stranding the queued caller:
+    assert.equal(storedTx('p1')?.blockHeight, 0)
   })
 
   it('does not emit change events when re-processing an unchanged pending tx', async function () {

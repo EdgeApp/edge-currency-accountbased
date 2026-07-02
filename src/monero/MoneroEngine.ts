@@ -60,6 +60,10 @@ const SYNC_POLL_MS = 1000 // actively syncing / backfilling
 const SYNCED_POLL_MS = 20000 // caught up to chain tip
 const ERROR_POLL_MS = 5000 // back off after a sync error
 
+// How long a formerly-pending tx must stay missing (from both the pending set
+// and confirmed history) before it is considered evicted from the pool:
+export const DROPPED_TX_GRACE_MS = 30 * 60 * 1000
+
 /**
  * Converts an Edge walletId (standard base64) into the form the native monero
  * layer expects. The native code embeds the id in a filesystem path and rejects
@@ -85,6 +89,8 @@ export class MoneroEngine extends CurrencyEngine<
   private sendKeysToNative?: (keys: MoneroPrivateKeys) => void
   private syncStartHeight: number | undefined
   private txSortOrder: 'asc' | 'desc' = 'asc'
+  private queryTransactionsRun: Promise<void> | undefined
+  private queryTransactionsQueued = false
   private unsubscribeWalletEvent?: () => void
   private unsubscribeNymFetch?: () => Promise<void>
   private abortKeysWait?: () => void
@@ -466,22 +472,53 @@ export class MoneroEngine extends CurrencyEngine<
   private async queryTransactions(nativeWalletId: string): Promise<void> {
     const PAGE_SIZE = 50
 
-    try {
-      if (this.txSortOrder === 'asc') {
-        await this.queryTransactionsAsc(nativeWalletId, PAGE_SIZE)
-      } else {
-        await this.queryTransactionsDesc(nativeWalletId, PAGE_SIZE)
-      }
-
-      // Pending transactions live outside the cursor protocol above: they sort
-      // behind all confirmed history, so neither scan reaches them. Process
-      // them on every pass so they appear before their first confirmation.
-      await this.queryPendingTransactions(nativeWalletId, PAGE_SIZE)
-
-      this.sendTransactionEvents()
-    } catch (error: unknown) {
-      this.log.error(`queryTransactions error: ${String(error)}`)
+    // The sync poll and the pendingTransactionReceived event can both call
+    // this; interleaved passes would race the scan cursor and the pending
+    // diff. A call that arrives mid-pass flags one coalesced re-run and awaits
+    // the in-flight run, whose promise only settles once the re-run queue has
+    // drained — so every caller's promise covers a pass that started at or
+    // after its call, and chained work (the event handler's balance refresh,
+    // syncNetwork's backfill pacing) never runs against a half-finished pass.
+    if (this.queryTransactionsRun != null) {
+      this.queryTransactionsQueued = true
+      return await this.queryTransactionsRun
     }
+
+    const run = (async () => {
+      try {
+        do {
+          this.queryTransactionsQueued = false
+
+          try {
+            if (this.txSortOrder === 'asc') {
+              await this.queryTransactionsAsc(nativeWalletId, PAGE_SIZE)
+            } else {
+              await this.queryTransactionsDesc(nativeWalletId, PAGE_SIZE)
+            }
+
+            // Pending transactions live outside the cursor protocol above:
+            // they sort behind all confirmed history, so neither scan reaches
+            // them. Process them on every pass so they appear before their
+            // first confirmation.
+            await this.queryPendingTransactions(nativeWalletId, PAGE_SIZE)
+
+            this.sendTransactionEvents()
+          } catch (error: unknown) {
+            // Log and keep looping: if another call arrived mid-pass, the
+            // loop still owes it a full pass — exiting here would silently
+            // skip that caller's trigger until the next sync poll. The loop
+            // stays bounded: a re-run only happens when a new call arrived
+            // during the failing pass.
+            this.log.error(`queryTransactions error: ${String(error)}`)
+          }
+        } while (this.queryTransactionsQueued)
+      } finally {
+        this.queryTransactionsRun = undefined
+      }
+    })()
+
+    this.queryTransactionsRun = run
+    return await run
   }
 
   /** Look up the engine's stored copy of a transaction, if any. */
@@ -492,11 +529,20 @@ export class MoneroEngine extends CurrencyEngine<
   }
 
   // Read the pending set directly and process every entry (addTransaction
-  // ignores unchanged data).
+  // ignores unchanged data). Anything that stays gone from the pool without
+  // ever gaining a block height was evicted (never mined): mark it dropped.
+  // The confirmed scan runs first, so a confirmation has already updated the
+  // stored copy by the time the drop check runs. Absence alone is NOT enough
+  // to declare a drop: a just-mined tx leaves the pool immediately but only
+  // shows up as confirmed once the LWS server has indexed its block, so a tx
+  // must stay missing for DROPPED_TX_GRACE_MS first. Real pool evictions take
+  // hours to days, so the grace does not meaningfully delay them.
   private async queryPendingTransactions(
     nativeWalletId: string,
     pageSize: number
   ): Promise<void> {
+    const now = Date.now()
+    const seen = new Set<string>()
     let page = 0
     while (true) {
       const txPage = await this.tools.cppBridge.getPendingTransactions(
@@ -505,10 +551,45 @@ export class MoneroEngine extends CurrencyEngine<
         pageSize
       )
       for (const tx of txPage.transactions) {
+        seen.add(tx.hash)
         this.processTransaction(tx)
       }
       if ((page + 1) * pageSize >= txPage.totalCount) break
       page++
+    }
+
+    // Rebuild the watch map: entries seen right now, plus absent-but-graced
+    // entries. Resolved (confirmed/dropped) entries are simply not carried.
+    const pendingTxSeen: { [txid: string]: number } = {}
+    for (const txid of seen) pendingTxSeen[txid] = now
+
+    for (const [txid, lastSeenMs] of Object.entries(
+      this.otherData.pendingTxSeen
+    )) {
+      if (seen.has(txid)) continue
+      const stored = this.storedTransaction(txid)
+      // Stop watching entries that resolved (confirmed or already dropped):
+      if (stored == null || stored.blockHeight !== 0) continue
+      // 'failed' is already a terminal state (a spend the backend reported as
+      // failed); leaving the pool is expected — don't relabel it as dropped:
+      if (stored.confirmations === 'failed') continue
+      if (now - lastSeenMs < DROPPED_TX_GRACE_MS) {
+        // Still within the grace window: keep watching.
+        pendingTxSeen[txid] = lastSeenMs
+        continue
+      }
+      // Set 'dropped' explicitly: the base engine clamps negative block
+      // heights to 0 unless confirmations is already a terminal state.
+      this.addTransaction(null, {
+        ...stored,
+        blockHeight: -1,
+        confirmations: 'dropped'
+      })
+    }
+
+    if (!matchJson(this.otherData.pendingTxSeen, pendingTxSeen)) {
+      this.otherData.pendingTxSeen = pendingTxSeen
+      this.walletLocalDataDirty = true
     }
   }
 
