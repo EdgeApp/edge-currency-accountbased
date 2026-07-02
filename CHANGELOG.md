@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (Monero) Pending (unconfirmed) transactions now appear in the transaction list as soon as the wallet sees them, instead of only after their first confirmation. Pending entries sort behind all confirmed history in the native transaction list, so the newest-known-txid history scan never reached them — on LWS the balance would move with no transaction row to explain it. Requires react-native-monero with `getPendingTransactions`.
+- fixed: (Monero) Repair transactions stuck displaying as unconfirmed because the history-scan cursor was recorded while they were still pending.
+
 ## 4.85.0 (2026-06-29)
 
 - changed: (Monero, Zano) Report sync progress at least once a second while it is still advancing, so a slow chain shows steady movement instead of appearing frozen between whole-percent updates.
