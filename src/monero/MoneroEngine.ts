@@ -1,5 +1,5 @@
 import { add, eq, gt, lt, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asMaybe, asNumber } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -23,7 +23,13 @@ import {
   LifecycleManager,
   makeLifecycleManager
 } from '../common/lifecycleManager'
-import { cleanTxLogs, makeEngineFetch, matchJson } from '../common/utils'
+import {
+  cleanTxLogs,
+  makeEngineFetch,
+  makeMutex,
+  matchJson,
+  normalizeAddress
+} from '../common/utils'
 import {
   makeWeightedSyncTracker,
   WeightedSyncTracker
@@ -55,6 +61,29 @@ const SYNC_POLL_MS = 1000 // actively syncing / backfilling
 const SYNCED_POLL_MS = 20000 // caught up to chain tip
 const ERROR_POLL_MS = 5000 // back off after a sync error
 
+// How long a formerly-pending tx must stay missing (from both the pending set
+// and confirmed history) before it is considered evicted from the pool:
+export const DROPPED_TX_GRACE_MS = 30 * 60 * 1000
+
+// Accept a lower reported network height only when it regresses by more than
+// this many blocks. Small dips (a load-balanced daemon a block behind, lwsf
+// reporting the stored scan height until its first refresh) are smoothed so
+// confirmation counts do not bounce, while a large regression is taken as a
+// correction so one garbage reading cannot ratchet the stored height forever:
+const HEIGHT_REGRESSION_BOUND = 1000
+
+// How often to refresh the pool-watch stamp of a tx that is still in the pool.
+// Millisecond freshness buys nothing against a 30-minute grace, and a fresh
+// stamp every pass would rewrite walletLocalData on every save loop:
+const PENDING_SEEN_REFRESH_MS = 5 * 60 * 1000
+
+// How often to refresh a still-pending tx's otherParams.lastSeenTime (seconds).
+// The base engine independently drops an unconfirmed tx once that stamp is
+// older than 24 hours, and a pool residence can outlast that (monerod keeps
+// transactions for around three days), so it must be refreshed periodically;
+// hourly keeps the refresh-triggered change events negligible:
+const LAST_SEEN_REFRESH_S = 60 * 60
+
 /**
  * Converts an Edge walletId (standard base64) into the form the native monero
  * layer expects. The native code embeds the id in a filesystem path and rejects
@@ -80,6 +109,8 @@ export class MoneroEngine extends CurrencyEngine<
   private sendKeysToNative?: (keys: MoneroPrivateKeys) => void
   private syncStartHeight: number | undefined
   private txSortOrder: 'asc' | 'desc' = 'asc'
+  private readonly queryTxMutex = makeMutex()
+  private pendingSeenReset = false
   private unsubscribeWalletEvent?: () => void
   private unsubscribeNymFetch?: () => Promise<void>
   private abortKeysWait?: () => void
@@ -390,7 +421,20 @@ export class MoneroEngine extends CurrencyEngine<
         return SYNC_POLL_MS
       }
 
-      this.updateBlockHeight(status.networkHeight)
+      // Smooth small height regressions: lwsf reports the stored account scan
+      // height until its first refresh completes, a load-balanced daemon can
+      // answer a block behind the previous poll, and the base engine re-stamps
+      // every tx's confirmation count on ANY height change, so honoring those
+      // dips makes displayed confirmations bounce. A large regression is
+      // accepted as a correction, so one garbage or wrong-chain reading cannot
+      // ratchet the stored height forever.
+      const storedHeight = this.walletLocalData.blockHeight
+      const networkHeight =
+        status.networkHeight >= storedHeight ||
+        storedHeight - status.networkHeight > HEIGHT_REGRESSION_BOUND
+          ? status.networkHeight
+          : storedHeight
+      this.updateBlockHeight(networkHeight)
 
       // Refresh the balance on every poll, not only once fully synced, so a
       // pending incoming tx or the pending change after a send is reflected
@@ -459,33 +503,167 @@ export class MoneroEngine extends CurrencyEngine<
   }
 
   private async queryTransactions(nativeWalletId: string): Promise<void> {
-    const PAGE_SIZE = 50
+    // Serialize passes with the fleet-standard mutex (Tron, Polkadot, and
+    // Algorand guard queryTransactions the same way): the sync poll and the
+    // pendingTransactionReceived event can both call this, and interleaved
+    // passes would race the scan cursor and the pending diff. A caller queued
+    // behind an in-flight pass runs its own full pass afterwards, so every
+    // caller's promise covers a pass that started at or after its call, even
+    // when an earlier pass throws.
+    return await this.queryTxMutex(async () => {
+      const PAGE_SIZE = 50
 
-    try {
-      if (this.txSortOrder === 'asc') {
-        const shouldSendEvents = await this.queryTransactionsAsc(
-          nativeWalletId,
-          PAGE_SIZE
-        )
-        if (!shouldSendEvents) {
-          return
+      // A queued caller can land here after killEngine (a settings change or
+      // resync wipes the state next); do not write into the fresh state.
+      if (!this.engineOn) return
+
+      try {
+        // The pending diff, cursor healing, and lastSeenTime preservation all
+        // consult the in-memory transaction list, which loadEngine only loads
+        // eagerly on a first-ever sync. Load it on warm launches too
+        // (idempotent after the first call):
+        await this.loadTransactions()
+
+        if (this.txSortOrder === 'asc') {
+          await this.queryTransactionsAsc(nativeWalletId, PAGE_SIZE)
+        } else {
+          await this.queryTransactionsDesc(nativeWalletId, PAGE_SIZE)
         }
+
+        // Bail between stages when the engine stopped mid-pass, to shorten
+        // the tail of writes killEngine's drain has to wait out:
+        if (!this.engineOn) return
+
+        // Pending transactions live outside the cursor protocol above: they
+        // sort behind all confirmed history, so neither scan reaches them.
+        // Process them on every pass so they appear before their first
+        // confirmation.
+        await this.queryPendingTransactions(nativeWalletId, PAGE_SIZE)
+      } catch (error: unknown) {
+        this.log.error(`queryTransactions error: ${String(error)}`)
+      } finally {
+        // Flush events even when a later stage failed, so confirmed txs the
+        // scans already processed are not buffered until the next block:
         this.sendTransactionEvents()
-        return
       }
+    })
+  }
 
-      await this.queryTransactionsDesc(nativeWalletId, PAGE_SIZE)
+  /** Look up the engine's stored copy of a transaction, if any. */
+  private storedTransaction(txid: string): EdgeTransaction | undefined {
+    const idx = this.findTransaction(null, normalizeAddress(txid))
+    if (idx < 0) return undefined
+    return this.transactionList['']?.[idx]
+  }
 
-      this.sendTransactionEvents()
-    } catch (error: unknown) {
-      this.log.error(`queryTransactions error: ${String(error)}`)
+  // Read the pending set directly and process every entry (addTransaction
+  // ignores unchanged data). Anything that stays gone from the pool without
+  // ever gaining a block height was evicted (never mined): mark it dropped.
+  // The confirmed scan runs first, so a confirmation has already updated the
+  // stored copy by the time the drop check runs. Absence alone is NOT enough
+  // to declare a drop: a just-mined tx leaves the pool immediately but only
+  // shows up as confirmed once the LWS server has indexed its block, so a tx
+  // must stay missing for DROPPED_TX_GRACE_MS first. Real pool evictions take
+  // hours to days, so the grace does not meaningfully delay them.
+  private async queryPendingTransactions(
+    nativeWalletId: string,
+    pageSize: number
+  ): Promise<void> {
+    const now = Date.now()
+
+    // Time while the engine was not running must not count toward the
+    // eviction grace: a tx can confirm or leave the pool while the app is
+    // closed, and the relaunch backfill has not caught up yet. Restart each
+    // surviving watch entry's clock once per engine session.
+    if (!this.pendingSeenReset) {
+      this.pendingSeenReset = true
+      const txids = Object.keys(this.otherData.pendingTxSeen)
+      if (txids.length > 0) {
+        const reset: { [txid: string]: number } = {}
+        for (const txid of txids) reset[txid] = now
+        this.otherData.pendingTxSeen = reset
+        this.walletLocalDataDirty = true
+      }
+    }
+
+    const seen = new Set<string>()
+    let page = 0
+    while (true) {
+      const txPage = await this.tools.cppBridge.getPendingTransactions(
+        nativeWalletId,
+        page,
+        pageSize
+      )
+      for (const tx of txPage.transactions) {
+        seen.add(tx.hash)
+        this.processTransaction(tx)
+      }
+      // The short/empty-page check is insurance against a native totalCount
+      // that disagrees with the page contents:
+      if (
+        txPage.transactions.length < pageSize ||
+        (page + 1) * pageSize >= txPage.totalCount
+      ) {
+        break
+      }
+      page++
+    }
+
+    // Rebuild the watch map: entries seen right now, plus absent-but-graced
+    // entries. Resolved (confirmed/dropped) entries are simply not carried.
+    const pendingTxSeen: { [txid: string]: number } = {}
+    for (const txid of seen) {
+      // Refresh a still-pending entry's stamp only periodically, so
+      // steady-state passes leave otherData byte-identical instead of
+      // rewriting walletLocalData on every save loop:
+      const prev = this.otherData.pendingTxSeen[txid]
+      pendingTxSeen[txid] =
+        prev != null && now - prev < PENDING_SEEN_REFRESH_MS ? prev : now
+    }
+
+    for (const [txid, lastSeenMs] of Object.entries(
+      this.otherData.pendingTxSeen
+    )) {
+      if (seen.has(txid)) continue
+      const stored = this.storedTransaction(txid)
+      // Stop watching entries that resolved (confirmed or already dropped):
+      if (stored == null || stored.blockHeight !== 0) continue
+      // 'failed' is already a terminal state (a spend the backend reported as
+      // failed); leaving the pool is expected, so don't relabel it as dropped:
+      if (stored.confirmations === 'failed') continue
+      if (
+        now - lastSeenMs < DROPPED_TX_GRACE_MS ||
+        // Only declare drops once the backfill has completed a full confirmed
+        // scan; during 'asc' the confirmed copy may simply not be ingested
+        // yet:
+        this.txSortOrder !== 'desc'
+      ) {
+        // Still within the grace window (or unable to judge): keep watching.
+        pendingTxSeen[txid] = lastSeenMs
+        continue
+      }
+      // Set 'dropped' explicitly: the base engine clamps negative block
+      // heights to 0 unless confirmations is already a terminal state. Spread
+      // otherParams too: addTransaction stamps lastSeenTime through it, and a
+      // shared reference would silently rewrite the stored entry's stamp.
+      this.addTransaction(null, {
+        ...stored,
+        otherParams: { ...stored.otherParams },
+        blockHeight: -1,
+        confirmations: 'dropped'
+      })
+    }
+
+    if (!matchJson(this.otherData.pendingTxSeen, pendingTxSeen)) {
+      this.otherData.pendingTxSeen = pendingTxSeen
+      this.walletLocalDataDirty = true
     }
   }
 
   private async queryTransactionsAsc(
     nativeWalletId: string,
     pageSize: number
-  ): Promise<boolean> {
+  ): Promise<void> {
     const startPage = Math.floor(
       this.otherData.processedTransactionCount / pageSize
     )
@@ -500,7 +678,7 @@ export class MoneroEngine extends CurrencyEngine<
     if (txPage.totalCount === 0) {
       // No history to backfill, so treat the ascending pass as complete:
       this.txSortOrder = 'desc'
-      return false
+      return
     }
 
     const onPageBoundary =
@@ -513,6 +691,10 @@ export class MoneroEngine extends CurrencyEngine<
         }
         continue
       }
+      // Pending rows are handled by queryPendingTransactions and must never
+      // become the cursor anchor: only a confirmed transaction is immutable,
+      // so only a confirmed hash can safely mark where the scan left off.
+      if (tx.isPending) continue
       this.processTransaction(tx)
       this.otherData.mostRecentTxid = tx.hash
     }
@@ -528,8 +710,6 @@ export class MoneroEngine extends CurrencyEngine<
     if (this.otherData.processedTransactionCount >= txPage.totalCount) {
       this.txSortOrder = 'desc'
     }
-
-    return true
   }
 
   private async queryTransactionsDesc(
@@ -538,6 +718,7 @@ export class MoneroEngine extends CurrencyEngine<
   ): Promise<void> {
     let page = 0
     let foundKnownTx = false
+    let healSweep = false
     let newestTxid: string | undefined
 
     while (!foundKnownTx) {
@@ -548,14 +729,39 @@ export class MoneroEngine extends CurrencyEngine<
         'desc'
       )
 
-      if (page === 0 && txPage.transactions.length > 0) {
-        newestTxid = txPage.transactions[0].hash
+      if (page === 0) {
+        // Anchor only on a confirmed transaction: a pending hash recorded here
+        // would match this same tx after it confirms and stop the scan from
+        // ever re-processing it with its block height.
+        newestTxid = txPage.transactions.find(tx => !tx.isPending)?.hash
       }
 
       for (const tx of txPage.transactions) {
-        if (tx.hash === this.otherData.mostRecentTxid) {
+        if (!healSweep && tx.hash === this.otherData.mostRecentTxid) {
+          // Heal a stale stored copy before stopping: if the anchor tx is
+          // confirmed on-chain but our copy never saw the confirmation (a
+          // cursor recorded while the tx was still pending), process it once
+          // more so it stops displaying as unconfirmed. The same old-code
+          // migration can have left more stuck-pending txs behind the anchor,
+          // so when the anchor itself needed healing, walk the rest of the
+          // history once, re-processing only rows whose stored copy is still
+          // missing its height.
+          if (!tx.isPending) {
+            const stored = this.storedTransaction(tx.hash)
+            if (stored == null || stored.blockHeight < 1) {
+              this.processTransaction(tx)
+              healSweep = true
+              continue
+            }
+          }
           foundKnownTx = true
           break
+        }
+        // Pending rows are handled by queryPendingTransactions:
+        if (tx.isPending) continue
+        if (healSweep) {
+          const stored = this.storedTransaction(tx.hash)
+          if (stored != null && stored.blockHeight >= 1) continue
         }
         this.processTransaction(tx)
       }
@@ -645,17 +851,60 @@ export class MoneroEngine extends CurrencyEngine<
       edgeTransaction.confirmations = 'failed'
     }
 
-    this.addTransaction(null, edgeTransaction)
+    if (tx.isPending) {
+      // Pending txs are re-processed on every pass. Without a lastSeenTime the
+      // base engine stamps a fresh one on each add, which reads as a change
+      // and emits a spurious update event per poll, so keep the prior stamp
+      // while it is fresh. Refresh it hourly though (undefined lets the base
+      // stamp now): the base engine independently drops an unconfirmed tx once
+      // the stamp is older than 24 hours, and a pool residence can outlast
+      // that.
+      const stored = this.storedTransaction(tx.hash)
+      const prior = asMaybe(asNumber)(stored?.otherParams?.lastSeenTime)
+      const nowSeconds = Math.round(Date.now() / 1000)
+      const lastSeenTime =
+        prior != null && nowSeconds - prior < LAST_SEEN_REFRESH_S
+          ? prior
+          : undefined
+      this.addTransaction(null, edgeTransaction, lastSeenTime)
+    } else {
+      this.addTransaction(null, edgeTransaction)
+    }
+  }
+
+  // Receives enter the store while still pending (blockHeight 0), so the base
+  // checkpoint math treats the first sighting as already seen ('0' never
+  // advances past a synced checkpoint) and the later confirmation takes the
+  // update path, which never notifies. Mirror ZcashEngine's partial fix: an
+  // incoming unconfirmed tx seen after the first-ever sync is new. The same
+  // multi-device caveat as Zcash applies.
+  protected isTransactionNew(edgeTransaction: EdgeTransaction): boolean {
+    if (
+      edgeTransaction.blockHeight === 0 &&
+      edgeTransaction.confirmations === 'unconfirmed' &&
+      this.seenTxCheckpoint != null &&
+      !edgeTransaction.isSend
+    ) {
+      return true
+    }
+    return super.isTransactionNew(edgeTransaction)
   }
 
   async killEngine(): Promise<void> {
     this.abortKeysWait?.()
     await this.nativeWalletId.stop()
+    await super.killEngine()
+    // Drain any in-flight transaction pass BEFORE resetting the session state
+    // below: the pass started while the engine was on and may still write
+    // (txSortOrder, otherData) until it finishes, so resetting first would let
+    // those late writes clobber the resets and stick across a settings-change
+    // restart. engineOn is false now, so queued callers exit immediately.
+    await this.queryTxMutex(async () => {})
     this.syncStartHeight = undefined
     this.unlockedBalance = '0'
     this.txSortOrder = 'asc'
+    this.pendingSeenReset = false
     this.syncTracker.resetSync()
-    await super.killEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
