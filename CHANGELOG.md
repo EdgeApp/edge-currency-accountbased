@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.85.1 (2026-07-03)
+
 - added: (Monero) Mark transactions that leave the mempool without confirming as dropped, instead of leaving them displayed as unconfirmed forever. A tx must stay missing for 30 minutes before it is declared dropped, since a just-mined tx briefly disappears from both the mempool and confirmed history while the LWS server indexes its block. Time while the app is closed, and the initial backfill after a relaunch, do not count toward that grace.
 - fixed: (Monero) Pending (unconfirmed) transactions now appear in the transaction list as soon as the wallet sees them, instead of only after their first confirmation. Pending entries sort behind all confirmed history in the native transaction list, so the newest-known-txid history scan never reached them; on LWS the balance would move with no transaction row to explain it. Requires react-native-monero with `getPendingTransactions`.
 - fixed: (Monero) First-sighted incoming transactions still emit the new-transaction notification even though they now enter the wallet while pending (the base checkpoint math treats a height-0 entry as already seen).
