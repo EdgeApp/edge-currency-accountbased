@@ -530,6 +530,10 @@ export class MoneroEngine extends CurrencyEngine<
           await this.queryTransactionsDesc(nativeWalletId, PAGE_SIZE)
         }
 
+        // Bail between stages when the engine stopped mid-pass, to shorten
+        // the tail of writes killEngine's drain has to wait out:
+        if (!this.engineOn) return
+
         // Pending transactions live outside the cursor protocol above: they
         // sort behind all confirmed history, so neither scan reaches them.
         // Process them on every pass so they appear before their first
@@ -889,16 +893,18 @@ export class MoneroEngine extends CurrencyEngine<
   async killEngine(): Promise<void> {
     this.abortKeysWait?.()
     await this.nativeWalletId.stop()
+    await super.killEngine()
+    // Drain any in-flight transaction pass BEFORE resetting the session state
+    // below: the pass started while the engine was on and may still write
+    // (txSortOrder, otherData) until it finishes, so resetting first would let
+    // those late writes clobber the resets and stick across a settings-change
+    // restart. engineOn is false now, so queued callers exit immediately.
+    await this.queryTxMutex(async () => {})
     this.syncStartHeight = undefined
     this.unlockedBalance = '0'
     this.txSortOrder = 'asc'
     this.pendingSeenReset = false
     this.syncTracker.resetSync()
-    await super.killEngine()
-    // Drain any in-flight transaction pass so a follow-up resync or settings
-    // change cannot have its freshly wiped state overwritten by that pass's
-    // late writes. engineOn is false now, so queued callers exit immediately.
-    await this.queryTxMutex(async () => {})
   }
 
   async resyncBlockchain(): Promise<void> {
