@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Hedera) HBAR sends failed with an "[object Object]" error. The npm conversion re-resolved `@hashgraph/sdk` to 2.81, whose account-ID serialization calls `Long.fromBigInt` — a method missing from the pinned `long@4.0.0` override. Bump the `long` override to the `5.3.1` the SDK declares so transactions serialize, sign, and broadcast.
+
 ## 4.85.0 (2026-06-29)
 
 - changed: (Monero, Zano) Report sync progress at least once a second while it is still advancing, so a slow chain shows steady movement instead of appearing frozen between whole-percent updates.
