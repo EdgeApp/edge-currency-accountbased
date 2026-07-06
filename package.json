@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-accountbased",
-  "version": "4.85.0",
+  "version": "4.85.2",
   "description": "Edge currency plugin for account based currencies",
   "homepage": "https://edge.app/",
   "repository": {
@@ -13,7 +13,7 @@
     "Paul Puey <paul@edge.app>",
     "William Swanson <william@edge.app>",
     "Eliran Zach <eliran@edge.app>",
-    "Matthew Pich\u00e9 <matthew@edge.app>",
+    "Matthew Piché <matthew@edge.app>",
     "Sam Holmes <sam@edge.app>",
     "Jonathan Tzeng <jon@edge.app>",
     "Austin Bonander <austin@launchbadge.com>"

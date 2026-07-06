@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 4.85.2 (2026-07-06)
+
+- fixed: (Hedera) HBAR sends failed with an "[object Object]" error. The npm conversion re-resolved `@hashgraph/sdk` to 2.81, whose account-ID serialization calls `Long.fromBigInt` — a method missing from the pinned `long@4.0.0` override. Bump the `long` override to the `5.3.1` the SDK declares so transactions serialize, sign, and broadcast.
+
+## 4.85.1 (2026-07-03)
+
 - added: (Monero) Mark transactions that leave the mempool without confirming as dropped, instead of leaving them displayed as unconfirmed forever. A tx must stay missing for 30 minutes before it is declared dropped, since a just-mined tx briefly disappears from both the mempool and confirmed history while the LWS server indexes its block. Time while the app is closed, and the initial backfill after a relaunch, do not count toward that grace.
 - fixed: (Hedera) HBAR sends failed with an "[object Object]" error. The npm conversion re-resolved `@hashgraph/sdk` to 2.81, whose account-ID serialization calls `Long.fromBigInt` — a method missing from the pinned `long@4.0.0` override. Bump the `long` override to the `5.3.1` the SDK declares so transactions serialize, sign, and broadcast.
 - fixed: (Monero) Pending (unconfirmed) transactions now appear in the transaction list as soon as the wallet sees them, instead of only after their first confirmation. Pending entries sort behind all confirmed history in the native transaction list, so the newest-known-txid history scan never reached them; on LWS the balance would move with no transaction row to explain it. Requires react-native-monero with `getPendingTransactions`.
@@ -16,6 +22,7 @@
 - fixed: (TON) Prevent duplicate transactions by keying a sent transaction on its external in-message hash. The broadcast and the transaction-list sync derive the same hash, so the pending send reconciles with the confirmed transaction, and the hash resolves on the block explorer. An already-deployed wallet derives this locally with no network lookup; only a wallet's very first send looks the hash up once, after the contract deploys.
 - fixed: (Monero) Update the wallet balance as soon as a pending transaction is received and on every sync poll, instead of only after a new block, so an incoming pending amount appears immediately.
 - fixed: (Monero) Calculate the max sendable amount from the wallet's live unlocked balance instead of a stale cached value, so tapping Max no longer intermittently returns 0 or an unsendable amount.
+
 ## 4.84.1 (2026-06-23)
 
 - fixed: (Stellar) Resolve the "undefined is not an object (evaluating 'Horizon')" crash on login by importing stellar-sdk v13 symbols (Horizon, Keypair, Account, TransactionBuilder, etc.) as named exports. The plugin's WebView uses stellar-sdk's browser build, whose default export is undefined, so the previous default-namespace access (stellarApi.Horizon.Server) threw.
