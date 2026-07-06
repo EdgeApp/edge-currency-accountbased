@@ -421,6 +421,20 @@ export class MoneroEngine extends CurrencyEngine<
         return SYNC_POLL_MS
       }
 
+      // Do not treat the wallet as synced until the native layer has completed
+      // at least one real server refresh. An LWS wallet seeds
+      // networkHeight === syncedHeight from its stored scan height on open, so
+      // the heights alone would report "synced" before it has contacted the
+      // server, exposing a stale balance and no incoming transactions. Hold the
+      // syncing state (the tracker keeps its current progress) until the first
+      // refresh confirms the wallet is caught up and spendable. Full-node
+      // wallets set refreshed on their first refresh too, and their
+      // networkHeight is already a live daemon value, so this does not delay
+      // them.
+      if (!status.refreshed) {
+        return SYNC_POLL_MS
+      }
+
       // Smooth small height regressions: lwsf reports the stored account scan
       // height until its first refresh completes, a load-balanced daemon can
       // answer a block behind the previous poll, and the base engine re-stamps
