@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.85.3 (2026-07-06)
+
 - fixed: (Monero) Incoming transactions no longer sort to the bottom of the history with a 1970 date when the backend reports no timestamp; they get a stable first-seen date until the real block time arrives.
 - fixed: (Monero) LWS wallets no longer briefly report as synced with a stale balance before their first server refresh completes.
 
