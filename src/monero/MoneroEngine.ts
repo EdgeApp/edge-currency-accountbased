@@ -843,10 +843,26 @@ export class MoneroEngine extends CurrencyEngine<
 
     const blockHeight = tx.isPending ? 0 : tx.blockHeight
 
+    // lwsf reports no timestamp for some transactions (e.g. an incoming tx the
+    // server has not yet attached a block time to), and the native layer emits
+    // 0 for that. A 0 date sorts the tx to the bottom of the list as if it were
+    // from 1970. Substitute a stable date: keep the date we already assigned
+    // this tx if any (so it does not jitter across polls), otherwise stamp it
+    // as first-seen now, so a just-received tx sorts to the top where it
+    // belongs. A real timestamp always wins once the backend provides one.
+    let date = tx.timestamp
+    if (date <= 0) {
+      const priorDate = this.storedTransaction(tx.hash)?.date
+      date =
+        priorDate != null && priorDate > 0
+          ? priorDate
+          : Math.round(Date.now() / 1000)
+    }
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight,
       currencyCode: this.currencyInfo.currencyCode,
-      date: tx.timestamp,
+      date,
       isSend: !isReceive,
       memos,
       nativeAmount,
