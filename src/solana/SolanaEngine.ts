@@ -17,6 +17,7 @@ import {
   TokenAmount,
   TokenBalance,
   TransactionInstruction,
+  TransactionMessage,
   TransactionResponse,
   VersionedTransaction,
   VersionedTransactionResponse
@@ -48,6 +49,7 @@ import {
   timeout
 } from '../common/promiseUtils'
 import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
+import { MakeTxParams } from '../common/types'
 import { cache, cleanTxLogs, getOtherParams, snooze } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
@@ -56,6 +58,7 @@ import {
   asBlocktime,
   asSafeSolanaWalletInfo,
   asSolanaCustomFee,
+  asSolanaMakeTxParams,
   asSolanaPrivateKeys,
   asSolanaSpendInfoOtherParams,
   asSolanaTxOtherParams,
@@ -1046,6 +1049,97 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     return edgeTransaction
+  }
+
+  otherMethods = {
+    // Build a custom-instruction transaction (e.g. a bridge deposit). The caller
+    // supplies raw program instruction(s); signing (blockhash refresh + wallet
+    // signature) and broadcast reuse the generic otherParams.unsignedTx path,
+    // exactly like makeSpend.
+    //
+    // Caller constraints:
+    // - Transactions are compiled as LEGACY (no address lookup tables), so
+    //   account-heavy instruction sets may exceed the transaction size limit.
+    // - The wallet is the fee payer and the only signer; instructions that
+    //   require additional signers are not supported.
+    // - networkFee is reported as the flat per-signature fee; include your own
+    //   ComputeBudget instructions if priority fees are needed.
+    // - nativeAmount and tokenId are trusted for balance checks and display
+    //   accounting; they are not derived from the instructions. Callers must
+    //   ensure they match what the instructions actually spend.
+    makeTx: async (makeTxParams: MakeTxParams): Promise<EdgeTransaction> => {
+      if (makeTxParams.type !== 'MakeTx') {
+        throw new Error('Unrecognized makeTx type')
+      }
+      const { unsignedTx, metadata } = makeTxParams
+      const { instructions, nativeAmount, tokenId } = asSolanaMakeTxParams(
+        JSON.parse(new TextDecoder().decode(unsignedTx))
+      )
+
+      const currencyCode = this.getCurrencyCode(tokenId)
+      if (currencyCode == null) throw new Error('Unknown tokenId')
+
+      const payer = new PublicKey(this.base58PublicKey)
+      const txInstructions = instructions.map(
+        ix =>
+          new TransactionInstruction({
+            programId: new PublicKey(ix.programId),
+            keys: ix.keys.map(k => ({
+              pubkey: new PublicKey(k.pubkey),
+              isSigner: k.isSigner,
+              isWritable: k.isWritable
+            })),
+            data: Buffer.from(ix.data)
+          })
+      )
+
+      const recentBlockhash = await this.getRecentBlockhash()
+      // Compile a legacy (non-versioned) message: the bridge tooling parses
+      // deposits with legacy transactions, and v0 transactions error on
+      // getTransaction calls that omit maxSupportedTransactionVersion.
+      const legacyMessage = new TransactionMessage({
+        instructions: txInstructions,
+        payerKey: payer,
+        recentBlockhash: recentBlockhash.blockhash
+      }).compileToLegacyMessage()
+      const versionedTx = new VersionedTransaction(legacyMessage)
+
+      const otherParams = wasSolanaTxOtherParams({
+        unsignedTx: versionedTx.serialize(),
+        blockhash: recentBlockhash.blockhash,
+        lastValidBlockHeight: recentBlockhash.lastValidBlockHeight
+      })
+
+      const networkFee = this.feePerSignature
+      const isNative = tokenId == null
+
+      const edgeTransaction: EdgeTransaction = {
+        assetAction: metadata?.assetAction,
+        savedAction: metadata?.savedAction,
+        metadata: metadata?.metadata,
+        swapData: metadata?.swapData,
+        blockHeight: 0,
+        currencyCode,
+        date: Date.now() / 1000,
+        isSend: true,
+        memos: metadata?.memos ?? [],
+        nativeAmount: isNative
+          ? `-${add(nativeAmount, networkFee)}`
+          : `-${nativeAmount}`,
+        // The signature fee is a SOL cost: token transactions report it only
+        // as parentNetworkFee, matching the engine's makeSpend convention.
+        networkFee: isNative ? networkFee : '0',
+        networkFees: [],
+        otherParams,
+        ourReceiveAddresses: [],
+        parentNetworkFee: isNative ? undefined : networkFee,
+        signedTx: '',
+        tokenId,
+        txid: '',
+        walletId: this.walletId
+      }
+      return edgeTransaction
+    }
   }
 }
 

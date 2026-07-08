@@ -1,7 +1,10 @@
 import {
   asArray,
+  asBoolean,
   asCodec,
+  asEither,
   asMaybe,
+  asNull,
   asNumber,
   asObject,
   asOptional,
@@ -138,6 +141,27 @@ export const asSolanaTxOtherParams = asObject({
 })
 
 export const wasSolanaTxOtherParams = uncleaner(asSolanaTxOtherParams)
+
+// Params for the `otherMethods.makeTx` custom-transaction path (e.g. bridge
+// deposits). The caller supplies raw program instruction(s) plus the amount and
+// tokenId so the engine can compile, price, and stash the transaction.
+export const asSolanaMakeTxParams = asObject({
+  instructions: asArray(
+    asObject({
+      programId: asString,
+      keys: asArray(
+        asObject({
+          pubkey: asString,
+          isSigner: asBoolean,
+          isWritable: asBoolean
+        })
+      ),
+      data: asBase64
+    })
+  ),
+  nativeAmount: asString,
+  tokenId: asEither(asString, asNull)
+})
 
 //
 // Info Payload
