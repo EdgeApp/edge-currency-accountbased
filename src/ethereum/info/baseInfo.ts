@@ -51,7 +51,9 @@ const networkFees: EthereumFees = {
       highFee: '40000000001',
       minGasPrice: '100000'
     },
-    minPriorityFee: '2000000000'
+    // Conservative fallback: 20x below the old floor while still covering the
+    // observed p99 priority fee in a 1,024-block Base sample.
+    minPriorityFee: '100000000'
   }
 }
 
@@ -85,6 +87,12 @@ const networkInfo: EthereumNetworkInfo = {
   },
   optimismRollup: true,
   supportsEIP1559: true,
+  feeAlgorithm: {
+    type: 'eth_feeHistory',
+    // Match the 10-minute fee refresh interval so spikes between polls remain
+    // represented in the next estimate (300 blocks at Base's 2s block time).
+    blocksToAnalyze: 300
+  },
   hdPathCoinType: 60,
   pluginMnemonicKeyName: 'baseMnemonic',
   pluginRegularKeyName: 'baseKey',
