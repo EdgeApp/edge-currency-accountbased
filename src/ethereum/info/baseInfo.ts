@@ -51,7 +51,7 @@ const networkFees: EthereumFees = {
       highFee: '40000000001',
       minGasPrice: '100000'
     },
-    minPriorityFee: '2000000000'
+    minPriorityFee: '100000000'
   }
 }
 
@@ -85,6 +85,10 @@ const networkInfo: EthereumNetworkInfo = {
   },
   optimismRollup: true,
   supportsEIP1559: true,
+  feeAlgorithm: {
+    type: 'eth_feeHistory',
+    blocksToAnalyze: 12 // 2 minutes at Base's 2s block time
+  },
   hdPathCoinType: 60,
   pluginMnemonicKeyName: 'baseMnemonic',
   pluginRegularKeyName: 'baseKey',

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Base) Use dynamic `eth_feeHistory` fee estimation instead of a hardcoded 2 gwei priority floor. The previous static floor caused sends to overpay by ~200x during normal network conditions. The dynamic algorithm tracks real-time percentile-based priority fees with a 2x base-fee buffer, so fees rise naturally during congestion spikes and drop to market rate otherwise. The static `minPriorityFee` fallback (used only when `eth_feeHistory` fails) is lowered from 2 gwei to 0.1 gwei, matching Arbitrum's proven floor.
+
 ## 4.85.3 (2026-07-06)
 
 - fixed: (Monero) Incoming transactions no longer sort to the bottom of the history with a 1970 date when the backend reports no timestamp; they get a stable first-seen date until the real block time arrives.
