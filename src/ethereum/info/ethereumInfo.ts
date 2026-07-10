@@ -412,6 +412,14 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x419D0d8BdD9aF5e606Ae2232ed285Aff190E711b'
     }
   },
+  f446aabf60f10c2f455f0a1728afdd48c653a5a3: {
+    currencyCode: 'FUSD',
+    displayName: 'Freedom Dollar',
+    denominations: [{ name: 'FUSD', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0xf446aaBf60f10C2F455f0a1728Afdd48C653a5a3'
+    }
+  },
   '7dd9c5cba05e151c895fde1cf355c9a1d5da6429': {
     currencyCode: 'GLM',
     displayName: 'Golem',

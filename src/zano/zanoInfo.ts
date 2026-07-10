@@ -122,6 +122,20 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress:
         '65b3bc549c8bc2c773781d5436f25f7af84644e61baaabd675d9867b007d17b4'
     }
+  },
+  '2cac029d4850464eff91828336ac06468737a19fbdd500cdabcc633db2fe0a2e': {
+    currencyCode: 'FUSDx',
+    displayName: 'Freedom Dollar',
+    denominations: [
+      {
+        name: 'FUSDx',
+        multiplier: '1000000000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        '2cac029d4850464eff91828336ac06468737a19fbdd500cdabcc633db2fe0a2e'
+    }
   }
 }
 

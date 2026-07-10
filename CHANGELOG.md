@@ -3,7 +3,8 @@
 ## Unreleased
 
 - fixed: (Tron) Token balance sync failing with `invalid BigNumber string` — pin `tronweb` to exactly 5.1.0 (5.3.x rejects the bare-hex address arrays used by the TRC20 balance checker) and pass 0x-prefixed lowercase addresses so the call also works on newer TronWeb versions.
-- added: (Zano) Bridgeless bridge tokens SOLx (Solana) and TONx (Toncoin).
+- added: (Zano) Bridgeless bridge tokens SOLx (Solana), TONx (Toncoin), and FUSDx (Freedom Dollar).
+- added: (Ethereum) FUSD (Freedom Dollar) token for Bridgeless swaps.
 - added: (TON) `otherMethods.makeTx` to build custom-body internal-message transactions (e.g. Bridgeless bridge deposits).
 - added: (Solana) `otherMethods.makeTx` to build custom program-instruction transactions (e.g. Bridgeless bridge deposits).
 
