@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Tron) Token balance sync failing with `invalid BigNumber string` — pin `tronweb` to exactly 5.1.0 (5.3.x rejects the bare-hex address arrays used by the TRC20 balance checker) and pass 0x-prefixed lowercase addresses so the call also works on newer TronWeb versions.
+
 ## 4.85.3 (2026-07-06)
 
 - fixed: (Monero) Incoming transactions no longer sort to the bottom of the history with a 1970 date when the backend reports no timestamp; they get a stable first-seen date until the real block time arrives.
