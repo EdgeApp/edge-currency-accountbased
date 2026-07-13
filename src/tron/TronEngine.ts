@@ -217,12 +217,17 @@ export class TronEngine extends CurrencyEngine<
     const detectedTokenIds: string[] = []
     const tokenIds = Object.keys(this.allTokensMap)
     try {
+      // TronWeb 5.3+ rejects bare hex inside address arrays, which is why
+      // tronweb is pinned to 5.1.0. Pass 0x-prefixed lowercase hex anyway
+      // (lowercase avoids EIP-55 checksum validation of the uppercase hex
+      // from base58ToHexAddress) so this call also survives a future unpin.
       const encodedParams = encodeParams(
         ['address[]', 'address[]'],
         [
-          [address.slice(2)],
-          tokenIds.map(tokenAddress =>
-            base58ToHexAddress(tokenAddress).slice(2)
+          [`0x${address.slice(2).toLowerCase()}`],
+          tokenIds.map(
+            tokenAddress =>
+              `0x${base58ToHexAddress(tokenAddress).slice(2).toLowerCase()}`
           )
         ]
       )
