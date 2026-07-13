@@ -1067,6 +1067,21 @@ export class SolanaEngine extends CurrencyEngine<
     // - nativeAmount and tokenId are trusted for balance checks and display
     //   accounting; they are not derived from the instructions. Callers must
     //   ensure they match what the instructions actually spend.
+    // Report the maximum amount spendable by a makeTx transaction. Native
+    // sends spend the full balance minus the flat per-signature fee; token
+    // sends spend the full token balance (the fee is paid in SOL).
+    getMaxTx: async (makeTxParams: MakeTxParams): Promise<string> => {
+      if (makeTxParams.type !== 'MakeTx') {
+        throw new Error('Unrecognized makeTx type')
+      }
+      const { tokenId } = asSolanaMakeTxParams(
+        JSON.parse(new TextDecoder().decode(makeTxParams.unsignedTx))
+      )
+      if (tokenId != null) return this.getBalance({ tokenId })
+      const balance = this.getBalance({ tokenId: null })
+      const max = sub(balance, this.feePerSignature)
+      return lt(max, '0') ? '0' : max
+    },
     makeTx: async (makeTxParams: MakeTxParams): Promise<EdgeTransaction> => {
       if (makeTxParams.type !== 'MakeTx') {
         throw new Error('Unrecognized makeTx type')
@@ -1078,6 +1093,28 @@ export class SolanaEngine extends CurrencyEngine<
 
       const currencyCode = this.getCurrencyCode(tokenId)
       if (currencyCode == null) throw new Error('Unknown tokenId')
+
+      // The transaction fee comes out of the same native balance the deposit
+      // spends, so reject amounts the wallet cannot actually cover. Like
+      // makeSpend, reserve the rent-exempt minimum unless the transaction
+      // drains the account to exactly zero.
+      const solBalance = this.getBalance({ tokenId: null })
+      const minimumAddressBalance = await this.getMinimumAddressBalance()
+      if (tokenId == null) {
+        const totalTxAmount = add(nativeAmount, this.feePerSignature)
+        if (eq(totalTxAmount, solBalance)) {
+          // A full-balance send may drain the account to zero
+        } else if (gt(add(totalTxAmount, minimumAddressBalance), solBalance)) {
+          throw new InsufficientFundsError({ tokenId: null })
+        }
+      } else {
+        if (gt(nativeAmount, this.getBalance({ tokenId }))) {
+          throw new InsufficientFundsError({ tokenId })
+        }
+        if (gt(add(this.feePerSignature, minimumAddressBalance), solBalance)) {
+          throw new InsufficientFundsError({ tokenId: null })
+        }
+      }
 
       const payer = new PublicKey(this.base58PublicKey)
       const txInstructions = instructions.map(

@@ -537,6 +537,58 @@ export class TonEngine extends CurrencyEngine<
     // - Sent with IGNORE_ERRORS + PAY_GAS_SEPARATELY: if the action phase
     //   fails (e.g. insufficient balance), the wallet consumes the seqno and
     //   silently sends nothing.
+    // Report the maximum native amount spendable by a makeTx transaction:
+    // the full balance minus the estimated fee and the minimum address
+    // balance the wallet must retain.
+    getMaxTx: async (makeTxParams: MakeTxParams): Promise<string> => {
+      if (makeTxParams.type !== 'MakeTx') {
+        throw new Error('Unrecognized makeTx type')
+      }
+      const { unsignedTx } = makeTxParams
+      const { toAddress, bodyBoc, bounce } = asTonMakeTxParams(
+        JSON.parse(new TextDecoder().decode(unsignedTx))
+      )
+      const balance = this.getBalance({ tokenId: null })
+
+      // Fees are effectively amount-independent, so estimate with the full
+      // balance as the transfer value.
+      const bodyCell = Cell.fromBoc(Buffer.from(base64.parse(bodyBoc)))[0]
+      const transferMessage: MessageRelaxed = internal({
+        value: fromNano(balance),
+        to: Address.parse(toAddress),
+        body: bodyCell,
+        bounce
+      })
+      const transfer = this.wallet.createTransfer({
+        sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
+        messages: [transferMessage],
+        seqno: 0,
+        secretKey: Buffer.alloc(64)
+      })
+      const needsInit = this.otherData.contractState === 'uninitialized'
+      const feeRaw = await this.tools.fetchDrpc('/estimateFee', {
+        address: this.wallet.address.toRawString(),
+        body: base64.stringify(transfer.toBoc()),
+        init_code: needsInit
+          ? base64.stringify(this.wallet.init.code.toBoc())
+          : '',
+        init_data: needsInit
+          ? base64.stringify(this.wallet.init.data.toBoc())
+          : ''
+      })
+      const { result: feeResult } = asDrpcEstimateFee(feeRaw)
+      const networkFee =
+        feeResult.source_fees.fwd_fee +
+        feeResult.source_fees.gas_fee +
+        feeResult.source_fees.in_fwd_fee +
+        feeResult.source_fees.storage_fee
+
+      const max = sub(
+        sub(balance, networkFee.toString()),
+        this.networkInfo.minimumAddressBalance
+      )
+      return lt(max, '0') ? '0' : max
+    },
     makeTx: async (makeTxParams: MakeTxParams): Promise<EdgeTransaction> => {
       if (makeTxParams.type !== 'MakeTx') {
         throw new Error('Unrecognized makeTx type')
