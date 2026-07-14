@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: zcash - Update react-native-zcash to 0.12.2 (Zcash SDK 2.5.2) to align the plugin's declared dependency with the version the app ships.
+
 ## 4.86.0 (2026-07-13)
 
 - added: (Zano) Bridgeless bridge tokens SOLx (Solana), TONx (Toncoin), and FUSDx (Freedom Dollar).
