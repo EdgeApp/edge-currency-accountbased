@@ -37,7 +37,11 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall } from '../common/promiseUtils'
 import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
-import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
+import {
+  asSafeCommonWalletInfo,
+  MakeTxParams,
+  SafeCommonWalletInfo
+} from '../common/types'
 import { snooze } from '../common/utils'
 import {
   asDrpcAddressInfo,
@@ -49,6 +53,7 @@ import {
 import { TonTools } from './TonTools'
 import {
   asParsedTx,
+  asTonMakeTxParams,
   asTonPrivateKeys,
   asTonTxOtherParams,
   asTonWalletOtherData,
@@ -519,6 +524,160 @@ export class TonEngine extends CurrencyEngine<
   async getFreshAddress(): Promise<EdgeFreshAddress> {
     const publicAddress = this.wallet.address.toString({ bounceable: false })
     return { publicAddress }
+  }
+
+  otherMethods = {
+    // Build a custom-body internal-message transaction (e.g. a bridge deposit).
+    // The signed broadcast reuses the generic signTx/broadcastTx path via
+    // `otherParams.unsignedTxBase64`, exactly like makeSpend.
+    //
+    // Caller constraints:
+    // - Exactly one internal message, with no stateInit (cannot deploy a
+    //   contract or initialize the destination account).
+    // - Sent with IGNORE_ERRORS + PAY_GAS_SEPARATELY: if the action phase
+    //   fails (e.g. insufficient balance), the wallet consumes the seqno and
+    //   silently sends nothing.
+    // Report the maximum native amount spendable by a makeTx transaction:
+    // the full balance minus the estimated fee and the minimum address
+    // balance the wallet must retain.
+    getMaxTx: async (makeTxParams: MakeTxParams): Promise<string> => {
+      if (makeTxParams.type !== 'MakeTx') {
+        throw new Error('Unrecognized makeTx type')
+      }
+      const { unsignedTx } = makeTxParams
+      const { toAddress, bodyBoc, bounce } = asTonMakeTxParams(
+        JSON.parse(new TextDecoder().decode(unsignedTx))
+      )
+      const balance = this.getBalance({ tokenId: null })
+
+      // Fees are effectively amount-independent, so estimate with the full
+      // balance as the transfer value.
+      const bodyCell = Cell.fromBoc(Buffer.from(base64.parse(bodyBoc)))[0]
+      const transferMessage: MessageRelaxed = internal({
+        value: fromNano(balance),
+        to: Address.parse(toAddress),
+        body: bodyCell,
+        bounce
+      })
+      const transfer = this.wallet.createTransfer({
+        sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
+        messages: [transferMessage],
+        seqno: 0,
+        secretKey: Buffer.alloc(64)
+      })
+      const needsInit = this.otherData.contractState === 'uninitialized'
+      const feeRaw = await this.tools.fetchDrpc('/estimateFee', {
+        address: this.wallet.address.toRawString(),
+        body: base64.stringify(transfer.toBoc()),
+        init_code: needsInit
+          ? base64.stringify(this.wallet.init.code.toBoc())
+          : '',
+        init_data: needsInit
+          ? base64.stringify(this.wallet.init.data.toBoc())
+          : ''
+      })
+      const { result: feeResult } = asDrpcEstimateFee(feeRaw)
+      const networkFee =
+        feeResult.source_fees.fwd_fee +
+        feeResult.source_fees.gas_fee +
+        feeResult.source_fees.in_fwd_fee +
+        feeResult.source_fees.storage_fee
+
+      const max = sub(
+        sub(balance, networkFee.toString()),
+        this.networkInfo.minimumAddressBalance
+      )
+      return lt(max, '0') ? '0' : max
+    },
+    makeTx: async (makeTxParams: MakeTxParams): Promise<EdgeTransaction> => {
+      if (makeTxParams.type !== 'MakeTx') {
+        throw new Error('Unrecognized makeTx type')
+      }
+      const { unsignedTx, metadata } = makeTxParams
+      const { toAddress, amount, bodyBoc, bounce } = asTonMakeTxParams(
+        JSON.parse(new TextDecoder().decode(unsignedTx))
+      )
+
+      const bodyCell = Cell.fromBoc(Buffer.from(base64.parse(bodyBoc)))[0]
+      const needsInit = this.otherData.contractState === 'uninitialized'
+
+      const transferMessage: MessageRelaxed = internal({
+        value: fromNano(amount),
+        to: Address.parse(toAddress),
+        body: bodyCell,
+        bounce
+      })
+
+      const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] =
+        {
+          sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
+          messages: [transferMessage],
+
+          // Fake data that doesn't impact fee calc
+          seqno: 0,
+          secretKey: Buffer.alloc(64)
+        }
+      const transfer = this.wallet.createTransfer(transferArgs)
+
+      let networkFee = '0'
+      if (amount !== '0') {
+        const addr = this.wallet.address.toRawString()
+        const feeBodyBoc = base64.stringify(transfer.toBoc())
+        const initCodeBoc = needsInit
+          ? base64.stringify(this.wallet.init.code.toBoc())
+          : ''
+        const initDataBoc = needsInit
+          ? base64.stringify(this.wallet.init.data.toBoc())
+          : ''
+        const feeRaw = await this.tools.fetchDrpc('/estimateFee', {
+          address: addr,
+          body: feeBodyBoc,
+          init_code: initCodeBoc,
+          init_data: initDataBoc
+        })
+        const { result: feeResult } = asDrpcEstimateFee(feeRaw)
+        const totalFee =
+          feeResult.source_fees.fwd_fee +
+          feeResult.source_fees.gas_fee +
+          feeResult.source_fees.in_fwd_fee +
+          feeResult.source_fees.storage_fee
+        networkFee = totalFee.toString()
+      }
+
+      const total = add(amount, networkFee)
+      const balance = this.getBalance({ tokenId: null })
+      if (gt(add(total, this.networkInfo.minimumAddressBalance), balance)) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
+
+      const builder = beginCell()
+      storeMessageRelaxed(transferMessage)(builder)
+      const otherParams = {
+        unsignedTxBase64: base64.stringify(builder.asSlice().asCell().toBoc())
+      }
+
+      const edgeTransaction: EdgeTransaction = {
+        assetAction: metadata?.assetAction,
+        savedAction: metadata?.savedAction,
+        metadata: metadata?.metadata,
+        swapData: metadata?.swapData,
+        blockHeight: 0,
+        currencyCode: this.currencyInfo.currencyCode,
+        date: Date.now() / 1000,
+        isSend: true,
+        memos: metadata?.memos ?? [],
+        nativeAmount: `-${total}`,
+        networkFee,
+        networkFees: [],
+        otherParams,
+        ourReceiveAddresses: [],
+        signedTx: '',
+        tokenId: null,
+        txid: '',
+        walletId: this.walletId
+      }
+      return edgeTransaction
+    }
   }
 }
 

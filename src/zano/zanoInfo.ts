@@ -94,6 +94,48 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress:
         '3de9ad7243afa49e0ade6839e97a9f10a527c4958ece2fc9cb1b87a44032167d'
     }
+  },
+  bfa6609a94e39f418d9adb000f89edc7bd180fd120f1cd272201220e3070fb4f: {
+    currencyCode: 'TONx',
+    displayName: 'Toncoin',
+    denominations: [
+      {
+        name: 'TONx',
+        multiplier: '1000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        'bfa6609a94e39f418d9adb000f89edc7bd180fd120f1cd272201220e3070fb4f'
+    }
+  },
+  '65b3bc549c8bc2c773781d5436f25f7af84644e61baaabd675d9867b007d17b4': {
+    currencyCode: 'SOLx',
+    displayName: 'Solana',
+    denominations: [
+      {
+        name: 'SOLx',
+        multiplier: '1000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        '65b3bc549c8bc2c773781d5436f25f7af84644e61baaabd675d9867b007d17b4'
+    }
+  },
+  '2cac029d4850464eff91828336ac06468737a19fbdd500cdabcc633db2fe0a2e': {
+    currencyCode: 'FUSDx',
+    displayName: 'Freedom Dollar',
+    denominations: [
+      {
+        name: 'FUSDx',
+        multiplier: '1000000000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        '2cac029d4850464eff91828336ac06468737a19fbdd500cdabcc633db2fe0a2e'
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 import {
   asArray,
+  asBoolean,
   asCodec,
   asNumber,
   asObject,
@@ -96,6 +97,16 @@ export type ParsedTx = ReturnType<typeof asParsedTx>
 
 export const asTonTxOtherParams = asObject({
   unsignedTxBase64: asString
+})
+
+// Params for the `otherMethods.makeTx` custom-transaction path (e.g. bridge
+// deposits). The caller supplies a fully-built message body cell (base64 BOC),
+// the destination contract, the native amount, and the bounce flag.
+export const asTonMakeTxParams = asObject({
+  toAddress: asString,
+  amount: asString,
+  bodyBoc: asString,
+  bounce: asOptional(asBoolean, true)
 })
 
 export const asTonInitOptions = asObject({
