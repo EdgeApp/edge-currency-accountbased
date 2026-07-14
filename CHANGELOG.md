@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.86.0 (2026-07-13)
+
 - added: (Zano) Bridgeless bridge tokens SOLx (Solana), TONx (Toncoin), and FUSDx (Freedom Dollar).
 - added: (Ethereum) FUSD (Freedom Dollar) token for Bridgeless swaps.
 - added: (TON) `otherMethods.makeTx` to build custom-body internal-message transactions (e.g. Bridgeless bridge deposits).
