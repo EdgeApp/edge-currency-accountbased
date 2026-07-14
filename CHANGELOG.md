@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.85.4 (2026-07-14)
+
 - fixed: (Tron) Token balance sync failing with `invalid BigNumber string` — pin `tronweb` to exactly 5.1.0 (5.3.x rejects the bare-hex address arrays used by the TRC20 balance checker) and pass 0x-prefixed lowercase addresses so the call also works on newer TronWeb versions.
 
 ## 4.85.3 (2026-07-06)
