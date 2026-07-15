@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.86.1 (2026-07-15)
+
 - fixed: (MAYAChain/THORChain) Failed transactions no longer appear in history as successful receives. Midgard reports a reverted transaction's full `in`/`out` amounts even though nothing moved on-chain; we now honor the action `status` and, for a failed action, record a fee-only transaction marked `failed` for the signer (like a failed EVM transaction) instead of crediting the intended recipient.
 
 ## 4.86.0 (2026-07-13)
