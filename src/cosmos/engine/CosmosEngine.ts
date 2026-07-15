@@ -23,7 +23,7 @@ import {
 } from '@cosmjs/stargate'
 import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
-import { add, ceil, gt, lt, mul, sub } from 'biggystring'
+import { abs, add, ceil, gt, lt, mul, sub } from 'biggystring'
 import {
   asArray,
   asEither,
@@ -857,7 +857,8 @@ export class CosmosEngine extends CurrencyEngine<
     cosmosCoin: CosmosCoin,
     memo: string,
     height: number,
-    fee?: Fee
+    fee?: Fee,
+    failed: boolean = false
   ): void {
     const { amount, denom } = cosmosCoin
 
@@ -891,7 +892,12 @@ export class CosmosEngine extends CurrencyEngine<
     let nativeAmount = amount
     let parentNetworkFee: string | undefined
     if (isSend) {
-      if (isMainnet) {
+      if (failed) {
+        // A failed transaction's only real balance change is the burned fee,
+        // which the coin events already carry in `amount`. Don't subtract a
+        // fee on top of it; the whole outflow is the fee.
+        networkFee = abs(nativeAmount)
+      } else if (isMainnet) {
         nativeAmount = sub(nativeAmount, networkFee)
       } else {
         parentNetworkFee = networkFee !== '0' ? networkFee : undefined
@@ -912,6 +918,7 @@ export class CosmosEngine extends CurrencyEngine<
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: height,
+      confirmations: failed ? 'failed' : undefined,
       currencyCode,
       date,
       isSend,

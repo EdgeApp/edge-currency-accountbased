@@ -18,13 +18,77 @@ import {
   asChainIdUpdate,
   asMidgardActionsResponse,
   asMidgardWalletOtherData,
-  MidgardAction,
+  MidgardActionResponse,
   MidgardNetworkInfo,
   MidgardWalletOtherData
 } from '../midgardTypes'
 import { CosmosEngine } from './CosmosEngine'
 
 const QUERY_POLL_MILLISECONDS = getRandomDelayMs(20000)
+
+/**
+ * Converts a single Midgard action into the coin_spent/coin_received events
+ * used to compute our wallet's net balance change.
+ *
+ * A failed action reverted its state changes on-chain, so the `in`/`out`
+ * amounts Midgard reports never actually moved. The only real balance change is
+ * the network fee, which is still charged to the signer even though the message
+ * reverted (exactly like a failed EVM transaction). For a failed action we
+ * therefore emit only the burned fee, and only when our wallet signed the
+ * transaction. If our wallet was merely the intended recipient it paid nothing
+ * and gets no events, so the action is ignored rather than shown as a
+ * successful receive.
+ */
+export function midgardActionToCoinEvents(
+  action: MidgardActionResponse,
+  ourAddress: string
+): Event[] {
+  const events: Event[] = []
+  const pushCoinEvent = (
+    address: string,
+    asset: string,
+    amount: string,
+    type: 'coin_spent' | 'coin_received'
+  ): void => {
+    // The coin might have a prefix like "RUNE.RUNE" or "MAYA.CACAO",
+    // or it might be a plain currency code like "TCY":
+    const assetParts = asset.split('.')
+    const assetCode = assetParts[1] ?? assetParts[0]
+    const typeValue = type === 'coin_received' ? 'receiver' : 'spender'
+    events.push({
+      type,
+      attributes: [
+        { key: 'amount', value: `${abs(amount)}${assetCode.toLowerCase()}` },
+        { key: typeValue, value: address }
+      ]
+    })
+  }
+
+  if (action.status === 'failed') {
+    const isSigner = action.in.some(
+      subAction => subAction.address === ourAddress
+    )
+    if (isSigner) {
+      const { networkFees } = Object.values(action.metadata)[0]
+      for (const feeCoin of networkFees) {
+        pushCoinEvent(ourAddress, feeCoin.asset, feeCoin.amount, 'coin_spent')
+      }
+    }
+    return events
+  }
+
+  for (const subAction of action.in) {
+    for (const coin of subAction.coins) {
+      pushCoinEvent(subAction.address, coin.asset, coin.amount, 'coin_spent')
+    }
+  }
+  for (const subAction of action.out) {
+    for (const coin of subAction.coins) {
+      pushCoinEvent(subAction.address, coin.asset, coin.amount, 'coin_received')
+    }
+  }
+  return events
+}
 
 /**
  * Base engine for chains that use Midgard API for transaction history.
@@ -109,44 +173,18 @@ export class MidgardEngine extends CosmosEngine {
           inLoopHeight = max(inLoopHeight, action.height)
           const date = parseInt(div(action.date, '1000000000'))
           const { memo } = Object.values(action.metadata)[0]
+          const ourAddress = this.walletInfo.keys.bech32Address
+
+          // The transaction id is the longest txID across all in/out
+          // sub-actions (internal/synthetic movements can use a shorter id).
           let txidHex = ''
-          // Convert actions to Events
-          const events: Event[] = []
-          const convertToEvents = (
-            actions: MidgardAction[],
-            type: 'coin_spent' | 'coin_received'
-          ): void => {
-            for (const action of actions) {
-              if (action.txID.length > txidHex.length) {
-                txidHex = action.txID
-              }
-              for (const coin of action.coins) {
-                const typeValue =
-                  type === 'coin_received' ? 'receiver' : 'spender'
-
-                // The coin might have a prefix like "RUNE.RUNE" or "MAYA.CACAO",
-                // or it might be a plain currency code like "TCY":
-                const assetParts = coin.asset.split('.')
-                const asset = assetParts[1] ?? assetParts[0]
-
-                events.push({
-                  type,
-                  attributes: [
-                    {
-                      key: 'amount',
-                      value: `${abs(coin.amount)}${asset.toLowerCase()}`
-                    },
-                    {
-                      key: typeValue,
-                      value: action.address
-                    }
-                  ]
-                })
-              }
+          for (const subAction of [...action.in, ...action.out]) {
+            if (subAction.txID.length > txidHex.length) {
+              txidHex = subAction.txID
             }
           }
-          convertToEvents(action.in, 'coin_spent')
-          convertToEvents(action.out, 'coin_received')
+
+          const events = midgardActionToCoinEvents(action, ourAddress)
 
           if (txidHex === mostRecentTxId) {
             breakWhileLoop = true
@@ -156,17 +194,17 @@ export class MidgardEngine extends CosmosEngine {
 
           let netBalanceChanges: CosmosCoin[] = []
           try {
-            netBalanceChanges = reduceCoinEventsForAddress(
-              events,
-              this.walletInfo.keys.bech32Address
-            )
+            netBalanceChanges = reduceCoinEventsForAddress(events, ourAddress)
           } catch (e) {
             this.log.warn('reduceCoinEventsForAddress error:', String(e))
           }
           if (netBalanceChanges.length === 0) continue
 
-          // Get the fee from the subclass
-          const fee = this.getMidgardTransactionFee()
+          // For a failed action the events already carry the burned fee as
+          // the entire balance change, so don't pass a fee that would be
+          // subtracted on top of it. Otherwise get the fee from the subclass.
+          const isFailed = action.status === 'failed'
+          const fee = isFailed ? undefined : this.getMidgardTransactionFee()
 
           netBalanceChanges.forEach(coin => {
             this.processCosmosTransaction(
@@ -176,7 +214,8 @@ export class MidgardEngine extends CosmosEngine {
               coin,
               memo,
               parseInt(action.height),
-              fee
+              fee,
+              isFailed
             )
           })
         }
