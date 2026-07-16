@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added: (Zcash) Orchard → Ironwood (NU6.3) migration support: `otherMethods.getMigrationStatus`/`prepareMigrationPlan` and key-injected `confirmMigrationPlan`/`retryMigration`; scheduled pre-signed transfers broadcast during sync cycles; migration self-transfers labeled in the transaction list.
+- added: (Zcash) Ironwood shielded-pool balance handling.
+- changed: (Zcash) react-native-zcash pinned to the prebuilt Ironwood build (EdgeApp/react-native-zcash#71) until an upstream Ironwood SDK release exists.
+
 ## 4.86.1 (2026-07-15)
 
 - fixed: (MAYAChain/THORChain) Failed transactions no longer appear in history as successful receives. Midgard reports a reverted transaction's full `in`/`out` amounts even though nothing moved on-chain; we now honor the action `status` and, for a failed action, record a fee-only transaction marked `failed` for the signer (like a failed EVM transaction) instead of crediting the intended recipient.
