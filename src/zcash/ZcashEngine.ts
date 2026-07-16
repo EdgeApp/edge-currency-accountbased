@@ -10,10 +10,12 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import type {
   CreateTransferOpts,
+  MigrationSchedule,
   StatusEvent,
   Transaction
 } from 'react-native-zcash'
@@ -23,14 +25,22 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs, getOtherParams } from '../common/utils'
 import type { ZcashIo, ZcashSynchronizer } from './zcashIo'
+import {
+  computeAvailableZatoshi,
+  decideMigrationAction,
+  mapMigrationStatus
+} from './zcashMigration'
 import { makeZcashSyncTracker, ZcashSyncTracker } from './ZcashSyncTracker'
 import { ZcashTools } from './ZcashTools'
 import {
   asSafeZcashWalletInfo,
+  asZcashMigrationPlan,
   asZcashPrivateKeys,
   asZcashWalletOtherData,
   SafeZcashWalletInfo,
   ZcashBalances,
+  ZcashMigrationPlan,
+  ZcashMigrationStatus,
   ZcashNetworkInfo,
   ZcashWalletOtherData
 } from './zcashTypes'
@@ -60,6 +70,25 @@ export class ZcashEngine extends CurrencyEngine<
     txid?: string
   }
 
+  // Orchard -> Ironwood migration. The SDK owns all durable migration state
+  // (schedule + pre-signed transactions, in its own database); these are the
+  // engine's ephemeral orchestration flags, rebuilt from SDK pulls.
+  migration: {
+    /** The sync loop should broadcast the next height-due transfer. */
+    executeTransferRequested: boolean
+    /** The sync loop should re-anchor/re-sign stale transfers (needs seed). */
+    refreshStaleRequested: boolean
+    /** An in-flight migration tx we are waiting to see confirmed. */
+    pendingTxid?: string
+    /** Throttles checkMigration to once per new block. */
+    lastCheckedHeight: number
+    /** Served to GUI polls when the synchronizer is not ready. */
+    statusCache?: ZcashMigrationStatus
+  }
+
+  otherMethods: Object
+  otherMethodsWithKeys: Object
+
   constructor(
     env: PluginEnvironment<ZcashNetworkInfo>,
     tools: ZcashTools,
@@ -81,11 +110,182 @@ export class ZcashEngine extends CurrencyEngine<
       saplingAvailableZatoshi: '0',
       saplingTotalZatoshi: '0',
       orchardAvailableZatoshi: '0',
-      orchardTotalZatoshi: '0'
+      orchardTotalZatoshi: '0',
+      ironwoodAvailableZatoshi: '0',
+      ironwoodTotalZatoshi: '0'
     }
     this.autoshielding = {
       createAutoshieldTx: false,
       threshold: mul(this.networkInfo.defaultNetworkFee, '2') // Only autoshield if received shielded balance is greater than the default fee
+    }
+    this.migration = {
+      executeTransferRequested: false,
+      refreshStaleRequested: false,
+      lastCheckedHeight: 0
+    }
+
+    this.otherMethods = {
+      /**
+       * Pull-based migration status for the GUI (poll on scene focus).
+       * Safe to call any time; reports notNeeded until the wallet syncs.
+       */
+      getMigrationStatus: async (): Promise<ZcashMigrationStatus> => {
+        const synchronizer = this.synchronizer
+        if (synchronizer == null || !this.isSynced()) {
+          return (
+            this.migration.statusCache ?? {
+              state: 'notNeeded',
+              completedTransfers: 0,
+              totalTransfers: 0,
+              remainingOrchardZatoshi: '0',
+              hasOverdueTransfers: false,
+              isSynced: false,
+              nextTransferReadyAtHeight: undefined
+            }
+          )
+        }
+        const [state, hasOverdueTransfers] = await Promise.all([
+          synchronizer.getMigrationState(),
+          synchronizer.hasOverdueTransfers()
+        ])
+        const status = mapMigrationStatus({
+          state,
+          hasOverdueTransfers,
+          isSynced: true,
+          orchardTotalZatoshi: this.balances.orchardTotalZatoshi
+        })
+        this.migration.statusCache = status
+        return status
+      },
+
+      /**
+       * Proposes a migration plan for the user to review. No signing happens
+       * here (and no keys are needed) — the returned plan round-trips to
+       * confirmMigrationPlan, which signs exactly what was proposed.
+       */
+      prepareMigrationPlan: async (opts: {
+        strategy: 'privacy' | 'immediate'
+      }): Promise<ZcashMigrationPlan> => {
+        const strategy =
+          opts?.strategy === 'immediate' ? 'immediate' : 'privacy'
+        const synchronizer = await this.synchronizerPromise
+        const state = await synchronizer.getMigrationState()
+
+        let noteSplitRequired = false
+        let noteSplitProposalBase64: string | undefined
+        let noteSplitFeeZatoshi = '0'
+        let schedule: MigrationSchedule
+        if (
+          state.state === 'inProgress' ||
+          state.state === 'requiresAttention'
+        ) {
+          // A migration is already in flight but needs a new plan (e.g. after
+          // invalid transfers): re-propose the remaining schedule instead.
+          schedule = await synchronizer.restartCurrentMigrationStep()
+        } else {
+          if (strategy === 'privacy') {
+            noteSplitRequired = await synchronizer.isNoteSplitNeeded()
+            if (noteSplitRequired) {
+              const proposal = await synchronizer.prepareNoteSplit()
+              noteSplitProposalBase64 = proposal.proposalBase64
+              noteSplitFeeZatoshi = proposal.feeZatoshi
+            }
+          }
+          schedule =
+            strategy === 'immediate'
+              ? await synchronizer.proposeImmediateMigration()
+              : await synchronizer.proposeMigrationTransfers()
+        }
+
+        const totalAmountZatoshi = schedule.transfers.reduce(
+          (sum, transfer) => add(sum, transfer.amountZatoshi),
+          '0'
+        )
+        return asZcashMigrationPlan({
+          strategy,
+          transfers: schedule.transfers.map(transfer => ({
+            id: transfer.id,
+            amountZatoshi: transfer.amountZatoshi,
+            nextExecutableAfterHeight: transfer.nextExecutableAfterHeight,
+            expiryHeight: transfer.expiryHeight
+          })),
+          estimatedDurationHours: schedule.estimatedDurationHours,
+          totalAmountZatoshi,
+          noteSplitFeeZatoshi,
+          noteSplitRequired,
+          noteSplitProposalBase64,
+          scheduleBase64: schedule.scheduleBase64
+        })
+      }
+    }
+
+    this.otherMethodsWithKeys = {
+      /**
+       * Submits the note split (when required), pre-signs and stores the
+       * confirmed schedule, and for the immediate strategy broadcasts the
+       * single transfer right away. The core injects the wallet keys.
+       */
+      confirmMigrationPlan: async (
+        rawKeys: JsonObject,
+        planRaw: unknown
+      ): Promise<{ txid?: string }> => {
+        const plan = asZcashMigrationPlan(planRaw)
+        const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(rawKeys)
+        const synchronizer = await this.synchronizerPromise
+
+        if (plan.noteSplitRequired && plan.noteSplitProposalBase64 != null) {
+          const result = await synchronizer.submitNoteSplit({
+            mnemonicSeed: zcashPrivateKeys.mnemonic,
+            proposalBase64: plan.noteSplitProposalBase64
+          })
+          if (result.type !== 'success') {
+            throw new Error(`Ironwood note split failed: ${result.type}`)
+          }
+          this.recordMigrationTxid(result.txid)
+          this.migration.pendingTxid = result.txid
+        }
+
+        await synchronizer.signAndStoreMigrationSchedule({
+          mnemonicSeed: zcashPrivateKeys.mnemonic,
+          scheduleBase64: plan.scheduleBase64
+        })
+
+        let txid: string | undefined
+        if (plan.strategy === 'immediate') {
+          const result = await synchronizer.executeNextPendingTransfer()
+          if (result != null && result.type === 'success') {
+            txid = result.txid
+            this.recordMigrationTxid(txid)
+            this.migration.pendingTxid = txid
+          }
+        }
+
+        this.migration.statusCache = undefined
+        this.migration.lastCheckedHeight = 0
+        return { txid }
+      },
+
+      /**
+       * Re-anchors, re-proves and re-signs stale scheduled transfers (the
+       * lighter recovery). Returns the number of transfers refreshed.
+       */
+      retryMigration: async (rawKeys: JsonObject): Promise<number> => {
+        const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(rawKeys)
+        const synchronizer = await this.synchronizerPromise
+        const refreshed = await synchronizer.refreshStaleTransfers({
+          mnemonicSeed: zcashPrivateKeys.mnemonic
+        })
+        this.migration.statusCache = undefined
+        this.migration.lastCheckedHeight = 0
+        return refreshed
+      }
+    }
+  }
+
+  recordMigrationTxid(txid: string): void {
+    if (!this.otherData.migrationTxids.includes(txid)) {
+      this.otherData.migrationTxids.push(txid)
+      this.walletLocalDataDirty = true
     }
   }
 
@@ -110,6 +310,7 @@ export class ZcashEngine extends CurrencyEngine<
       this.updateBlockHeight(networkBlockHeight)
       this.syncTracker.updateProgress(scanProgress)
       await this.checkAutoshielding()
+      await this.checkMigration(networkBlockHeight)
     })
     this.synchronizer.on('statusChanged', async payload => {
       this.synchronizerStatus = payload.name
@@ -121,26 +322,30 @@ export class ZcashEngine extends CurrencyEngine<
         saplingAvailableZatoshi,
         saplingTotalZatoshi,
         orchardAvailableZatoshi,
-        orchardTotalZatoshi
+        orchardTotalZatoshi,
+        ironwoodAvailableZatoshi,
+        ironwoodTotalZatoshi
       } = payload
 
-      // Transparent funds will be autoshielded so the available balance should only reflect the shielded balances
-      this.availableZatoshi = add(
-        saplingAvailableZatoshi,
-        orchardAvailableZatoshi
-      )
       this.balances = {
         transparentAvailableZatoshi,
         transparentTotalZatoshi,
         saplingAvailableZatoshi,
         saplingTotalZatoshi,
         orchardAvailableZatoshi,
-        orchardTotalZatoshi
+        orchardTotalZatoshi,
+        ironwoodAvailableZatoshi,
+        ironwoodTotalZatoshi
       }
+      // Transparent funds will be autoshielded so the available balance should only reflect the shielded balances
+      this.availableZatoshi = computeAvailableZatoshi(this.balances)
 
       const total = add(
-        add(transparentTotalZatoshi, saplingTotalZatoshi),
-        orchardTotalZatoshi
+        add(
+          add(transparentTotalZatoshi, saplingTotalZatoshi),
+          orchardTotalZatoshi
+        ),
+        ironwoodTotalZatoshi
       )
 
       this.updateBalance(null, total)
@@ -156,6 +361,15 @@ export class ZcashEngine extends CurrencyEngine<
         ) {
           this.autoshielding.txid = undefined
           this.autoshielding.createAutoshieldTx = false
+        }
+
+        // Check if the in-flight migration transaction has confirmed (the
+        // next transfer waits for its own executable height via checkMigration)
+        if (
+          tx.rawTransactionId === this.migration.pendingTxid &&
+          tx.minedHeight > 0
+        ) {
+          this.migration.pendingTxid = undefined
         }
 
         this.processTransaction(tx)
@@ -224,6 +438,14 @@ export class ZcashEngine extends CurrencyEngine<
       netNativeAmount = `-${networkFee}`
     }
 
+    // Special case for Orchard -> Ironwood migration txs (self-transfers the
+    // engine created; the SDK's Transaction carries no migration flag, so the
+    // engine matches against its own recorded txids):
+    if (this.otherData.migrationTxids.includes(rawTransactionId)) {
+      metadata = { notes: 'Ironwood Migration' }
+      netNativeAmount = `-${networkFee}`
+    }
+
     let confirmations: EdgeTransaction['confirmations'] | undefined
     if (isExpired) {
       confirmations = 'failed'
@@ -289,6 +511,52 @@ export class ZcashEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Drives the Orchard -> Ironwood migration during sync: once per new block,
+   * pull the SDK's migration state and decide whether the sync loop should
+   * broadcast the next height-due pre-signed transfer or refresh stale ones
+   * (see decideMigrationAction). The actual work happens in syncNetwork,
+   * which has the seed.
+   */
+  async checkMigration(networkBlockHeight: number): Promise<void> {
+    if (this.synchronizer == null || !this.isSynced()) return
+    if (networkBlockHeight <= this.migration.lastCheckedHeight) return
+    this.migration.lastCheckedHeight = networkBlockHeight
+
+    const isBusy =
+      this.migration.executeTransferRequested ||
+      this.migration.refreshStaleRequested ||
+      this.migration.pendingTxid != null
+
+    try {
+      const state = await this.synchronizer.getMigrationState()
+      const [hasInvalidTransfers, isSyncRequiredBeforeNextTransfer] =
+        state.state === 'inProgress' && !isBusy
+          ? await Promise.all([
+              this.synchronizer.hasInvalidTransfers(),
+              this.synchronizer.isSyncRequiredBeforeNextTransfer()
+            ])
+          : [false, false]
+
+      const action = decideMigrationAction({
+        state,
+        hasInvalidTransfers,
+        isSyncRequiredBeforeNextTransfer,
+        networkBlockHeight,
+        isBusy
+      })
+      if (action === 'execute') {
+        this.migration.executeTransferRequested = true
+        await this.restartSyncNetwork()
+      } else if (action === 'refreshStale') {
+        this.migration.refreshStaleRequested = true
+        await this.restartSyncNetwork()
+      }
+    } catch (e) {
+      this.log.warn('checkMigration failed: ', String(e))
+    }
+  }
+
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
     if (!this.engineOn) return 1000
 
@@ -312,6 +580,21 @@ export class ZcashEngine extends CurrencyEngine<
       this.synchronizerResolver(this.synchronizer)
       this.initData()
       this.initSubscriptions()
+
+      // One-time Ironwood post-upgrade initialization (idempotency of the SDK
+      // call is unconfirmed, so the engine guards it with a persisted flag):
+      if (!this.otherData.isPostUpgradeInitialized) {
+        try {
+          await this.synchronizer.initializeIronwoodPostUpgrade()
+          this.otherData.isPostUpgradeInitialized = true
+          this.walletLocalDataDirty = true
+        } catch (e) {
+          this.log.warn(
+            'initializeIronwoodPostUpgrade failed (will retry next engine start): ',
+            String(e)
+          )
+        }
+      }
     }
 
     if (this.synchronizer != null && this.autoshielding.createAutoshieldTx) {
@@ -332,6 +615,63 @@ export class ZcashEngine extends CurrencyEngine<
             this.log.error('Autoshield failed: ', e)
           })
           .finally(() => {
+            this.stopSyncing = resolve
+          })
+      })
+    }
+
+    if (this.synchronizer != null && this.migration.refreshStaleRequested) {
+      return await new Promise(resolve => {
+        this.log.warn('Ironwood migration: refreshing stale transfers...')
+        this.synchronizer
+          ?.refreshStaleTransfers({ mnemonicSeed: zcashPrivateKeys.mnemonic })
+          .then(refreshed => {
+            this.log.warn(
+              `Ironwood migration: refreshed ${refreshed} transfers`
+            )
+            this.migration.statusCache = undefined
+          })
+          .catch(e => {
+            this.log.error('Ironwood migration: refresh failed: ', e)
+          })
+          .finally(() => {
+            this.migration.refreshStaleRequested = false
+            this.stopSyncing = resolve
+          })
+      })
+    }
+
+    if (this.synchronizer != null && this.migration.executeTransferRequested) {
+      return await new Promise(resolve => {
+        this.log.warn(
+          'Ironwood migration: broadcasting next pending transfer...'
+        )
+        this.synchronizer
+          ?.executeNextPendingTransfer()
+          .then(result => {
+            if (result == null) {
+              this.log.warn('Ironwood migration: no transfer due')
+            } else if (result.type === 'success') {
+              this.log.warn(
+                'Ironwood migration: transfer broadcast',
+                result.txid
+              )
+              this.recordMigrationTxid(result.txid)
+              this.migration.pendingTxid = result.txid
+              this.migration.statusCache = undefined
+            } else {
+              // Recorded outcome; checkMigration re-evaluates on the next block
+              // (stale/invalid outcomes route to refreshStaleTransfers there).
+              this.log.warn(
+                `Ironwood migration: transfer outcome ${result.type}`
+              )
+            }
+          })
+          .catch(e => {
+            this.log.error('Ironwood migration: execute failed: ', e)
+          })
+          .finally(() => {
+            this.migration.executeTransferRequested = false
             this.stopSyncing = resolve
           })
       })
@@ -373,6 +713,14 @@ export class ZcashEngine extends CurrencyEngine<
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
     this.initData()
     this.synchronizerStatus = 'SYNCING'
+    // Migration orchestration state is rebuilt from SDK pulls after the
+    // rescan (whether the SDK preserves its stored schedule or reverts the
+    // wallet to a needs-migration state, checkMigration handles both):
+    this.migration.executeTransferRequested = false
+    this.migration.refreshStaleRequested = false
+    this.migration.pendingTxid = undefined
+    this.migration.lastCheckedHeight = 0
+    this.migration.statusCache = undefined
   }
 
   async getMaxSpendable(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
