@@ -1,4 +1,5 @@
 import {
+  asArray,
   asBoolean,
   asCodec,
   asMaybe,
@@ -44,10 +45,71 @@ export type CachedEdgeAddresses = ReturnType<typeof asCachedEdgeAddresses>
 
 export const asZcashWalletOtherData = asObject({
   cachedAddresses: asMaybe(asCachedEdgeAddresses),
-  isSdkInitializedOnDisk: asMaybe(asBoolean, false)
+  isSdkInitializedOnDisk: asMaybe(asBoolean, false),
+  /** Guards the one-time Ironwood post-upgrade SDK initialization. */
+  isPostUpgradeInitialized: asMaybe(asBoolean, false),
+  /**
+   * Txids of Orchard->Ironwood migration transactions this engine created
+   * (note split + transfers), used to label them in the transaction list.
+   * The SDK's Transaction type carries no migration flag, so the engine
+   * tracks its own.
+   */
+  migrationTxids: asMaybe(asArray(asString), () => [])
 })
 
 export type ZcashWalletOtherData = ReturnType<typeof asZcashWalletOtherData>
+
+//
+// Orchard -> Ironwood migration (engine-level shapes, consumed by the GUI
+// through wallet.otherMethods — kept independent of the SDK's enums so SDK
+// churn doesn't ripple into the GUI).
+//
+
+export const asZcashMigrationStatus = asObject({
+  /**
+   * notNeeded: no Orchard funds (or pre-activation) — show nothing.
+   * required: Orchard funds present and no confirmed plan — prompt the user.
+   * scheduled: note split and/or signed schedule in motion — show progress.
+   * complete: everything migrated.
+   * error: a transfer needs attention (stale/invalid) — offer retry.
+   */
+  state: asValue('notNeeded', 'required', 'scheduled', 'complete', 'error'),
+  completedTransfers: asMaybe(asNumber, 0),
+  totalTransfers: asMaybe(asNumber, 0),
+  remainingOrchardZatoshi: asMaybe(asString, '0'),
+  hasOverdueTransfers: asMaybe(asBoolean, false),
+  isSynced: asMaybe(asBoolean, false),
+  /** Height after which the next pre-signed transfer becomes executable. */
+  nextTransferReadyAtHeight: asOptional(asNumber)
+})
+export type ZcashMigrationStatus = ReturnType<typeof asZcashMigrationStatus>
+
+export const asZcashMigrationTransferDisplay = asObject({
+  id: asString,
+  amountZatoshi: asString,
+  nextExecutableAfterHeight: asNumber,
+  expiryHeight: asNumber
+})
+
+export const asZcashMigrationPlan = asObject({
+  strategy: asValue('privacy', 'immediate'),
+  transfers: asArray(asZcashMigrationTransferDisplay),
+  estimatedDurationHours: asNumber,
+  /** Sum of the transfer amounts. */
+  totalAmountZatoshi: asString,
+  /**
+   * The note-split preparation fee (zero when no split is needed). The SDK
+   * does not expose per-transfer fees at proposal time, so this is the only
+   * fee component known up front.
+   */
+  noteSplitFeeZatoshi: asString,
+  noteSplitRequired: asBoolean,
+  /** Opaque; round-tripped to submitNoteSplit exactly as proposed. */
+  noteSplitProposalBase64: asOptional(asString),
+  /** Opaque; round-tripped to signAndStoreMigrationSchedule as proposed. */
+  scheduleBase64: asString
+})
+export type ZcashMigrationPlan = ReturnType<typeof asZcashMigrationPlan>
 
 export type ZcashBalances = Omit<
   BalanceEvent,
