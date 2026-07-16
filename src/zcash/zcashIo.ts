@@ -4,11 +4,19 @@ import type {
   CreateTransferOpts,
   ErrorEvent,
   InitializerConfig,
+  MigrationProgress,
+  MigrationSchedule,
+  MigrationState,
+  MigrationTransferResult,
+  NetworkPrivacyOptions,
+  NoteSplitProposal,
   ProposalSuccess,
   ProposeTransferOpts,
   ShieldFundsInfo,
+  SignScheduleOpts,
   SpendFailure,
   StatusEvent,
+  SubmitNoteSplitOpts,
   Synchronizer,
   Tools,
   TransactionEvent,
@@ -33,6 +41,29 @@ export interface ZcashSynchronizer {
   rescan: () => Promise<void>
   shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<string>
   stop: () => Promise<string>
+
+  // Orchard -> Ironwood migration (NU6.3). The SDK persists all migration
+  // state (schedule, pre-signed transactions) in its own database, so this
+  // surface is pull-based; the seed crosses per call and is never stored.
+  getMigrationState: () => Promise<MigrationState>
+  getMigrationProgress: () => Promise<MigrationProgress | null>
+  isNoteSplitNeeded: () => Promise<boolean>
+  prepareNoteSplit: () => Promise<NoteSplitProposal>
+  submitNoteSplit: (
+    opts: SubmitNoteSplitOpts
+  ) => Promise<MigrationTransferResult>
+  proposeMigrationTransfers: () => Promise<MigrationSchedule>
+  proposeImmediateMigration: () => Promise<MigrationSchedule>
+  signAndStoreMigrationSchedule: (opts: SignScheduleOpts) => Promise<void>
+  isSyncRequiredBeforeNextTransfer: () => Promise<boolean>
+  executeNextPendingTransfer: (
+    privacy?: NetworkPrivacyOptions
+  ) => Promise<MigrationTransferResult | null>
+  hasOverdueTransfers: () => Promise<boolean>
+  hasInvalidTransfers: () => Promise<boolean>
+  refreshStaleTransfers: (opts: { mnemonicSeed: string }) => Promise<number>
+  restartCurrentMigrationStep: () => Promise<MigrationSchedule>
+  initializeIronwoodPostUpgrade: () => Promise<void>
 }
 
 export interface ZcashIo {
@@ -94,6 +125,52 @@ export function makeZcashIo(): ZcashIo {
         },
         stop: async () => {
           return await realSynchronizer.stop()
+        },
+
+        getMigrationState: async () => {
+          return await realSynchronizer.getMigrationState()
+        },
+        getMigrationProgress: async () => {
+          return await realSynchronizer.getMigrationProgress()
+        },
+        isNoteSplitNeeded: async () => {
+          return await realSynchronizer.isNoteSplitNeeded()
+        },
+        prepareNoteSplit: async () => {
+          return await realSynchronizer.prepareNoteSplit()
+        },
+        submitNoteSplit: async opts => {
+          return await realSynchronizer.submitNoteSplit(opts)
+        },
+        proposeMigrationTransfers: async () => {
+          return await realSynchronizer.proposeMigrationTransfers()
+        },
+        proposeImmediateMigration: async () => {
+          return await realSynchronizer.proposeImmediateMigration()
+        },
+        signAndStoreMigrationSchedule: async opts => {
+          return await realSynchronizer.signAndStoreMigrationSchedule(opts)
+        },
+        isSyncRequiredBeforeNextTransfer: async () => {
+          return await realSynchronizer.isSyncRequiredBeforeNextTransfer()
+        },
+        executeNextPendingTransfer: async privacy => {
+          return await realSynchronizer.executeNextPendingTransfer(privacy)
+        },
+        hasOverdueTransfers: async () => {
+          return await realSynchronizer.hasOverdueTransfers()
+        },
+        hasInvalidTransfers: async () => {
+          return await realSynchronizer.hasInvalidTransfers()
+        },
+        refreshStaleTransfers: async opts => {
+          return await realSynchronizer.refreshStaleTransfers(opts)
+        },
+        restartCurrentMigrationStep: async () => {
+          return await realSynchronizer.restartCurrentMigrationStep()
+        },
+        initializeIronwoodPostUpgrade: async () => {
+          return await realSynchronizer.initializeIronwoodPostUpgrade()
         }
       })
 
