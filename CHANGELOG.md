@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Base) Use dynamic `eth_feeHistory` fee estimation instead of a hardcoded 2 gwei priority floor. The previous static floor caused sends to overpay by ~200x during normal network conditions. The dynamic algorithm tracks real-time percentile-based priority fees with a 2x base-fee buffer, so fees rise naturally during congestion spikes and drop to market rate otherwise. The static `minPriorityFee` fallback (used only when `eth_feeHistory` fails) is lowered from 2 gwei to 0.1 gwei, a conservative 20x reduction that covered the observed p99 priority fee in a 1,024-block Base sample.
+
 ## 4.86.1 (2026-07-15)
 
 - fixed: (MAYAChain/THORChain) Failed transactions no longer appear in history as successful receives. Midgard reports a reverted transaction's full `in`/`out` amounts even though nothing moved on-chain; we now honor the action `status` and, for a failed action, record a fee-only transaction marked `failed` for the signer (like a failed EVM transaction) instead of crediting the intended recipient.
