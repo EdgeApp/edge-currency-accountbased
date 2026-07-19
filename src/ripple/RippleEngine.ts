@@ -705,7 +705,7 @@ export class XrpEngine extends CurrencyEngine<
       })
 
       if (detectedTokenIds.length > 0) {
-        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+        this.reportDetectedTokens(detectedTokenIds)
       }
 
       // If get here, we've checked balances for all possible tokens the user
