@@ -28,7 +28,7 @@ export const formatPixKey = (pixkey: string): [boolean, string] => {
     return [true, pixkey]
   }
 
-  // formated cnpj
+  // formatted cnpj
   if (pixkey.length === 18) {
     if (!/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(pixkey)) {
       return [false, 'invalid pixkey']
@@ -55,16 +55,16 @@ export const formatPixKey = (pixkey: string): [boolean, string] => {
     return [false, 'invalid pixkey']
   }
 
-  // cnpj or formated cpf
+  // cnpj or formatted cpf
   if (pixkey.length === 14) {
-    // unformated cnpj
+    // unformatted cnpj
     if (/^\d+$/.test(pixkey)) {
       if (!isCnpj(pixkey)) {
         return [false, 'invalid pixkey']
       }
       return [true, pixkey]
     }
-    // formated cpf
+    // formatted cpf
     if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(pixkey)) {
       if (!isCpf(pixkey)) {
         return [false, 'invalid cpf']
@@ -73,7 +73,7 @@ export const formatPixKey = (pixkey: string): [boolean, string] => {
     }
   }
 
-  // informated cpf or phone without country
+  // informatted cpf or phone without country
   if (pixkey.length === 11) {
     if (!/^\d+$/.test(pixkey)) {
       return [false, 'invalid pixkey']
@@ -87,7 +87,7 @@ export const formatPixKey = (pixkey: string): [boolean, string] => {
     return [true, '+55' + pixkey]
   }
 
-  // eigher wrong formated cpf or formated phone number
+  // eigher wrong formatted cpf or formatted phone number
   pixkey = pixkey.replace(/[^\d]+/g, '')
   if (pixkey.length === 12) {
     if (pixkey.charAt(0) !== '0') {
