@@ -65,9 +65,13 @@ export const asMidgardActionResponse = asObject({
   // reverted its state changes on-chain, so its `in`/`out` amounts never
   // actually moved (only the network fee was burned). Default to 'success'
   // to preserve behavior if the field is ever absent.
-  status: asMaybe(asString, () => 'success')
+  status: asMaybe(asString, () => 'success'),
+  // The action's operation, e.g. 'swap', 'send', 'refund'. A MsgDeposit whose
+  // message failed to execute (e.g. a misrouted swap memo) is reported as its
+  // own 'failed' type — with status 'success' and a metadata.failed object
+  // that carries no networkFees — rather than as a failed-status action.
+  type: asMaybe(asString, () => '')
   // pools: ['BTC.BTC'],
-  // type: 'swap'
 })
 export type MidgardActionResponse = ReturnType<typeof asMidgardActionResponse>
 export const asMidgardActionsResponse = asObject({

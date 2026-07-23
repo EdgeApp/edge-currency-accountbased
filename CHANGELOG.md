@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Thorchain/Mayachain) Stop recording failed MsgDeposit actions (Midgard `type: 'failed'`) as full-amount sends. The reverted deposit never moved funds, so only the burned network fee is recorded, marked as a failed transaction — matching the existing failed-send handling.
+
 ## 4.86.2 (2026-07-17)
 
 - changed: (Base) Use dynamic `eth_feeHistory` fee estimation instead of a hardcoded 2 gwei priority floor. The previous static floor caused sends to overpay by ~200x during normal network conditions. The dynamic algorithm tracks real-time percentile-based priority fees with a 2x base-fee buffer, so fees rise naturally during congestion spikes and drop to market rate otherwise. The static `minPriorityFee` fallback (used only when `eth_feeHistory` fails) is lowered from 2 gwei to 0.1 gwei, a conservative 20x reduction that covered the observed p99 priority fee in a 1,024-block Base sample.
