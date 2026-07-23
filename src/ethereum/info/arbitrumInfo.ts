@@ -192,6 +192,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'arbitrum',
+  hasStableAddresses: true,
   walletType: 'wallet:arbitrum',
 
   // Explorers:

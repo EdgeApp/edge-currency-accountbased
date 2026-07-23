@@ -101,6 +101,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'EthereumPoW',
   memoOptions: evmMemoOptions,
   pluginId: 'ethereumpow',
+  hasStableAddresses: true,
   walletType: 'wallet:ethereumpow',
 
   // Explorers:

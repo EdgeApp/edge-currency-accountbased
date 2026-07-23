@@ -50,6 +50,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Tezos',
   chainDisplayName: 'Tezos',
   pluginId: 'tezos',
+  hasStableAddresses: true,
   walletType: 'wallet:tezos',
 
   // Explorers:

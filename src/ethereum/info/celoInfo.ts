@@ -110,6 +110,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Celo',
   memoOptions: evmMemoOptions,
   pluginId: 'celo',
+  hasStableAddresses: true,
   walletType: 'wallet:celo',
 
   // Explorers:

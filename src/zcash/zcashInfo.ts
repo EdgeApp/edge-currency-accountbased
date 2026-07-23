@@ -22,6 +22,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Zcash',
   chainDisplayName: 'Zcash',
   pluginId: 'zcash',
+  hasStableAddresses: true,
   requiredConfirmations: 10,
   syncDisplayPrecision: 6,
   unsafeBroadcastTx: true,

@@ -20,6 +20,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Cardano',
   chainDisplayName: 'Cardano',
   pluginId: 'cardano',
+  hasStableAddresses: true,
   walletType: 'wallet:cardano',
 
   // Explorers:

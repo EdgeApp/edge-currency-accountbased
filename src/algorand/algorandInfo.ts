@@ -41,6 +41,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Algorand',
   chainDisplayName: 'Algorand',
   pluginId: 'algorand',
+  hasStableAddresses: true,
   walletType: 'wallet:algorand',
 
   // Explorers:

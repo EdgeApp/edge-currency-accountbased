@@ -121,6 +121,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Monad',
   memoOptions: evmMemoOptions,
   pluginId: 'monad',
+  hasStableAddresses: true,
   walletType: 'wallet:monad',
 
   // Explorers:

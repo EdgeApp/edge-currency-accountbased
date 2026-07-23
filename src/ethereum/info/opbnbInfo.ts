@@ -102,6 +102,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'BNB',
   memoOptions: evmMemoOptions,
   pluginId: 'opbnb',
+  hasStableAddresses: true,
   walletType: 'wallet:opbnb',
 
   // Explorers:

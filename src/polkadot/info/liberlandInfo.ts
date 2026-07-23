@@ -38,6 +38,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Liberland Dollar',
   chainDisplayName: 'Liberland',
   pluginId: 'liberland',
+  hasStableAddresses: true,
   walletType: 'wallet:liberland',
 
   // Explorers:

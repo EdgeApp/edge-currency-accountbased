@@ -66,6 +66,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Osmosis',
   chainDisplayName: 'Osmosis',
   pluginId: 'osmosis',
+  hasStableAddresses: true,
   walletType: 'wallet:osmosis',
 
   // Explorers:

@@ -235,6 +235,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Solana',
   chainDisplayName: 'Solana',
   pluginId: 'solana',
+  hasStableAddresses: true,
   walletType: 'wallet:solana',
 
   // Explorers:

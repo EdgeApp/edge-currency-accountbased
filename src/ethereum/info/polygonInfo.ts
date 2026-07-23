@@ -231,6 +231,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Polygon',
   memoOptions: evmMemoOptions,
   pluginId: 'polygon', // matching mnemonic here
+  hasStableAddresses: true,
   walletType: 'wallet:polygon',
 
   // Explorers:

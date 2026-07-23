@@ -94,6 +94,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Rootstock',
   memoOptions: evmMemoOptions,
   pluginId: 'rsk',
+  hasStableAddresses: true,
   walletType: 'wallet:rsk',
 
   // Explorers:

@@ -35,6 +35,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Cosmos Hub',
   chainDisplayName: 'Cosmos Hub',
   pluginId: 'cosmoshub',
+  hasStableAddresses: true,
   walletType: 'wallet:cosmoshub',
 
   // Explorers:

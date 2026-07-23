@@ -90,6 +90,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Amoy Testnet',
   memoOptions: evmMemoOptions,
   pluginId: 'amoy',
+  hasStableAddresses: true,
   walletType: 'wallet:amoy',
 
   // Explorers:

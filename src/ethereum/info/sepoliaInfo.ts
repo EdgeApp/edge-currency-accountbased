@@ -107,6 +107,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Sepolia Testnet',
   memoOptions: evmMemoOptions,
   pluginId: 'sepolia',
+  hasStableAddresses: true,
   walletType: 'wallet:sepolia',
 
   // Explorers:

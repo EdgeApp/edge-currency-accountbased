@@ -19,6 +19,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'XRP',
   chainDisplayName: 'XRPL',
   pluginId: 'ripple',
+  hasStableAddresses: true,
   walletType: 'wallet:ripple',
 
   // Explorers:

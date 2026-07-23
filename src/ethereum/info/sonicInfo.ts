@@ -178,6 +178,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Sonic',
   memoOptions: evmMemoOptions,
   pluginId: 'sonic',
+  hasStableAddresses: true,
   walletType: 'wallet:sonic',
 
   // Explorers:

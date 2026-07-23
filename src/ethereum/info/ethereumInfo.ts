@@ -1257,6 +1257,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'ethereum',
+  hasStableAddresses: true,
   walletType: 'wallet:ethereum',
 
   // Explorers:

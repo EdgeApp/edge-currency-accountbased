@@ -42,6 +42,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Axelar',
   chainDisplayName: 'Axelar',
   pluginId: 'axelar',
+  hasStableAddresses: true,
   walletType: 'wallet:axelar',
 
   // Explorers:

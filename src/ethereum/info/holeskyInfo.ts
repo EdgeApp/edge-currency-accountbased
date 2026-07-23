@@ -109,6 +109,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Holesky Testnet',
   memoOptions: evmMemoOptions,
   pluginId: 'holesky',
+  hasStableAddresses: true,
   walletType: 'wallet:holesky',
 
   // Explorers:

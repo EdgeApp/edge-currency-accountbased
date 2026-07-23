@@ -32,6 +32,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Telos',
   memoOptions: eosMemoOptions,
   pluginId: 'telos',
+  hasStableAddresses: true,
   walletType: 'wallet:telos',
 
   // Explorers:

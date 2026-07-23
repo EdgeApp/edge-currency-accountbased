@@ -150,6 +150,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Zano',
   chainDisplayName: 'Zano',
   pluginId: 'zano',
+  hasStableAddresses: true,
   walletType: 'wallet:zano',
   requiredConfirmations: 10,
 

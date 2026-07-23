@@ -138,6 +138,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Dev Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'ethDev',
+  hasStableAddresses: true,
   walletType: 'wallet:ethDev',
 
   // Explorers:

@@ -84,6 +84,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'abstract',
+  hasStableAddresses: true,
   walletType: 'wallet:abstract',
 
   // Explorers:
