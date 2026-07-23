@@ -132,6 +132,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'zksync',
+  hasStableAddresses: true,
   walletType: 'wallet:zksync',
 
   // Explorers:

@@ -17,6 +17,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Toncoin',
   chainDisplayName: 'Toncoin',
   pluginId: 'ton',
+  hasStableAddresses: true,
   walletType: 'wallet:ton',
 
   // Explorers:

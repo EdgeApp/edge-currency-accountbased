@@ -23,6 +23,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'BNB Beacon Chain',
   chainDisplayName: 'BNB Beacon Chain',
   pluginId: 'binance',
+  hasStableAddresses: true,
   walletType: 'wallet:binance',
 
   // Explorers:

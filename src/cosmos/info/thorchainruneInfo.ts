@@ -70,6 +70,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'THORChain',
   chainDisplayName: 'THORChain',
   pluginId: 'thorchainrune',
+  hasStableAddresses: true,
   walletType: 'wallet:thorchainrune',
 
   // Explorers:

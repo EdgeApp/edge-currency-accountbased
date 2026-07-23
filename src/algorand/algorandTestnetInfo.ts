@@ -34,6 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Algorand Testnet',
   chainDisplayName: 'Algorand Testnet',
   pluginId: 'algorandtestnet',
+  hasStableAddresses: true,
   walletType: 'wallet:algorandtestnet',
 
   // Explorers:

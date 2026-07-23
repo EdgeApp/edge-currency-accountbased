@@ -24,6 +24,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Filecoin Testnet (Calibration)',
   chainDisplayName: 'Filecoin Testnet (Calibration)',
   pluginId: 'calibration',
+  hasStableAddresses: true,
   requiredConfirmations: 900,
   unsafeBroadcastTx: true,
   walletType: 'wallet:calibration',

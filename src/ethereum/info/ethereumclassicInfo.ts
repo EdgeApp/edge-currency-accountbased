@@ -130,6 +130,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Ethereum Classic',
   memoOptions: evmMemoOptions,
   pluginId: 'ethereumclassic',
+  hasStableAddresses: true,
   walletType: 'wallet:ethereumclassic',
 
   // Explorers:

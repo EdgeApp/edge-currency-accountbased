@@ -62,6 +62,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'THORChain Stagenet',
   chainDisplayName: 'THORChain Stagenet',
   pluginId: 'thorchainrunestagenet',
+  hasStableAddresses: true,
   walletType: 'wallet:thorchainrunestagenet',
 
   // Explorers:

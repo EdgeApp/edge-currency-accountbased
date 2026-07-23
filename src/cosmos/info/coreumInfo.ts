@@ -163,6 +163,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'TX',
   chainDisplayName: 'TX',
   pluginId: 'coreum',
+  hasStableAddresses: true,
   walletType: 'wallet:coreum',
 
   // Explorers:

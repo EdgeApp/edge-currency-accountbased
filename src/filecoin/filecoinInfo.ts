@@ -24,6 +24,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Filecoin',
   chainDisplayName: 'Filecoin',
   pluginId: 'filecoin',
+  hasStableAddresses: true,
   requiredConfirmations: 900,
   walletType: 'wallet:filecoin',
 

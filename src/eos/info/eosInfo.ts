@@ -39,6 +39,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'EOS',
   memoOptions: eosMemoOptions,
   pluginId: 'eos',
+  hasStableAddresses: true,
   unsafeBroadcastTx: true,
   walletType: 'wallet:eos',
 

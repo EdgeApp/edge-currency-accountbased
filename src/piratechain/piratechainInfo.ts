@@ -25,6 +25,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Pirate Chain',
   chainDisplayName: 'Pirate Chain',
   pluginId: 'piratechain',
+  hasStableAddresses: true,
   requiredConfirmations: 10,
   syncDisplayPrecision: 6,
   unsafeBroadcastTx: true,

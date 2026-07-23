@@ -42,6 +42,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'FIO',
   chainDisplayName: 'FIO',
   pluginId: 'fio',
+  hasStableAddresses: true,
   unsafeSyncNetwork: true,
   walletType: 'wallet:fio',
 

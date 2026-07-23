@@ -42,6 +42,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Nym',
   chainDisplayName: 'Nyx',
   pluginId: 'nym',
+  hasStableAddresses: true,
   walletType: 'wallet:nym',
 
   // Explorers:

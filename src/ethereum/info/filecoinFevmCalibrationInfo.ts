@@ -96,6 +96,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Filecoin FEVM (Calibration Testnet)',
   memoOptions: evmMemoOptions,
   pluginId: 'filecoinfevmcalibration',
+  hasStableAddresses: true,
   requiredConfirmations: 900,
   walletType: 'wallet:filecoinfevmcalibration',
 

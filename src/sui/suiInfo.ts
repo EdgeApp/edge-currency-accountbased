@@ -27,6 +27,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Sui',
   chainDisplayName: 'Sui',
   pluginId: 'sui',
+  hasStableAddresses: true,
   walletType: 'wallet:sui',
 
   // Explorers:

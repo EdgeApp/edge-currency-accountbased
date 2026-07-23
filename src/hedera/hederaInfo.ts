@@ -20,6 +20,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Hedera',
   chainDisplayName: 'Hedera',
   pluginId: 'hedera',
+  hasStableAddresses: true,
   walletType: 'wallet:hedera',
 
   // Explorers:

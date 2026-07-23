@@ -26,6 +26,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Polkadot',
   chainDisplayName: 'Polkadot',
   pluginId: 'polkadot',
+  hasStableAddresses: true,
   walletType: 'wallet:polkadot',
 
   // Explorers:

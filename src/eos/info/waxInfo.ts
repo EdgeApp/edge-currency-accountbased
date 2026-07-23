@@ -28,6 +28,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Wax',
   memoOptions: eosMemoOptions,
   pluginId: 'wax',
+  hasStableAddresses: true,
   walletType: 'wallet:wax',
 
   // Explorers:

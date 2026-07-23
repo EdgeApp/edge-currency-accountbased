@@ -234,6 +234,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Avalanche',
   memoOptions: evmMemoOptions,
   pluginId: 'avalanche', // matching mnemonic here
+  hasStableAddresses: true,
   walletType: 'wallet:avalanche',
 
   // Explorers:

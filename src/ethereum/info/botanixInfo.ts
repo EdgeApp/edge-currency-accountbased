@@ -90,6 +90,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Botanix',
   memoOptions: evmMemoOptions,
   pluginId: 'botanix',
+  hasStableAddresses: true,
   walletType: 'wallet:botanix',
 
   // Explorers:

@@ -92,6 +92,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'BOB',
   memoOptions: evmMemoOptions,
   pluginId: 'bobevm',
+  hasStableAddresses: true,
   walletType: 'wallet:bobevm',
 
   // Explorers:

@@ -332,6 +332,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'Fantom',
   memoOptions: evmMemoOptions,
   pluginId: 'fantom',
+  hasStableAddresses: true,
   walletType: 'wallet:fantom',
 
   // Explorers:

@@ -193,6 +193,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'BNB Smart Chain',
   memoOptions: evmMemoOptions,
   pluginId: 'binancesmartchain',
+  hasStableAddresses: true,
   walletType: 'wallet:binancesmartchain',
 
   // Explorers:

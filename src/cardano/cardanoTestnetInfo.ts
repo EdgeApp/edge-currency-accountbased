@@ -20,6 +20,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Cardano PreProd Testnet',
   chainDisplayName: 'Cardano PreProd Testnet',
   pluginId: 'cardanotestnet',
+  hasStableAddresses: true,
   walletType: 'wallet:cardanotestnet',
 
   // Explorers:

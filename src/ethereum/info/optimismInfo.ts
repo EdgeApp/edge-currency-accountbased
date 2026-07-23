@@ -223,6 +223,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'optimism',
+  hasStableAddresses: true,
   walletType: 'wallet:optimism',
 
   // Explorers:

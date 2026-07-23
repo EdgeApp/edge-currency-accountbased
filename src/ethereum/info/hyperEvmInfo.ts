@@ -163,6 +163,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'HYPE',
   memoOptions: evmMemoOptions,
   pluginId: 'hyperevm',
+  hasStableAddresses: true,
   walletType: 'wallet:hyperevm',
 
   // Explorers:

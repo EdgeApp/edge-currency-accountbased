@@ -18,6 +18,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Stellar',
   chainDisplayName: 'Stellar',
   pluginId: 'stellar',
+  hasStableAddresses: true,
   walletType: 'wallet:stellar',
 
   // Explorers:

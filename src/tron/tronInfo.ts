@@ -121,6 +121,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Tron',
   chainDisplayName: 'Tron',
   pluginId: 'tron',
+  hasStableAddresses: true,
   walletType: 'wallet:tron',
 
   // Explorers:

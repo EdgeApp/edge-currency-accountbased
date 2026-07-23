@@ -102,6 +102,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   chainDisplayName: 'PulseChain',
   memoOptions: evmMemoOptions,
   pluginId: 'pulsechain',
+  hasStableAddresses: true,
   walletType: 'wallet:pulsechain',
 
   // Explorers:

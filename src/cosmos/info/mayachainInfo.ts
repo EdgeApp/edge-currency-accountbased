@@ -46,6 +46,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   assetDisplayName: 'Cacao',
   chainDisplayName: 'MAYAChain',
   pluginId: 'mayachain',
+  hasStableAddresses: true,
   walletType: 'wallet:mayachain',
 
   // Explorers:
