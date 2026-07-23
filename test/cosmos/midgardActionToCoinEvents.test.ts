@@ -54,30 +54,29 @@ const successfulSend: MidgardActionResponse = {
   status: 'success'
 }
 
-const DEPOSIT_SENDER = 'thor1dc5s9xqgpuvzwvlaqqh7zkd02llvd88468a0fz'
+const DEPOSIT_SENDER = 'thor1awtcehl2tq4jg0js9tdsx623a8k3a2nqcce4el'
 
-// Real THORChain MsgDeposit whose swap memo failed to execute (a Maya memo
-// misrouted to THORChain; the RUNE-DASH ticket). Midgard reports these as
-// their own `type: 'failed'` action — status stays 'success', and the
-// metadata.failed object carries no networkFees — with the full deposit
-// amount in `in` even though it never moved. Source: thorchain Midgard
-// actions API, txid 12581E...D65758, raw and uncleaned.
+// A real THORChain MsgDeposit that failed to execute, from an unrelated
+// third-party integration (note the `-_/t1` affiliate — not ours). Midgard
+// reports these as their own `type: 'failed'` action: the status stays
+// 'success', the metadata.failed object carries no networkFees, and the full
+// deposit amount is still listed in `in` even though it never moved.
+// Source: thorchain Midgard actions API, txid D3A914...57CDA9, verbatim.
 const failedDeposit = asMidgardActionResponse({
-  date: '1784338251324347561',
-  height: '27050815',
+  date: '1784826777907554968',
+  height: '27128571',
   in: [
     {
       address: DEPOSIT_SENDER,
-      coins: [{ amount: '582794500000', asset: 'THOR.RUNE' }],
-      txID: '12581E59B4A350D32A4123744B2407CCA68A071A8A68A8A45CDFC0759BD65758'
+      coins: [{ amount: '49856548000', asset: 'THOR.RUNE' }],
+      txID: 'D3A9148F8A242FF64D16C1656B48A2E7B58FB8FA90C69070EF4E9FEA8757CDA9'
     }
   ],
   metadata: {
     failed: {
-      code: '99',
-      memo: '=:d:Xm1rpLaZrvku1XEB25PXRohSTYdxbdfkgK:0/5/0:ej:75',
-      reason:
-        "failed to execute message; message index: 0: invalid memo: 2 errors occurred:\n\t* internal error\n\t* MEMO: =:d:Xm1rpLaZrvku1XEB25PXRohSTYdxbdfkgK:0/5/0:ej:75\nPARSE FAILURE(S): cannot parse 'Xm1rpLaZrvku1XEB25PXRohSTYdxbdfkgK' as an Address: Xm1rpLaZrvku1XEB25PXRohSTYdxbdfkgK is not recognizable\n\n: internal error"
+      code: '5',
+      memo: '=:e:0x566bc53a9648FC5f4a01DDA944EE91B66Dc8CE13:10940295/0/0:-_/t1:0/70',
+      reason: 'failed to execute message; message index: 0: insufficient funds'
     }
   },
   out: [],
@@ -128,8 +127,8 @@ describe('midgardActionToCoinEvents', function () {
 
   // A `type: 'failed'` deposit reverted on-chain even though its status reads
   // 'success'. Treating it by status alone recorded the full deposit amount as
-  // a real send (the RUNE-DASH ticket: a -5,827 RUNE "send" that never
-  // debited the balance).
+  // a real send, leaving a large outgoing transaction in history against a
+  // balance that never moved.
   it('records only the fallback fee for the signer of a failed deposit', function () {
     const events = midgardActionToCoinEvents(
       failedDeposit,
@@ -149,7 +148,7 @@ describe('midgardActionToCoinEvents', function () {
       THOR_FALLBACK_FEES
     )
     const changes = reduceCoinEventsForAddress(events, DEPOSIT_SENDER)
-    assert.isFalse(changes.some(c => c.amount === '-582794500000'))
+    assert.isFalse(changes.some(c => c.amount === '-49856548000'))
   })
 
   it('emits nothing for a failed deposit without a fallback fee', function () {
