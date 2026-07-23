@@ -27,6 +27,17 @@ import { CosmosEngine } from './CosmosEngine'
 const QUERY_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 /**
+ * Midgard reports a reverted operation two ways: a reverted send is a normal
+ * action with `status: 'failed'`, while a MsgDeposit whose message failed to
+ * execute (e.g. a swap memo the chain could not parse) is its own
+ * `type: 'failed'` action whose status is still 'success'. Both mean the
+ * `in`/`out` amounts never moved on-chain.
+ */
+export function isFailedMidgardAction(action: MidgardActionResponse): boolean {
+  return action.status === 'failed' || action.type === 'failed'
+}
+
+/**
  * Converts a single Midgard action into the coin_spent/coin_received events
  * used to compute our wallet's net balance change.
  *
@@ -38,10 +49,15 @@ const QUERY_POLL_MILLISECONDS = getRandomDelayMs(20000)
  * transaction. If our wallet was merely the intended recipient it paid nothing
  * and gets no events, so the action is ignored rather than shown as a
  * successful receive.
+ *
+ * A `type: 'failed'` deposit reports no networkFees in its metadata, so
+ * callers pass the chain's standard fee as `fallbackNetworkFees` to keep the
+ * burned fee on record.
  */
 export function midgardActionToCoinEvents(
   action: MidgardActionResponse,
-  ourAddress: string
+  ourAddress: string,
+  fallbackNetworkFees: Array<{ amount: string; asset: string }> = []
 ): Event[] {
   const events: Event[] = []
   const pushCoinEvent = (
@@ -64,13 +80,15 @@ export function midgardActionToCoinEvents(
     })
   }
 
-  if (action.status === 'failed') {
+  if (isFailedMidgardAction(action)) {
     const isSigner = action.in.some(
       subAction => subAction.address === ourAddress
     )
     if (isSigner) {
       const { networkFees } = Object.values(action.metadata)[0]
-      for (const feeCoin of networkFees) {
+      const feeCoins =
+        networkFees.length > 0 ? networkFees : fallbackNetworkFees
+      for (const feeCoin of feeCoins) {
         pushCoinEvent(ourAddress, feeCoin.asset, feeCoin.amount, 'coin_spent')
       }
     }
@@ -184,7 +202,18 @@ export class MidgardEngine extends CosmosEngine {
             }
           }
 
-          const events = midgardActionToCoinEvents(action, ourAddress)
+          // A failed deposit reports no networkFees, so offer the chain's
+          // standard fee as the fallback balance change for the signer.
+          const fallbackNetworkFees =
+            this.getMidgardTransactionFee().amount.map(feeCoin => ({
+              amount: feeCoin.amount,
+              asset: feeCoin.denom
+            }))
+          const events = midgardActionToCoinEvents(
+            action,
+            ourAddress,
+            fallbackNetworkFees
+          )
 
           if (txidHex === mostRecentTxId) {
             breakWhileLoop = true
@@ -203,7 +232,7 @@ export class MidgardEngine extends CosmosEngine {
           // For a failed action the events already carry the burned fee as
           // the entire balance change, so don't pass a fee that would be
           // subtracted on top of it. Otherwise get the fee from the subclass.
-          const isFailed = action.status === 'failed'
+          const isFailed = isFailedMidgardAction(action)
           const fee = isFailed ? undefined : this.getMidgardTransactionFee()
 
           netBalanceChanges.forEach(coin => {
