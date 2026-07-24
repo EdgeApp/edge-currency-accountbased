@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fixed: (Zano) Roughly one in 814 newly created seed phrases came out with 25 words and a trailing space instead of 26 words, because the mnemonic library was missing a checksum wrap-around case that Zano core handles.
 - fixed: (Zcash) The sync ratio no longer holds a stale value for the whole rescan after a resync. The synchronizer is deliberately left running across a resync, so progress it sampled beforehand can be delivered after the sync tracker has been reset. The tracker trusts a first-seen 100 and never goes backwards, so one such report pinned the ratio until the next login - at 1 for a wallet that was synced, or at wherever it had reached for a wallet that was still syncing, which is a common reason to resync in the first place. Progress reports are now ignored for the span of the resync, from before the engine is torn down until the rewind has actually happened, since a stale report is indistinguishable from a fresh one and a status transition cannot mark the boundary either - iOS suppresses the synchronizer's post-rescan SYNCED entirely.
 
 ## 4.87.0 (2026-08-02)
