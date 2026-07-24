@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Zano) Roughly one in 814 newly created seed phrases came out with 25 words and a trailing space instead of 26 words, because the mnemonic library was missing a checksum wrap-around case that Zano core handles.
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.
