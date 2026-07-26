@@ -105,3 +105,30 @@ export const asZcashInfoPayload = asObject({
   )
 })
 export type ZcashInfoPayload = ReturnType<typeof asZcashInfoPayload>
+
+//
+// Orchard -> Ironwood migration (engine-level shape, consumed by the GUI
+// through wallet.otherMethods — kept independent of the SDK's enums so SDK
+// churn doesn't ripple into the GUI).
+//
+
+export const asZcashMigrationStatus = asObject({
+  /**
+   * notNeeded: nothing to offer (no meaningful Orchard funds, pre-activation,
+   *   not yet synced, or a guided run owns the funds) — show nothing.
+   * required: a sweep is worthwhile — offer it. Recommended, not mandatory:
+   *   Orchard stays spendable and drains passively through ordinary spends.
+   * scheduled: reserved for the guided (v2) migration lifecycle.
+   * complete: everything migrated (guided-run terminal state).
+   * error: reserved for the guided (v2) migration lifecycle.
+   */
+  state: asValue('notNeeded', 'required', 'scheduled', 'complete', 'error'),
+  completedTransfers: asMaybe(asNumber, 0),
+  totalTransfers: asMaybe(asNumber, 0),
+  remainingOrchardZatoshi: asMaybe(asString, '0'),
+  hasOverdueTransfers: asMaybe(asBoolean, false),
+  isSynced: asMaybe(asBoolean, false),
+  /** Height after which the next pre-signed transfer becomes executable. */
+  nextTransferReadyAtHeight: asOptional(asNumber)
+})
+export type ZcashMigrationStatus = ReturnType<typeof asZcashMigrationStatus>
