@@ -34,6 +34,7 @@ import {
   ZcashNetworkInfo,
   ZcashWalletOtherData
 } from './zcashTypes'
+import { computeAvailableZatoshi } from './zcashUtils'
 
 export class ZcashEngine extends CurrencyEngine<
   ZcashTools,
@@ -81,7 +82,9 @@ export class ZcashEngine extends CurrencyEngine<
       saplingAvailableZatoshi: '0',
       saplingTotalZatoshi: '0',
       orchardAvailableZatoshi: '0',
-      orchardTotalZatoshi: '0'
+      orchardTotalZatoshi: '0',
+      ironwoodAvailableZatoshi: '0',
+      ironwoodTotalZatoshi: '0'
     }
     this.autoshielding = {
       createAutoshieldTx: false,
@@ -121,26 +124,30 @@ export class ZcashEngine extends CurrencyEngine<
         saplingAvailableZatoshi,
         saplingTotalZatoshi,
         orchardAvailableZatoshi,
-        orchardTotalZatoshi
+        orchardTotalZatoshi,
+        ironwoodAvailableZatoshi,
+        ironwoodTotalZatoshi
       } = payload
 
-      // Transparent funds will be autoshielded so the available balance should only reflect the shielded balances
-      this.availableZatoshi = add(
-        saplingAvailableZatoshi,
-        orchardAvailableZatoshi
-      )
       this.balances = {
         transparentAvailableZatoshi,
         transparentTotalZatoshi,
         saplingAvailableZatoshi,
         saplingTotalZatoshi,
         orchardAvailableZatoshi,
-        orchardTotalZatoshi
+        orchardTotalZatoshi,
+        ironwoodAvailableZatoshi,
+        ironwoodTotalZatoshi
       }
+      // Transparent funds will be autoshielded so the available balance should only reflect the shielded balances
+      this.availableZatoshi = computeAvailableZatoshi(this.balances)
 
       const total = add(
-        add(transparentTotalZatoshi, saplingTotalZatoshi),
-        orchardTotalZatoshi
+        add(
+          add(transparentTotalZatoshi, saplingTotalZatoshi),
+          orchardTotalZatoshi
+        ),
+        ironwoodTotalZatoshi
       )
 
       this.updateBalance(null, total)

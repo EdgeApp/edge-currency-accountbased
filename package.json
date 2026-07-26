@@ -109,6 +109,7 @@
     "ethereumjs-wallet": "^0.6.5",
     "ethers": "^5.6.0",
     "isomorphic-ws": "^5.0.0",
+    "react-native-zcash": "https://github.com/EdgeApp/react-native-zcash/releases/download/ironwood-ffi-6e29ab42/react-native-zcash-0.12.1-ironwood-3fca8be.tgz",
     "rfc4648": "^1.5.0",
     "stellar-sdk": "^13.3.0",
     "tezos-uri": "^1.0.3",
@@ -171,7 +172,7 @@
     "react-native-monero": "0.4.0",
     "react-native-piratechain": "0.5.0",
     "react-native-zano": "^0.2.7",
-    "react-native-zcash": "0.10.1",
+    "react-native-zcash": "https://github.com/EdgeApp/react-native-zcash/releases/download/ironwood-ffi-6e29ab42/react-native-zcash-0.12.1-ironwood-3fca8be.tgz",
     "rimraf": "^3.0.2",
     "shell-quote": "^1.8.1",
     "stream-browserify": "^2.0.2",
@@ -189,7 +190,7 @@
     "react-native-monero": "^0.3.0",
     "react-native-piratechain": "v0.5.0",
     "react-native-zano": "^0.2.7",
-    "react-native-zcash": "^0.10.1"
+    "react-native-zcash": "^0.12.1"
   },
   "overrides": {
     "@greymass/eosio": "^0.6.8",

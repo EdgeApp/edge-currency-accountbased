@@ -3,6 +3,7 @@ import type {
   BalanceEvent,
   CreateTransferOpts,
   ErrorEvent,
+  ImmediateMigrationProposal,
   InitializerConfig,
   ProposalSuccess,
   ProposeTransferOpts,
@@ -33,6 +34,13 @@ export interface ZcashSynchronizer {
   rescan: () => Promise<void>
   shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<string>
   stop: () => Promise<string>
+
+  // Orchard -> Ironwood migration (NU6.3). The sweep is one ordinary proposal
+  // the app broadcasts through createTransfer: the SDK spends every Orchard
+  // note to the wallet's own address with the fee chosen so no Orchard change
+  // remains, leaving the other pools untouched. Deliberately not a plain max
+  // send, which would drag Sapling funds across the turnstile too.
+  proposeOrchardToIronwoodMigration: () => Promise<ImmediateMigrationProposal>
 }
 
 export interface ZcashIo {
@@ -94,6 +102,10 @@ export function makeZcashIo(): ZcashIo {
         },
         stop: async () => {
           return await realSynchronizer.stop()
+        },
+
+        proposeOrchardToIronwoodMigration: async () => {
+          return await realSynchronizer.proposeOrchardToIronwoodMigration()
         }
       })
 
