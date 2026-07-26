@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.
+- added: Zcash: Orchard -> Ironwood (NU6.3) migration detection - `otherMethods.getMigrationStatus` reports when a sweep into the new Ironwood pool is worth offering, from the activation height, sync state and Orchard balance. The sweep itself runs through the ordinary send path, sourcing its amount, fee and proposal from the SDK's Orchard-only migration proposal so no other pool crosses the turnstile.
 - added: Zcash: Ironwood pool balances join the per-pool split and the reported available balance.
 - changed: (Sui) Broadcast submits to every configured node at once, succeeding if any one does.
 - changed: Zcash: react-native-zcash pinned to the Ironwood build of upstream SDK 2.7.0-rc.1, the first release carrying NU6.3.
