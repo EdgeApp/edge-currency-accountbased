@@ -339,6 +339,17 @@ export const fetchFeesFromInfoServer = async (
   return asEthereumFees(json)
 }
 
+/**
+ * An init option counts as missing when it is absent, an empty string, or an
+ * empty array. The GUI defaults `evmScanApiKey` to `[]`, so a plain null check
+ * would treat an unconfigured build as configured and send a keyless request.
+ */
+const hasApiKey = (apiKey: unknown): boolean => {
+  if (apiKey == null) return false
+  if (Array.isArray(apiKey)) return apiKey.length > 0
+  return apiKey !== ''
+}
+
 // Get API key for Etherscan v2 API or network-specific scan APIs
 export const getEvmScanApiKey = (
   initOptions: JsonObject,
@@ -351,14 +362,22 @@ export const getEvmScanApiKey = (
 
   const { currencyCode } = info
 
-  // If we have a server URL and it's etherscan.io, use the Ethereum API key
+  // `evmScanApiKey` is the supported option and is valid for every Etherscan v2
+  // network, etherscan.io included. It must be checked first, otherwise a build
+  // configured with only this option gets no key at all, Etherscan v2 rejects
+  // the keyless request, and transaction history never syncs.
+  if (hasApiKey(evmScanApiKey)) return evmScanApiKey
+
+  // Etherscan v2 rejects keyless requests with 'Missing/Invalid API Key', so a
+  // build with no usable key cannot query this server at all:
   if (serverUrl.includes('etherscan.io')) {
-    if (etherscanApiKey == null)
-      throw new Error(`Missing etherscanApiKey for etherscan.io`)
+    if (!hasApiKey(etherscanApiKey))
+      throw new Error(`Missing evmScanApiKey for etherscan.io`)
+    log.warn(
+      "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+    )
     return etherscanApiKey
   }
-
-  if (evmScanApiKey != null) return evmScanApiKey
 
   // For networks that don't support Etherscan v2, fall back to network-specific keys
   if (currencyCode === 'ETH' && etherscanApiKey != null) {
