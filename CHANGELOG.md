@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Honor the `evmScanApiKey` init option on `api.etherscan.io`. Since the Etherscan V2 upgrade, key lookup for that host required the deprecated `etherscanApiKey` and threw before considering `evmScanApiKey`, so a build configured with only the supported option sent no key. Etherscan V2 rejects keyless requests, leaving the EvmScan adapter (the sole transaction-history source on 15 EVM networks) unable to return transactions, which pinned wallet sync at 50% forever. An empty string or empty array now counts as unconfigured so it falls through to the deprecated per-network keys.
+
 ## 4.86.2 (2026-07-17)
 
 - changed: (Base) Use dynamic `eth_feeHistory` fee estimation instead of a hardcoded 2 gwei priority floor. The previous static floor caused sends to overpay by ~200x during normal network conditions. The dynamic algorithm tracks real-time percentile-based priority fees with a 2x base-fee buffer, so fees rise naturally during congestion spikes and drop to market rate otherwise. The static `minPriorityFee` fallback (used only when `eth_feeHistory` fails) is lowered from 2 gwei to 0.1 gwei, a conservative 20x reduction that covered the observed p99 priority fee in a 1,024-block Base sample.
