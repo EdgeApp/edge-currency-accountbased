@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.86.3 (2026-07-27)
+
 - fixed: (Thorchain/Mayachain) Stop recording failed MsgDeposit actions (Midgard `type: 'failed'`) as full-amount sends. The reverted deposit never moved funds, so only the burned network fee is recorded, marked as a failed transaction — matching the existing failed-send handling.
 
 ## 4.86.2 (2026-07-17)
