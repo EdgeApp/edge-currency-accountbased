@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- changed: (ARRR) Reimplement the Pirate Chain plugin over the unified `react-native-pirate-wallet` SDK, replacing `react-native-piratechain`.
+- changed: (ARRR) Reimplement the Pirate Chain plugin over the unified `react-native-pirate-wallet` SDK, replacing `react-native-piratechain`. Isolate each wallet in its own passphrase-scoped registry and encode amounts as strings for full precision.
 
 ## 4.87.0 (2026-08-02)
 

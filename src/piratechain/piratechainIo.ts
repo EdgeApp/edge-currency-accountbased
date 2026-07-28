@@ -38,7 +38,8 @@ export interface PiratechainEvents {
 
 export interface PiratechainSpendOutput {
   addr: string
-  amount: number
+  /** Arrrtoshis as a decimal string to preserve precision above 2^53-1. */
+  amount: string
   memo?: string
 }
 
@@ -46,6 +47,12 @@ export interface PiratechainWalletConfig {
   birthdayHeight: number
   mnemonic: string
   name: string
+  /**
+   * The registry passphrase, derived from the wallet seed on the core side
+   * (see piratechainCrypto). The bridge cannot derive it because Metro does
+   * not resolve `crypto`.
+   */
+  registryPassphrase: string
 }
 
 export interface PiratechainSynchronizer {
@@ -54,7 +61,7 @@ export interface PiratechainSynchronizer {
   getCurrentAddress: () => Promise<string>
   getTransactions: () => Promise<PirateTransaction[]>
   rescan: (fromHeight?: number) => Promise<void>
-  send: (outputs: PiratechainSpendOutput[], fee?: number) => Promise<string>
+  send: (outputs: PiratechainSpendOutput[], fee?: string) => Promise<string>
   stop: () => Promise<void>
 }
 
@@ -68,13 +75,18 @@ export interface PiratechainIo {
 }
 
 /**
- * The SDK encrypts its on-device databases (SQLCipher) behind an app
- * passphrase and rejects every wallet call with "App is locked" until
- * `set_app_passphrase`/`unlock_app` runs. Edge already gates wallet access
- * behind its own login, so a fixed passphrase keeps at-rest encryption at
- * parity with the previous SDK (sandbox-protected files).
+ * The SDK isolates each local wallet in its own encrypted registry namespace,
+ * selected by `configureAccountStorage` before any wallet call. The registry
+ * passphrase must be unique per local wallet and derived from high-entropy
+ * secret material rather than shared or hardcoded; the core side derives it
+ * from the wallet seed (see piratechainCrypto) and passes it in the config.
+ *
+ * A separate throwaway namespace serves wallet-free reads (address validation,
+ * chain-tip probe). It never holds funds or spending keys, so a fixed
+ * passphrase is safe here.
  */
-const APP_PASSPHRASE = 'edge-pirate-wallet'
+const PROBE_ACCOUNT_ID = 'edge-arrr-probe'
+const PROBE_PASSPHRASE = 'edge-arrr-probe-namespace-v1'
 
 const asInvokeEnvelope = asObject({
   ok: asBoolean,
@@ -106,42 +118,49 @@ export function makePiratechainIo(): PiratechainIo {
     return envelope.result
   }
 
-  let unlockPromise: Promise<void> | undefined
-  const ensureUnlocked = async (): Promise<void> => {
-    if (unlockPromise == null) {
-      unlockPromise = (async () => {
-        const hasPassphrase = asBoolean(await invokeCall('has_app_passphrase'))
-        if (hasPassphrase) {
-          await invokeCall('unlock_app', { passphrase: APP_PASSPHRASE })
-        } else {
-          await invokeCall('set_app_passphrase', { passphrase: APP_PASSPHRASE })
-        }
-        // The SDK tunnels through Tor by default, which doesn't reliably
-        // bootstrap inside Edge. Connect directly, like every other plugin:
-        await invokeCall('set_tunnel', { mode: 'Direct' })
-      })().catch((error: unknown) => {
-        // Allow a retry on the next call instead of caching the failure:
-        unlockPromise = undefined
-        throw error
-      })
-    }
-    await unlockPromise
+  // Selecting a namespace clears the SDK's active wallet and sync caches, so
+  // track the active one and only switch when it actually changes:
+  let activeAccountId: string | undefined
+  const selectNamespace = async (
+    accountId: string,
+    passphrase: string
+  ): Promise<void> => {
+    if (activeAccountId === accountId) return
+    await getSdk().configureAccountStorage({ accountId, passphrase })
+    // The default transport tunnels through Tor, which doesn't reliably
+    // bootstrap inside Edge, and a namespace switch clears transport state.
+    // Reconnect directly, like every other plugin. Mark the namespace active
+    // only after the tunnel is set: if set_tunnel throws, activeAccountId
+    // stays unchanged so a retry reconfigures fully instead of early-returning
+    // onto the unreliable default Tor transport.
+    await invokeCall('set_tunnel', { mode: 'Direct' })
+    activeAccountId = accountId
   }
 
   /**
-   * Finds the registry wallet matching the Edge wallet's alias name,
-   * restoring it from the mnemonic if this device hasn't seen it yet.
-   * Calls are serialized because the registry has no name uniqueness:
-   * two concurrent restores would create duplicate wallets.
+   * Ensures some namespace is active for a wallet-free read. Reuses the
+   * currently-selected wallet namespace when one is active so validating an
+   * address never clears a syncing wallet's caches.
+   */
+  const ensureAnyNamespace = async (): Promise<void> => {
+    if (activeAccountId != null) return
+    await selectNamespace(PROBE_ACCOUNT_ID, PROBE_PASSPHRASE)
+  }
+
+  /**
+   * Finds the registry wallet matching the Edge wallet's alias name inside its
+   * own namespace, restoring it from the mnemonic if this device hasn't seen
+   * it yet. Calls are serialized so a namespace switch never interleaves with
+   * another wallet's registry mutation.
    */
   let ensureWalletLock: Promise<unknown> = Promise.resolve()
   const ensureWallet = async (
     config: PiratechainWalletConfig
   ): Promise<string> => {
     const task = ensureWalletLock.then(async () => {
-      const { birthdayHeight, mnemonic, name } = config
+      const { birthdayHeight, mnemonic, name, registryPassphrase } = config
       const walletSdk = getSdk()
-      await ensureUnlocked()
+      await selectNamespace(name, registryPassphrase)
       const registryExists = await walletSdk.walletRegistryExists()
       if (registryExists) {
         const wallets = await walletSdk.listWallets()
@@ -163,11 +182,12 @@ export function makePiratechainIo(): PiratechainIo {
     async getLatestNetworkHeight() {
       // The SDK has no wallet-free "get chain tip" call, but `create_wallet`
       // with no birthday resolves one from the lightwalletd tip (falling back
-      // to the SDK's static checkpoint), so probe with a throwaway wallet.
-      // Registry mutations share the serialization lock (see ensureWallet):
+      // to the SDK's static checkpoint), so probe with a throwaway wallet in
+      // the throwaway namespace. Shares the serialization lock (see
+      // ensureWallet) so it never switches namespaces mid-mutation:
       const task = ensureWalletLock.then(async () => {
         const walletSdk = getSdk()
-        await ensureUnlocked()
+        await selectNamespace(PROBE_ACCOUNT_ID, PROBE_PASSPHRASE)
         const probeWalletId = await walletSdk.createWallet({
           name: 'edge-birthday-probe'
         })
@@ -186,7 +206,7 @@ export function makePiratechainIo(): PiratechainIo {
     },
 
     async isValidAddress(address) {
-      await ensureUnlocked()
+      await ensureAnyNamespace()
       const result = await getSdk().validateAddress(address)
       return result.isValid
     },
@@ -238,20 +258,10 @@ export function makePiratechainIo(): PiratechainIo {
           await walletSdk.rescan(walletId, fromHeight ?? null)
         },
         send: async (outputs, fee) => {
-          // The wrapper's `send` helper camelizes the build_tx result and
-          // feeds it back into sign_tx, which rejects it (snake_case
-          // fields), so run the three steps over the raw invoke bridge:
-          const pending = await invokeCall('build_tx', {
-            wallet_id: walletId,
-            outputs,
-            fee_opt: fee ?? null
-          })
-          const signed = await invokeCall('sign_tx', {
-            wallet_id: walletId,
-            pending
-          })
-          const txid = await invokeCall('broadcast_tx', { signed })
-          return asString(txid)
+          // The SDK's send builds, signs, and broadcasts, keeping the opaque
+          // pending/signed payloads verbatim between steps and serializing
+          // amounts as strings so large sends keep full precision:
+          return await walletSdk.send(walletId, outputs, fee ?? null)
         },
         stop: async () => {
           await realSynchronizer.close()

@@ -41,20 +41,26 @@ declare module 'react-native-pirate-wallet' {
     lastBatchMs: number | null
   }
 
-  /** Result of the `get_balance` RPC. Values are arrrtoshis. */
+  /**
+   * Result of the `get_balance` RPC. Values are arrrtoshis serialized as
+   * decimal strings so balances above 2^53-1 keep full precision.
+   */
   export interface PirateBalance {
-    total: number
-    spendable: number
-    pending: number
+    total: string
+    spendable: string
+    pending: string
   }
 
-  /** Entry of the `list_transactions` RPC result. Amounts are arrrtoshis. */
+  /**
+   * Entry of the `list_transactions` RPC result. Amounts are arrrtoshis
+   * serialized as decimal strings (see PirateBalance).
+   */
   export interface PirateTransaction {
-    txId: string
+    txid: string
     height: number | null
     timestamp: number
-    amount: number
-    fee: number
+    amount: string
+    fee: string
     memo: string | null
     confirmed: boolean
   }
@@ -82,8 +88,20 @@ declare module 'react-native-pirate-wallet' {
 
   export interface PirateTransactionOutput {
     addr: string
-    amount: number
+    /** Arrrtoshis as a decimal string to preserve precision above 2^53-1. */
+    amount: string
     memo?: string | null
+  }
+
+  /**
+   * Per-account storage isolation. Configures a registry with its own path
+   * and passphrase so each local Edge account gets an isolated wallet
+   * registry instead of sharing a single device-wide one.
+   */
+  export interface PirateAccountStorageConfig {
+    accountId: string
+    passphrase: string
+    storagePath?: string | null
   }
 
   export interface SynchronizerSnapshot {
@@ -106,7 +124,9 @@ declare module 'react-native-pirate-wallet' {
       name: SynchronizerStatus
     }) => void
     onUpdate?: (snapshot: SynchronizerSnapshot) => void
-    onError?: (error: Error) => void
+    // Native errors are serialized across the RN bridge and arrive as plain
+    // objects or strings, not real Error instances, so consumers must narrow:
+    onError?: (error: unknown) => void
   }
 
   export class PirateWalletSynchronizer {
@@ -180,11 +200,15 @@ declare module 'react-native-pirate-wallet' {
     send: (
       walletId: string,
       outputsOrOutput: PirateTransactionOutput | PirateTransactionOutput[],
-      fee?: number | null
+      fee?: string | null
     ) => Promise<string>
 
+    configureAccountStorage: (
+      config: PirateAccountStorageConfig
+    ) => Promise<unknown>
+
     exportSaplingViewingKey: (walletId: string) => Promise<string>
-    exportOrchardViewingKey: (walletId: string) => Promise<string>
+    exportIronwoodViewingKey: (walletId: string) => Promise<string>
   }
 
   export function createPirateWalletSdk(): PirateWalletSdk

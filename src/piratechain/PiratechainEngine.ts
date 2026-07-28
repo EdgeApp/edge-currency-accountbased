@@ -1,4 +1,4 @@
-import { abs, add, eq, gt, lte, mul, sub } from 'biggystring'
+import { abs, add, eq, gt, gte, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -16,7 +16,8 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { cleanTxLogs, safeParseInt } from '../common/utils'
+import { cleanTxLogs } from '../common/utils'
+import { derivePiratechainRegistryPassphrase } from './piratechainCrypto'
 import type { PiratechainIo, PiratechainSynchronizer } from './piratechainIo'
 import {
   makePiratechainSyncTracker,
@@ -154,9 +155,9 @@ export class PiratechainEngine extends CurrencyEngine<
         // The SDK returns the full history each time, so only process
         // transactions that are new or have moved (confirmed/reorged):
         const height = tx.height ?? 0
-        if (this.processedTxHeights.get(tx.txId) === height) continue
+        if (this.processedTxHeights.get(tx.txid) === height) continue
         this.processTransaction(tx)
-        this.processedTxHeights.set(tx.txId, height)
+        this.processedTxHeights.set(tx.txid, height)
       }
       if (this.isSynced()) {
         this.syncTracker.updateTransactionRatio(1)
@@ -173,7 +174,7 @@ export class PiratechainEngine extends CurrencyEngine<
     // A negative amount is a send and already includes the network fee:
     const netNativeAmount = String(tx.amount)
     const ourReceiveAddresses = []
-    if (tx.amount >= 0) {
+    if (gte(netNativeAmount, '0')) {
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
     }
 
@@ -201,7 +202,7 @@ export class PiratechainEngine extends CurrencyEngine<
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
       tokenId: null,
-      txid: tx.txId,
+      txid: tx.txid,
       walletId: this.walletId
     }
     this.addTransaction(null, edgeTransaction)
@@ -221,7 +222,10 @@ export class PiratechainEngine extends CurrencyEngine<
       this.synchronizerPromise = this.makeSynchronizer({
         name: base16.stringify(base64.parse(this.walletId)),
         mnemonic: piratechainPrivateKeys.mnemonic,
-        birthdayHeight: piratechainPrivateKeys.birthdayHeight
+        birthdayHeight: piratechainPrivateKeys.birthdayHeight,
+        registryPassphrase: derivePiratechainRegistryPassphrase(
+          piratechainPrivateKeys.mnemonic
+        )
       })
       this.synchronizer = await this.synchronizerPromise
       // People might be waiting on the old promise, so resolve that
@@ -363,11 +367,11 @@ export class PiratechainEngine extends CurrencyEngine<
         [
           {
             addr: spendTarget.publicAddress,
-            amount: safeParseInt(spendAmount),
+            amount: spendAmount,
             memo
           }
         ],
-        safeParseInt(edgeTransaction.networkFee)
+        edgeTransaction.networkFee
       )
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000

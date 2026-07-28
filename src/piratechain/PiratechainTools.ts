@@ -18,6 +18,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import { derivePiratechainRegistryPassphrase } from './piratechainCrypto'
 import type { PiratechainIo } from './piratechainIo'
 import {
   asArrrPublicKey,
@@ -146,7 +147,8 @@ export class PiratechainTools implements EdgeCurrencyTools {
     const viewingKey = await this.piratechainIo.deriveViewingKey({
       name: base16.stringify(base64.parse(walletInfo.id)),
       mnemonic,
-      birthdayHeight: piratechainPrivateKeys.birthdayHeight
+      birthdayHeight: piratechainPrivateKeys.birthdayHeight,
+      registryPassphrase: derivePiratechainRegistryPassphrase(mnemonic)
     })
     return {
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,
