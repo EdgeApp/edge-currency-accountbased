@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.
+- changed: (Sui) Broadcast submits to every configured node at once, succeeding if any one does.
+- fixed: (Sui) Restore syncing and sending after Mysten removed JSON-RPC from the public fullnodes. The plugin used the SDK's `getFullnodeUrl`, which now answers every method with `-32601`, breaking balances, transaction history, fee estimation, and broadcast. Replaced with configurable node lists served by third-party providers that still offer JSON-RPC, raced across nodes with a per-node timeout, and made overridable from the info server.
+- fixed: (Sui) Transaction sync progress no longer reports as complete when the queries failed. A total RPC outage previously presented as a wallet frozen at 50% rather than one visibly failing to sync.
+- fixed: (Sui) Transaction sweeps commit their cursor per page. Previously a failure part-way through discarded every page of progress, so a wallet whose history could not be swept in a single pass never advanced.
+- fixed: (Sui) Token sends page through coins with a cursor. The previous loop re-read the first page indefinitely when it did not cover the send amount.
+
 ## 4.86.3 (2026-07-27)
 
 - fixed: (Thorchain/Mayachain) Stop recording failed MsgDeposit actions (Midgard `type: 'failed'`) as full-amount sends. The reverted deposit never moved funds, so only the burned network fee is recorded, marked as a failed transaction — matching the existing failed-send handling.

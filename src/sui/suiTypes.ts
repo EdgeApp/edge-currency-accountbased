@@ -1,5 +1,13 @@
 import type { SignatureWithBytes } from '@mysten/sui/cryptography'
-import { asCodec, asObject, asOptional, asString, Cleaner } from 'cleaners'
+import {
+  asArray,
+  asCodec,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  Cleaner
+} from 'cleaners'
 import type {
   EdgeAssetAction,
   EdgeMemo,
@@ -14,13 +22,37 @@ import { MakeTxParams } from '../common/types'
 export interface SuiNetworkInfo {
   network: 'mainnet' | 'testnet'
   pluginMnemonicKeyName: string
+
+  /**
+   * Nodes for balances, fees, and broadcasts. These may be pruned, since none
+   * of those operations reach back into history.
+   */
+  rpcNodes: string[]
+
+  /**
+   * Nodes verified to serve full history. Transaction queries must begin here:
+   * the engine walks history from the oldest transaction, and a pruned node
+   * rejects both that walk and any cursor older than its retention window.
+   */
+  rpcNodesArchival: string[]
+
+  /**
+   * Per-node request ceiling, shared by every wallet in the app. A single
+   * wallet is latency-bound well under this; it only binds when several
+   * wallets sync at once and would otherwise trip a provider's limiter.
+   */
+  maxRequestsPerSecond: number
 }
 
 //
 // Info Payload
 //
 
-export const asSuiInfoPayload = asObject(() => {})
+export const asSuiInfoPayload = asObject({
+  rpcNodes: asOptional(asArray(asString)),
+  rpcNodesArchival: asOptional(asArray(asString)),
+  maxRequestsPerSecond: asOptional(asNumber)
+})
 export type SuiInfoPayload = ReturnType<typeof asSuiInfoPayload>
 
 export const asSuiWalletOtherData = asObject({
