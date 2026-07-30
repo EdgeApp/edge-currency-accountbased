@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Status | Implemented (pending sim verification) |
+| Status | Implemented and verified (iOS sim, e2e send broadcast) |
 | Author | Jon Tzeng |
 | Reviewer | peachbits |
-| Last updated | 2026-07-28 |
+| Last updated | 2026-07-29 |
 | Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), react-native-pirate-wallet (vendored) |
 | Implementation | [edge-currency-accountbased#1055](https://github.com/EdgeApp/edge-currency-accountbased/pull/1055), [edge-react-gui#6021](https://github.com/EdgeApp/edge-react-gui/pull/6021) |
 | Supersedes | - |
@@ -86,16 +86,18 @@ Three files change; the plugin's public shape and the engine's transaction mappi
 
 ### Registry storage and namespaces
 
-v1.1.5 removes the global `set_app_passphrase` / `unlock_app` flow entirely; the only storage entry point is `configureAccountStorage`, which selects an account-scoped registry directory, creates or unlocks it with the passphrase, and clears active wallet and sync caches before switching namespaces. The bridge configures one namespace per Edge wallet, keyed by the wallet's alias `name` (already the `base16(walletId)` the tools layer passes), with a passphrase derived from that wallet's seed:
+v1.1.5 removes the global `set_app_passphrase` / `unlock_app` flow entirely; the only storage entry point is `configureAccountStorage`, which selects an account-scoped registry directory, creates or unlocks it with the passphrase, and clears active wallet and sync caches before switching namespaces. The bridge configures one namespace per Edge wallet, keyed by the wallet's alias `name` (already the `base16(walletId)` the tools layer passes), with a passphrase derived from that wallet's seed.
+
+The passphrase is derived on the **core side**, not in the bridge. Metro does not resolve Node's `crypto` module (the bridge redboxes `Unable to resolve module crypto`), while the accountbased webpack bundle aliases `crypto` to `crypto-browserify`. So the HMAC lives in `piratechainCrypto.ts`, imported only by the engine and tools (which run in the core webview), and the derived value is passed to the bridge as `registryPassphrase` on the wallet config:
 
 ```ts
-// as landed, piratechainIo.ts
+// as landed, piratechainCrypto.ts (core side)
 const PASSPHRASE_DOMAIN = 'edge-pirate-wallet-registry-v1'
-const deriveNamespacePassphrase = (mnemonic: string): string =>
+export const derivePiratechainRegistryPassphrase = (mnemonic: string): string =>
   createHmac('sha256', mnemonic).update(PASSPHRASE_DOMAIN).digest('hex')
 ```
 
-`selectNamespace(accountId, passphrase)` no-ops when the requested namespace is already active, so a syncing wallet's caches are not cleared by unrelated reads. Wallet-free reads (`isValidAddress`, the chain-tip probe in `getLatestNetworkHeight`) reuse the active namespace when one exists and otherwise fall back to a fixed throwaway probe namespace that never holds funds. All namespace switches and registry mutations run under the existing `ensureWalletLock` serialization.
+`selectNamespace(accountId, passphrase)` no-ops when the requested namespace is already active, so a syncing wallet's caches are not cleared by unrelated reads. It configures the storage, then sets the transport (`set_tunnel` Direct), and only then marks the namespace active: if `set_tunnel` throws, `activeAccountId` stays unchanged so a retry reconfigures fully instead of early-returning onto the SDK's unreliable default Tor transport. Wallet-free reads (`isValidAddress`, the chain-tip probe in `getLatestNetworkHeight`) reuse the active namespace when one exists and otherwise fall back to a fixed throwaway probe namespace that never holds funds. All namespace switches and registry mutations run under the existing `ensureWalletLock` serialization.
 
 ### Amounts as strings
 
@@ -116,8 +118,10 @@ The vendored `react-native-pirate-wallet` sibling is re-extracted from the v1.1.
 ## 7. Testing
 
 1. Static: `tsc --noEmit` and `verify-repo.sh` (eslint plus jest) pass in edge-currency-accountbased. No piratechain unit tests exist.
-2. Crash retirement: build the GUI for the iOS simulator with `piratechain: true` (no corePlugins disable) against the v1.1.5 native binaries, open an ARRR wallet, and confirm the app does not crash while the wallet syncs. This is the primary acceptance signal.
-3. Send: from a funded ARRR wallet, send a small amount to a second address and reach the transaction-success scene, confirming the string-amount send path and the SDK `send()` call end to end.
+2. Crash retirement (VERIFIED, iOS sim): the GUI was built for the iOS simulator with `piratechain: true` (no corePlugins disable) against the v1.1.5 native binaries. Old `react-native-piratechain` is absent from the build (zero Podfile.lock references, not autolinked). ARRR wallets ran the shielded sync with the app stable throughout, the exact background sync that crash-looped the old module. Per-account storage created isolated registries under `Library/Application Support/PirateWallet/accounts/<sanitized-id>/`.
+3. Send (VERIFIED, iOS sim, real broadcast): a self-account ARRR send was driven to the transaction-success scene. Source `My Pirate 2` (14.731 ARRR spendable), destination `My Pirate` (picked via the send scene's "Myself" wallet picker, which derived the recipient shielded z-address `zs1e5v84m2mnhwcxd0h4nx85jz97gd9shcphgx84fhh8v7vw9eztz72scekz8c6pxjrl0a2yurjuyj`), amount 4.754 ARRR, fee 0.0001 ARRR. The app reported "Transaction Success" and the transaction record shows txid `34ba68b0fee76668790ef7dae32f374c7f378da589022a1034f1112e234e49cd`. This confirms the string-amount send path and the SDK `send()` call end to end, and exercises the `txid` transaction-processing fix (see [phase 3](#phase-3-e2e-send-verification)) without the `toLowerCase` crash.
+
+Sync note: on a clean baked build the shielded sync completes fast on the sim (roughly 90 seconds from wallet birthday to `SYNCED`, `localHeight == targetHeight`, at roughly 8000 blocks/sec), and `getSpendabilityStatus` then reports `spendable: true` / `reason_code: OK`. The earlier "sync stuck at 0%" observation did not reproduce; it was an artifact of a broken build where the reconciled engine was not correctly loaded, not a native scan stall.
 
 ## 8. Phase history
 
@@ -137,6 +141,14 @@ Diverged: the fork carried a shared registry unlocked by a hardcoded app passphr
 
 Deferred: a single per-Edge-account registry (rather than per wallet) would let one account's wallets share sync state without re-selecting namespaces; it needs an account-derived secret plumbed to the native IO and is out of scope here ([decision 1](#decision-1-per-wallet-registry-namespaces)).
 
+### Phase 3: e2e send verification
+Two things landed while verifying on device:
+- Fixed: v1.1.5's `TransactionInfo.txid` is lowercase, but the engine read `tx.txId`, so `edgeTransaction.txid` was `undefined` and `CurrencyEngine.normalizeAddress(undefined)` threw `undefined is not an object (evaluating 'address.toLowerCase')` in `queryTransactions` on every ARRR sync poll, before `updateTransactionRatio(1)`. Changed `txId` to `txid` in `PiratechainEngine` and `rnPirateWallet.d.ts`. Watch for other camelCase-vs-lowercase mismatches: the SDK's `camelize` only converts snake_case, so `txid` and `arrrtoshis` (no underscore) stay lowercase.
+- Verified: a real ARRR send broadcast to another wallet in the account ([section 7](#7-testing)), retiring the crash workaround end to end.
+- Fixed (Bugbot review): `selectNamespace` marked the namespace active before `set_tunnel` succeeded, so a failed Direct-tunnel call could not be retried (the early return left the namespace on the default Tor transport). Moved the `activeAccountId` assignment to after `set_tunnel` ([section 5](#registry-storage-and-namespaces)).
+
+Observed (not fixed, [decision 1](#decision-1-per-wallet-registry-namespaces) reopen trigger): with more than one ARRR wallet, the SDK's single active namespace means only the last-selected wallet syncs and stays spendable; the others' background pollers read the wrong namespace. The single-wallet send path is unaffected (the send succeeded), but concurrent multi-wallet sync is the "measured problem" decision 1 anticipated. A fix would re-select the wallet's namespace per SDK operation, or instantiate one SDK context per wallet.
+
 ## 9. Decisions
 
 ### Decision 1: per-wallet registry namespaces
@@ -151,11 +163,11 @@ Evidence: v1.1.5 fixed the camelization bug (merged from [PR #19](https://github
 Rejected: keeping the manual `build_tx` / `sign_tx` / `broadcast_tx` over raw `invoke`, which now duplicates SDK logic and, because raw `invoke` skips the SDK's amount normalization, would send unnormalized numeric amounts.
 Reopen if: a future SDK release changes `send()` semantics or reintroduces the payload rewrite.
 
-### Decision 3: derive the passphrase with an HMAC over the seed
-Chosen: `createHmac('sha256', mnemonic).update(domain).digest('hex')` from Node `crypto` (shimmed by the `crypto-browserify` dependency in the RN bundle).
-Evidence: `crypto-browserify` is a direct dependency and `@types/node` types the import, so it type-checks and bundles. HMAC over the seed yields a stable, high-entropy, per-wallet value without ever using the raw mnemonic as the passphrase.
-Rejected: `create-hmac` directly (present transitively but untyped, would introduce `any`); using the raw mnemonic (exposes spending material as the storage key).
-Reopen if: the RN bundle stops shimming `crypto`, in which case switch to a typed hashing dependency.
+### Decision 3: derive the passphrase with an HMAC over the seed, on the core side
+Chosen: `createHmac('sha256', mnemonic).update(domain).digest('hex')` in `piratechainCrypto.ts`, imported by the engine and tools (core webview context) and passed to the bridge as `registryPassphrase`.
+Evidence: HMAC over the seed yields a stable, high-entropy, per-wallet value without ever using the raw mnemonic as the passphrase. The derivation cannot live in the bridge: Metro does not resolve Node's `crypto` (the bridge redboxes `Unable to resolve module crypto`), whereas the accountbased webpack bundle aliases `crypto` to `crypto-browserify` and `@types/node` types the import, so it type-checks and bundles core-side. This was found on the sim and moved before landing.
+Rejected: deriving in the bridge with `crypto` (fails to resolve under Metro); `create-hmac` directly (present transitively but untyped, would introduce `any`); using the raw mnemonic (exposes spending material as the storage key).
+Reopen if: the core bundle stops shimming `crypto`, in which case switch to a typed hashing dependency.
 
 ## 10. References
 - Asana task 1216926437132721 and its recorded Pirate Chain team thread.
