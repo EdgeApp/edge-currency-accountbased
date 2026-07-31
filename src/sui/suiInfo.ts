@@ -19,7 +19,26 @@ const builtinTokens: EdgeTokenMap = {
 
 const networkInfo: SuiNetworkInfo = {
   network: 'mainnet',
-  pluginMnemonicKeyName: 'suiMnemonic'
+  pluginMnemonicKeyName: 'suiMnemonic',
+
+  // Mysten removed JSON-RPC from the public fullnodes, so `getFullnodeUrl` is
+  // no longer usable. These are third-party nodes that still serve it.
+  rpcNodes: [
+    'https://sui-rpc.publicnode.com',
+    'https://rpc-mainnet.suiscan.xyz',
+    // Pruned to roughly the last 220 epochs, so it is fine for the tip but
+    // must stay out of `rpcNodesArchival`:
+    'https://mainnet.suiet.app'
+  ],
+  rpcNodesArchival: [
+    // Both verified to serve checkpoint 1:
+    'https://sui-rpc.publicnode.com',
+    'https://rpc-mainnet.suiscan.xyz'
+    // blockvision is archival too, but its public endpoint rate-limits below
+    // the 5 req/s its own docs advertise, and returns no Retry-After to pace
+    // against. Left out rather than have sweeps stall on it.
+  ],
+  maxRequestsPerSecond: 10
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

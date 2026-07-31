@@ -7,7 +7,7 @@ import { SignatureWithBytes } from '@mysten/sui/cryptography'
 import { Ed25519Keypair, Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
 import { Transaction } from '@mysten/sui/transactions'
 import { SUI_TYPE_ARG } from '@mysten/sui/utils'
-import { add, eq, gt, lt, sub } from 'biggystring'
+import { add, gt, lt, sub } from 'biggystring'
 import {
   EdgeAddress,
   EdgeCurrencyEngine,
@@ -24,6 +24,7 @@ import { base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { formatAggregateError } from '../common/promiseUtils'
 import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
@@ -31,7 +32,12 @@ import {
   MakeTxParams,
   SafeCommonWalletInfo
 } from '../common/types'
-import { cleanTxLogs, getOtherParams } from '../common/utils'
+import {
+  cleanTxLogs,
+  getOtherParams,
+  makeMutex,
+  shuffleArray
+} from '../common/utils'
 import { SuiTools } from './SuiTools'
 import {
   asSuiPrivateKeys,
@@ -45,6 +51,19 @@ import {
 
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
+/**
+ * A pruned node reports a cursor outside its retention window as JSON-RPC
+ * -32602 rather than as an empty page, so this is how "too old for me" arrives.
+ * Reading it too broadly is safe: the only consequence is falling back to an
+ * archival node, which is the conservative choice anyway.
+ */
+const isUnknownCursorError = (error: unknown): boolean => {
+  if ((error as { code?: unknown } | null)?.code === -32602) return true
+  return /could not find the referenced transaction/i.test(
+    String((error as Error | null)?.message ?? error)
+  )
+}
+
 export class SuiEngine extends CurrencyEngine<
   SuiTools,
   SafeCommonWalletInfo,
@@ -55,6 +74,23 @@ export class SuiEngine extends CurrencyEngine<
   otherData!: SuiWalletOtherData
   suiAddress: string
   otherMethods: SuiOtherMethods
+
+  /**
+   * Whether a full sweep has finished this session. Not persisted: every
+   * session re-validates against an archival node before trusting a pruned one.
+   */
+  private historySynced = false
+
+  /** Set when a pruned node rejects our cursor. Archival-only from then on. */
+  private shallowCursorRejected = false
+
+  /**
+   * Serializes transaction passes, the way Tron, Polkadot, Algorand, and
+   * Monero guard `queryTransactions`. Overlapping passes would race the saved
+   * cursors and the `historySynced` / `shallowCursorRejected` flags, and
+   * `killEngine` drains this before a resync resets that state.
+   */
+  private readonly queryTxMutex = makeMutex()
 
   constructor(
     env: PluginEnvironment<SuiNetworkInfo>,
@@ -73,15 +109,7 @@ export class SuiEngine extends CurrencyEngine<
           throw new Error('Unrecognized makeTx type')
         }
         const { unsignedTx, metadata } = makeTxParams
-        // Deserialize and validate the transaction
-        const tx = Transaction.from(unsignedTx)
-        const serialized = await tx.build({ client: this.tools.suiClient })
-
-        // Calculate fees using dry run
-        const dryRun = await this.tools.suiClient.dryRunTransactionBlock({
-          transactionBlock: serialized
-        })
-        const networkFee = this.feeSum(dryRun.effects.gasUsed)
+        const { serialized, networkFee } = await this.buildAndDryRun(unsignedTx)
 
         // For pre-built transactions, we can't determine the exact amount being sent
         // from the transaction data alone, so we set nativeAmount to '0'
@@ -130,11 +158,31 @@ export class SuiEngine extends CurrencyEngine<
     this.otherData = asSuiWalletOtherData(raw)
   }
 
+  /**
+   * Builds and dry-runs on a single node, raced across nodes. The build
+   * resolves object versions that the dry run then validates, so the pair has
+   * to see one node's view of the chain -- but racing the pair as a unit still
+   * spreads load. Each attempt deserializes its own `Transaction` so that
+   * parallel builds cannot interleave on shared internal state.
+   */
+  async buildAndDryRun(
+    unsignedTx: string | Uint8Array
+  ): Promise<{ serialized: Uint8Array; networkFee: string }> {
+    return await this.tools.raceRpc(this.tools.rpcNodes, async client => {
+      const serialized = await Transaction.from(unsignedTx).build({ client })
+      const dryRun = await client.dryRunTransactionBlock({
+        transactionBlock: serialized
+      })
+      return { serialized, networkFee: this.feeSum(dryRun.effects.gasUsed) }
+    })
+  }
+
   async queryBalance(): Promise<void> {
     try {
-      const balances = await this.tools.suiClient.getAllBalances({
-        owner: this.suiAddress
-      })
+      const balances = await this.tools.raceRpc(
+        this.tools.rpcNodes,
+        async client => await client.getAllBalances({ owner: this.suiAddress })
+      )
 
       const detectedTokenIds: string[] = []
 
@@ -167,69 +215,153 @@ export class SuiEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    const cursorFrom = this.otherData.latestTxidFrom
+    return await this.queryTxMutex(
+      async () => await this.queryTransactionsInnerLoop()
+    )
+  }
+
+  async queryTransactionsInnerLoop(): Promise<void> {
+    // A caller queued behind the mutex can land here after `killEngine` (a
+    // resync or settings change wipes the session state next); do not write
+    // into the fresh state.
+    if (!this.engineOn) return
+
+    let fromOk = false
+    let toOk = false
+
     try {
-      const latestTxid = await this.queryTransactionsInner('from', cursorFrom)
-      if (latestTxid !== cursorFrom) {
-        this.otherData.latestTxidFrom = latestTxid
-        this.walletLocalDataDirty = true
-      }
+      await this.queryTransactionsInner('from')
+      fromOk = true
     } catch (e) {
       this.log.warn('queryTransactions from error:', e)
     }
 
-    this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 0.5)
+    // Only report progress that actually happened. These calls used to sit
+    // outside the try/catch, so history claimed to be complete even when both
+    // sweeps threw -- which is why a total RPC outage presented as a wallet
+    // frozen at 50% instead of one visibly failing to sync.
+    if (fromOk) {
+      this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 0.5)
+    }
 
-    const cursorTo = this.otherData.latestTxidTo
     try {
-      const latestTxid = await this.queryTransactionsInner('to', cursorTo)
-      if (latestTxid !== cursorTo) {
-        this.otherData.latestTxidTo = latestTxid
-        this.walletLocalDataDirty = true
-      }
+      await this.queryTransactionsInner('to')
+      toOk = true
     } catch (e) {
       this.log.warn('queryTransactions to error:', e)
     }
 
     this.sendTransactionEvents()
 
-    this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
+    if (fromOk && toOk) {
+      this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
+      this.historySynced = true
+    }
   }
 
-  async queryTransactionsInner(
-    direction: 'from' | 'to',
-    latestTxid?: string
-  ): Promise<string | undefined> {
+  /**
+   * Nodes eligible to serve a transaction sweep. Until a sweep completes this
+   * session the walk begins at the wallet's oldest transaction and the saved
+   * cursor may predate a pruned node's retention window, so only archival
+   * nodes can answer. Once caught up the cursor is recent enough for any node.
+   */
+  private getTxQueryUrls(): string[] {
+    const { rpcNodes, rpcNodesArchival } = this.tools
+    if (!this.historySynced || this.shallowCursorRejected) {
+      return rpcNodesArchival
+    }
+    return [...new Set([...rpcNodes, ...rpcNodesArchival])]
+  }
+
+  /**
+   * Sweeps one direction to completion. The node stays pinned for the whole
+   * sweep so pagination follows a single provider's view of history, while the
+   * choice of node is shuffled per sweep to spread load. Rotating to another
+   * node on failure is safe because each page commits its cursor as it goes.
+   */
+  async queryTransactionsInner(direction: 'from' | 'to'): Promise<void> {
+    const urls = shuffleArray([...this.getTxQueryUrls()])
+    let lastError: Error | undefined
+
+    for (const url of urls) {
+      try {
+        await this.sweepTransactions(url, direction)
+        return
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+        if (
+          isUnknownCursorError(error) &&
+          !this.tools.rpcNodesArchival.includes(url)
+        ) {
+          // A dormant wallet's cursor can predate a pruned node's window even
+          // when we are legitimately caught up, and it would fail this way on
+          // every poll. Drop back to archival for the rest of the session.
+          this.shallowCursorRejected = true
+        }
+      }
+    }
+
+    throw lastError ?? new Error('Sui: no RPC node available for tx query')
+  }
+
+  private async sweepTransactions(
+    url: string,
+    direction: 'from' | 'to'
+  ): Promise<void> {
     const filter =
       direction === 'from'
         ? { FromAddress: this.suiAddress }
         : { ToAddress: this.suiAddress }
 
+    let cursor = this.getCursor(direction)
     let queryMore = true
-    let cursor = latestTxid
 
     while (queryMore) {
-      const { data, hasNextPage, nextCursor } =
-        await this.tools.suiClient.queryTransactionBlocks({
-          cursor,
-          filter,
-          order: 'ascending',
-          options: {
-            showBalanceChanges: true,
-            showEffects: true,
-            // showEvents: false,
-            // showInput: false,
-            // showObjectChanges: false,
-            // showRawEffects: false,
-            showRawInput: true
-          }
-        })
+      const { data, hasNextPage, nextCursor } = await this.tools.callRpc(
+        url,
+        async client =>
+          await client.queryTransactionBlocks({
+            cursor,
+            filter,
+            order: 'ascending',
+            options: {
+              showBalanceChanges: true,
+              showEffects: true,
+              showRawInput: true
+            }
+          })
+      )
 
       data.forEach(tx => this.processTransaction(tx, direction))
-      cursor = nextCursor ?? undefined
+
+      // Nothing to advance to. The old code assigned a null cursor through,
+      // which would restart the walk from the beginning on the next page.
+      if (nextCursor == null) break
+
+      cursor = nextCursor
+      // Commit every page. The cursor was previously returned only after the
+      // loop finished, so any mid-sweep failure discarded all of it and the
+      // next poll began again from the start -- meaning a wallet whose history
+      // could not be swept in a single pass never advanced at all.
+      this.saveCursor(direction, cursor)
       queryMore = hasNextPage
     }
-    return cursor
+  }
+
+  private getCursor(direction: 'from' | 'to'): string | undefined {
+    return direction === 'from'
+      ? this.otherData.latestTxidFrom
+      : this.otherData.latestTxidTo
+  }
+
+  private saveCursor(direction: 'from' | 'to', cursor: string): void {
+    if (this.getCursor(direction) === cursor) return
+    if (direction === 'from') {
+      this.otherData.latestTxidFrom = cursor
+    } else {
+      this.otherData.latestTxidTo = cursor
+    }
+    this.walletLocalDataDirty = true
   }
 
   processTransaction(
@@ -293,6 +425,47 @@ export class SuiEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Gathers coins of one type until they cover `amount`. Read-only by design:
+   * it returns the selection instead of touching the transaction, so racing it
+   * across nodes cannot produce two conflicting builds.
+   */
+  private async collectCoins(
+    url: string,
+    coinType: string,
+    amount: string
+  ): Promise<{ coins: CoinStruct[]; total: string }> {
+    const coins: CoinStruct[] = []
+    let total = '0'
+    let cursor: string | null | undefined
+
+    while (true) {
+      // Page through `callRpc` so each request is throttled and time-boxed on
+      // its own, the way `sweepTransactions` does. The node stays pinned for
+      // the whole walk, so pagination follows a single provider's view.
+      const { data, hasNextPage, nextCursor } = await this.tools.callRpc(
+        url,
+        async client =>
+          await client.getCoins({
+            owner: this.suiAddress,
+            coinType,
+            cursor
+          })
+      )
+
+      for (const coin of data) {
+        coins.push(coin)
+        total = add(total, coin.balance)
+        if (!lt(total, amount)) return { coins, total }
+      }
+
+      // This loop used to page without passing a cursor, so a wallet whose
+      // first page did not cover the amount re-read that same page forever.
+      if (!hasNextPage || nextCursor == null) return { coins, total }
+      cursor = nextCursor
+    }
+  }
+
   feeSum(gasUsed: GasCostSummary): string {
     const { computationCost, storageCost, storageRebate } = gasUsed
     return sub(add(computationCost, storageCost), storageRebate)
@@ -308,9 +481,30 @@ export class SuiEngine extends CurrencyEngine<
     await super.startEngine()
   }
 
+  async killEngine(): Promise<void> {
+    await super.killEngine()
+    // Drain any in-flight transaction pass BEFORE `resyncBlockchain` clears the
+    // cursors and resets `historySynced` below. That pass started while the
+    // engine was on and keeps running (a promise cannot be cancelled); it can
+    // still `saveCursor` and set `historySynced = true` until it finishes, so
+    // resetting first would let those late writes clobber the reset and hand a
+    // pruned node an ascending walk that silently drops history. `super`
+    // already set `engineOn = false`, so a pass queued behind the mutex exits
+    // immediately, and this empty pass simply waits out the running one.
+    await this.queryTxMutex(async () => {})
+  }
+
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
+    // `clearBlockchainCache` drops the cursors, so the next sweep walks from
+    // the wallet's oldest transaction again and has to go back through an
+    // archival node. Without resetting these, a resync in a session that had
+    // already synced would allow a pruned node -- and a cursor-less ascending
+    // walk against one returns truncated history rather than an error, so the
+    // resync would report complete with transactions silently missing.
+    this.historySynced = false
+    this.shallowCursorRejected = false
     await this.startEngine()
   }
 
@@ -379,61 +573,69 @@ export class SuiEngine extends CurrencyEngine<
         tx.setGasBudgetIfNotSet(base + coinCount * gasPerCoin)
       }
 
-      const transferCoins: CoinStruct[] = []
-      let transferCoinsBalance = '0'
-      let keepSearching = true
-      do {
-        const { data: coins, hasNextPage } =
-          await this.tools.suiClient.getCoins({
-            owner: this.suiAddress,
-            coinType: networkLocation.contractAddress
-          })
-
-        for (const coin of coins) {
-          transferCoins.push(coin)
-          transferCoinsBalance = add(transferCoinsBalance, coin.balance)
-
-          if (gt(transferCoinsBalance, amount)) {
-            const overage = sub(transferCoinsBalance, amount)
-            const amountNeeded = sub(coin.balance, overage)
-
-            // Remove coin from transfer array, We'll create a new coin for the exact amount needed
-            transferCoins.pop()
-            const [newCoin] = tx.splitCoins(coin.coinObjectId, [amountNeeded])
-
-            tx.transferObjects(
-              [newCoin, ...transferCoins.map(c => tx.object(c.coinObjectId))],
-              publicAddress
-            )
-            setGasBudget(transferCoins.length + 1)
-
-            keepSearching = false
-            break
-          } else if (eq(transferCoinsBalance, amount)) {
-            // This coin gives us the exact amount needed, no need to split
-            tx.transferObjects(
-              [...transferCoins.map(c => tx.object(c.coinObjectId))],
-              publicAddress
-            )
-            setGasBudget(transferCoins.length)
-
-            keepSearching = false
-            break
+      // Gather coins from one node at a time, shuffled, paging that node with
+      // per-page throttle + timeout (like `sweepTransactions`). Running the
+      // whole pagination inside a single `raceRpc` call throttled only once
+      // and had to finish within one RPC timeout, so a wallet with many coin
+      // objects could burst a provider's rate limit or time out. Rotating on
+      // failure OR shortfall also drops a lagging node that under-reports
+      // coins in favor of a healthy one; `InsufficientFundsError` surfaces
+      // only once every node comes up short.
+      const coinUrls = shuffleArray([...this.tools.rpcNodes])
+      let coins: CoinStruct[] | undefined
+      let total: string | undefined
+      let lastCoinError: Error | undefined
+      for (const url of coinUrls) {
+        try {
+          const result = await this.collectCoins(
+            url,
+            networkLocation.contractAddress,
+            amount
+          )
+          if (lt(result.total, amount)) {
+            lastCoinError = new InsufficientFundsError({ tokenId })
+            continue
           }
+          coins = result.coins
+          total = result.total
+          break
+        } catch (error) {
+          lastCoinError =
+            error instanceof Error ? error : new Error(String(error))
         }
+      }
+      if (coins == null || total == null) {
+        throw lastCoinError ?? new InsufficientFundsError({ tokenId })
+      }
 
-        if (keepSearching && !hasNextPage && lt(transferCoinsBalance, amount)) {
-          throw new InsufficientFundsError({ tokenId })
-        }
-      } while (keepSearching)
+      const transferCoins = [...coins]
+      if (gt(total, amount)) {
+        // The final coin overshoots, so split off exactly what is needed and
+        // send that alongside the whole coins gathered before it.
+        const overshoot = transferCoins.pop() as CoinStruct
+        const amountNeeded = sub(overshoot.balance, sub(total, amount))
+        const [newCoin] = tx.splitCoins(overshoot.coinObjectId, [amountNeeded])
+
+        tx.transferObjects(
+          [newCoin, ...transferCoins.map(c => tx.object(c.coinObjectId))],
+          publicAddress
+        )
+        setGasBudget(transferCoins.length + 1)
+      } else {
+        // Exact match, so no split is needed.
+        tx.transferObjects(
+          transferCoins.map(c => tx.object(c.coinObjectId)),
+          publicAddress
+        )
+        setGasBudget(transferCoins.length)
+      }
     }
 
     tx.setSender(this.suiAddress)
-    const serialized = await tx.build({ client: this.tools.suiClient })
-    const dryRun = await this.tools.suiClient.dryRunTransactionBlock({
-      transactionBlock: serialized
-    })
-    let networkFee = this.feeSum(dryRun.effects.gasUsed)
+    const { serialized, networkFee: estimatedFee } = await this.buildAndDryRun(
+      await tx.toJSON()
+    )
+    let networkFee = estimatedFee
 
     const mainnetBalance = this.getBalance({ tokenId: null })
     let nativeAmount = amount
@@ -510,11 +712,20 @@ export class SuiEngine extends CurrencyEngine<
         JSON.parse(edgeTransaction.signedTx)
       )
 
-      const broadcastResult =
-        await this.tools.suiClient.executeTransactionBlock({
-          transactionBlock: signedTxObj.bytes,
-          signature: signedTxObj.signature
-        })
+      // Submit to every node at once. Execution is idempotent by digest, so
+      // the duplicates are harmless, and a node reporting the transaction as
+      // already executed is ignored as long as one submission succeeds.
+      const broadcastResult = await formatAggregateError(
+        this.tools.blastRpc(
+          this.tools.rpcNodes,
+          async client =>
+            await client.executeTransactionBlock({
+              transactionBlock: signedTxObj.bytes,
+              signature: signedTxObj.signature
+            })
+        ),
+        'Sui broadcast failed:'
+      )
 
       edgeTransaction.txid = broadcastResult.digest
       edgeTransaction.date = Date.now() / 1000

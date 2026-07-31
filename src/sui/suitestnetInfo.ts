@@ -19,7 +19,21 @@ const builtinTokens: EdgeTokenMap = {
 
 const networkInfo: SuiNetworkInfo = {
   network: 'testnet',
-  pluginMnemonicKeyName: 'suitestnetMnemonic'
+  pluginMnemonicKeyName: 'suitestnetMnemonic',
+
+  // Testnet lost JSON-RPC alongside mainnet. Retention depth is not verified
+  // here the way it is on mainnet, but testnet is periodically wiped, so there
+  // is little history for a pruned node to be missing.
+  rpcNodes: [
+    'https://sui-testnet-rpc.publicnode.com',
+    'https://rpc-testnet.suiscan.xyz',
+    'https://sui-testnet-endpoint.blockvision.org'
+  ],
+  rpcNodesArchival: [
+    'https://sui-testnet-rpc.publicnode.com',
+    'https://rpc-testnet.suiscan.xyz'
+  ],
+  maxRequestsPerSecond: 10
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
