@@ -48,6 +48,19 @@ export class StellarTools implements EdgeCurrencyTools {
     // stellar-sdk v13 removed the global Network singleton; the network
     // passphrase is now passed per-transaction in StellarEngine's
     // TransactionBuilder options.
+    //
+    // Guard the Horizon namespace. `new Horizon.Server()` has crashed XLM
+    // engine start twice with an opaque `undefined is not an object` WebView
+    // error: once from the v13 default-import migration (fixed in #1060), and
+    // again when a bundle was built against a stale stellar-sdk (pre-v13
+    // versions expose no `Horizon` namespace, so the named import binds
+    // undefined). Fail loudly with an actionable message so the cause is
+    // obvious instead of surfacing as a recurring background toast.
+    if (typeof Horizon?.Server !== 'function') {
+      throw new Error(
+        'stellar-sdk Horizon.Server is unavailable — the bundled stellar-sdk does not expose the Horizon namespace. This usually means edge-currency-accountbased was built against the wrong stellar-sdk version (>=13 is required). Reinstall dependencies and rebuild the WebView bundle.'
+      )
+    }
     this.stellarApiServers = []
     for (const server of this.networkInfo.stellarServers) {
       const stellarServer = new Horizon.Server(server)

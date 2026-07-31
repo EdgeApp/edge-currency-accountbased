@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Stellar) Guard `new Horizon.Server()` at engine start so a stellar-sdk build without the `Horizon` namespace fails with a clear, actionable error instead of an opaque `undefined is not an object` WebView crash, and add a resolution regression test so a Horizon-less stellar-sdk build is caught by the test suite rather than shipping as a recurring background toast.
+
 ## 4.86.3 (2026-07-27)
 
 - fixed: (Thorchain/Mayachain) Stop recording failed MsgDeposit actions (Midgard `type: 'failed'`) as full-amount sends. The reverted deposit never moved funds, so only the burned network fee is recorded, marked as a failed transaction — matching the existing failed-send handling.
