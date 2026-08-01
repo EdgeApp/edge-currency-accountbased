@@ -18,6 +18,7 @@ import { base64 } from 'rfc4648'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { parseUriCommon } from '../common/uriHelpers'
 import {
+  cleanServerUrl,
   getLegacyDenomination,
   makeEngineFetch,
   mergeDeeply
@@ -84,6 +85,10 @@ export class MoneroTools implements EdgeCurrencyTools {
     if (moneroIo == null) throw new Error('Need monero native IO')
     this.moneroIo = moneroIo
     this.cppBridge = new CppBridge(moneroIo)
+    this.log.warn(
+      `init: plugin created (network=${networkInfo.networkType} ` +
+        `lws=${cleanServerUrl(networkInfo.edgeLwsServer)})`
+    )
   }
 
   private get nymCppBridge(): NymCppBridge {
@@ -100,6 +105,11 @@ export class MoneroTools implements EdgeCurrencyTools {
       }
       return async () => {}
     }
+
+    this.log.warn(
+      `init: enabling nym proxy for ${cleanServerUrl(daemonAddress)} ` +
+        `(users=${this.nymFetchUsers})`
+    )
 
     if (this.unsubscribeNymFetch == null) {
       this.unsubscribeNymFetch = this.moneroIo.on('walletEvent', event => {
@@ -121,6 +131,7 @@ export class MoneroTools implements EdgeCurrencyTools {
         daemonAddress.replace(/\/$/, '')
       )
     } catch (error: unknown) {
+      this.log.warn(`init: FAILURE enabling nym proxy: ${String(error)}`)
       this.nymFetchUsers -= 1
       if (this.nymFetchUsers === 0 && this.unsubscribeNymFetch != null) {
         this.unsubscribeNymFetch()
@@ -182,10 +193,13 @@ export class MoneroTools implements EdgeCurrencyTools {
       )
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
+      // A failed nym request stops the wallet from syncing at all, and the
+      // native layer only sees the rejection, so log it on this side too:
+      this.log.warn(`sync: FAILURE nym fetch ${requestId}: ${message}`)
       try {
         await this.nymCppBridge.rejectFetch(requestId, message)
       } catch (rejectError: unknown) {
-        this.log.error(`rejectFetch failed: ${String(rejectError)}`)
+        this.log.warn(`sync: FAILURE nym rejectFetch: ${String(rejectError)}`)
       }
     }
   }

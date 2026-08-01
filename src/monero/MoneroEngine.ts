@@ -24,6 +24,7 @@ import {
   makeLifecycleManager
 } from '../common/lifecycleManager'
 import {
+  cleanServerUrl,
   cleanTxLogs,
   makeEngineFetch,
   makeMutex,
@@ -60,6 +61,28 @@ import {
 const SYNC_POLL_MS = 1000 // actively syncing / backfilling
 const SYNCED_POLL_MS = 20000 // caught up to chain tip
 const ERROR_POLL_MS = 5000 // back off after a sync error
+
+// Everything the engine reports about starting up and syncing goes through
+// log.warn, never plain log(): the core filters by EdgeLogSettings and a
+// released build's default level drops 'info', so an info line is invisible
+// exactly when a user sends in a log about a wallet stuck "initializing" or
+// "syncing". Failures use warn too rather than log.error, so a sync problem and
+// the steps leading to it land together in one greppable stream.
+
+// syncNetwork polls once a second, so a progress line is only re-logged this
+// often while the phase is unchanged. A phase CHANGE always logs immediately,
+// which is what identifies where a stuck wallet stopped:
+const SYNC_LOG_THROTTLE_MS = 30 * 1000
+
+// The settled 'synced' line is throttled harder: it only says the wallet is
+// still polling, and a wallet can sit synced for hours:
+const SYNCED_LOG_THROTTLE_MS = 5 * 60 * 1000
+
+// An init step that throws leaves the lifecycle manager 'stopped', so the next
+// syncNetwork poll retries the whole sequence a second later. Trace the steps
+// on the first attempt and then only once per this interval, so a wallet that
+// cannot open keeps reporting why without burying it under its own retries:
+const INIT_LOG_REPEAT_MS = 60 * 1000
 
 // How long a formerly-pending tx must stay missing (from both the pending set
 // and confirmed history) before it is considered evicted from the pool:
@@ -115,6 +138,12 @@ export class MoneroEngine extends CurrencyEngine<
   private unsubscribeNymFetch?: () => Promise<void>
   private abortKeysWait?: () => void
   private settingsChangeQueue: Promise<void> = Promise.resolve()
+  private lastSyncLogPhase: string | undefined
+  private lastSyncLogMs = 0
+  private lastRegressionLogHeight: number | undefined
+  private initAttempt = 0
+  private initTraceOn = true
+  private lastInitTraceMs = 0
 
   constructor(
     env: PluginEnvironment<MoneroNetworkInfo>,
@@ -156,6 +185,14 @@ export class MoneroEngine extends CurrencyEngine<
 
     this.nativeWalletId = makeLifecycleManager({
       onStart: async () => {
+        const attemptMs = Date.now()
+        this.initAttempt += 1
+        this.initTraceOn =
+          this.initAttempt === 1 ||
+          attemptMs - this.lastInitTraceMs >= INIT_LOG_REPEAT_MS
+        if (this.initTraceOn) this.lastInitTraceMs = attemptMs
+
+        this.logInit('waiting for private keys')
         let abortKeysWait: (() => void) | undefined
         const abortPromise = new Promise<never>((resolve, reject) => {
           abortKeysWait = () => reject(new Error('Engine stopped'))
@@ -166,7 +203,6 @@ export class MoneroEngine extends CurrencyEngine<
         const base64UrlWalletId = asNativeWalletId(this.walletId)
 
         const { backend } = this.currentWalletSettings
-        this.log('Using backend:', backend)
         const defaults = asMoneroUserSettings({})
         const daemonAddress =
           backend === 'lws'
@@ -177,6 +213,12 @@ export class MoneroEngine extends CurrencyEngine<
             ? this.currentSettings.monerodServer
             : defaults.monerodServer
 
+        this.logInit(
+          `backend=${backend} server=${cleanServerUrl(daemonAddress)} ` +
+            `privacy=${this.currentSettings.networkPrivacy} ` +
+            `keyBirthdayHeight=${String(keys.birthdayHeight)}`
+        )
+
         try {
           // LWS-specific setup: API key and login
           let loginResult: LoginResponse | undefined
@@ -186,12 +228,20 @@ export class MoneroEngine extends CurrencyEngine<
               isEdgeLws ? this.initOptions.edgeApiKey : ''
             )
             if (isEdgeLws) {
+              this.logInit('logging in to Edge LWS')
               loginResult = await this.loginToLwsServer(
                 daemonAddress,
                 this.walletInfo.keys.moneroAddress,
                 this.walletInfo.keys.moneroViewKeyPrivate,
                 keys.birthdayHeight // pass it along in case we have it already
               )
+              this.logInit(
+                `LWS login ok newAddress=${String(
+                  loginResult.new_address
+                )} startHeight=${String(loginResult.start_height)}`
+              )
+            } else {
+              this.logInit('custom LWS server, skipping Edge LWS login')
             }
           }
 
@@ -206,11 +256,17 @@ export class MoneroEngine extends CurrencyEngine<
 
           // Hook up the Nym mixnet proxy (before openWallet so the
           // very first LWSF request is already routed through it).
+          const useNym = this.currentSettings.networkPrivacy === 'nym'
+          this.logInit(`nym proxy ${useNym ? 'enabled' : 'disabled'}`)
           this.unsubscribeNymFetch = await this.tools.setupNymFetch(
-            this.currentSettings.networkPrivacy === 'nym',
+            useNym,
             daemonAddress
           )
 
+          this.logInit(
+            `opening native wallet ${base64UrlWalletId} at height ${birthdayHeight}`
+          )
+          const openStartMs = Date.now()
           await this.tools.cppBridge.openWallet(
             base64UrlWalletId,
             backend,
@@ -220,6 +276,7 @@ export class MoneroEngine extends CurrencyEngine<
             birthdayHeight,
             daemonAddress
           )
+          this.logInit(`native wallet opened in ${Date.now() - openStartMs}ms`)
 
           // Subscribe to native wallet events for immediate tx detection
           const unsubscribeWalletEvent = this.tools.moneroIo.on(
@@ -228,6 +285,7 @@ export class MoneroEngine extends CurrencyEngine<
               if (event.walletId !== base64UrlWalletId) return
               if (event.eventName !== 'pendingTransactionReceived') return
 
+              this.warn('sync: native pendingTransactionReceived event')
               this.queryTransactions(base64UrlWalletId)
                 .then(async () => {
                   // Refresh the balance immediately so a pending incoming tx
@@ -235,31 +293,43 @@ export class MoneroEngine extends CurrencyEngine<
                   await this.refreshBalance(base64UrlWalletId)
                 })
                 .catch(err =>
-                  this.log.error(
-                    `Event-triggered refresh error: ${String(err)}`
+                  this.warn(
+                    `sync: FAILURE event-triggered refresh: ${String(err)}`
                   )
                 )
             }
           )
           this.unsubscribeWalletEvent = unsubscribeWalletEvent
+          this.logInit('subscribed to native wallet events')
+
+          // The wallet is open, so a later restart starts a fresh trace:
+          this.initAttempt = 0
 
           return base64UrlWalletId
         } catch (error: unknown) {
+          // Logged before the nym teardown below so the original failure is the
+          // first thing in the log, and for any thrown value (the old code only
+          // logged `Error` instances, so a native string throw vanished). The
+          // attempt count carries the retry rate that the trace gate elides:
+          this.logInit(
+            `FAILURE opening wallet (attempt ${this.initAttempt}): ${String(
+              error
+            )}`
+          )
           if (this.unsubscribeNymFetch != null) {
             try {
               await this.unsubscribeNymFetch()
             } catch (cleanupError: unknown) {
-              this.log.error(`Error disabling nym: ${String(cleanupError)}`)
+              this.logInit(`FAILURE disabling nym: ${String(cleanupError)}`)
             }
             this.unsubscribeNymFetch = undefined
           }
-          if (!(error instanceof Error)) throw error
-          this.log.error(`Failed to open wallet: ${error.message}`)
           throw error
         }
       },
 
       onStop: async (nativeWalletId: string) => {
+        this.warn(`init: stopping native wallet ${nativeWalletId}`)
         if (this.unsubscribeWalletEvent != null) {
           this.unsubscribeWalletEvent()
           this.unsubscribeWalletEvent = undefined
@@ -268,20 +338,20 @@ export class MoneroEngine extends CurrencyEngine<
           try {
             await this.unsubscribeNymFetch()
           } catch (error: unknown) {
-            this.log.error(`Error disabling nym: ${String(error)}`)
+            this.warn(`init: FAILURE disabling nym: ${String(error)}`)
           }
           this.unsubscribeNymFetch = undefined
         }
         try {
           await this.tools.cppBridge.closeWallet(nativeWalletId)
-          this.log(`Wallet closed: ${nativeWalletId}`)
+          this.warn(`init: wallet closed: ${nativeWalletId}`)
         } catch (error: unknown) {
-          this.log.error(`Error closing wallet: ${String(error)}`)
+          this.warn(`init: FAILURE closing wallet: ${String(error)}`)
         }
       },
 
       onError: error => {
-        this.log.error('Monero lifecycle error:', String(error))
+        this.warn(`init: FAILURE lifecycle error: ${String(error)}`)
       }
     })
   }
@@ -303,9 +373,14 @@ export class MoneroEngine extends CurrencyEngine<
   ): Promise<number> {
     if (height != null && height > 0) return height
 
+    // A wallet that has to recover its creation height makes extra network
+    // calls before it can even open, so name the path it took:
+    this.logInit(`no stored birthdayHeight; recovering (backend=${backend})`)
+
     // For Edge LWS, the login response may already have it (a zero here is
     // not a valid creation height, so fall through to recovery):
     if (loginResult?.start_height != null && loginResult.start_height > 0) {
+      this.logInit(`birthdayHeight ${loginResult.start_height} from LWS login`)
       return loginResult.start_height
     }
 
@@ -318,6 +393,7 @@ export class MoneroEngine extends CurrencyEngine<
         : this.currentSettings.enableCustomServers
         ? this.currentSettings.moneroLightwalletServer
         : edgeLwsServer
+    this.logInit(`asking ${cleanServerUrl(serverUrl)} for birthdayHeight`)
     const addressInfo = await this.getAddressInfo(
       serverUrl,
       this.walletInfo.keys.moneroAddress,
@@ -330,7 +406,36 @@ export class MoneroEngine extends CurrencyEngine<
           'The wallet creation height could not be determined.'
       )
     }
+    this.logInit(
+      `birthdayHeight ${addressInfo.start_height} from get_address_info`
+    )
     return addressInfo.start_height
+  }
+
+  /**
+   * Log one step of the init sequence. onStart reruns in full on every poll
+   * while the wallet fails to open (an error leaves the lifecycle manager
+   * 'stopped'), so without this gate a wallet that cannot open would repeat its
+   * whole trace every second and bury the failure it is meant to explain. The
+   * first attempt after a start always traces; a stuck wallet re-traces on
+   * INIT_LOG_REPEAT_MS.
+   */
+  private logInit(message: string): void {
+    if (!this.initTraceOn) return
+    this.warn(`init: ${message}`)
+  }
+
+  /**
+   * Clear the log throttles so the next line prints immediately. Called on both
+   * sides of a restart: resetting only in killEngine is not enough, because a
+   * syncNetwork pass already past its engineOn check can finish afterwards and
+   * write stale throttle state back.
+   */
+  private resetLogState(): void {
+    this.lastSyncLogPhase = undefined
+    this.lastSyncLogMs = 0
+    this.lastRegressionLogHeight = undefined
+    this.initAttempt = 0
   }
 
   // The Edge API key must only be sent to the Edge LWS (never a custom or
@@ -400,6 +505,31 @@ export class MoneroEngine extends CurrencyEngine<
     return asAddressInfoResponse(json)
   }
 
+  /**
+   * Log where the sync is, but only when that changes: syncNetwork polls once a
+   * second, so an unconditional line per pass would bury every other log the
+   * plugin writes. A new phase always prints, an unchanged one reprints on the
+   * throttle, so a wallet that never leaves "waiting for first server refresh"
+   * is obvious from the log alone.
+   */
+  private logSyncPhase(
+    phase: string,
+    detail: string,
+    throttleMs: number = SYNC_LOG_THROTTLE_MS
+  ): void {
+    // A pass that got past syncNetwork's engineOn check before killEngine can
+    // land here afterwards; letting it write would re-arm the throttle against
+    // the restart that just cleared it:
+    if (!this.engineOn) return
+
+    const now = Date.now()
+    const isSamePhase = phase === this.lastSyncLogPhase
+    if (isSamePhase && now - this.lastSyncLogMs < throttleMs) return
+    this.lastSyncLogPhase = phase
+    this.lastSyncLogMs = now
+    this.warn(`sync: ${phase}${detail === '' ? '' : ` ${detail}`}`)
+  }
+
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
     if (!this.engineOn) return SYNC_POLL_MS
 
@@ -408,16 +538,24 @@ export class MoneroEngine extends CurrencyEngine<
         asMoneroPrivateKeys(this.currencyInfo.pluginId)(opts.privateKeys)
       )
       this.sendKeysToNative = undefined
+      this.warn('sync: handed private keys to the native layer')
     }
 
     const nativeWalletId = await this.nativeWalletId.get()
     if (nativeWalletId == null) {
+      // Either the open is still in flight or it failed and the lifecycle
+      // manager reset to 'stopped', in which case the next poll retries it:
+      this.logSyncPhase('waiting for the native wallet to open', '')
       return SYNC_POLL_MS
     }
 
     try {
       const status = await this.tools.cppBridge.getWalletStatus(nativeWalletId)
       if (status.networkHeight === 0) {
+        this.logSyncPhase(
+          'waiting for a network height',
+          `synced=${status.syncedHeight}`
+        )
         return SYNC_POLL_MS
       }
 
@@ -432,6 +570,10 @@ export class MoneroEngine extends CurrencyEngine<
       // networkHeight is already a live daemon value, so this does not delay
       // them.
       if (!status.refreshed) {
+        this.logSyncPhase(
+          'waiting for the first server refresh',
+          `synced=${status.syncedHeight} network=${status.networkHeight}`
+        )
         return SYNC_POLL_MS
       }
 
@@ -448,6 +590,18 @@ export class MoneroEngine extends CurrencyEngine<
         storedHeight - status.networkHeight > HEIGHT_REGRESSION_BOUND
           ? status.networkHeight
           : storedHeight
+      if (networkHeight !== status.networkHeight) {
+        // Keyed on the reported height so a dip that persists across polls only
+        // logs once, but a second, different bad reading still gets a line:
+        if (this.lastRegressionLogHeight !== status.networkHeight) {
+          this.lastRegressionLogHeight = status.networkHeight
+          this.warn(
+            `sync: ignoring height regression: reported=${status.networkHeight} stored=${storedHeight}`
+          )
+        }
+      } else {
+        this.lastRegressionLogHeight = undefined
+      }
       this.updateBlockHeight(networkHeight)
 
       // Refresh the balance on every poll, not only once fully synced, so a
@@ -462,6 +616,10 @@ export class MoneroEngine extends CurrencyEngine<
       // (settings change, resync, daemon change).
       if (this.syncStartHeight == null) {
         this.syncStartHeight = status.syncedHeight
+        this.warn(
+          `sync: baseline synced=${status.syncedHeight} network=${status.networkHeight} ` +
+            `balance=${status.balance} unlocked=${status.unlockedBalance}`
+        )
       }
 
       const isSynced = status.syncedHeight >= status.networkHeight - 1
@@ -482,8 +640,18 @@ export class MoneroEngine extends CurrencyEngine<
         // While still backfilling, poll quickly to pull the next page.
         if (this.txSortOrder === 'desc') {
           this.syncTracker.updateHistoryRatio(1)
+          this.logSyncPhase(
+            'synced',
+            `height=${status.syncedHeight} balance=${status.balance} ` +
+              `unlocked=${status.unlockedBalance}`,
+            SYNCED_LOG_THROTTLE_MS
+          )
           return SYNCED_POLL_MS
         }
+        this.logSyncPhase(
+          'blocks synced, backfilling history',
+          `processed=${this.otherData.processedTransactionCount}`
+        )
         return SYNC_POLL_MS
       } else {
         const range = status.networkHeight - this.syncStartHeight
@@ -499,10 +667,15 @@ export class MoneroEngine extends CurrencyEngine<
           status.syncedHeight,
           status.networkHeight
         )
+        this.logSyncPhase(
+          'scanning blocks',
+          `synced=${status.syncedHeight}/${status.networkHeight} ` +
+            `from=${this.syncStartHeight} ratio=${ratio.toFixed(4)}`
+        )
         return SYNC_POLL_MS
       }
     } catch (error: unknown) {
-      this.log.error(`syncNetwork error: ${String(error)}`)
+      this.warn(`sync: FAILURE syncNetwork: ${String(error)}`)
       return ERROR_POLL_MS
     }
   }
@@ -554,7 +727,7 @@ export class MoneroEngine extends CurrencyEngine<
         // confirmation.
         await this.queryPendingTransactions(nativeWalletId, PAGE_SIZE)
       } catch (error: unknown) {
-        this.log.error(`queryTransactions error: ${String(error)}`)
+        this.warn(`sync: FAILURE queryTransactions: ${String(error)}`)
       } finally {
         // Flush events even when a later stage failed, so confirmed txs the
         // scans already processed are not buffered until the next block:
@@ -609,6 +782,15 @@ export class MoneroEngine extends CurrencyEngine<
         pageSize
       )
       for (const tx of txPage.transactions) {
+        // pendingTxSeen still holds the previous pass's map (it is rebuilt at
+        // the end of this function), so a txid missing from it is a first
+        // sighting. Logging here instead of per-pass keeps it to one line per
+        // pool entry:
+        if (this.otherData.pendingTxSeen[tx.hash] == null) {
+          this.warn(
+            `sync: pending tx ${tx.hash} in pool direction=${tx.direction} amount=${tx.amount}`
+          )
+        }
         seen.add(tx.hash)
         this.processTransaction(tx)
       }
@@ -656,6 +838,10 @@ export class MoneroEngine extends CurrencyEngine<
         pendingTxSeen[txid] = lastSeenMs
         continue
       }
+      this.warn(
+        `sync: pending tx ${txid} gone from the pool for ` +
+          `${Math.round((now - lastSeenMs) / 60000)}m; marking dropped`
+      )
       // Set 'dropped' explicitly: the base engine clamps negative block
       // heights to 0 unless confirmations is already a terminal state. Spread
       // otherParams too: addTransaction stamps lastSeenTime through it, and a
@@ -692,9 +878,11 @@ export class MoneroEngine extends CurrencyEngine<
     if (txPage.totalCount === 0) {
       // No history to backfill, so treat the ascending pass as complete:
       this.txSortOrder = 'desc'
+      this.warn('sync: no transaction history; switching to newest-first scans')
       return
     }
 
+    const priorCount = this.otherData.processedTransactionCount
     const onPageBoundary =
       this.otherData.processedTransactionCount % pageSize === 0
     let foundKnown = this.otherData.mostRecentTxid == null || onPageBoundary
@@ -717,12 +905,25 @@ export class MoneroEngine extends CurrencyEngine<
       startPage * pageSize + txPage.transactions.length
     this.walletLocalDataDirty = true
 
+    // Only when the count moved, so a stalled backfill (the same page returning
+    // nothing new every second) does not fill the log:
+    if (this.otherData.processedTransactionCount !== priorCount) {
+      this.warn(
+        `sync: backfilled history page ${startPage}: ` +
+          `${this.otherData.processedTransactionCount}/${txPage.totalCount}`
+      )
+    }
+
     this.syncTracker.updateHistoryRatio(
       this.otherData.processedTransactionCount / txPage.totalCount
     )
 
     if (this.otherData.processedTransactionCount >= txPage.totalCount) {
       this.txSortOrder = 'desc'
+      this.warn(
+        `sync: history backfill complete (${txPage.totalCount} transactions); ` +
+          'switching to newest-first scans'
+      )
     }
   }
 
@@ -734,6 +935,7 @@ export class MoneroEngine extends CurrencyEngine<
     let foundKnownTx = false
     let healSweep = false
     let newestTxid: string | undefined
+    let processedCount = 0
 
     while (!foundKnownTx) {
       const txPage = await this.tools.cppBridge.getAllTransactions(
@@ -763,7 +965,12 @@ export class MoneroEngine extends CurrencyEngine<
           if (!tx.isPending) {
             const stored = this.storedTransaction(tx.hash)
             if (stored == null || stored.blockHeight < 1) {
+              this.warn(
+                `sync: healing stale unconfirmed anchor tx ${tx.hash}; ` +
+                  'sweeping the rest of the history'
+              )
               this.processTransaction(tx)
+              processedCount++
               healSweep = true
               continue
             }
@@ -778,6 +985,7 @@ export class MoneroEngine extends CurrencyEngine<
           if (stored != null && stored.blockHeight >= 1) continue
         }
         this.processTransaction(tx)
+        processedCount++
       }
 
       if (
@@ -792,11 +1000,21 @@ export class MoneroEngine extends CurrencyEngine<
           this.otherData.mostRecentTxid = newestTxid
           this.otherData.processedTransactionCount = txPage.totalCount
           this.walletLocalDataDirty = true
+          this.warn(`sync: cursor advanced to ${newestTxid}`)
         }
         break
       }
 
       page++
+    }
+
+    // Silent on the common no-op pass (anchor found on page 0, nothing new), so
+    // this only prints when the scan actually did work:
+    if (processedCount > 0 || page > 0) {
+      this.warn(
+        `sync: newest-first scan processed ${processedCount} transaction(s) ` +
+          `across ${page + 1} page(s)`
+      )
     }
   }
 
@@ -920,7 +1138,21 @@ export class MoneroEngine extends CurrencyEngine<
     return super.isTransactionNew(edgeTransaction)
   }
 
+  async startEngine(): Promise<void> {
+    this.resetLogState()
+    // The native wallet is opened lazily by the first syncNetwork poll, so this
+    // brackets the start of the whole init sequence and shows what the engine
+    // resumed from:
+    this.warn(
+      `init: startEngine backend=${this.currentWalletSettings.backend} ` +
+        `blockHeight=${this.walletLocalData.blockHeight} ` +
+        `processedTxCount=${this.otherData.processedTransactionCount}`
+    )
+    await super.startEngine()
+  }
+
   async killEngine(): Promise<void> {
+    this.warn('init: killEngine')
     this.abortKeysWait?.()
     await this.nativeWalletId.stop()
     await super.killEngine()
@@ -934,10 +1166,13 @@ export class MoneroEngine extends CurrencyEngine<
     this.unlockedBalance = '0'
     this.txSortOrder = 'asc'
     this.pendingSeenReset = false
+    this.resetLogState()
     this.syncTracker.resetSync()
+    this.warn('init: killEngine complete')
   }
 
   async resyncBlockchain(): Promise<void> {
+    this.warn('init: resyncBlockchain: deleting the native wallet')
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.tools.cppBridge.deleteWallet(
@@ -953,6 +1188,11 @@ export class MoneroEngine extends CurrencyEngine<
       return
     }
 
+    this.warn(
+      `init: user settings changed (privacy=${newSettings.networkPrivacy} ` +
+        `customLws=${String(newSettings.enableCustomServers)} ` +
+        `customMonerod=${String(newSettings.enableCustomMonerod)}); restarting`
+    )
     const run = this.settingsChangeQueue.then(async () => {
       this.currentSettings = newSettings
       await this.killEngine()
@@ -973,6 +1213,11 @@ export class MoneroEngine extends CurrencyEngine<
       return
     }
 
+    this.warn(
+      `init: wallet settings changed (backend ` +
+        `${this.currentWalletSettings.backend} -> ${newSettings.backend}); ` +
+        'clearing the cache and restarting'
+    )
     const run = this.settingsChangeQueue.then(async () => {
       this.currentWalletSettings = newSettings
       await this.killEngine()
@@ -1023,7 +1268,7 @@ export class MoneroEngine extends CurrencyEngine<
       }
       return maxSpendable
     } catch (error: unknown) {
-      this.log.error(`getMaxSpendable error: ${String(error)}`)
+      this.warn(`FAILURE getMaxSpendable: ${String(error)}`)
       throw error
     }
   }

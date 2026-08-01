@@ -212,6 +212,22 @@ export function cleanTxLogs(tx: EdgeTransaction): string {
   return JSON.stringify(asCleanTxLogs(tx), null, 2)
 }
 
+/**
+ * Reduces a server URL to its origin so it can be logged. Users can type any
+ * URL into currency settings, including one carrying credentials in the
+ * userinfo or a token in the query string, and plugin logs end up attached to
+ * support requests. An unparsable value is reported as such rather than passed
+ * through, since nothing about it can be assumed safe.
+ */
+export function cleanServerUrl(url: string): string {
+  try {
+    const { protocol, host } = new URL(url)
+    return `${protocol}//${host}`
+  } catch (error: unknown) {
+    return '<invalid url>'
+  }
+}
+
 // Convert number strings in scientific notation to decimal notation using biggystring
 export function biggyScience(num: string): string {
   const [factor, exponent] = num.split('e')
