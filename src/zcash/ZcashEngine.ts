@@ -23,6 +23,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs, getOtherParams } from '../common/utils'
 import type { ZcashIo, ZcashSynchronizer } from './zcashIo'
+import { isIronwoodMigrationSpend, mapMigrationStatus } from './zcashMigration'
 import { makeZcashSyncTracker, ZcashSyncTracker } from './ZcashSyncTracker'
 import { ZcashTools } from './ZcashTools'
 import {
@@ -31,9 +32,11 @@ import {
   asZcashWalletOtherData,
   SafeZcashWalletInfo,
   ZcashBalances,
+  ZcashMigrationStatus,
   ZcashNetworkInfo,
   ZcashWalletOtherData
 } from './zcashTypes'
+import { computeAvailableZatoshi } from './zcashUtils'
 
 export class ZcashEngine extends CurrencyEngine<
   ZcashTools,
@@ -60,6 +63,16 @@ export class ZcashEngine extends CurrencyEngine<
     txid?: string
   }
 
+  /**
+   * The NU6.3 activation height, fetched once per engine life from the
+   * native side. undefined = not yet fetched; null = unknown/unsupported
+   * (pre-Ironwood native build, or the Android stubs) — migration detection
+   * stays dormant then.
+   */
+  ironwoodActivationHeight?: number | null
+
+  otherMethods: Object
+
   constructor(
     env: PluginEnvironment<ZcashNetworkInfo>,
     tools: ZcashTools,
@@ -81,11 +94,59 @@ export class ZcashEngine extends CurrencyEngine<
       saplingAvailableZatoshi: '0',
       saplingTotalZatoshi: '0',
       orchardAvailableZatoshi: '0',
-      orchardTotalZatoshi: '0'
+      orchardTotalZatoshi: '0',
+      ironwoodAvailableZatoshi: '0',
+      ironwoodTotalZatoshi: '0'
     }
     this.autoshielding = {
       createAutoshieldTx: false,
       threshold: mul(this.networkInfo.defaultNetworkFee, '2') // Only autoshield if received shielded balance is greater than the default fee
+    }
+
+    this.otherMethods = {
+      /**
+       * Pull-based Orchard -> Ironwood migration status for the GUI (poll on
+       * scene focus). Safe to call any time; reports notNeeded until the
+       * wallet syncs and NU6.3 activates.
+       *
+       * `remainingOrchardZatoshi` is the Orchard-pool balance the GUI must
+       * show at the migration entry point (ZIP 318). The sweep it offers on
+       * 'required' runs through the regular send scene, but as an
+       * Orchard-ONLY proposal (see makeSpend) so no other pool is dragged
+       * across the turnstile.
+       */
+      getMigrationStatus: async (): Promise<ZcashMigrationStatus> => {
+        const dormant: ZcashMigrationStatus = {
+          state: 'notNeeded',
+          completedTransfers: 0,
+          totalTransfers: 0,
+          remainingOrchardZatoshi: this.balances.orchardAvailableZatoshi,
+          hasOverdueTransfers: false,
+          isSynced: this.isSynced(),
+          nextTransferReadyAtHeight: undefined
+        }
+        const synchronizer = this.synchronizer
+        if (synchronizer == null || !this.isSynced()) return dormant
+
+        if (this.ironwoodActivationHeight === undefined) {
+          try {
+            this.ironwoodActivationHeight =
+              await this.tools.nativeTools.getIronwoodActivationHeight(
+                this.networkInfo.rpcNode.networkName
+              )
+          } catch (e) {
+            // Pre-Ironwood native builds and the Android stubs reject; treat
+            // as unknown so detection stays dormant instead of failing polls:
+            this.ironwoodActivationHeight = null
+          }
+        }
+        return mapMigrationStatus({
+          isSynced: true,
+          orchardAvailableZatoshi: this.balances.orchardAvailableZatoshi,
+          networkBlockHeight: this.walletLocalData.blockHeight,
+          activationHeight: this.ironwoodActivationHeight
+        })
+      }
     }
   }
 
@@ -121,26 +182,30 @@ export class ZcashEngine extends CurrencyEngine<
         saplingAvailableZatoshi,
         saplingTotalZatoshi,
         orchardAvailableZatoshi,
-        orchardTotalZatoshi
+        orchardTotalZatoshi,
+        ironwoodAvailableZatoshi,
+        ironwoodTotalZatoshi
       } = payload
 
-      // Transparent funds will be autoshielded so the available balance should only reflect the shielded balances
-      this.availableZatoshi = add(
-        saplingAvailableZatoshi,
-        orchardAvailableZatoshi
-      )
       this.balances = {
         transparentAvailableZatoshi,
         transparentTotalZatoshi,
         saplingAvailableZatoshi,
         saplingTotalZatoshi,
         orchardAvailableZatoshi,
-        orchardTotalZatoshi
+        orchardTotalZatoshi,
+        ironwoodAvailableZatoshi,
+        ironwoodTotalZatoshi
       }
+      // Transparent funds will be autoshielded so the available balance should only reflect the shielded balances
+      this.availableZatoshi = computeAvailableZatoshi(this.balances)
 
       const total = add(
-        add(transparentTotalZatoshi, saplingTotalZatoshi),
-        orchardTotalZatoshi
+        add(
+          add(transparentTotalZatoshi, saplingTotalZatoshi),
+          orchardTotalZatoshi
+        ),
+        ironwoodTotalZatoshi
       )
 
       this.updateBalance(null, total)
@@ -376,6 +441,17 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
+    // Orchard -> Ironwood sweep: the SDK's Orchard-only send-max defines the
+    // amount, not the wallet's whole spendable balance (which would also drag
+    // Sapling funds across the turnstile). Deterministic, so the amount quoted
+    // here is the amount makeSpend proposes and the user signs.
+    if (isIronwoodMigrationSpend(edgeSpendInfo)) {
+      const synchronizer = await this.synchronizerPromise
+      const { amountZatoshi } =
+        await synchronizer.proposeOrchardToIronwoodMigration()
+      return amountZatoshi
+    }
+
     const { memos = [], spendTargets } = edgeSpendInfo
     const { publicAddress } = spendTargets[0]
 
@@ -414,6 +490,39 @@ export class ZcashEngine extends CurrencyEngine<
     if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
     const synchronizer = await this.synchronizerPromise
+
+    // Orchard -> Ironwood sweep: amount and fee come from the SDK's
+    // Orchard-only proposal rather than the caller, so what the user signs is
+    // exactly the Orchard-pool balance minus fee. Re-proposing is
+    // deterministic, so this matches the getMaxSpendable quote the GUI locked.
+    if (isIronwoodMigrationSpend(edgeSpendInfo)) {
+      const immediate = await synchronizer.proposeOrchardToIronwoodMigration()
+      return {
+        blockHeight: 0,
+        currencyCode,
+        date: 0,
+        isSend: true,
+        memos,
+        // Fee-only, like shielding (see processTransaction): the sweep moves
+        // value between pools of this same wallet, so only the fee leaves it.
+        // Debiting amount + fee would report the whole Orchard balance as gone.
+        // The amount the user consents to is shown from the spend target, not
+        // from here, so this does not soften the ZIP 315 disclosure.
+        nativeAmount: mul(immediate.feeZatoshi, '-1'),
+        networkFee: immediate.feeZatoshi,
+        networkFees: [],
+        otherParams: {
+          proposalBase64: immediate.proposalBase64,
+          ironwoodMigration: true
+        },
+        ourReceiveAddresses: [],
+        signedTx: '',
+        tokenId,
+        txid: '',
+        walletId: this.walletId
+      }
+    }
+
     // If a ZIP-321 Payment URI is provided, use that flow instead:
     const zip321Uri: string | undefined = (edgeSpendInfo.otherParams as any)
       ?.zip321Uri
@@ -498,6 +607,7 @@ export class ZcashEngine extends CurrencyEngine<
       }
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
+
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
