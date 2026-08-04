@@ -5,7 +5,7 @@
 | Status | Implemented and verified (iOS sim, e2e send broadcast) |
 | Author | Jon Tzeng |
 | Reviewer | peachbits |
-| Last updated | 2026-07-29 |
+| Last updated | 2026-08-04 |
 | Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), react-native-pirate-wallet (vendored) |
 | Implementation | [edge-currency-accountbased#1055](https://github.com/EdgeApp/edge-currency-accountbased/pull/1055), [edge-react-gui#6021](https://github.com/EdgeApp/edge-react-gui/pull/6021) |
 | Supersedes | - |
@@ -41,12 +41,14 @@ The Pirate Chain team replaced that module with a unified SDK whose React Native
 Goals:
 - Re-vendor `react-native-pirate-wallet` from the v1.1.5 release (RN binding 0.1.1 to 0.2.0), native binaries included.
 - Reconcile the plugin to the v1.1.5 wire format: amounts as decimal strings in both directions, sends through the SDK `send()` method, and the `orchard` to `ironwood` key rename in the type surface.
-- Resolve the three open review threads: string amounts (precision), per-wallet registry passphrase (security), and honest native-error typing.
+- Resolve the three open review threads: string amounts (precision), registry passphrase secrecy (security), and honest native-error typing.
+- Hold every ARRR wallet in one device-scoped registry so multiple wallets sync at once over a shared block cache ([decision 1](#decision-1-one-device-scoped-registry-namespace)).
 - Keep `piratechain: true` in the GUI and confirm on device that the crash is gone, removing the need for the corePlugins workaround.
 
 Non-goals:
-- Plumbing an Edge-account-derived secret into the plugin's native IO for a single per-Edge-account registry. The bridge only receives per-wallet secret material, so this design scopes the registry per wallet instead ([decision 1](#decision-1-per-wallet-registry-namespaces)).
-- Publishing `react-native-pirate-wallet` to npm. It stays a vendored `file:` dependency, unchanged from the prior phase.
+- Isolating registries per Edge account. The SDK's registry selection is device-global, so an account-scoped registry would reintroduce the switching that breaks concurrent sync ([decision 1](#decision-1-one-device-scoped-registry-namespace)).
+- Publishing `react-native-pirate-wallet` to npm. It stays a vendored `file:` dependency, unchanged from the prior phase; the Pirate team's npm publish is the trigger to revisit.
+- Bumping to v1.1.6. That release is v1.1.5 plus the Ironwood mainnet activation height, which the Pirate team sets only once partners confirm readiness. A v1.1.5 build does not survive that activation, so one more bump is owed before it happens.
 
 ## 4. Design overview
 
@@ -61,6 +63,7 @@ The plugin's native IO bridge (`piratechainIo.ts`) runs on the React Native side
 ```mermaid
 sequenceDiagram
   box edge-core-js plugin context
+    participant Tools as PiratechainTools
     participant Engine as PiratechainEngine
   end
   box React Native side
@@ -70,9 +73,10 @@ sequenceDiagram
   box Native
     participant Rust as pirate-ffi-native (Rust)
   end
+  Tools->>Bridge: setDevicePassphrase(random device secret, once)
   Engine->>Bridge: makeSynchronizer({ mnemonic, name, birthdayHeight })
-  Bridge->>SDK: configureAccountStorage({ accountId: name, passphrase: HMAC(mnemonic) })
-  SDK->>Rust: configure_wallet_storage (open/create namespace)
+  Bridge->>SDK: configureAccountStorage({ accountId: 'edge-pirate-device', passphrase })
+  SDK->>Rust: configure_wallet_storage (open/create the device registry, once)
   Bridge->>SDK: restoreWallet / createSynchronizer / start
   Engine->>Bridge: send(outputs[amount as string], fee as string)
   Bridge->>SDK: send(walletId, outputs, fee)
@@ -82,22 +86,50 @@ sequenceDiagram
 
 ## 5. Detailed design: edge-currency-accountbased
 
-Three files change; the plugin's public shape and the engine's transaction mapping are unchanged.
+The plugin's public shape and the engine's transaction mapping are unchanged.
 
-### Registry storage and namespaces
+### Registry storage
 
-v1.1.5 removes the global `set_app_passphrase` / `unlock_app` flow entirely; the only storage entry point is `configureAccountStorage`, which selects an account-scoped registry directory, creates or unlocks it with the passphrase, and clears active wallet and sync caches before switching namespaces. The bridge configures one namespace per Edge wallet, keyed by the wallet's alias `name` (already the `base16(walletId)` the tools layer passes), with a passphrase derived from that wallet's seed.
+v1.1.5 removes the global `set_app_passphrase` / `unlock_app` flow entirely; the only storage entry point is `configureAccountStorage`, which selects a registry directory and creates or unlocks it with a passphrase. That selection is **device-global**: one registry is active at a time, and switching cancels any running sync and clears the registry and block caches. So the bridge configures exactly one device-scoped registry, `DEVICE_ACCOUNT_ID = 'edge-pirate-device'`, and every ARRR wallet lives inside it keyed by its alias `name` (the `base16(walletId)` the tools layer already passes). Wallet-free reads (`isValidAddress`, the chain-tip probe in `getLatestNetworkHeight`) use that same registry, so no throwaway namespace exists.
 
-The passphrase is derived on the **core side**, not in the bridge. Metro does not resolve Node's `crypto` module (the bridge redboxes `Unable to resolve module crypto`), while the accountbased webpack bundle aliases `crypto` to `crypto-browserify`. So the HMAC lives in `piratechainCrypto.ts`, imported only by the engine and tools (which run in the core webview), and the derived value is passed to the bridge as `registryPassphrase` on the wallet config:
+`ensureDeviceStorage()` performs the configuration at most once, memoized on a promise so concurrent wallet starts share one setup. It configures storage and then sets the transport (`set_tunnel` Direct, because the SDK's default Tor tunnel does not reliably bootstrap inside Edge); a failure clears the memo so the next call retries the whole setup rather than proceeding on an unconfigured registry. Registry mutations (restore, and the probe wallet's create/delete) run under a `registryLock` serialization. Syncing does not: each wallet gets its own `PirateWalletSynchronizer`, and with no namespace switching left they run concurrently over a shared block cache.
+
+The passphrase is a random 32-byte secret minted per device on first use and persisted in the plugin's local storage. It is generated on the **core side**, in `piratechainDeviceStorage.ts`: the bridge cannot do it because Metro resolves neither Node's `crypto` (the bridge redboxes `Unable to resolve module crypto`) nor a disklet. The core hands it to the bridge through `setDevicePassphrase` before any wallet call:
 
 ```ts
-// as landed, piratechainCrypto.ts (core side)
-const PASSPHRASE_DOMAIN = 'edge-pirate-wallet-registry-v1'
-export const derivePiratechainRegistryPassphrase = (mnemonic: string): string =>
-  createHmac('sha256', mnemonic).update(PASSPHRASE_DOMAIN).digest('hex')
+// as landed, piratechainDeviceStorage.ts (core side)
+const DEVICE_PASSPHRASE_FILE = 'piratechain/devicePassphrase.json'
+
+const loadOrCreateDevicePassphrase = async (io: EdgeIo): Promise<string> => {
+  const { disklet } = io
+  const listing = await disklet.list(DEVICE_PASSPHRASE_FILE)
+  if (listing[DEVICE_PASSPHRASE_FILE] === 'file') {
+    const text = await disklet.getText(DEVICE_PASSPHRASE_FILE)
+    try {
+      return asDevicePassphraseFile(text).passphrase
+    } catch (error: unknown) {
+      // Unreadable contents: fall through and re-mint.
+    }
+  }
+  const passphrase = base16.stringify(io.random(32))
+  await disklet.setText(DEVICE_PASSPHRASE_FILE, JSON.stringify({ passphrase }))
+  return passphrase
+}
 ```
 
-`selectNamespace(accountId, passphrase)` no-ops when the requested namespace is already active, so a syncing wallet's caches are not cleared by unrelated reads. It configures the storage, then sets the transport (`set_tunnel` Direct), and only then marks the namespace active: if `set_tunnel` throws, `activeAccountId` stays unchanged so a retry reconfigures fully instead of early-returning onto the SDK's unreliable default Tor transport. Wallet-free reads (`isValidAddress`, the chain-tip probe in `getLatestNetworkHeight`) reuse the active namespace when one exists and otherwise fall back to a fixed throwaway probe namespace that never holds funds. All namespace switches and registry mutations run under the existing `ensureWalletLock` serialization.
+Existence is checked before reading so a transient read failure surfaces as an error rather than silently minting a new secret and orphaning the registry, which would force every wallet to re-scan from its birthday.
+
+`PiratechainTools.ensureDevicePassphrase()` performs the handoff once, memoized on a promise, and every path that reaches the SDK's storage awaits it first: the tools' own `isValidAddress`, `getNewWalletBirthdayBlockheight` and `derivePublicKey`, plus the engine's `syncNetwork` before it builds a synchronizer. It is deliberately lazy rather than part of `makeCurrencyTools`, so constructing tools never depends on the native module being linked (the plugin's unit tests build tools against a stub bridge).
+
+### Chain tip without mutating the registry
+
+`getLatestNetworkHeight` cannot ask the SDK for a chain tip directly, and the obvious workaround (create a throwaway wallet with no birthday, read the height it resolves, delete it) mutates the shared registry. Doing that while other wallets' synchronizers are running **aborts the app**: the native service panics inside `pirate_wallet_service_invoke_json`, and because the panic crosses the FFI boundary Rust turns it into `SIGABRT` rather than a catchable error. Under the phase-2 per-wallet model this never surfaced, since the probe had its own throwaway namespace and touched nothing live.
+
+So the height comes from a wallet that is already registered: `getSyncStatus(walletId).targetHeight`, which reads state instead of changing it. The create-and-delete probe survives only as the empty-registry fallback, where no wallet exists to ask and therefore no synchronizer can be running.
+
+### Synchronizer status backstop
+
+The engine subscribes to the synchronizer after `start()`, so a `statusChanged` that fires in between is lost and the engine stays at `STOPPED`, which blocks every spend. `PiratechainSynchronizer.getStatus()` exposes the SDK synchronizer's current `status`, and `initSubscriptions` reads it once after subscribing, adopting it only when no event has arrived yet (`synchronizerStatus === 'STOPPED'`) so a live event is never clobbered.
 
 ### Amounts as strings
 
@@ -139,23 +171,40 @@ Diverged: the fork carried a shared registry unlocked by a hardcoded app passphr
 | `onError: (error: Error)` | `onError: (error: unknown)` |
 | Vendored fork v1.1.4 | Released v1.1.5, binding 0.2.0 |
 
-Deferred: a single per-Edge-account registry (rather than per wallet) would let one account's wallets share sync state without re-selecting namespaces; it needs an account-derived secret plumbed to the native IO and is out of scope here ([decision 1](#decision-1-per-wallet-registry-namespaces)).
+Deferred: a single per-Edge-account registry (rather than per wallet) would let one account's wallets share sync state without re-selecting namespaces; it needed an account-derived secret plumbed to the native IO and was out of scope. Phase 4 settles this differently, at device scope ([decision 1](#decision-1-one-device-scoped-registry-namespace)).
 
 ### Phase 3: e2e send verification
-Two things landed while verifying on device:
+Verifying on device landed the following:
 - Fixed: v1.1.5's `TransactionInfo.txid` is lowercase, but the engine read `tx.txId`, so `edgeTransaction.txid` was `undefined` and `CurrencyEngine.normalizeAddress(undefined)` threw `undefined is not an object (evaluating 'address.toLowerCase')` in `queryTransactions` on every ARRR sync poll, before `updateTransactionRatio(1)`. Changed `txId` to `txid` in `PiratechainEngine` and `rnPirateWallet.d.ts`. Watch for other camelCase-vs-lowercase mismatches: the SDK's `camelize` only converts snake_case, so `txid` and `arrrtoshis` (no underscore) stay lowercase.
 - Verified: a real ARRR send broadcast to another wallet in the account ([section 7](#7-testing)), retiring the crash workaround end to end.
-- Fixed (Bugbot review): `selectNamespace` marked the namespace active before `set_tunnel` succeeded, so a failed Direct-tunnel call could not be retried (the early return left the namespace on the default Tor transport). Moved the `activeAccountId` assignment to after `set_tunnel` ([section 5](#registry-storage-and-namespaces)).
+- Fixed (Bugbot review): `selectNamespace` marked the namespace active before `set_tunnel` succeeded, so a failed Direct-tunnel call could not be retried (the early return left the namespace on the default Tor transport). Phase 4 removed `selectNamespace` entirely.
 
-Observed (not fixed, [decision 1](#decision-1-per-wallet-registry-namespaces) reopen trigger): with more than one ARRR wallet, the SDK's single active namespace means only the last-selected wallet syncs and stays spendable; the others' background pollers read the wrong namespace. The single-wallet send path is unaffected (the send succeeded), but concurrent multi-wallet sync is the "measured problem" decision 1 anticipated. A fix would re-select the wallet's namespace per SDK operation, or instantiate one SDK context per wallet.
+Observed (fixed in phase 4): with more than one ARRR wallet, the SDK's single active namespace meant only the last-selected wallet synced and stayed spendable; the others' background pollers read the wrong namespace. The single-wallet send path was unaffected (the send succeeded), but concurrent multi-wallet sync was broken.
+
+### Phase 4: one device-scoped registry
+
+The Pirate team confirmed the intended storage model, which is not the one phase 2 built: `configure_wallet_storage` is global, only one namespace is active at a time, and switching cancels active sync and clears the registry and caches. One namespace per **device**, holding many wallets that share the block cache, is the design; concurrency comes from wallet-scoped synchronizers.
+
+| Diverged in phase 2 | Shipped in phase 4 |
+|---|---|
+| One namespace per wallet, switched on every wallet-scoped call | One namespace per device, configured once at first use |
+| Passphrase = HMAC of the wallet seed (`piratechainCrypto.ts`) | Random 32-byte per-device secret in local storage (`piratechainDeviceStorage.ts`) |
+| Fixed throwaway probe namespace for wallet-free reads | The device registry serves them |
+| Only the last-selected wallet synced; others polled the wrong namespace | Every wallet's synchronizer runs concurrently over a shared block cache |
+| Initial `SYNCED` could be missed, stranding the engine at `STOPPED` | `getStatus()` backstop read once after subscribing |
+| Chain tip probed by creating and deleting a throwaway wallet | Read from a registered wallet's `getSyncStatus().targetHeight`; the probe is the empty-registry fallback only |
+
+Old per-wallet registries are abandoned rather than migrated: wallets re-restore from their seeds into the device registry on first run, and the stale directories hold no unrecoverable state.
+
+Found while testing this phase: creating a new ARRR wallet crashed the app to springboard, because the chain-tip probe mutated the now-shared registry while three synchronizers were running against it. The crash report pinned it to a Rust panic in `pirate_wallet_service_invoke_json` reaching `abort` through `panic_cannot_unwind`. The fix is [the chain-tip change above](#chain-tip-without-mutating-the-registry); wallet creation then succeeded with all four wallets coexisting in the one registry.
 
 ## 9. Decisions
 
-### Decision 1: per-wallet registry namespaces
-Chosen: one `configureAccountStorage` namespace per Edge wallet, keyed by the wallet alias, passphrase derived from that wallet's seed.
-Evidence: the native IO bridge is a single shared instance that receives only per-wallet config (`{ mnemonic, name, birthdayHeight }`); it has no Edge-account handle. v1.1.5's README requires a unique, high-entropy, secret-derived passphrase per local account and forbids hardcoded or public values. The wallet seed is the only secret material the bridge holds.
-Rejected: a single shared namespace with one passphrase, which cannot be both unique-per-account and derived-from-secret without plumbing an account secret the bridge does not have, and which is exactly the hardcoded-passphrase pattern the reviewer flagged. Rejected: per-Edge-account namespaces, which would require changing how the plugin's native IO is instantiated to carry account secret material; deferred as a non-goal.
-Reopen if: the plugin gains access to an Edge-account-derived secret, or concurrent multi-wallet sync (which forces namespace re-selection and cache clears on switch) becomes a measured problem.
+### Decision 1: one device-scoped registry namespace
+Chosen: a single `configureAccountStorage` namespace per device (`edge-pirate-device`), holding every ARRR wallet keyed by alias, with one synchronizer per wallet.
+Evidence: the Pirate team confirmed `configure_wallet_storage` is global state, that switching cancels active sync and clears the registry and caches, and that one namespace per device sharing a block cache is the intended model. Phase 2's per-wallet namespaces produced exactly the predicted failure on device: with two ARRR wallets, only the last-selected one synced and stayed spendable while the others' pollers read the wrong namespace.
+Rejected: per-wallet namespaces (phase 2), which cannot support concurrent sync because every wallet-scoped call would have to re-select and thereby cancel another wallet's sync. Rejected: per-Edge-account namespaces, which have the same defect one level up (switching accounts still clears the shared block cache) and also need an account secret the bridge does not hold. Rejected: one SDK context per wallet, which the RN binding does not expose (`createPirateWalletSdk` wraps a single native module instance).
+Reopen if: the SDK gains per-wallet or per-context storage selection, making isolation possible without cancelling sync.
 
 ### Decision 2: send through the SDK, not raw invoke
 Chosen: `walletSdk.send(walletId, outputs, fee)`.
@@ -163,11 +212,11 @@ Evidence: v1.1.5 fixed the camelization bug (merged from [PR #19](https://github
 Rejected: keeping the manual `build_tx` / `sign_tx` / `broadcast_tx` over raw `invoke`, which now duplicates SDK logic and, because raw `invoke` skips the SDK's amount normalization, would send unnormalized numeric amounts.
 Reopen if: a future SDK release changes `send()` semantics or reintroduces the payload rewrite.
 
-### Decision 3: derive the passphrase with an HMAC over the seed, on the core side
-Chosen: `createHmac('sha256', mnemonic).update(domain).digest('hex')` in `piratechainCrypto.ts`, imported by the engine and tools (core webview context) and passed to the bridge as `registryPassphrase`.
-Evidence: HMAC over the seed yields a stable, high-entropy, per-wallet value without ever using the raw mnemonic as the passphrase. The derivation cannot live in the bridge: Metro does not resolve Node's `crypto` (the bridge redboxes `Unable to resolve module crypto`), whereas the accountbased webpack bundle aliases `crypto` to `crypto-browserify` and `@types/node` types the import, so it type-checks and bundles core-side. This was found on the sim and moved before landing.
-Rejected: deriving in the bridge with `crypto` (fails to resolve under Metro); `create-hmac` directly (present transitively but untyped, would introduce `any`); using the raw mnemonic (exposes spending material as the storage key).
-Reopen if: the core bundle stops shimming `crypto`, in which case switch to a typed hashing dependency.
+### Decision 3: a random per-device passphrase in the plugin's local storage
+Chosen: `base16.stringify(io.random(32))`, minted on first use and persisted to `piratechain/devicePassphrase.json` on the core `EdgeIo` disklet, handed to the bridge via `setDevicePassphrase`.
+Evidence: v1.1.5's README requires a unique, high-entropy, secret-derived passphrase and forbids hardcoded or public values; a device-random secret satisfies all three and, unlike a seed-derived one, does not tie a device-scoped registry to any single wallet's key material. `io.random` is the core's CSPRNG and `io.disklet` is device-local storage that never syncs, so the secret stays on the device. Generation cannot live in the bridge: Metro resolves neither `crypto` nor a disklet.
+Rejected: HMAC of a wallet seed (phase 2's answer), which cannot key a registry holding many wallets without arbitrarily privileging one wallet's seed, and which leaks a deterministic function of spending material into a storage key. Rejected: a hardcoded constant, the exact pattern the security review flagged. Rejected: the OS keychain, which would add a native dependency for a secret that guards device-local data the OS already sandboxes; the disklet is the plugin's existing storage seam.
+Reopen if: the secret needs to survive an app reinstall or migrate between devices, which local storage does not do (today the cost is a re-scan from birthday, not a loss of funds).
 
 ## 10. References
 - Asana task 1216926437132721 and its recorded Pirate Chain team thread.
