@@ -94,9 +94,10 @@ declare module 'react-native-pirate-wallet' {
   }
 
   /**
-   * Per-account storage isolation. Configures a registry with its own path
-   * and passphrase so each local Edge account gets an isolated wallet
-   * registry instead of sharing a single device-wide one.
+   * Selects the encrypted wallet registry, by path and passphrase. This is
+   * global state: one registry is active at a time, and switching cancels any
+   * running sync and clears the registry and block caches. Edge configures a
+   * single device-scoped registry once and keeps every wallet inside it.
    */
   export interface PirateAccountStorageConfig {
     accountId: string

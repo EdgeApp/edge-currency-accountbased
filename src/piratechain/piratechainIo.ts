@@ -47,18 +47,13 @@ export interface PiratechainWalletConfig {
   birthdayHeight: number
   mnemonic: string
   name: string
-  /**
-   * The registry passphrase, derived from the wallet seed on the core side
-   * (see piratechainCrypto). The bridge cannot derive it because Metro does
-   * not resolve `crypto`.
-   */
-  registryPassphrase: string
 }
 
 export interface PiratechainSynchronizer {
   on: Subscriber<PiratechainEvents>
   getBalance: () => Promise<PirateBalance>
   getCurrentAddress: () => Promise<string>
+  getStatus: () => Promise<SynchronizerStatus>
   getTransactions: () => Promise<PirateTransaction[]>
   rescan: (fromHeight?: number) => Promise<void>
   send: (outputs: PiratechainSpendOutput[], fee?: string) => Promise<string>
@@ -72,21 +67,22 @@ export interface PiratechainIo {
   makeSynchronizer: (
     config: PiratechainWalletConfig
   ) => Promise<PiratechainSynchronizer>
+  setDevicePassphrase: (passphrase: string) => Promise<void>
 }
 
 /**
- * The SDK isolates each local wallet in its own encrypted registry namespace,
- * selected by `configureAccountStorage` before any wallet call. The registry
- * passphrase must be unique per local wallet and derived from high-entropy
- * secret material rather than shared or hardcoded; the core side derives it
- * from the wallet seed (see piratechainCrypto) and passes it in the config.
+ * `configureAccountStorage` selects the SDK's registry namespace globally:
+ * only one is active at a time, and switching cancels any running sync and
+ * clears the registry and block caches. So Edge configures exactly one
+ * device-scoped namespace, holds every ARRR wallet inside it keyed by alias,
+ * and runs a wallet-scoped synchronizer per wallet concurrently. Wallet-free
+ * reads (address validation, chain-tip probe) use the same namespace.
  *
- * A separate throwaway namespace serves wallet-free reads (address validation,
- * chain-tip probe). It never holds funds or spending keys, so a fixed
- * passphrase is safe here.
+ * The core side owns the namespace passphrase — a per-device random secret
+ * kept in local storage (see piratechainDeviceStorage) — and hands it over
+ * through `setDevicePassphrase` before the first wallet call.
  */
-const PROBE_ACCOUNT_ID = 'edge-arrr-probe'
-const PROBE_PASSPHRASE = 'edge-arrr-probe-namespace-v1'
+const DEVICE_ACCOUNT_ID = 'edge-pirate-device'
 
 const asInvokeEnvelope = asObject({
   ok: asBoolean,
@@ -118,49 +114,57 @@ export function makePiratechainIo(): PiratechainIo {
     return envelope.result
   }
 
-  // Selecting a namespace clears the SDK's active wallet and sync caches, so
-  // track the active one and only switch when it actually changes:
-  let activeAccountId: string | undefined
-  const selectNamespace = async (
-    accountId: string,
-    passphrase: string
-  ): Promise<void> => {
-    if (activeAccountId === accountId) return
-    await getSdk().configureAccountStorage({ accountId, passphrase })
+  // Supplied by the core side, which reads it from local storage:
+  let devicePassphrase: string | undefined
+
+  /**
+   * Configures the one device namespace, at most once. Every call that touches
+   * storage awaits this first.
+   */
+  let deviceStoragePromise: Promise<void> | undefined
+  const ensureDeviceStorage = async (): Promise<void> => {
+    if (deviceStoragePromise == null) {
+      deviceStoragePromise = configureDeviceStorage().catch(
+        (error: unknown) => {
+          // Don't cache a failure — the next call retries the whole setup
+          // rather than proceeding on an unconfigured namespace:
+          deviceStoragePromise = undefined
+          throw error
+        }
+      )
+    }
+    await deviceStoragePromise
+  }
+
+  const configureDeviceStorage = async (): Promise<void> => {
+    const passphrase = devicePassphrase
+    if (passphrase == null) {
+      throw new Error('Piratechain device storage passphrase is not set')
+    }
+    await getSdk().configureAccountStorage({
+      accountId: DEVICE_ACCOUNT_ID,
+      passphrase
+    })
     // The default transport tunnels through Tor, which doesn't reliably
-    // bootstrap inside Edge, and a namespace switch clears transport state.
-    // Reconnect directly, like every other plugin. Mark the namespace active
-    // only after the tunnel is set: if set_tunnel throws, activeAccountId
-    // stays unchanged so a retry reconfigures fully instead of early-returning
-    // onto the unreliable default Tor transport.
+    // bootstrap inside Edge, and configuring storage clears transport state.
+    // Reconnect directly, like every other plugin:
     await invokeCall('set_tunnel', { mode: 'Direct' })
-    activeAccountId = accountId
   }
 
   /**
-   * Ensures some namespace is active for a wallet-free read. Reuses the
-   * currently-selected wallet namespace when one is active so validating an
-   * address never clears a syncing wallet's caches.
+   * Finds the registry wallet matching the Edge wallet's alias name, restoring
+   * it from the mnemonic if this device hasn't seen it yet. Registry mutations
+   * are serialized so two wallets starting at once cannot interleave. Syncing
+   * itself is wallet-scoped and stays concurrent.
    */
-  const ensureAnyNamespace = async (): Promise<void> => {
-    if (activeAccountId != null) return
-    await selectNamespace(PROBE_ACCOUNT_ID, PROBE_PASSPHRASE)
-  }
-
-  /**
-   * Finds the registry wallet matching the Edge wallet's alias name inside its
-   * own namespace, restoring it from the mnemonic if this device hasn't seen
-   * it yet. Calls are serialized so a namespace switch never interleaves with
-   * another wallet's registry mutation.
-   */
-  let ensureWalletLock: Promise<unknown> = Promise.resolve()
+  let registryLock: Promise<unknown> = Promise.resolve()
   const ensureWallet = async (
     config: PiratechainWalletConfig
   ): Promise<string> => {
-    const task = ensureWalletLock.then(async () => {
-      const { birthdayHeight, mnemonic, name, registryPassphrase } = config
+    const task = registryLock.then(async () => {
+      const { birthdayHeight, mnemonic, name } = config
       const walletSdk = getSdk()
-      await selectNamespace(name, registryPassphrase)
+      await ensureDeviceStorage()
       const registryExists = await walletSdk.walletRegistryExists()
       if (registryExists) {
         const wallets = await walletSdk.listWallets()
@@ -169,25 +173,46 @@ export function makePiratechainIo(): PiratechainIo {
       }
       return await walletSdk.restoreWallet({ name, mnemonic, birthdayHeight })
     })
-    ensureWalletLock = task.catch(() => undefined)
+    registryLock = task.catch(() => undefined)
     return await task
   }
 
   return bridgifyObject<PiratechainIo>({
+    async setDevicePassphrase(passphrase) {
+      devicePassphrase = passphrase
+    },
+
     async deriveViewingKey(config) {
       const walletId = await ensureWallet(config)
       return await getSdk().exportSaplingViewingKey(walletId)
     },
 
     async getLatestNetworkHeight() {
-      // The SDK has no wallet-free "get chain tip" call, but `create_wallet`
-      // with no birthday resolves one from the lightwalletd tip (falling back
-      // to the SDK's static checkpoint), so probe with a throwaway wallet in
-      // the throwaway namespace. Shares the serialization lock (see
-      // ensureWallet) so it never switches namespaces mid-mutation:
-      const task = ensureWalletLock.then(async () => {
+      // The SDK has no wallet-free "get chain tip" call. Any wallet already in
+      // the registry carries it on its sync status, so ask one of those first:
+      // adding and removing a throwaway wallet mutates the shared registry,
+      // and the native service panics (aborting the app) when the registry
+      // changes underneath a running synchronizer.
+      const task = registryLock.then(async () => {
         const walletSdk = getSdk()
-        await selectNamespace(PROBE_ACCOUNT_ID, PROBE_PASSPHRASE)
+        await ensureDeviceStorage()
+
+        if (await walletSdk.walletRegistryExists()) {
+          const wallets = await walletSdk.listWallets()
+          for (const wallet of wallets) {
+            const syncStatus = await walletSdk
+              .getSyncStatus(wallet.id)
+              .catch(() => undefined)
+            if (syncStatus != null && syncStatus.targetHeight > 0) {
+              return syncStatus.targetHeight
+            }
+          }
+        }
+
+        // Nothing in the registry to ask, so no synchronizer can be running
+        // either, and mutating it is safe. `create_wallet` with no birthday
+        // resolves the height from the lightwalletd tip, falling back to the
+        // SDK's static checkpoint:
         const probeWalletId = await walletSdk.createWallet({
           name: 'edge-birthday-probe'
         })
@@ -201,12 +226,12 @@ export function makePiratechainIo(): PiratechainIo {
           await walletSdk.deleteWallet(probeWalletId).catch(() => undefined)
         }
       })
-      ensureWalletLock = task.catch(() => undefined)
+      registryLock = task.catch(() => undefined)
       return await task
     },
 
     async isValidAddress(address) {
-      await ensureAnyNamespace()
+      await ensureDeviceStorage()
       const result = await getSdk().validateAddress(address)
       return result.isValid
     },
@@ -250,6 +275,9 @@ export function makePiratechainIo(): PiratechainIo {
         },
         getCurrentAddress: async () => {
           return await walletSdk.getCurrentReceiveAddress(walletId)
+        },
+        getStatus: async () => {
+          return realSynchronizer.status
         },
         getTransactions: async () => {
           return realSynchronizer.transactions

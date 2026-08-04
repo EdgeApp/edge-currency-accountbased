@@ -17,7 +17,6 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from '../common/utils'
-import { derivePiratechainRegistryPassphrase } from './piratechainCrypto'
 import type { PiratechainIo, PiratechainSynchronizer } from './piratechainIo'
 import {
   makePiratechainSyncTracker,
@@ -92,7 +91,8 @@ export class PiratechainEngine extends CurrencyEngine<
 
   initSubscriptions(): void {
     if (this.synchronizer == null) return
-    this.synchronizer.on('update', async payload => {
+    const { synchronizer } = this
+    synchronizer.on('update', async payload => {
       const { lastDownloadedHeight, networkBlockHeight } = payload
       this.updateBlockHeight(networkBlockHeight)
       this.syncTracker.updateBlockProgress({
@@ -102,14 +102,30 @@ export class PiratechainEngine extends CurrencyEngine<
       })
       await this.queryAll()
     })
-    this.synchronizer.on('statusChanged', async payload => {
+    synchronizer.on('statusChanged', async payload => {
       this.synchronizerStatus = payload.name
       await this.queryAll()
     })
-    this.synchronizer.on('error', payload => {
+    synchronizer.on('error', payload => {
       // The polling synchronizer retries transient errors on its own:
       this.log.warn(`Synchronizer error: ${payload.message}`)
     })
+
+    // A status change that fired before these subscriptions existed is lost,
+    // which would strand the engine at STOPPED and block every spend. Read the
+    // status once and adopt it if no event has arrived yet:
+    synchronizer
+      .getStatus()
+      .then(async status => {
+        if (this.synchronizerStatus !== 'STOPPED') return
+        this.synchronizerStatus = status
+        await this.queryAll()
+      })
+      .catch((error: unknown) => {
+        this.log.warn(
+          `Failed to read the initial synchronizer status: ${String(error)}`
+        )
+      })
   }
 
   async queryAll(): Promise<void> {
@@ -218,14 +234,12 @@ export class PiratechainEngine extends CurrencyEngine<
     this.birthdayHeight = piratechainPrivateKeys.birthdayHeight
 
     try {
+      await this.tools.ensureDevicePassphrase()
       // Replace this.synchronizerPromise with a fresh promise. The old promise might have already been resolved
       this.synchronizerPromise = this.makeSynchronizer({
         name: base16.stringify(base64.parse(this.walletId)),
         mnemonic: piratechainPrivateKeys.mnemonic,
-        birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-        registryPassphrase: derivePiratechainRegistryPassphrase(
-          piratechainPrivateKeys.mnemonic
-        )
+        birthdayHeight: piratechainPrivateKeys.birthdayHeight
       })
       this.synchronizer = await this.synchronizerPromise
       // People might be waiting on the old promise, so resolve that

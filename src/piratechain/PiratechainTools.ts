@@ -18,7 +18,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
-import { derivePiratechainRegistryPassphrase } from './piratechainCrypto'
+import { getPiratechainDevicePassphrase } from './piratechainDeviceStorage'
 import type { PiratechainIo } from './piratechainIo'
 import {
   asArrrPublicKey,
@@ -34,6 +34,7 @@ export class PiratechainTools implements EdgeCurrencyTools {
   io: EdgeIo
   networkInfo: PiratechainNetworkInfo
   piratechainIo: PiratechainIo
+  devicePassphrasePromise?: Promise<void>
 
   constructor(env: PluginEnvironment<PiratechainNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -52,6 +53,27 @@ export class PiratechainTools implements EdgeCurrencyTools {
     this.piratechainIo = piratechainIo
   }
 
+  /**
+   * Hands the bridge the device registry passphrase, once. Every call that
+   * reaches the SDK's storage goes through here first. This is lazy rather
+   * than part of construction so that building tools never depends on the
+   * native module being present.
+   */
+  async ensureDevicePassphrase(): Promise<void> {
+    if (this.devicePassphrasePromise == null) {
+      this.devicePassphrasePromise = getPiratechainDevicePassphrase(this.io)
+        .then(async passphrase => {
+          await this.piratechainIo.setDevicePassphrase(passphrase)
+        })
+        .catch((error: unknown) => {
+          // Don't cache a failure — let the next call retry:
+          this.devicePassphrasePromise = undefined
+          throw error
+        })
+    }
+    await this.devicePassphrasePromise
+  }
+
   async getDisplayPrivateKey(
     privateWalletInfo: EdgeWalletInfo
   ): Promise<string> {
@@ -66,10 +88,12 @@ export class PiratechainTools implements EdgeCurrencyTools {
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
+    await this.ensureDevicePassphrase()
     return await this.piratechainIo.getLatestNetworkHeight()
   }
 
   async isValidAddress(address: string): Promise<boolean> {
+    await this.ensureDevicePassphrase()
     return await this.piratechainIo.isValidAddress(address)
   }
 
@@ -144,11 +168,11 @@ export class PiratechainTools implements EdgeCurrencyTools {
 
     // Registers the wallet with the SDK's registry as a side effect,
     // using the same alias name the engine looks up later:
+    await this.ensureDevicePassphrase()
     const viewingKey = await this.piratechainIo.deriveViewingKey({
       name: base16.stringify(base64.parse(walletInfo.id)),
       mnemonic,
-      birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-      registryPassphrase: derivePiratechainRegistryPassphrase(mnemonic)
+      birthdayHeight: piratechainPrivateKeys.birthdayHeight
     })
     return {
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,

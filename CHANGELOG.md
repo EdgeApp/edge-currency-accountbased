@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- changed: (ARRR) Reimplement the Pirate Chain plugin over the unified `react-native-pirate-wallet` SDK, replacing `react-native-piratechain`. Isolate each wallet in its own passphrase-scoped registry and encode amounts as strings for full precision.
+- changed: (ARRR) Reimplement the Pirate Chain plugin over the unified `react-native-pirate-wallet` SDK, replacing `react-native-piratechain`. Every wallet lives in one device-scoped encrypted registry, so multiple ARRR wallets sync at once over a shared block cache, and amounts are encoded as strings for full precision.
 
 ## 4.87.0 (2026-08-02)
 
