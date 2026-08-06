@@ -112,6 +112,16 @@ export class ZanoEngine extends CurrencyEngine<
             keys.passphrase ?? '',
             keys.storagePath
           )
+
+          // The public key is derived from the seed phrase, in pure JS for
+          // wallets without a passphrase. Fail loudly rather than sync a
+          // wallet whose native address is not the one we show the user.
+          if (response.wi.address !== this.walletInfo.keys.publicKey) {
+            throw new Error(
+              'initializeWallet: native wallet address does not match the wallet public key'
+            )
+          }
+
           return response.wallet_id
         } catch (error: unknown) {
           if (!(error instanceof Error)) throw error
