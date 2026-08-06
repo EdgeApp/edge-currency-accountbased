@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Zcash) The sync ratio no longer sits at "synced" for the whole rescan after a resync. The rewind races the synchronizer's event stream: a progress report sampled while the wallet still looked synced could land right after the sync tracker was reset, and the tracker trusts a first-seen 100 and never goes backwards, so one stale report pinned the ratio at 1 until the next login. The engine now distrusts 100% reports from the moment the rewind is requested until the rescan is visibly underway (a sub-100 report) or a SYNCED status transition shows a trivial rescan genuinely finished.
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.
