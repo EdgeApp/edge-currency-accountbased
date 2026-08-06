@@ -57,6 +57,15 @@ export class ZcashEngine extends CurrencyEngine<
   synchronizer?: ZcashSynchronizer
   synchronizerPromise: Promise<ZcashSynchronizer>
   synchronizerResolver!: (synchronizer: ZcashSynchronizer) => void
+  /**
+   * True from the moment a resync's rewind is requested until the rescan is
+   * visibly underway (a sub-100 progress report) or has genuinely finished
+   * (a SYNCED transition). While set, "100%" progress reports are stale
+   * echoes of the pre-rewind state and must not reach the sync tracker,
+   * whose don't-go-backwards ratchet would otherwise pin the wallet at
+   * "synced" for the entire rescan.
+   */
+  rescanSettling = false
   autoshielding: {
     createAutoshieldTx: boolean
     threshold: string
@@ -169,10 +178,31 @@ export class ZcashEngine extends CurrencyEngine<
     this.synchronizer.on('update', async payload => {
       const { scanProgress, networkBlockHeight } = payload
       this.updateBlockHeight(networkBlockHeight)
+
+      // A resync's rewind races the synchronizer's event stream: progress
+      // sampled while the wallet still looked synced can be delivered after
+      // the tracker reset, and the tracker trusts a first-seen 100 and never
+      // goes backwards, so one stale report would show "synced" for the whole
+      // rescan. Swallow 100s until the rescan is visibly underway; the
+      // statusChanged handler ends the window on a genuine completion, since
+      // a trivial rescan can finish without ever reporting sub-100 progress.
+      if (this.rescanSettling) {
+        if (scanProgress === 100) return
+        this.rescanSettling = false
+      }
+
       this.syncTracker.updateProgress(scanProgress)
       await this.checkAutoshielding()
     })
     this.synchronizer.on('statusChanged', async payload => {
+      // Status flows only emit transitions, so a SYNCED arriving after the
+      // rewind was requested means the synchronizer left SYNCED and came
+      // back: the rescan really finished. Report the 100 that the update
+      // handler above swallowed while settling.
+      if (this.rescanSettling && payload.name === 'SYNCED') {
+        this.rescanSettling = false
+        this.syncTracker.updateProgress(100)
+      }
       this.synchronizerStatus = payload.name
     })
     this.synchronizer.on('balanceChanged', async payload => {
@@ -433,9 +463,17 @@ export class ZcashEngine extends CurrencyEngine<
     await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
-    await this.synchronizer
-      ?.rescan()
-      .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
+    // Distrust "synced" progress reports from here on: the tracker was just
+    // reset, and a stale pre-rewind report would re-pin it at 1 (see
+    // initSubscriptions):
+    this.rescanSettling = true
+    try {
+      await this.synchronizer?.rescan()
+    } catch (e: any) {
+      // No rewind happened, so there are no stale reports to distrust:
+      this.rescanSettling = false
+      this.warn('resyncBlockchain failed: ', e)
+    }
     this.initData()
     this.synchronizerStatus = 'SYNCING'
   }
