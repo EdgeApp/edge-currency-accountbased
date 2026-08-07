@@ -110,7 +110,8 @@ export class ZanoEngine extends CurrencyEngine<
           const response = await this.tools.zano.startWallet(
             keys.mnemonic,
             keys.passphrase ?? '',
-            keys.storagePath
+            keys.storagePath,
+            { log: message => this.log.warn(message) }
           )
 
           // The public key is derived from the seed phrase, in pure JS for
