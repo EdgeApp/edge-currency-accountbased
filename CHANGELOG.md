@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Zano) Generate seed phrases from the plugin's own entropy rather than through the native library. Creating a wallet no longer starts the native library or writes a wallet file to disk, and the generated phrase is self-checked offline: it must decode back to the entropy it was built from, and its checksum word must match.
+- changed: (Zano) Derive addresses and validate seed phrases without the native library, so scanning or sweeping a Zano private key no longer needs the native module. Phrases protected by a seed passphrase still use the native library, which is the only implementation that supports them.
 - fixed: (Zano) Roughly one in 814 newly created seed phrases came out with 25 words and a trailing space instead of 26 words, because the mnemonic library was missing a checksum wrap-around case that Zano core handles.
 
 ## 4.87.0 (2026-08-02)
