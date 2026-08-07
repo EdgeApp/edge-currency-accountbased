@@ -415,8 +415,23 @@ export class ZanoEngine extends CurrencyEngine<
           throw new Error('Wallet is not running, cannot get view key')
         }
 
-        const walletInfo = await this.tools.zano.getWalletInfo(nativeId)
-        return walletInfo.wi_extended.view_private_key
+        // `getOpenedWallets` reads the view key without taking the per-wallet
+        // lock, while `getWalletInfo` blocks on it with no timeout. The app
+        // asks for this key for every wallet shortly after login, so the
+        // locking call can stall the whole native queue behind a wallet that
+        // is mid-refresh.
+        const opened = await this.tools.zano.getOpenedWallets()
+        if (!('result' in opened) || opened.result == null) {
+          throw new Error('Could not list the opened wallets')
+        }
+        const entry = opened.result.find(
+          wallet => wallet.wallet_id === nativeId
+        )
+        const viewKey = entry?.wi?.view_sec_key
+        if (viewKey == null || viewKey === '') {
+          throw new Error('The wallet is not among the opened wallets')
+        }
+        return viewKey
       } catch (error: unknown) {
         throw new Error('Failed to get wallet info: ' + JSON.stringify(error))
       }

@@ -8,6 +8,7 @@
 - changed: (Zano) Derive addresses and validate seed phrases without the native library, so scanning or sweeping a Zano private key no longer needs the native module. Phrases protected by a seed passphrase still use the native library, which is the only implementation that supports them.
 - fixed: (Zano) Roughly one in 814 newly created seed phrases came out with 25 words and a trailing space instead of 26 words, because the mnemonic library was missing a checksum wrap-around case that Zano core handles.
 - fixed: (Zano) Align the `react-native-zano` dependency range with the app. The dev and peer ranges were `^0.2.7` while edge-react-gui installs `^0.3.0`, and caret ranges below 1.0 do not widen past the minor version, so the peer dependency was unsatisfiable.
+- fixed: (Zano) Read the private view key without taking the native per-wallet lock. The app requests it for every wallet shortly after login, and the previous call blocks with no timeout, so an account with several Zano wallets could hang while one of them was mid-refresh.
 
 ## 4.87.0 (2026-08-02)
 
