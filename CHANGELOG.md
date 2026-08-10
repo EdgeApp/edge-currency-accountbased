@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (MAYAChain) A max send now leaves the wallet. mayanode collects the transaction's declared gas fee on top of the chain's flat network fee, but only the flat fee was reported, so a max send came out exactly one base unit over the balance. The chain accepted it at CheckTx and then reverted it as `insufficient funds`, which surfaced as a successful send in the app with nothing moving on-chain. The reported fee now covers both, and the fee recorded for a send that syncs back from Midgard matches it.
+
 ## 4.96.1 (2026-09-29)
 
 - fixed: (Solana) Swaps routed through a held token no longer add a zero-amount transaction for that token

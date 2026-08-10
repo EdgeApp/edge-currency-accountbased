@@ -1,4 +1,4 @@
-import { Event } from '@cosmjs/stargate'
+import { coin, Event } from '@cosmjs/stargate'
 import { abs, div, max } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
@@ -10,6 +10,7 @@ import { CosmosTools } from '../CosmosTools'
 import {
   asCosmosWalletOtherData,
   CosmosCoin,
+  CosmosFee,
   CosmosWalletOtherData,
   SafeCosmosWalletInfo
 } from '../cosmosTypes'
@@ -25,6 +26,18 @@ import {
 import { CosmosEngine } from './CosmosEngine'
 
 const QUERY_POLL_MILLISECONDS = getRandomDelayMs(20000)
+
+/**
+ * MAYAChain and THORChain price a transaction by a flat network fee rather than
+ * by gas, so we declare a token gas fee. Whether the chain then COLLECTS it
+ * differs, which is why each subclass reports its own total:
+ * - MAYAChain runs the stock cosmos-sdk `DeductFeeDecorator` and charges it on
+ *   top of the flat fee (a send emits `tx {fee: 1cacao}` at ante level).
+ * - THORChain's ante chain has no `DeductFeeDecorator`, so the declared fee is
+ *   ignored; live sends declare an empty fee and are accepted.
+ */
+export const MIDGARD_DECLARED_GAS_FEE = '1'
+const MIDGARD_GAS_LIMIT = '60000000'
 
 /**
  * Midgard reports a reverted operation two ways: a reverted send is a normal
@@ -263,6 +276,21 @@ export class MidgardEngine extends CosmosEngine {
 
     this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
     this.sendTransactionEvents()
+  }
+
+  /**
+   * Builds the `CosmosFee` shape shared by the flat-fee Midgard chains.
+   *
+   * `networkFee` is the TOTAL the signer pays, which the subclass computes:
+   * whether the declared gas fee is collected on top of the chain's flat fee is
+   * chain-specific (see `MIDGARD_DECLARED_GAS_FEE`).
+   */
+  protected makeMidgardFee(networkFee: string): CosmosFee {
+    return {
+      gasFeeCoin: coin(MIDGARD_DECLARED_GAS_FEE, this.networkInfo.nativeDenom),
+      gasLimit: MIDGARD_GAS_LIMIT,
+      networkFee
+    }
   }
 
   /**

@@ -1,5 +1,4 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { coin } from '@cosmjs/stargate'
 import { add } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
@@ -10,7 +9,13 @@ import { CosmosFee, SafeCosmosWalletInfo } from '../cosmosTypes'
 import { rpcWithApiKey } from '../cosmosUtils'
 import { MidgardNetworkInfo } from '../midgardTypes'
 import { asMayachainConstants } from '../thorchainTypes'
-import { MidgardEngine } from './MidgardEngine'
+import { MIDGARD_DECLARED_GAS_FEE, MidgardEngine } from './MidgardEngine'
+
+/**
+ * The chain's flat `NativeTransactionFee`, used to reconstruct the fee of a send
+ * that syncs back from Midgard. `calculateFee` reads the live constant instead.
+ */
+const NATIVE_TRANSACTION_FEE = '2000000000'
 
 /**
  * Mayachain (Cacao) engine that uses Midgard for transaction history
@@ -34,7 +39,9 @@ export class MayachainEngine extends MidgardEngine {
       amount: [
         {
           denom: this.networkInfo.nativeDenom,
-          amount: '2000000000'
+          // Both halves of what a send costs the signer, so history agrees with
+          // what `calculateFee` reported at spend time.
+          amount: add(NATIVE_TRANSACTION_FEE, MIDGARD_DECLARED_GAS_FEE)
         }
       ],
       gasLimit: BigInt(0),
@@ -72,10 +79,10 @@ export class MayachainEngine extends MidgardEngine {
       }
     }
 
-    return {
-      gasFeeCoin: coin('1', this.networkInfo.nativeDenom),
-      gasLimit: '60000000',
-      networkFee
-    }
+    // mayanode runs the stock cosmos-sdk `DeductFeeDecorator`, so the declared
+    // gas fee is collected on top of the flat fee. Leaving it out of the total
+    // put a max send one base unit over the balance, which the chain accepted
+    // at CheckTx and then reverted as `insufficient funds`.
+    return this.makeMidgardFee(add(networkFee, MIDGARD_DECLARED_GAS_FEE))
   }
 }
