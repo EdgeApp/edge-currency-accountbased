@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Avalanche) Restore transaction history sync. All three configured evmscan servers had stopped answering: Etherscan V2 gates chain 43114 behind a paid plan, `api.avascan.info` no longer resolves, and `api.snowscan.xyz` serves only the retired V1 API. Since the RPC adapter still covered balances, nonce, block height and broadcast, wallets looked healthy while their history stayed blank. Replaced with Routescan's etherscan-compatible endpoint, already used for Botanix and HyperEVM.
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.

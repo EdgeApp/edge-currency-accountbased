@@ -196,12 +196,18 @@ const networkInfo: EthereumNetworkInfo = {
       ethBalCheckerContract: '0xd023d153a0dfa485130ecfde2faa7e612ef94818'
     },
     {
+      // Routescan is the only working etherscan-compatible source for
+      // Avalanche C-Chain. Etherscan V2 gates chain 43114 behind a paid plan,
+      // api.avascan.info no longer resolves, and api.snowscan.xyz only serves
+      // the retired V1 API.
+      //
+      // gastracker is intentionally left off: Routescan's gasoracle reports
+      // wei, but fetchFeesFromEvmScan assumes the Etherscan convention of gwei
+      // and multiplies by 1e9. Avalanche derives its gas price from the RPC
+      // adapter instead.
       type: 'evmscan',
-      gastrackerSupport: true,
       servers: [
-        'https://api.etherscan.io',
-        'https://api.avascan.info/v2/network/mainnet/evm/43114/etherscan',
-        'https://api.snowscan.xyz'
+        'https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan'
       ]
     }
   ],
