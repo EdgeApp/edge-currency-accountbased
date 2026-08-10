@@ -196,13 +196,20 @@ const networkInfo: EthereumNetworkInfo = {
       ethBalCheckerContract: '0xd023d153a0dfa485130ecfde2faa7e612ef94818'
     },
     {
+      // Etherscan V2 covers chain 43114 only on a paid plan. A free-tier key
+      // answers "Free API access is not supported for this chain", which reads
+      // as a dead server and leaves history blank; the etherscanApiKey shipped
+      // for Avalanche has to be a paid one.
+      //
+      // api.avascan.info and api.snowscan.xyz used to sit alongside Etherscan
+      // here, and both are dead: avascan.info's API host resolves to a
+      // CloudFront distribution that no longer exists, and snowscan.xyz answers
+      // every request with "You are using a deprecated V1 endpoint". Neither
+      // comes back with a different key or plan, and a dead server in this list
+      // costs a failed request on every waterfall pass.
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: [
-        'https://api.etherscan.io',
-        'https://api.avascan.info/v2/network/mainnet/evm/43114/etherscan',
-        'https://api.snowscan.xyz'
-      ]
+      servers: ['https://api.etherscan.io']
     }
   ],
   uriNetworks: ['avalanche'],
