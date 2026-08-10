@@ -1,5 +1,5 @@
-import { Event } from '@cosmjs/stargate'
-import { abs, div, max } from 'biggystring'
+import { coin, Event } from '@cosmjs/stargate'
+import { abs, add, div, max } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
 
@@ -10,6 +10,7 @@ import { CosmosTools } from '../CosmosTools'
 import {
   asCosmosWalletOtherData,
   CosmosCoin,
+  CosmosFee,
   CosmosWalletOtherData,
   SafeCosmosWalletInfo
 } from '../cosmosTypes'
@@ -25,6 +26,14 @@ import {
 import { CosmosEngine } from './CosmosEngine'
 
 const QUERY_POLL_MILLISECONDS = getRandomDelayMs(20000)
+
+/**
+ * MAYAChain and THORChain price a transaction by a flat network fee rather than
+ * by gas, so the declared gas fee only has to be non-zero for the ante handler
+ * to accept the transaction.
+ */
+const MIDGARD_GAS_FEE = '1'
+const MIDGARD_GAS_LIMIT = '60000000'
 
 /**
  * Midgard reports a reverted operation two ways: a reverted send is a normal
@@ -263,6 +272,25 @@ export class MidgardEngine extends CosmosEngine {
 
     this.syncTracker.setHistoryRatios([null, ...this.enabledTokenIds], 1)
     this.sendTransactionEvents()
+  }
+
+  /**
+   * Builds the `CosmosFee` for a chain that charges a flat network fee.
+   *
+   * The signer pays BOTH the flat fee the chain quotes and the gas fee the
+   * transaction declares, so `networkFee` has to cover both. Reporting the flat
+   * fee alone puts a max spend exactly `MIDGARD_GAS_FEE` over the balance: the
+   * ante handler collects the declared gas fee first, which leaves the message
+   * short, and the chain accepts the transaction at CheckTx and then reverts it
+   * as `insufficient funds`.
+   */
+  protected makeMidgardFee(networkFee: string): CosmosFee {
+    const gasFeeCoin = coin(MIDGARD_GAS_FEE, this.networkInfo.nativeDenom)
+    return {
+      gasFeeCoin,
+      gasLimit: MIDGARD_GAS_LIMIT,
+      networkFee: add(networkFee, gasFeeCoin.amount)
+    }
   }
 
   /**

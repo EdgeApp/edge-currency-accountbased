@@ -1,5 +1,4 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { coin } from '@cosmjs/stargate'
 import { add } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
@@ -72,10 +71,6 @@ export class MayachainEngine extends MidgardEngine {
       }
     }
 
-    return {
-      gasFeeCoin: coin('1', this.networkInfo.nativeDenom),
-      gasLimit: '60000000',
-      networkFee
-    }
+    return this.makeMidgardFee(networkFee)
   }
 }

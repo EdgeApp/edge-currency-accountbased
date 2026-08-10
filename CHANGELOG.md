@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (MAYAChain/THORChain) A max send now leaves the wallet. The signer pays the chain's flat network fee AND the transaction's declared gas fee, but only the flat fee was reported, so a max send came out exactly one base unit over the balance. The chain accepted it at CheckTx and then reverted it as `insufficient funds`, which surfaced as a successful send in the app with nothing moving on-chain.
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.
