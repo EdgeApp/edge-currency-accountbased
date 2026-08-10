@@ -112,6 +112,29 @@ export class ZanoEngine extends CurrencyEngine<
             keys.passphrase ?? '',
             keys.storagePath
           )
+
+          // The public key is derived from the seed phrase, in pure JS for
+          // wallets without a passphrase. Fail loudly rather than sync a
+          // wallet whose native address is not the one we show the user.
+          if (response.wi.address !== this.walletInfo.keys.publicKey) {
+            // `startWallet` left the wallet open, and the lifecycle manager
+            // does not run `onStop` for an `onStart` that threw. Left open,
+            // the next start gets ALREADY_EXISTS and adopts it below, and
+            // every restart leaks another handle.
+            try {
+              await this.tools.zano.closeWallet(response.wallet_id)
+            } catch (closeError: unknown) {
+              this.log.warn(
+                `initializeWallet: could not close the mismatched wallet: ${String(
+                  closeError
+                )}`
+              )
+            }
+            throw new Error(
+              'initializeWallet: native wallet address does not match the wallet public key'
+            )
+          }
+
           return response.wallet_id
         } catch (error: unknown) {
           if (!(error instanceof Error)) throw error
@@ -139,6 +162,14 @@ export class ZanoEngine extends CurrencyEngine<
           if (existingWallet?.wallet_id == null) {
             throw new Error(
               'initializeWallet: Wallet already exists but could not be found'
+            )
+          }
+
+          // Adopting a wallet has to clear the same bar as opening one, or
+          // the address check above is bypassed by anything that retries.
+          if (existingWallet.wi?.address !== this.walletInfo.keys.publicKey) {
+            throw new Error(
+              'initializeWallet: existing native wallet address does not match the wallet public key'
             )
           }
 
