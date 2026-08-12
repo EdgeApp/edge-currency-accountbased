@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Monero) Outgoing transactions report their transaction key again. The key is the sender's only proof of a payment, and the move to react-native-monero dropped it from the send path, so every send since then has shown an empty Transaction Key. Stored transactions also re-report their key once per session, which lets the core save a key for sends made while the send path was reporting none.
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.

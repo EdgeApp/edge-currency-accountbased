@@ -107,6 +107,9 @@ const PENDING_SEEN_REFRESH_MS = 5 * 60 * 1000
 // hourly keeps the refresh-triggered change events negligible:
 const LAST_SEEN_REFRESH_S = 60 * 60
 
+// How many transactions to request per native transaction-list call:
+const TX_PAGE_SIZE = 50
+
 /**
  * Converts an Edge walletId (standard base64) into the form the native monero
  * layer expects. The native code embeds the id in a filesystem path and rejects
@@ -134,6 +137,7 @@ export class MoneroEngine extends CurrencyEngine<
   private txSortOrder: 'asc' | 'desc' = 'asc'
   private readonly queryTxMutex = makeMutex()
   private pendingSeenReset = false
+  private txSecretsEmitted = false
   private unsubscribeWalletEvent?: () => void
   private unsubscribeNymFetch?: () => Promise<void>
   private abortKeysWait?: () => void
@@ -698,8 +702,6 @@ export class MoneroEngine extends CurrencyEngine<
     // caller's promise covers a pass that started at or after its call, even
     // when an earlier pass throws.
     return await this.queryTxMutex(async () => {
-      const PAGE_SIZE = 50
-
       // A queued caller can land here after killEngine (a settings change or
       // resync wipes the state next); do not write into the fresh state.
       if (!this.engineOn) return
@@ -711,10 +713,12 @@ export class MoneroEngine extends CurrencyEngine<
         // (idempotent after the first call):
         await this.loadTransactions()
 
+        this.emitStoredTxSecrets()
+
         if (this.txSortOrder === 'asc') {
-          await this.queryTransactionsAsc(nativeWalletId, PAGE_SIZE)
+          await this.queryTransactionsAsc(nativeWalletId, TX_PAGE_SIZE)
         } else {
-          await this.queryTransactionsDesc(nativeWalletId, PAGE_SIZE)
+          await this.queryTransactionsDesc(nativeWalletId, TX_PAGE_SIZE)
         }
 
         // Bail between stages when the engine stopped mid-pass, to shorten
@@ -725,7 +729,7 @@ export class MoneroEngine extends CurrencyEngine<
         // sort behind all confirmed history, so neither scan reaches them.
         // Process them on every pass so they appear before their first
         // confirmation.
-        await this.queryPendingTransactions(nativeWalletId, PAGE_SIZE)
+        await this.queryPendingTransactions(nativeWalletId, TX_PAGE_SIZE)
       } catch (error: unknown) {
         this.warn(`sync: FAILURE queryTransactions: ${String(error)}`)
       } finally {
@@ -734,6 +738,34 @@ export class MoneroEngine extends CurrencyEngine<
         this.sendTransactionEvents()
       }
     })
+  }
+
+  /**
+   * Re-emits every stored transaction that carries a transaction key, once per
+   * engine session, so the core can save a key it never stored.
+   *
+   * The core writes a transaction's key into its metadata file the first time
+   * it sees the transaction and never revisits it. Transactions sent before the
+   * send path started reporting a key therefore have no key on file, even
+   * though the engine's own copy has one: the sync path below has always read
+   * the key from the native wallet, which keeps it for every transaction the
+   * wallet built. Re-emitting hands the core that key. It is a no-op for a
+   * transaction whose key the core already has, so this can run every session
+   * rather than depending on a stored migration flag.
+   */
+  private emitStoredTxSecrets(): void {
+    if (this.txSecretsEmitted) return
+    this.txSecretsEmitted = true
+
+    let count = 0
+    for (const transaction of this.transactionList[''] ?? []) {
+      if (transaction.txSecret == null) continue
+      this.transactionEvents.push({ isNew: false, transaction })
+      ++count
+    }
+    if (count > 0) {
+      this.warn(`sync: re-reported the transaction key of ${count} tx(s)`)
+    }
   }
 
   /** Look up the engine's stored copy of a transaction, if any. */
@@ -1166,6 +1198,7 @@ export class MoneroEngine extends CurrencyEngine<
     this.unlockedBalance = '0'
     this.txSortOrder = 'asc'
     this.pendingSeenReset = false
+    this.txSecretsEmitted = false
     this.resetLogState()
     this.syncTracker.resetSync()
     this.warn('init: killEngine complete')
@@ -1381,6 +1414,52 @@ export class MoneroEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
+  /**
+   * Reads the transaction key of a transaction this wallet just sent. That key
+   * is the sender's only proof of payment: it lets anyone holding it confirm
+   * which outputs the transaction paid, and it cannot be recovered later, since
+   * Monero picks it at random while building the transaction and only the
+   * sending wallet ever holds it.
+   *
+   * The key must be read here rather than in makeSpend, because the native
+   * wallet only records it once the transaction is committed. Reading it on the
+   * send path is also the only chance to give it to the core: the core stores
+   * the key when it first sees a transaction, which for our own sends is the
+   * saveTx that immediately follows this broadcast.
+   *
+   * A key we cannot read is not worth failing an already-broadcast payment
+   * over, so this reports undefined instead of throwing.
+   */
+  private async queryTxSecret(
+    nativeWalletId: string,
+    txid: string
+  ): Promise<string | undefined> {
+    try {
+      // The transaction is pending until it is mined, and the pending set is
+      // small, so this is a short scan even on a busy wallet:
+      let page = 0
+      let totalCount = 1
+      while (page * TX_PAGE_SIZE < totalCount) {
+        const txPage = await this.tools.cppBridge.getPendingTransactions(
+          nativeWalletId,
+          page,
+          TX_PAGE_SIZE
+        )
+        totalCount = txPage.totalCount
+        const match = txPage.transactions.find(tx => tx.hash === txid)
+        if (match != null) return match.txKey
+        ++page
+      }
+      this.warn(`broadcastTx: no transaction key reported for ${txid}`)
+      return undefined
+    } catch (error: unknown) {
+      this.warn(
+        `broadcastTx: FAILURE reading transaction key: ${String(error)}`
+      )
+      return undefined
+    }
+  }
+
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
@@ -1396,6 +1475,10 @@ export class MoneroEngine extends CurrencyEngine<
       )
 
       edgeTransaction.date = Date.now() / 1000
+      edgeTransaction.txSecret = await this.queryTxSecret(
+        nativeWalletId,
+        edgeTransaction.txid
+      )
 
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
       return edgeTransaction
