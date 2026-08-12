@@ -8,33 +8,32 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import type { BlockRange } from 'react-native-piratechain'
 
 import { asWalletInfo } from '../common/types'
 
 type PiratechainNetworkName = 'mainnet' | 'testnet'
 
 export interface PiratechainNetworkInfo {
+  /** Unused by the unified SDK (endpoints live in the native core); kept for
+   * info-server payload compatibility. */
   rpcNode: {
     networkName: PiratechainNetworkName
     defaultHost: string
     defaultPort: number
   }
+  /**
+   * The full lightwalletd URL the SDK scans against, scheme included. This is
+   * deliberately NOT derived from `rpcNode`: that shape shipped with
+   * `defaultPort: 443` long before the SDK needed a port at all, so an
+   * info-server payload carrying the historical value would silently point
+   * sync at a port the SDK cannot speak. Scheme, host and port travel
+   * together here so a payload can only ever set a coherent endpoint.
+   */
+  lightwalletdUrl: string
   defaultNetworkFee: string
-  transactionQueryLimit: number
 }
 
-const asPiratechainBlockRange = asObject<BlockRange>({
-  first: asNumber,
-  last: asNumber
-})
-
 export const asPiratechainWalletOtherData = asObject({
-  alias: asMaybe(asString),
-  blockRange: asMaybe(asPiratechainBlockRange, () => ({
-    first: 0,
-    last: 0
-  })),
   cachedAddress: asMaybe(asString)
 })
 
@@ -86,6 +85,7 @@ export const asPiratechainPrivateKeys = (
 //
 
 export const asPiratechainInfoPayload = asObject({
+  lightwalletdUrl: asOptional(asString),
   rpcNode: asOptional(
     asObject({
       networkName: asValue('mainnet', 'testnet'),

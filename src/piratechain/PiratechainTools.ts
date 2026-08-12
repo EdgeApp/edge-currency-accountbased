@@ -12,12 +12,13 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-import { Tools as ToolsType } from 'react-native-piratechain'
+import { base16, base64 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import { getPiratechainDevicePassphrase } from './piratechainDeviceStorage'
 import type { PiratechainIo } from './piratechainIo'
 import {
   asArrrPublicKey,
@@ -32,7 +33,8 @@ export class PiratechainTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: PiratechainNetworkInfo
-  nativeTools: typeof ToolsType
+  piratechainIo: PiratechainIo
+  devicePassphrasePromise?: Promise<void>
 
   constructor(env: PluginEnvironment<PiratechainNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -48,7 +50,28 @@ export class PiratechainTools implements EdgeCurrencyTools {
       throw new Error('Need piratechain native IO')
     }
 
-    this.nativeTools = piratechainIo.Tools
+    this.piratechainIo = piratechainIo
+  }
+
+  /**
+   * Hands the bridge the device registry passphrase, once. Every call that
+   * reaches the SDK's storage goes through here first. This is lazy rather
+   * than part of construction so that building tools never depends on the
+   * native module being present.
+   */
+  async ensureDevicePassphrase(): Promise<void> {
+    if (this.devicePassphrasePromise == null) {
+      this.devicePassphrasePromise = getPiratechainDevicePassphrase(this.io)
+        .then(async passphrase => {
+          await this.piratechainIo.setDevicePassphrase(passphrase)
+        })
+        .catch((error: unknown) => {
+          // Don't cache a failure — let the next call retry:
+          this.devicePassphrasePromise = undefined
+          throw error
+        })
+    }
+    await this.devicePassphrasePromise
   }
 
   async getDisplayPrivateKey(
@@ -65,14 +88,13 @@ export class PiratechainTools implements EdgeCurrencyTools {
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    return await this.nativeTools.getBirthdayHeight(
-      this.networkInfo.rpcNode.defaultHost,
-      this.networkInfo.rpcNode.defaultPort
-    )
+    await this.ensureDevicePassphrase()
+    return await this.piratechainIo.getLatestNetworkHeight()
   }
 
   async isValidAddress(address: string): Promise<boolean> {
-    return await this.nativeTools.isValidAddress(address)
+    await this.ensureDevicePassphrase()
+    return await this.piratechainIo.isValidAddress(address)
   }
 
   // will actually use MNEMONIC version of private key
@@ -143,13 +165,18 @@ export class PiratechainTools implements EdgeCurrencyTools {
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
-    const unifiedViewingKey: string = await this.nativeTools.deriveViewingKey(
+
+    // Registers the wallet with the SDK's registry as a side effect,
+    // using the same alias name the engine looks up later:
+    await this.ensureDevicePassphrase()
+    const viewingKey = await this.piratechainIo.deriveViewingKey({
+      name: base16.stringify(base64.parse(walletInfo.id)),
       mnemonic,
-      this.networkInfo.rpcNode.networkName
-    )
+      birthdayHeight: piratechainPrivateKeys.birthdayHeight
+    })
     return {
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-      publicKey: unifiedViewingKey
+      publicKey: viewingKey
     }
   }
 

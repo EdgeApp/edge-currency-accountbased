@@ -16,8 +16,18 @@ const networkInfo: PiratechainNetworkInfo = {
     defaultHost: 'lightd1.pirate.black',
     defaultPort: 443
   },
-  defaultNetworkFee: '10000',
-  transactionQueryLimit: 999
+  // Plain gRPC, not gRPC-over-TLS. The SDK's own `test_node` succeeds against
+  // `http://lightd1.pirate.black:9067` and fails against
+  // `https://lightd1.pirate.black:443`, so this is the transport the node
+  // actually serves; the SDK's built-in default node is plaintext too. That
+  // leaves sync and broadcast traffic without TLS integrity or authentication,
+  // which is a real exposure for a shielded chain: a network observer learns
+  // which block ranges this device fetches and when it broadcasts, and an
+  // active attacker can serve a forked view. Move to an `https://` endpoint
+  // as soon as the Pirate team publishes a TLS-terminating lightwalletd this
+  // SDK can complete a gRPC handshake against.
+  lightwalletdUrl: 'http://lightd1.pirate.black:9067',
+  defaultNetworkFee: '10000'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
