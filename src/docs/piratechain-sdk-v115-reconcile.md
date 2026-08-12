@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Status | Implemented and verified (iOS sim, e2e send broadcast) |
+| Status | Implemented; sync verified on the iOS sim, broadcast blocked upstream ([section 7](#7-testing)) |
 | Author | Jon Tzeng |
 | Reviewer | peachbits |
-| Last updated | 2026-08-04 |
-| Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), react-native-pirate-wallet (vendored) |
+| Last updated | 2026-08-11 |
+| Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), react-native-pirate-wallet (npm `0.2.1`) |
 | Implementation | [edge-currency-accountbased#1055](https://github.com/EdgeApp/edge-currency-accountbased/pull/1055), [edge-react-gui#6021](https://github.com/EdgeApp/edge-react-gui/pull/6021) |
 | Supersedes | - |
 | Related | [PirateNetwork/Pirate-Unified-Light-Wallet#19](https://github.com/PirateNetwork/Pirate-Unified-Light-Wallet/pull/19), Asana 1216926437132721 |
@@ -19,7 +19,7 @@ Branch references point at `agent/1214721783909451` in both Edge repos. Directio
 3. [Goals and non-goals](#3-goals-and-non-goals)
 4. [Design overview](#4-design-overview)
 5. [Detailed design: edge-currency-accountbased](#5-detailed-design-edge-currency-accountbased)
-6. [Detailed design: edge-react-gui and the vendored SDK](#6-detailed-design-edge-react-gui-and-the-vendored-sdk)
+6. [Detailed design: edge-react-gui and the SDK dependency](#6-detailed-design-edge-react-gui-and-the-sdk-dependency)
 7. [Testing](#7-testing)
 8. [Phase history](#8-phase-history)
 9. [Decisions](#9-decisions)
@@ -47,7 +47,7 @@ Goals:
 
 Non-goals:
 - Isolating registries per Edge account. The SDK's registry selection is device-global, so an account-scoped registry would reintroduce the switching that breaks concurrent sync ([decision 1](#decision-1-one-device-scoped-registry-namespace)).
-- Publishing `react-native-pirate-wallet` to npm. It stays a vendored `file:` dependency, unchanged from the prior phase; the Pirate team's npm publish is the trigger to revisit.
+- Publishing `react-native-pirate-wallet` itself. The Pirate team published it on 2026-08-06, and [phase 5](#phase-5-npm-dependency-and-the-lightwalletd-endpoint) consumes that release; Edge does not own the package.
 - Bumping to v1.1.6. That release is v1.1.5 plus the Ironwood mainnet activation height, which the Pirate team sets only once partners confirm readiness. A v1.1.5 build does not survive that activation, so one more bump is owed before it happens.
 
 ## 4. Design overview
@@ -55,8 +55,8 @@ Non-goals:
 | Repo | Deliverable | Scope |
 |---|---|---|
 | edge-currency-accountbased | [#1055](https://github.com/EdgeApp/edge-currency-accountbased/pull/1055) | Bridge and engine reconciliation ([section 5](#5-detailed-design-edge-currency-accountbased)) |
-| edge-react-gui | [#6021](https://github.com/EdgeApp/edge-react-gui/pull/6021) | Dependency version bump, keep plugin enabled ([section 6](#6-detailed-design-edge-react-gui-and-the-vendored-sdk)) |
-| react-native-pirate-wallet | vendored `file:` sibling | Re-vendored to v1.1.5 0.2.0 ([section 6](#6-detailed-design-edge-react-gui-and-the-vendored-sdk)) |
+| edge-react-gui | [#6021](https://github.com/EdgeApp/edge-react-gui/pull/6021) | Depend on the published SDK, keep plugin enabled ([section 6](#6-detailed-design-edge-react-gui-and-the-sdk-dependency)) |
+| react-native-pirate-wallet | npm `0.2.1` | Published by the Pirate team 2026-08-06 ([section 6](#6-detailed-design-edge-react-gui-and-the-sdk-dependency)) |
 
 The plugin's native IO bridge (`piratechainIo.ts`) runs on the React Native side and talks to the SDK, which forwards JSON to the Rust core. The engine (`PiratechainEngine.ts`) runs inside the edge-core-js plugin context and reaches the bridge over the yaob object bridge.
 
@@ -143,9 +143,17 @@ The engine subscribes to the synchronizer after `start()`, so a `statusChanged` 
 
 `SynchronizerCallbacks.onError` is retyped `(error: unknown)` because bridge errors arrive as serialized objects or strings, not real `Error` instances; the existing `error instanceof Error ? error.message : String(error)` guard already assumes this.
 
-## 6. Detailed design: edge-react-gui and the vendored SDK
+## 6. Detailed design: edge-react-gui and the SDK dependency
 
-The vendored `react-native-pirate-wallet` sibling is re-extracted from the v1.1.5 release artifact (`pirate-unified-wallet-react-native-plugin-artifacts-v1.1.5.zip`), taking the 0.2.0 binding source plus the iOS xcframework (device and simulator slices) and Android jniLibs. The GUI dependency reference stays `file:../react-native-pirate-wallet`; only the resolved version in `yarn.lock` and `ios/Podfile.lock` moves from 0.1.1 to 0.2.0. `src/util/corePlugins.ts` keeps `piratechain: true`; no code change is needed there because the fix is native. The seam back to the plugin is the bridge in [section 5](#5-detailed-design-edge-currency-accountbased) and its diagram.
+`react-native-pirate-wallet@0.2.1` comes from npm, replacing the `file:../react-native-pirate-wallet` sibling. The wrapper tarball carries only JS and the ObjC/Swift/Kotlin bridge; the native artifacts ship as four `optionalDependencies` pinned to the exact wrapper version (`-android`, `-android-x86_64`, `-ios-device`, `-ios-simulator`), and a `postinstall` hard-links the two iOS slices into the `PirateWalletNative.xcframework` the podspec vendors. The iOS pair is marked `os: ["darwin"]`, so Linux CI skips 560MB it cannot use.
+
+`edge-react-gui` sets `ignore-scripts=true` in `.npmrc`, so that `postinstall` can never fire and the podspec would vendor a framework that does not exist. The assembly therefore runs from `scripts/prepare.sh`, which is where the repo already keeps `patch-package`, `jetify` and the native-header copy, and which must run before `pod install`. The script no-ops off macOS.
+
+`src/util/corePlugins.ts` keeps `piratechain: true`; nothing else on the GUI side changes. The seam back to the plugin is the bridge in [section 5](#5-detailed-design-edge-currency-accountbased) and its diagram.
+
+### The lightwalletd endpoint
+
+The SDK bakes in a default lightwalletd node and never reads the plugin's `networkInfo`, so a wallet left alone scans against that default rather than Edge's. When that node degrades the failure is silent and total: `test_node` still succeeds, the chain tip still resolves, and `sync_status` still reports `SYNCING` — but the scan sits in the `Headers` stage at zero blocks/sec forever, which the app renders as "Sync in Progress, 0% Complete" with no error anywhere in the stack. `PiratechainEngine` therefore passes its configured node down as `lightwalletdUrl`, and `makeSynchronizer` applies it with `set_lightd_endpoint` before the synchronizer starts. The configured port is the node's plain gRPC port, not 443: `test_node` fails against `https://lightd1.pirate.black:443` and succeeds against `http://lightd1.pirate.black:9067`.
 
 ## 7. Testing
 
@@ -153,7 +161,10 @@ The vendored `react-native-pirate-wallet` sibling is re-extracted from the v1.1.
 2. Crash retirement (VERIFIED, iOS sim): the GUI was built for the iOS simulator with `piratechain: true` (no corePlugins disable) against the v1.1.5 native binaries. Old `react-native-piratechain` is absent from the build (zero Podfile.lock references, not autolinked). ARRR wallets ran the shielded sync with the app stable throughout, the exact background sync that crash-looped the old module. Per-account storage created isolated registries under `Library/Application Support/PirateWallet/accounts/<sanitized-id>/`.
 3. Send (VERIFIED, iOS sim, real broadcast): a self-account ARRR send was driven to the transaction-success scene. Source `My Pirate 2` (14.731 ARRR spendable), destination `My Pirate` (picked via the send scene's "Myself" wallet picker, which derived the recipient shielded z-address `zs1e5v84m2mnhwcxd0h4nx85jz97gd9shcphgx84fhh8v7vw9eztz72scekz8c6pxjrl0a2yurjuyj`), amount 4.754 ARRR, fee 0.0001 ARRR. The app reported "Transaction Success" and the transaction record shows txid `34ba68b0fee76668790ef7dae32f374c7f378da589022a1034f1112e234e49cd`. This confirms the string-amount send path and the SDK `send()` call end to end, and exercises the `txid` transaction-processing fix (see [phase 3](#phase-3-e2e-send-verification)) without the `toLowerCase` crash.
 
-Sync note: on a clean baked build the shielded sync completes fast on the sim (roughly 90 seconds from wallet birthday to `SYNCED`, `localHeight == targetHeight`, at roughly 8000 blocks/sec), and `getSpendabilityStatus` then reports `spendable: true` / `reason_code: OK`. The earlier "sync stuck at 0%" observation did not reproduce; it was an artifact of a broken build where the reconciled engine was not correctly loaded, not a native scan stall.
+4. Endpoint fix (VERIFIED, iOS sim, 2026-08-11): with `set_lightd_endpoint` applied, `My Pirate 2` and `My Pirate` scanned from their birthdays to `SYNCED` at roughly 1,800 blocks/sec, `localHeight == targetHeight == 4085959`, wallet DBs growing 1.5MB to 233MB, and the wallet-detail sync banner cleared. Without it both wallets sat at `stage: "Headers"`, `blocksPerSecond: 0`, `localHeight` frozen, for 45 minutes across two full builds. Re-verified on a build carrying the committed fix rather than the diagnostic patch.
+5. Broadcast (NOT VERIFIED, 2026-08-11): three funded attempts from the SYNCED, spendable `My Pirate 2` — 2.19 ARRR to `My Pirate`, fee 0.0001, confirm slider active — each failed inside the SDK with `Broadcast failed: Status error: status: Cancelled, message: "Timeout expired"`. Reproduced against two different lightwalletd nodes, so it is not endpoint-specific. No principal moved. The transaction builds and signs (roughly 5 minutes on the sim) and the failure is at the gRPC broadcast. This is the one remaining gap before the app is ready for activation, and it is upstream of Edge's code.
+
+Sync note (superseded): the earlier claim that a clean baked build syncs in roughly 90 seconds at 8000 blocks/sec, and that "sync stuck at 0%" was only a broken-build artifact, was wrong. Item 4 above identifies the real cause: the SDK scans against its own default node unless the plugin sets one, and that default stopped serving blocks.
 
 ## 8. Phase history
 
@@ -197,6 +208,11 @@ The Pirate team confirmed the intended storage model, which is not the one phase
 Old per-wallet registries are abandoned rather than migrated: wallets re-restore from their seeds into the device registry on first run, and the stale directories hold no unrecoverable state.
 
 Found while testing this phase: creating a new ARRR wallet crashed the app to springboard, because the chain-tip probe mutated the now-shared registry while three synchronizers were running against it. The crash report pinned it to a Rust panic in `pirate_wallet_service_invoke_json` reaching `abort` through `panic_cannot_unwind`. The fix is [the chain-tip change above](#chain-tip-without-mutating-the-registry); wallet creation then succeeded with all four wallets coexisting in the one registry.
+
+### Phase 5: npm dependency and the lightwalletd endpoint
+Sketched: swap the GUI off the vendored `file:` sibling onto the published `react-native-pirate-wallet@0.2.1`, merge up with `develop`, and close the e2e send that the phase-4 storage re-key blocked.
+Shipped: the npm swap, with the XCFramework assembly moved into `scripts/prepare.sh` because the repo disables install scripts ([section 6](#6-detailed-design-edge-react-gui-and-the-sdk-dependency)); and the `set_lightd_endpoint` fix, which is what actually made ARRR sync ([section 6](#the-lightwalletd-endpoint)). A clean clone reproduces every native artifact.
+Diverged: two walls the phase did not anticipate. The e2e send still does not broadcast — it now fails at the SDK's gRPC broadcast rather than at spendability, which is a different and later failure than phase 4's. And on current `develop` the iOS binary no longer links: `__TEXT` reaches 184MB against the arm64 ±128MB branch range, so `ld` cannot place a branch island. The Pirate static library is the largest contributor at roughly 187MB of arm64 code, but it is not solely responsible; the build linked on 2026-08-04 with the same library, and dropping the three other large Rust/C++ libraries (`zcash`, `monero`, `zano`) links it again. Dead-stripping, link reordering and `-ld_classic` were each tried and each failed identically.
 
 ## 9. Decisions
 
