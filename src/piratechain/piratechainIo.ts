@@ -45,6 +45,12 @@ export interface PiratechainSpendOutput {
 
 export interface PiratechainWalletConfig {
   birthdayHeight: number
+  /**
+   * The lightwalletd node this wallet scans against, as a plain gRPC URL. The
+   * SDK ships its own default node and never consults the plugin's config, so
+   * without this the wallet silently scans against whatever the SDK picked.
+   */
+  lightwalletdUrl?: string
   mnemonic: string
   name: string
 }
@@ -239,6 +245,21 @@ export function makePiratechainIo(): PiratechainIo {
     async makeSynchronizer(config) {
       const walletSdk = getSdk()
       const walletId = await ensureWallet(config)
+
+      // Point the wallet at Edge's own node. The SDK bakes in a default
+      // lightwalletd and never reads the plugin's `networkInfo`, so a wallet
+      // left alone scans against that default. When that node is degraded the
+      // failure is silent and total: `test_node` still succeeds and the chain
+      // tip still resolves, but the scan sits in the `Headers` stage at zero
+      // blocks/sec forever, which surfaces in the app as "Sync in Progress,
+      // 0% Complete" with no error anywhere.
+      if (config.lightwalletdUrl != null) {
+        await invokeCall('set_lightd_endpoint', {
+          wallet_id: walletId,
+          url: config.lightwalletdUrl
+        })
+      }
+
       const realSynchronizer = walletSdk.createSynchronizer(walletId, {
         transactionLimit: null
       })

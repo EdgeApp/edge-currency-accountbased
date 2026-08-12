@@ -239,7 +239,8 @@ export class PiratechainEngine extends CurrencyEngine<
       this.synchronizerPromise = this.makeSynchronizer({
         name: base16.stringify(base64.parse(this.walletId)),
         mnemonic: piratechainPrivateKeys.mnemonic,
-        birthdayHeight: piratechainPrivateKeys.birthdayHeight
+        birthdayHeight: piratechainPrivateKeys.birthdayHeight,
+        lightwalletdUrl: this.networkInfo.lightwalletdUrl
       })
       this.synchronizer = await this.synchronizerPromise
       // People might be waiting on the old promise, so resolve that

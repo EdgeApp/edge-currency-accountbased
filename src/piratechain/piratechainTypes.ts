@@ -21,6 +21,15 @@ export interface PiratechainNetworkInfo {
     defaultHost: string
     defaultPort: number
   }
+  /**
+   * The full lightwalletd URL the SDK scans against, scheme included. This is
+   * deliberately NOT derived from `rpcNode`: that shape shipped with
+   * `defaultPort: 443` long before the SDK needed a port at all, so an
+   * info-server payload carrying the historical value would silently point
+   * sync at a port the SDK cannot speak. Scheme, host and port travel
+   * together here so a payload can only ever set a coherent endpoint.
+   */
+  lightwalletdUrl: string
   defaultNetworkFee: string
 }
 
@@ -76,6 +85,7 @@ export const asPiratechainPrivateKeys = (
 //
 
 export const asPiratechainInfoPayload = asObject({
+  lightwalletdUrl: asOptional(asString),
   rpcNode: asOptional(
     asObject({
       networkName: asValue('mainnet', 'testnet'),
