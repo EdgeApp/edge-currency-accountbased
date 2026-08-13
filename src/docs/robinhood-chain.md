@@ -5,13 +5,13 @@
 | Status | Implemented |
 | Author | Jon Tzeng |
 | Reviewer | - |
-| Last updated | 2026-08-12 |
-| Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui) |
+| Last updated | 2026-08-13 |
+| Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), [edge-exchange-plugins](https://github.com/EdgeApp/edge-exchange-plugins) |
 | Implementation | see the repo table in [4. Design overview](#4-design-overview) |
 | Supersedes | - |
 | Related | [Asana 1217382370104887](https://app.asana.com/1/9976422036640/project/1213843652804305/task/1217382370104887) |
 
-File and branch references point at the `jon/robinhood-chain` branch in both repos. The task description carried a single link, `https://docs.robinhood.com/chain/`, so every chain parameter below was read from Robinhood's published documentation and then confirmed against the live network.
+File and branch references point at the `jon/robinhood-chain` branch in all three repos. The task description carried a single link, `https://docs.robinhood.com/chain/`, so every chain parameter below was read from Robinhood's published documentation and then confirmed against the live network.
 
 ## Contents
 
@@ -21,12 +21,13 @@ File and branch references point at the `jon/robinhood-chain` branch in both rep
 4. [Design overview](#4-design-overview)
 5. [Detailed design: edge-currency-accountbased](#5-detailed-design-edge-currency-accountbased)
 6. [Detailed design: edge-react-gui](#6-detailed-design-edge-react-gui)
-7. [Testing](#7-testing)
-8. [Phase history](#8-phase-history)
-9. [Decisions](#9-decisions)
-10. [Glossary](#10-glossary)
-11. [References](#11-references)
-12. [Post-implementation retrospective](#12-post-implementation-retrospective)
+7. [Detailed design: edge-exchange-plugins](#7-detailed-design-edge-exchange-plugins)
+8. [Testing](#8-testing)
+9. [Phase history](#9-phase-history)
+10. [Decisions](#10-decisions)
+11. [Glossary](#11-glossary)
+12. [References](#12-references)
+13. [Post-implementation retrospective](#13-post-implementation-retrospective)
 
 ## 1. Problem
 
@@ -51,11 +52,11 @@ Goals:
 - A `robinhood` currency plugin whose wallets derive addresses, report balances, list transactions, and estimate fees correctly on chain 4663.
 - Registration in `edge-react-gui` so the wallet is creatable and importable from the app.
 - Built-in tokens for the assets a user is most likely to hold, with contract addresses that cannot be confused with imitations.
+- A swap route that can fund a Robinhood Chain wallet from another chain, so a user arriving with no ETH on 4663 can acquire gas without leaving the app, and so a send can be exercised at all.
 
 Non-goals:
 
-- Sending or swapping on the chain. No Edge swap provider quotes chain 4663, and nothing in the test roster holds a spendable balance there, so a funded send is deferred rather than designed around.
-- Currency icons. They live in the `content.edge.app` asset repo, outside both repos here.
+- Currency icons. They live in the `content.edge.app` asset repo, outside the three repos here.
 - Testnet (chain 46630) support. Nothing asked for it.
 
 ## 4. Design overview
@@ -64,6 +65,7 @@ Non-goals:
 |---|---|---|
 | edge-currency-accountbased | [#1087](https://github.com/EdgeApp/edge-currency-accountbased/pull/1087) | The plugin itself: [5. Detailed design](#5-detailed-design-edge-currency-accountbased) |
 | edge-react-gui | [#6150](https://github.com/EdgeApp/edge-react-gui/pull/6150) | Plugin registration and wallet naming: [6. Detailed design](#6-detailed-design-edge-react-gui) |
+| edge-exchange-plugins | [#483](https://github.com/EdgeApp/edge-exchange-plugins/pull/483) | Swap routing to and from the chain: [7. Detailed design](#7-detailed-design-edge-exchange-plugins) |
 
 The plugin is a configuration file. Every behavior it needs already exists in the shared `EthereumEngine`, selected by the fields the config sets. The engine runs inside edge-core-js's plugin WebView, and the app reaches it through the plugin registration in [6. Detailed design: edge-react-gui](#6-detailed-design-edge-react-gui).
 
@@ -202,7 +204,30 @@ The wallet name string is `'My Robinhood Chain'` rather than `'My Robinhood'`, s
 
 One search behavior is worth knowing: `filterWalletCreateItemListBySearchText` splits the query on whitespace and requires every term to match a field by prefix, so typing the full name "Robinhood Chain" returns nothing. "Robinhood" matches on `displayName`.
 
-## 7. Testing
+## 7. Detailed design: edge-exchange-plugins
+
+Every swap plugin resolves a wallet to its provider-side chain code through one shared map, `MAINNET_CODE_TRANSCRIPTION`, keyed by Edge pluginId. `lifi.ts` and `rango.ts` gate entirely on a non-null lookup for both the source and destination wallet, so a chain the map does not know is invisible to the provider regardless of what the provider's API supports. Adding a chain is therefore a mapping change, not a code change.
+
+The maps are generated. `scripts/mappings/<provider>Mappings.ts` holds the authored direction, provider chain code to Edge pluginId; `npm run mapctl update-mappings` inverts each one into `src/mappings/<provider>.ts`, which is what the plugins import. Every pluginId must exist in `src/util/edgeCurrencyPluginIds.ts` first, so `robinhood` is added there by `mapctl add-plugin`.
+
+Six providers advertise the chain, but only three can fill an order into it. The map records the ones whose support is real:
+
+| Provider | Chain code | Status |
+|---|---|---|
+| SideShift | `robinhood` | Quotes both directions for native ETH and bridged WETH |
+| LI.FI | `out` | Quotes cross-chain into 4663; the chain's LI.FI key is the literal string `out` |
+| Rango | `ROBINHOOD` | Chain enabled, 495 tokens indexed, routes via Relay and GasZip |
+| ChangeNow | `hood` | Chain listed with three assets, but the native-ETH pair is currently inactive |
+| LetsExchange | `ROBINHOOD` | Carries only CASHCAT and ARROW, no native ETH, so it cannot deliver gas. Left unmapped |
+| SwapKit | `HOOD` | Chain code appears in the provider sweep but no queried provider lists a tradeable asset. Left unmapped |
+
+ChangeNow is mapped despite the inactive pair because the map is chain-level while fill availability is per-pair and dynamic: `changenow.ts` rebuilds `chainCodeTickerMap` hourly from `exchange/currencies?active=true`, filtered to the chain codes the map knows, so an unmapped chain can never appear even after the pair activates. Mapping it costs a failed quote today and needs no further change later.
+
+LI.FI's key deserves a note. Every other chain in `lifiMappings.ts` uses a mnemonic three-letter key (`arb`, `bas`, `opt`); LI.FI assigned Robinhood Chain `out`, which reads like a placeholder and is easy to mistake for a bug. It is what `https://li.quest/v1/chains` returns for chain ID 4663.
+
+One asymmetry is worth recording: `https://li.quest/v1/connections?toChain=4663` returns zero connections while `https://li.quest/v1/quote` into the same chain returns a route. The connections endpoint lags; quoting is the reliable probe.
+
+## 8. Testing
 
 1. **Unit, built-in token IDs.** `test/builtinTokens.test.ts` iterates every registered plugin and asserts each `builtinTokens` key equals what `tools.getTokenId` derives from the token. The five contracts above pass, which is what proves the lowercased-address keys are right. The full `npm test` suite passes.
 2. **Type check.** `tsc --noEmit` reports no errors in `src/ethereum`. Nine pre-existing errors in `src/zcash` come from an unpublished `react-native-zcash` and are untouched by this work.
@@ -210,9 +235,12 @@ One search behavior is worth knowing: `filterWalletCreateItemListBySearchText` s
 4. **Live network, RPC.** Both configured servers answer `eth_chainId` with `0x1237`, and agree on `eth_blockNumber`, `eth_getBalance` and `eth_getTransactionCount`. The [NodeInterface](#nodeinterface) call at `0x…C8` returns a `baseFee`, which is what confirms the chain runs Nitro and that the Arbitrum fee path applies.
 5. **In-app, wallet creation.** On the iOS simulator, "Robinhood Chain" appears in Choose Wallets to Add, creates as "My Robinhood Chain", and opens on a wallet scene titled "Robinhood Chain Network" showing 0 ETH.
 6. **In-app, live balance.** Importing the test-vector seed as a second wallet renders `0.000000019866 ETH`, matching the `0x4a01b1a80` wei that `eth_getBalance` returns for that address. This is the end-to-end proof: the app is running the modified plugin, deriving the address, and reading the live chain.
-7. **Transaction history.** The address's two real transactions, read from [Blockscout](#blockscout)'s v2 API, run through the repo's own `asEvmScanTransaction` cleaner and `processEvmScanTransaction` to `nativeAmount` `-11497329332206467` / `networkFee` `1182846000000` (21000 gas at 56,326,000 wei) / `blockHeight` `10328717` for the outgoing transfer, and `nativeAmount` `0` / `blockHeight` `25585560` for the incoming one. Both then render in the app as "Sent Ethereum -Ξ 0.011497, Jul 15 2026" and "Received Ethereum +Ξ 0, Aug 1 2026", captured under a forced response because the live endpoint was rate-limited; see [12. Post-implementation retrospective](#12-post-implementation-retrospective).
+7. **Transaction history.** The address's two real transactions, read from [Blockscout](#blockscout)'s v2 API, run through the repo's own `asEvmScanTransaction` cleaner and `processEvmScanTransaction` to `nativeAmount` `-11497329332206467` / `networkFee` `1182846000000` (21000 gas at 56,326,000 wei) / `blockHeight` `10328717` for the outgoing transfer, and `nativeAmount` `0` / `blockHeight` `25585560` for the incoming one. Both then render in the app as "Sent Ethereum -Ξ 0.011497, Jul 15 2026" and "Received Ethereum +Ξ 0, Aug 1 2026", captured under a forced response because the live endpoint was rate-limited; see [13. Post-implementation retrospective](#13-post-implementation-retrospective).
+8. **Provider survey, live.** Each provider's own discovery endpoint was queried for a chain code matching the chain, then each candidate was asked for a real quote into native ETH on 4663. SideShift, LI.FI and Rango returned routes; ChangeNow returned `pair_is_inactive` in both directions; LetsExchange listed only two tokens and no native asset. The mapped codes in [7. Detailed design](#7-detailed-design-edge-exchange-plugins) come from that survey, not from documentation.
+9. **In-app, funded swap.** With the modified `edge-exchange-plugins` served into the app, an exchange of 529.16 S from My Sonic to My Robinhood Chain quoted at 0.006243 ETH "Powered by LI.FI" and executed to the Congratulations scene. `eth_getBalance` for the receiving address then returned `0x1632fcdd394831`, 6248511112300593 wei, and the wallet scene rendered `0.006248511112300593 ETH`. This is the first spendable balance any Edge account has held on the chain.
+10. **In-app, send.** Sending 0.001 ETH from that wallet reached the "Transaction Success" modal. On chain, transaction `0x70e4950b5991c9419eff70ea2478c7ae55c5c58adcc3da237d5889394f8fdf62` is `success` in block 35308086, value 1000000000000000 wei, fee 1427144040000 wei, and the sender's balance fell by exactly the sum. Send and fee estimation on the chain are now exercised rather than deferred.
 
-## 8. Phase history
+## 9. Phase history
 
 ### Phase 1: initial integration
 
@@ -231,7 +259,25 @@ Deferred:
 - Currency icons at `content.edge.app/currencyIconsV3/robinhood/`. The app requests `robinhood.png` and `chain_robinhood.png` and gets neither, so the wallet renders a text placeholder.
 - A `robinhood` entry in edge-change-server's plugin registry. `usesChangeServer: true` is set to match `opbnb` and `monad`, which are also absent from that registry; an unknown plugin ID returns `-1` from the hub and the engine polls instead.
 
-## 9. Decisions
+### Phase 2: swap routing, and the send it unblocked
+
+Phase 1 recorded "no swap provider quotes chain 4663" and deferred a funded send on that basis. Both halves were wrong. The claim rested on the chain being absent from Edge's provider maps, which is a statement about Edge's configuration, not about the providers: a direct sweep of each provider's own discovery endpoint found six advertising the chain within a day of the integration landing. Mapping three of them turned an undeliverable send into a routine one.
+
+| Phase 1 believed | Phase 2 found |
+|---|---|
+| No provider quotes 4663 | Six advertise it; SideShift, LI.FI and Rango fill orders into it |
+| Funding needs an L1 bridge deposit through the Delayed Inbox, undrivable from the app | A single in-app exchange funds the wallet in about four minutes |
+| A funded send is deferred | Sent, mined, and confirmed against the chain |
+
+Scope added in this phase: `edge-exchange-plugins` [#483](https://github.com/EdgeApp/edge-exchange-plugins/pull/483), 27 inserted lines across the generated maps and no engine or plugin code.
+
+Deferred, still:
+
+- Currency icons, unchanged from phase 1.
+- An exchange rate for ETH on `robinhood`. Edge's rates server has no entry for the pluginId, so every fiat figure on the chain renders `$0`. On the exchange scene that also trips the "High Price Impact" banner, since the destination value compares as zero against a priced source. Cosmetic, but it looks like a routing fault to a user and should be fixed where rates are configured, not here.
+- A Blockscout API key, unchanged from phase 1 and now the one remaining functional gap: transaction history still rate-limits, so the send above is confirmed against the chain rather than in the app's own list.
+
+## 10. Decisions
 
 ### Decision 1: pluginId is `robinhood`
 
@@ -273,7 +319,25 @@ Rejected: shipping no built-in tokens at all. Auto-detection would eventually su
 
 Reopens if: Robinhood publishes a canonical token list, which would also settle USDG without the proxy-implementation check.
 
-## 10. Glossary
+### Decision 5: map only the providers that fill, and only ChangeNow on faith
+
+Chosen because a mapped chain code is a promise the plugin will quote. LetsExchange and SwapKit advertise the chain but cannot deliver native ETH, so mapping them would produce failed quotes with no path to a filled one. ChangeNow is the exception: it lists three assets on the chain and its plugin re-reads fill availability hourly, so the inactive pair is a temporary state the mapping does not have to encode.
+
+Rejected: mapping all six advertised codes. It reads as broader support but converts a provider's marketing into a user-visible error.
+
+Rejected: mapping only LI.FI, the provider actually used for the test. Two independent routes is what keeps the funding path alive when one is degraded, and Rango quoted a comparable rate through a different swapper.
+
+Reopens if: Tether or another issuer bridges native liquidity that changes which providers can fill.
+
+### Decision 6: the funding swap ran through LI.FI rather than SideShift
+
+Chosen because SideShift is geographically blocked from this host's egress: quotes and the confirm slider render, but shift creation is denied at any amount. LI.FI and Rango are on-chain aggregators with no such gate, so competitors were disabled locally to pin the route and LI.FI won it.
+
+Rejected: routing the test through SideShift to exercise the map's first entry. Its mapping is verified by its live pair endpoint quoting both directions; executing through it needs non-US egress the environment does not have.
+
+Reopens if: a non-US egress path becomes available, which would let the SideShift leg be exercised end to end.
+
+## 11. Glossary
 
 ### Arbitrum Nitro
 
@@ -311,27 +375,30 @@ The request format Ethereum nodes answer on, carrying methods like `eth_getBalan
 
 Optimism's rollup framework, used by Base, opBNB and others. Its fee model differs from Arbitrum's: the L1 component comes from a `GasPriceOracle` contract rather than a NodeInterface call, which is why `optimismRollup` is the wrong flag for this chain. See [OP Stack documentation](https://docs.optimism.io/stack/getting-started).
 
-## 11. References
+## 12. References
 
 - [Robinhood Chain documentation](https://docs.robinhood.com/chain/)
 - [Connecting to Robinhood Chain](https://docs.robinhood.com/chain/connecting), the source for chain ID, RPC and explorer URLs
 - [Robinhood Chain protocol contracts](https://docs.robinhood.com/chain/protocol-contracts), the source for the gateway router and [NodeInterface](#nodeinterface) addresses
 - [chainid.network chain registry](https://chainid.network/chains.json), the source for the second RPC endpoint
 
-## 12. Post-implementation retrospective
+## 13. Post-implementation retrospective
 
 ### Estimate vs. actuals
 
 | Item | Expected | Actual |
 |---|---|---|
-| Files changed | 3 in accountbased, 6 in gui | 3 and 6 |
-| New engine code | none | none, config only |
+| Files changed | 3 in accountbased, 6 in gui | 3 and 6, plus 19 in exchange-plugins (17 of them generated) |
+| New engine code | none | none, config and mappings only |
 | Chain params from docs | all | all but the token addresses, which the docs do not list |
+| Swap support | none expected | three providers, reached by mapping alone |
 
 ### Where this document was wrong or silent
 
 1. [5. Detailed design](#5-detailed-design-edge-currency-accountbased) originally carried Arbitrum One's `addressQueryLookbackBlocks: 480` with a "~2 minutes" comment copied from that plugin. On a 96ms block time that is 46 seconds. The constant is a re-scan overlap, so too small a value narrows the window that absorbs indexer lag. Corrected to 1250 before the first PR.
 2. Nothing anticipated the token-imitation problem. The first pass would have read addresses off [Blockscout](#blockscout)'s token list, which ranks a fake USDC above the real one by holder count.
+3. The largest error was the non-goal itself. "No Edge swap provider quotes chain 4663" was inferred from the chain being absent in Edge's own provider maps and never checked against a provider API, and a deferred send was justified with an L1-bridge argument that a four-minute in-app swap made moot. The absence of a chain in a mapping file says nothing about the provider; only the provider's endpoint does. Any future chain integration should query the provider discovery endpoints before writing down what swap support exists.
+4. The document assumed a working balance implies a working fiat display. It does not: the rates server keys on pluginId, so a new chain reads `$0` everywhere until it is registered there, and the exchange scene turns that zero into a "High Price Impact" warning that looks like a routing fault.
 
 ### What held
 
@@ -341,5 +408,7 @@ The plugin needed no engine changes. `arbitrumRollupParams`, `supportsEIP1559` a
 
 - Block rate measured on the live chain: 626 blocks in 60.2 seconds, 96ms per block.
 - In-app balance `0.000000019866 ETH` matches `eth_getBalance` returning `0x4a01b1a80` for the imported address.
+- The funding swap delivered 6248511112300593 wei against a quoted 0.006243 ETH, slightly above quote, and the app rendered the figure to the wei once the engine's next balance poll landed. The poll is the lag to expect after any receive: the balance arrived on chain before the wallet scene showed it, and no resync was needed.
+- The send's destination was the `abandon abandon … about` test vector, whose private key is public. It was credited by the transaction above and drained to zero shortly after, so a destination-balance delta is not a usable check there. The transaction receipt is.
 - The public Blockscout instance returns HTTP 429 after a small number of requests from one egress address and recovers after about three minutes. During this run the simulator's own polling and the verification probes competed for that budget, so the transaction list was verified by forcing the response instead: `fetchGetEtherscan` was temporarily stubbed to return the address's two real rows, leaving the cleaner, `processEvmScanTransaction` and the list component untouched. The stub was reverted afterwards.
 - Its v2 API (`/api/v2/addresses/<addr>/transactions`) has a SEPARATE quota from the Etherscan-compatible `/api` and answered while the latter was still returning 429. That is where the real row data above came from. No Edge-held provider key covers chain 4663: Etherscan V2 does not serve it, the dRPC key is deactivated account-wide, nowNodes and quiknode have no endpoint for it, and Alchemy supports the network but answers `ROBINHOOD_MAINNET is not enabled for this app`. Enabling it on the Alchemy app, or provisioning a Blockscout API key (which `EvmScanAdapter` already appends as `&apikey=`), removes the limit without a code change.
