@@ -6,12 +6,12 @@
 | Author | Jon Tzeng |
 | Reviewer | - |
 | Last updated | 2026-08-13 |
-| Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), [edge-exchange-plugins](https://github.com/EdgeApp/edge-exchange-plugins) |
+| Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), [edge-exchange-plugins](https://github.com/EdgeApp/edge-exchange-plugins), [edge-rates-server](https://github.com/EdgeApp/edge-rates-server) |
 | Implementation | see the repo table in [4. Design overview](#4-design-overview) |
 | Supersedes | - |
 | Related | [Asana 1217382370104887](https://app.asana.com/1/9976422036640/project/1213843652804305/task/1217382370104887) |
 
-File and branch references point at the `jon/robinhood-chain` branch in all three repos. The task description carried a single link, `https://docs.robinhood.com/chain/`, so every chain parameter below was read from Robinhood's published documentation and then confirmed against the live network.
+File and branch references point at the `jon/robinhood-chain` branch in all four repos. The task description carried a single link, `https://docs.robinhood.com/chain/`, so every chain parameter below was read from Robinhood's published documentation and then confirmed against the live network.
 
 ## Contents
 
@@ -22,12 +22,13 @@ File and branch references point at the `jon/robinhood-chain` branch in all thre
 5. [Detailed design: edge-currency-accountbased](#5-detailed-design-edge-currency-accountbased)
 6. [Detailed design: edge-react-gui](#6-detailed-design-edge-react-gui)
 7. [Detailed design: edge-exchange-plugins](#7-detailed-design-edge-exchange-plugins)
-8. [Testing](#8-testing)
-9. [Phase history](#9-phase-history)
-10. [Decisions](#10-decisions)
-11. [Glossary](#11-glossary)
-12. [References](#12-references)
-13. [Post-implementation retrospective](#13-post-implementation-retrospective)
+8. [Detailed design: edge-rates-server](#8-detailed-design-edge-rates-server)
+9. [Testing](#9-testing)
+10. [Phase history](#10-phase-history)
+11. [Decisions](#11-decisions)
+12. [Glossary](#12-glossary)
+13. [References](#13-references)
+14. [Post-implementation retrospective](#14-post-implementation-retrospective)
 
 ## 1. Problem
 
@@ -66,6 +67,7 @@ Non-goals:
 | edge-currency-accountbased | [#1087](https://github.com/EdgeApp/edge-currency-accountbased/pull/1087) | The plugin itself: [5. Detailed design](#5-detailed-design-edge-currency-accountbased) |
 | edge-react-gui | [#6150](https://github.com/EdgeApp/edge-react-gui/pull/6150) | Plugin registration and wallet naming: [6. Detailed design](#6-detailed-design-edge-react-gui) |
 | edge-exchange-plugins | [#483](https://github.com/EdgeApp/edge-exchange-plugins/pull/483) | Swap routing to and from the chain: [7. Detailed design](#7-detailed-design-edge-exchange-plugins) |
+| edge-rates-server | [#123](https://github.com/EdgeApp/edge-rates-server/pull/123) | Exchange rates for the chain's assets: [8. Detailed design](#8-detailed-design-edge-rates-server) |
 
 The plugin is a configuration file. Every behavior it needs already exists in the shared `EthereumEngine`, selected by the fields the config sets. The engine runs inside edge-core-js's plugin WebView, and the app reaches it through the plugin registration in [6. Detailed design: edge-react-gui](#6-detailed-design-edge-react-gui).
 
@@ -227,7 +229,39 @@ LI.FI's key deserves a note. Every other chain in `lifiMappings.ts` uses a mnemo
 
 One asymmetry is worth recording: `https://li.quest/v1/connections?toChain=4663` returns zero connections while `https://li.quest/v1/quote` into the same chain returns a route. The connections endpoint lags; quoting is the reliable probe.
 
-## 8. Testing
+## 8. Detailed design: edge-rates-server
+
+A chain can hold a real balance, receive a swap and send a transaction and still be unusable, because every fiat figure attached to it renders `$0`: wallet list, wallet scene, send confirm and swap quote. On the exchange scene the zero destination value additionally trips a "High Price Impact" warning, so a correct quote reads to the user as broken or predatory.
+
+The reason is that the rates server's v3 API keys on `{pluginId, tokenId}`, not on currency code. Robinhood Chain's native asset is ETH and its `currencyInfo.currencyCode` is `'ETH'`, but that string never reaches the rate lookup. `toCryptoKey` turns the asset into the bare pluginId `robinhood`, and no provider map contained it, so the response came back with the asset echoed and the `rate` field simply absent.
+
+Registration spans four maps plus one bridge:
+
+| Map | Value | Effect |
+|---|---|---|
+| `coingeckoMainnetCurrencyMapping` | `ethereum` | Native ETH prices off ETH |
+| `coingeckoPlatformIdMapping` | `robinhood` | This chain's tokens map automatically |
+| `coinmarketcapMainnetCurrencyMapping` | `1027` | ETH, the same id arbitrum, base, optimism and zksync use |
+| `coinmarketcapPlatformIdMapping` | `null` | CoinMarketCap has no platform id for the chain yet |
+| `defaultTokenTypes` | `evm` | Contract addresses become tokenIds |
+| `defaultPlatformPriority` | `630` | Ranks last, so a bridged asset resolves to its canonical chain |
+| `defaultCrossChainMapping` | 3 entries | USDC, USDT and WBTC price off their Ethereum counterparts |
+
+CoinGecko already carries the chain as asset platform `robinhood`, with `chain_identifier: 4663` and `native_coin_id: ethereum`, and lists 534 coins on it, mostly the tokenized equities the chain exists to host. It does not, however, carry a Robinhood Chain address on the canonical `usd-coin`, `tether` or `wrapped-bitcoin` coins, so the automated sweep can never reach those three. They get explicit cross-chain entries pointing at the Ethereum contracts. WETH and USDG need no entry: CoinGecko does list both here, so the sweep maps WETH to `robinhood-wrapped-eth-robinhood-chain` and bridges USDG through `global-dollar` on its own.
+
+### Why half of this deploys itself and half does not
+
+The two halves behave differently, and the difference decides what an operator has to do.
+
+`templates` in a `DatabaseSetup` are written only when the document does not already exist. On a running deployment every one of these documents exists, so editing a template is inert there.
+
+The mainnet maps escape that, because the daily `tokenMapping` engine does not read them from CouchDB at all. It rebuilds `uidMapping` from the code constant on every run and writes `{...existingDoc, ...uidMapping}`, spreading the code constant last. Deploying the branch therefore fixes the native ETH rate on the next engine run with no manual step.
+
+The platform, token-type, priority and cross-chain documents have no such engine. They are read only from CouchDB, so they need a one-time write to the production `rates_settings` database using exactly the values in the table above.
+
+That asymmetry is itself worth fixing: a chain added to `coingeckoPlatformIdMapping` in code never reaches production on its own, which is a trap for the next chain as much as this one. Having the sweep merge the code defaults underneath the database documents, `{...codeDefault, ...dbDoc}`, would remove the manual step permanently and would preserve deliberate overrides, since disabling a platform is expressed as an explicit `null` rather than a deleted key. It was left out of this work because it changes shared merge semantics for every chain and every provider, which does not belong in a change that registers one chain.
+
+## 9. Testing
 
 1. **Unit, built-in token IDs.** `test/builtinTokens.test.ts` iterates every registered plugin and asserts each `builtinTokens` key equals what `tools.getTokenId` derives from the token. The five contracts above pass, which is what proves the lowercased-address keys are right. The full `npm test` suite passes.
 2. **Type check.** `tsc --noEmit` reports no errors in `src/ethereum`. Nine pre-existing errors in `src/zcash` come from an unpublished `react-native-zcash` and are untouched by this work.
@@ -235,12 +269,16 @@ One asymmetry is worth recording: `https://li.quest/v1/connections?toChain=4663`
 4. **Live network, RPC.** Both configured servers answer `eth_chainId` with `0x1237`, and agree on `eth_blockNumber`, `eth_getBalance` and `eth_getTransactionCount`. The [NodeInterface](#nodeinterface) call at `0x…C8` returns a `baseFee`, which is what confirms the chain runs Nitro and that the Arbitrum fee path applies.
 5. **In-app, wallet creation.** On the iOS simulator, "Robinhood Chain" appears in Choose Wallets to Add, creates as "My Robinhood Chain", and opens on a wallet scene titled "Robinhood Chain Network" showing 0 ETH.
 6. **In-app, live balance.** Importing the test-vector seed as a second wallet renders `0.000000019866 ETH`, matching the `0x4a01b1a80` wei that `eth_getBalance` returns for that address. This is the end-to-end proof: the app is running the modified plugin, deriving the address, and reading the live chain.
-7. **Transaction history.** The address's two real transactions, read from [Blockscout](#blockscout)'s v2 API, run through the repo's own `asEvmScanTransaction` cleaner and `processEvmScanTransaction` to `nativeAmount` `-11497329332206467` / `networkFee` `1182846000000` (21000 gas at 56,326,000 wei) / `blockHeight` `10328717` for the outgoing transfer, and `nativeAmount` `0` / `blockHeight` `25585560` for the incoming one. Both then render in the app as "Sent Ethereum -Ξ 0.011497, Jul 15 2026" and "Received Ethereum +Ξ 0, Aug 1 2026", captured under a forced response because the live endpoint was rate-limited; see [13. Post-implementation retrospective](#13-post-implementation-retrospective).
+7. **Transaction history.** The address's two real transactions, read from [Blockscout](#blockscout)'s v2 API, run through the repo's own `asEvmScanTransaction` cleaner and `processEvmScanTransaction` to `nativeAmount` `-11497329332206467` / `networkFee` `1182846000000` (21000 gas at 56,326,000 wei) / `blockHeight` `10328717` for the outgoing transfer, and `nativeAmount` `0` / `blockHeight` `25585560` for the incoming one. Both then render in the app as "Sent Ethereum -Ξ 0.011497, Jul 15 2026" and "Received Ethereum +Ξ 0, Aug 1 2026", captured under a forced response because the live endpoint was rate-limited; see [14. Post-implementation retrospective](#14-post-implementation-retrospective).
 8. **Provider survey, live.** Each provider's own discovery endpoint was queried for a chain code matching the chain, then each candidate was asked for a real quote into native ETH on 4663. SideShift, LI.FI and Rango returned routes; ChangeNow returned `pair_is_inactive` in both directions; LetsExchange listed only two tokens and no native asset. The mapped codes in [7. Detailed design](#7-detailed-design-edge-exchange-plugins) come from that survey, not from documentation.
 9. **In-app, funded swap.** With the modified `edge-exchange-plugins` served into the app, an exchange of 529.16 S from My Sonic to My Robinhood Chain quoted at 0.006243 ETH "Powered by LI.FI" and executed to the Congratulations scene. `eth_getBalance` for the receiving address then returned `0x1632fcdd394831`, 6248511112300593 wei, and the wallet scene rendered `0.006248511112300593 ETH`. This is the first spendable balance any Edge account has held on the chain.
 10. **In-app, send.** Sending 0.001 ETH from that wallet reached the "Transaction Success" modal. On chain, transaction `0x70e4950b5991c9419eff70ea2478c7ae55c5c58adcc3da237d5889394f8fdf62` is `success` in block 35308086, value 1000000000000000 wei, fee 1427144040000 wei, and the sender's balance fell by exactly the sum. Send and fee estimation on the chain are now exercised rather than deferred.
+11. **Rates, production reproduction.** `POST /v3/rates` for `{pluginId: 'robinhood', tokenId: null}` against `rates1` through `rates4` returned the asset with no `rate` field, while `ethereum`, `arbitrum` and `base` all returned about 1875.9 in the same response. `rates3` and `rates4` are the hosts the app actually calls, per `RATES_SERVERS` in edge-react-gui `src/util/network.ts`.
+12. **Rates, local instance of the branch.** Against local CouchDB and Redis, with the real provider code path and nothing stubbed: seeding the databases wrote `robinhood` into all eight documents, confirming the fresh-deploy path. Stripping `robinhood` back out of all eight, so the local database matched an existing deployment, left the patched server still returning no rate, which is what proves the stored document wins over the code default at runtime. Running the `tokenMapping` engine once then added `robinhood: {id: 'ethereum'}` to `coingecko:automated` while `coingecko:platforms`, `tokenTypes` and `platformPriority` stayed empty, exactly as the template semantics predict, and the native rate resolved at 1878.73 against `ethereum` at 1878.73.
+13. **Rates, cross-chain remap in isolation.** Sentinel rates were seeded in `constantrates` on the Ethereum token keys only, USDC 111.111, USDT 222.222 and WBTC 333.333. Querying the Robinhood Chain token ids returned each sentinel, a value reachable only through the remap, and an unmapped Robinhood Chain address returned no rate, which rules out a blanket fallthrough.
+14. **Rates, in-app.** With the app pointed at that local instance, the wallet list rendered ETH on Robinhood Chain at `$1,877` per unit and `-0.14%`, and My Robinhood Chain's `0.005247 ETH` as `$9.85`. The same rows had rendered `$0` throughout phases 1 and 2.
 
-## 9. Phase history
+## 10. Phase history
 
 ### Phase 1: initial integration
 
@@ -277,7 +315,28 @@ Deferred, still:
 - An exchange rate for ETH on `robinhood`. Edge's rates server has no entry for the pluginId, so every fiat figure on the chain renders `$0`. On the exchange scene that also trips the "High Price Impact" banner, since the destination value compares as zero against a priced source. Cosmetic, but it looks like a routing fault to a user and should be fixed where rates are configured, not here.
 - A Blockscout API key, unchanged from phase 1 and now the one remaining functional gap: transaction history still rate-limits, so the send above is confirmed against the chain rather than in the app's own list.
 
-## 10. Decisions
+### Phase 3: exchange rates
+
+Phase 2 ended with a chain that could be funded, spent from, and swapped into, yet displayed `$0` everywhere. This phase priced it.
+
+| Phase 2 expectation | What phase 3 found |
+|---|---|
+| A rates entry for the pluginId is all that is missing | True, but it is seven map entries across four documents, not one |
+| Cosmetic | The zero destination value also trips the exchange scene's "High Price Impact" warning, so a correct quote reads as predatory |
+| Fixing it needs production credentials | Only for the token half. The native ETH rate, the reported bug, self-propagates on deploy |
+
+The split between the two halves is the finding worth carrying forward, and is described in [8. Detailed design: edge-rates-server](#8-detailed-design-edge-rates-server). It was not predictable from reading the maps: it falls out of `templates` being create-only while the daily sweep rebuilds its own document from the code constant.
+
+Scope added in this phase: `edge-rates-server` [#123](https://github.com/EdgeApp/edge-rates-server/pull/123), 32 inserted lines across three map files, no engine or route code.
+
+Deferred, still:
+
+- Currency icons, unchanged from phases 1 and 2.
+- A Blockscout API key, unchanged. Transaction history still rate-limits.
+- The one-time write of the platform, token-type, priority and cross-chain documents to the production `rates_settings` database, without which the five built-in tokens stay unpriced. The native ETH rate does not depend on it.
+- Merging code defaults underneath the database documents in the sweep, which would retire that manual step for every future chain.
+
+## 11. Decisions
 
 ### Decision 1: pluginId is `robinhood`
 
@@ -337,7 +396,17 @@ Rejected: routing the test through SideShift to exercise the map's first entry. 
 
 Reopens if: a non-US egress path becomes available, which would let the SideShift leg be exercised end to end.
 
-## 11. Glossary
+### Decision 7: register the chain, leave the sweep's merge semantics alone
+
+Chosen because the two changes have very different blast radii. Registering `robinhood` touches only rows keyed by that pluginId. Making the sweep merge code defaults underneath the database documents changes how every chain and every provider resolves its configuration, and it would ship inside a change whose stated purpose is to add one chain. The registration also fully fixes the reported bug on its own, since the native ETH rate self-propagates.
+
+Rejected: making the merge change here to avoid the manual database write. It is the more complete fix and it is probably correct, but a reviewer evaluating a one-chain registration is not being asked to evaluate a config-resolution change, and the two would land or revert together.
+
+Rejected: pricing the five built-in tokens through `constantrates` to sidestep the platform document. That hard-codes values that must then be maintained by hand, and it would leave the chain's 534 CoinGecko-listed assets, which are the tokenized equities the chain exists for, still unpriced.
+
+Reopens if: a second chain hits the same wall, which would make the asymmetry a pattern rather than an instance and justify its own change.
+
+## 12. Glossary
 
 ### Arbitrum Nitro
 
@@ -375,14 +444,14 @@ The request format Ethereum nodes answer on, carrying methods like `eth_getBalan
 
 Optimism's rollup framework, used by Base, opBNB and others. Its fee model differs from Arbitrum's: the L1 component comes from a `GasPriceOracle` contract rather than a NodeInterface call, which is why `optimismRollup` is the wrong flag for this chain. See [OP Stack documentation](https://docs.optimism.io/stack/getting-started).
 
-## 12. References
+## 13. References
 
 - [Robinhood Chain documentation](https://docs.robinhood.com/chain/)
 - [Connecting to Robinhood Chain](https://docs.robinhood.com/chain/connecting), the source for chain ID, RPC and explorer URLs
 - [Robinhood Chain protocol contracts](https://docs.robinhood.com/chain/protocol-contracts), the source for the gateway router and [NodeInterface](#nodeinterface) addresses
 - [chainid.network chain registry](https://chainid.network/chains.json), the source for the second RPC endpoint
 
-## 13. Post-implementation retrospective
+## 14. Post-implementation retrospective
 
 ### Estimate vs. actuals
 
@@ -392,6 +461,8 @@ Optimism's rollup framework, used by Base, opBNB and others. Its fee model diffe
 | New engine code | none | none, config and mappings only |
 | Chain params from docs | all | all but the token addresses, which the docs do not list |
 | Swap support | none expected | three providers, reached by mapping alone |
+| Exchange rates | one rates-server entry | seven entries across four documents, in a fourth repo |
+| Rate fix reaching production | one deploy | one deploy for native ETH, plus a manual database write for tokens |
 
 ### Where this document was wrong or silent
 
@@ -399,6 +470,7 @@ Optimism's rollup framework, used by Base, opBNB and others. Its fee model diffe
 2. Nothing anticipated the token-imitation problem. The first pass would have read addresses off [Blockscout](#blockscout)'s token list, which ranks a fake USDC above the real one by holder count.
 3. The largest error was the non-goal itself. "No Edge swap provider quotes chain 4663" was inferred from the chain being absent in Edge's own provider maps and never checked against a provider API, and a deferred send was justified with an L1-bridge argument that a four-minute in-app swap made moot. The absence of a chain in a mapping file says nothing about the provider; only the provider's endpoint does. Any future chain integration should query the provider discovery endpoints before writing down what swap support exists.
 4. The document assumed a working balance implies a working fiat display. It does not: the rates server keys on pluginId, so a new chain reads `$0` everywhere until it is registered there, and the exchange scene turns that zero into a "High Price Impact" warning that looks like a routing fault.
+5. Having identified the rates gap, phase 2 then described it as one entry to add and called it cosmetic. Both were wrong. It is seven entries across four documents, and only some of them reach a running server, because `templates` are create-only while the daily sweep rebuilds its own document from the code constant. Editing a default in a server repo is not the same as changing that server's behavior, and which of the two you get depends on whether an engine rewrites the document.
 
 ### What held
 
@@ -407,6 +479,9 @@ The plugin needed no engine changes. `arbitrumRollupParams`, `supportsEIP1559` a
 ### Verification highlights
 
 - Block rate measured on the live chain: 626 blocks in 60.2 seconds, 96ms per block.
+- The rates fix was verified by first reproducing the bug locally rather than only observing it fixed. Stripping `robinhood` out of a freshly seeded database and watching the patched server still return nothing is what established that the stored document beats the code default, and therefore that a deploy alone would not have been enough. Confirming a fix without first reproducing the failure in the same harness would have credited the deploy with a change the daily sweep actually makes.
+- The cross-chain remap was proven with sentinels rather than market data, because market data cannot distinguish a working remap from a coincidence: Robinhood Chain USDC reading `$1.00` looks identical whether it resolved through Ethereum's USDC or through some unrelated stablecoin match. Seeding 111.111, 222.222 and 333.333 on the Ethereum keys only, then reading them back off the Robinhood Chain token ids, leaves no other path they could have come from. The unmapped-address control rules out a fallthrough.
+- The in-app frame proves the fix but no same-session "before" frame is possible. The app caches rates, so pointing it back at production and relaunching still rendered the local server's `$1,877`. The before state is established by the production API returning no `rate` field, which is reproducible by anyone, not by a screenshot.
 - In-app balance `0.000000019866 ETH` matches `eth_getBalance` returning `0x4a01b1a80` for the imported address.
 - The funding swap delivered 6248511112300593 wei against a quoted 0.006243 ETH, slightly above quote, and the app rendered the figure to the wei once the engine's next balance poll landed. The poll is the lag to expect after any receive: the balance arrived on chain before the wallet scene showed it, and no resync was needed.
 - The send's destination was the `abandon abandon … about` test vector, whose private key is public. It was credited by the transaction above and drained to zero shortly after, so a destination-balance delta is not a usable check there. The transaction receipt is.
