@@ -21,6 +21,7 @@ import { opbnb } from './info/opbnbInfo'
 import { optimism } from './info/optimismInfo'
 import { polygon } from './info/polygonInfo'
 import { pulsechain } from './info/pulsechainInfo'
+import { robinhood } from './info/robinhoodInfo'
 import { rsk } from './info/rskInfo'
 import { sepolia } from './info/sepoliaInfo'
 import { sonic } from './info/sonicInfo'
@@ -50,6 +51,7 @@ export const ethereumPlugins = {
   optimism,
   polygon,
   pulsechain,
+  robinhood,
   sepolia,
   rsk,
   sonic,
