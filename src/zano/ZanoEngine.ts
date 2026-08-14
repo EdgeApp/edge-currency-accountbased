@@ -18,7 +18,8 @@ import {
 import type {
   CppBridge,
   RecentTransaction,
-  TransferParams
+  TransferParams,
+  WalletDetails
 } from 'react-native-zano'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
@@ -110,8 +111,32 @@ export class ZanoEngine extends CurrencyEngine<
           const response = await this.tools.zano.startWallet(
             keys.mnemonic,
             keys.passphrase ?? '',
-            keys.storagePath
+            keys.storagePath,
+            { log: message => this.log.warn(message) }
           )
+
+          // The public key is derived from the seed phrase, in pure JS for
+          // wallets without a passphrase. Fail loudly rather than sync a
+          // wallet whose native address is not the one we show the user.
+          if (response.wi.address !== this.walletInfo.keys.publicKey) {
+            // `startWallet` left the wallet open, and the lifecycle manager
+            // does not run `onStop` for an `onStart` that threw. Left open,
+            // the next start gets ALREADY_EXISTS and adopts it below, and
+            // every restart leaks another handle.
+            try {
+              await this.tools.zano.closeWallet(response.wallet_id)
+            } catch (closeError: unknown) {
+              this.log.warn(
+                `initializeWallet: could not close the mismatched wallet: ${String(
+                  closeError
+                )}`
+              )
+            }
+            throw new Error(
+              'initializeWallet: native wallet address does not match the wallet public key'
+            )
+          }
+
           return response.wallet_id
         } catch (error: unknown) {
           if (!(error instanceof Error)) throw error
@@ -121,24 +146,21 @@ export class ZanoEngine extends CurrencyEngine<
             `initializeWallet: wallet already exists, finding existing wallet`
           )
 
-          // Get all opened wallets and find ours by storage path
-          const openedWalletsResponse = await this.tools.zano.getOpenedWallets()
-          if (
-            !('result' in openedWalletsResponse) ||
-            openedWalletsResponse.result == null
-          ) {
-            throw new Error(
-              'initializeWallet: Failed to retrieve opened wallets'
-            )
-          }
-
           // Find the wallet that matches our storage path
-          const existingWallet = openedWalletsResponse.result.find(
+          const existingWallet = (await this.listOpenedWallets()).find(
             info => info.name === keys.storagePath
           )
           if (existingWallet?.wallet_id == null) {
             throw new Error(
               'initializeWallet: Wallet already exists but could not be found'
+            )
+          }
+
+          // Adopting a wallet has to clear the same bar as opening one, or
+          // the address check above is bypassed by anything that retries.
+          if (existingWallet.wi?.address !== this.walletInfo.keys.publicKey) {
+            throw new Error(
+              'initializeWallet: existing native wallet address does not match the wallet public key'
             )
           }
 
@@ -157,6 +179,21 @@ export class ZanoEngine extends CurrencyEngine<
         this.log.error('Wallet lifecycle error:', String(error))
       }
     })
+  }
+
+  /**
+   * Lists the wallets the native library currently has open.
+   *
+   * `get_opened_wallets` reads its snapshot under a shared lock on the wallet
+   * map and reports each wallet through `get_wallet_info_unlocked`, so unlike
+   * the per-wallet calls it never waits on a wallet that is mid-refresh.
+   */
+  private async listOpenedWallets(): Promise<WalletDetails[]> {
+    const response = await this.tools.zano.getOpenedWallets()
+    if (!('result' in response) || response.result == null) {
+      throw new Error('Could not list the opened Zano wallets')
+    }
+    return response.result
   }
 
   setOtherData(raw: any): void {
@@ -404,10 +441,27 @@ export class ZanoEngine extends CurrencyEngine<
           throw new Error('Wallet is not running, cannot get view key')
         }
 
-        const walletInfo = await this.tools.zano.getWalletInfo(nativeId)
-        return walletInfo.wi_extended.view_private_key
+        // `getOpenedWallets` reads the view key without taking the per-wallet
+        // lock, while `getWalletInfo` blocks on it with no timeout. The app
+        // asks for this key for every wallet shortly after login, so the
+        // locking call can stall the whole native queue behind a wallet that
+        // is mid-refresh.
+        const entry = (await this.listOpenedWallets()).find(
+          wallet => wallet.wallet_id === nativeId
+        )
+        const viewKey = entry?.wi?.view_sec_key
+        if (viewKey == null || viewKey === '') {
+          // Not a bug so much as a race: the wallet closed, or was still
+          // opening, between our id being handed out and this snapshot.
+          throw new Error(
+            `Zano wallet ${nativeId} was not in the opened-wallet list`
+          )
+        }
+        return viewKey
       } catch (error: unknown) {
-        throw new Error('Failed to get wallet info: ' + JSON.stringify(error))
+        // `JSON.stringify` on an Error yields `{}`, so every failure here
+        // used to report the same empty cause.
+        throw new Error('Failed to get the wallet view key: ' + String(error))
       }
     }
 

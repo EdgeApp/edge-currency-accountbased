@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- added: (Zano) Verify that the native wallet address matches the address derived from the seed phrase when a wallet starts, failing the start rather than syncing a wallet whose native address is not the one shown to the user.
+- added: (Zano) Report wallet-file migration and recovery events to the wallet log, so a re-keyed or rebuilt wallet file is visible in support logs rather than silent.
+- changed: (Zano) Generate seed phrases from the plugin's own entropy rather than through the native library. Creating a wallet no longer starts the native library or writes a wallet file to disk, and the generated phrase is self-checked offline: it must decode back to the entropy it was built from, and its checksum word must match.
+- changed: (Zano) Derive addresses and validate seed phrases without the native library, so scanning or sweeping a Zano private key no longer needs the native module. Phrases protected by a seed passphrase still use the native library, which is the only implementation that supports them.
+- changed: (Zano) Update react-native-zano to ^0.4.0, which carries the Zano HF6 SDK and encrypts the wallet file on disk with a password derived from the mnemonic instead of the seed passphrase.
+- fixed: (Zano) Roughly one in 814 newly created seed phrases came out with 25 words and a trailing space instead of 26 words, because the mnemonic library was missing a checksum wrap-around case that Zano core handles.
+- fixed: (Zano) Read the private view key without taking the native per-wallet lock. The app requests it for every wallet shortly after login, and the previous call blocks with no timeout, so an account with several Zano wallets could hang while one of them was mid-refresh.
 - fixed: (Zcash) The sync ratio no longer holds a stale value for the whole rescan after a resync. The synchronizer is deliberately left running across a resync, so progress it sampled beforehand can be delivered after the sync tracker has been reset. The tracker trusts a first-seen 100 and never goes backwards, so one such report pinned the ratio until the next login - at 1 for a wallet that was synced, or at wherever it had reached for a wallet that was still syncing, which is a common reason to resync in the first place. Progress reports are now ignored for the span of the resync, from before the engine is torn down until the rewind has actually happened, since a stale report is indistinguishable from a fresh one and a status transition cannot mark the boundary either - iOS suppresses the synchronizer's post-rescan SYNCED entirely.
 
 ## 4.87.0 (2026-08-02)

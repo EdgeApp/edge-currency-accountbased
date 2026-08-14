@@ -26,6 +26,13 @@ import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import { parseZanoDeeplink } from './parseZanoDeeplink'
 import {
+  deriveAddressFromMnemonic,
+  mnemonicMatchesKeysSeed,
+  normalizeMnemonic,
+  validateMnemonic,
+  verifyMnemonicChecksum
+} from './zanoMnemonic'
+import {
   asZanoAssetDetails,
   asZanoPrivateKeys,
   ZanoImportPrivateKeyOpts,
@@ -81,8 +88,12 @@ export class ZanoTools implements EdgeCurrencyTools {
   ): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
 
+    // Store the normalized form. The wallet-file password is derived from
+    // the mnemonic, so stray whitespace would otherwise change it.
+    const mnemonic = normalizeMnemonic(input)
+
     const out = {
-      [`${pluginId}Mnemonic`]: input
+      [`${pluginId}Mnemonic`]: mnemonic
     }
 
     const { passphrase } = opts
@@ -99,9 +110,21 @@ export class ZanoTools implements EdgeCurrencyTools {
     }
     out[`${pluginId}StoragePath`] = storagePath
 
+    if (seedPassword === '') {
+      // Validate offline. `parseUri` calls this for every scanned payload to
+      // decide whether it is a private key, so it must not touch the native
+      // library or the network.
+      validateMnemonic(mnemonic)
+      return out
+    }
+
+    // Only the native library can decrypt a passphrase-protected seed, and it
+    // has to be initialized here rather than left to `ZanoEngine`: importing
+    // runs before any engine for this wallet exists. `getSeedPhraseInfo` uses
+    // instance 0, so it opens no wallet and writes no wallet file.
     await this.zano.init(this.networkInfo.walletRpcAddress, -1)
     const seedPhraseInfo = await this.zano.getSeedPhraseInfo(
-      input,
+      mnemonic,
       seedPassword
     )
 
@@ -122,14 +145,30 @@ export class ZanoTools implements EdgeCurrencyTools {
 
     const storagePath = this.createPath()
 
-    await this.zano.init(this.networkInfo.walletRpcAddress, -1)
-    const generatedWallet = await this.zano.generateSeedPhrase(
-      this.networkInfo.walletRpcAddress,
-      storagePath,
-      ''
-    )
+    // Generate from our own entropy rather than through the native library.
+    // `generateSeedPhrase` writes a wallet file to disk purely as a side
+    // effect of producing a seed, and it has no way to encrypt that file
+    // with anything but the seed passphrase.
+    const keysSeed = base16.stringify(this.io.random(32))
+    const mnemonic = seedToMnemonic(keysSeed)
 
-    return await this.importPrivateKey(generatedWallet.seed, { storagePath })
+    // A phrase we hand the user is their only backup, and a wallet funded
+    // against a phrase that does not restore is unrecoverable, so self-check
+    // both halves of it before returning: the seed words must decode back to
+    // the entropy above, and the checksum word must match them.
+    //
+    // Deliberately no native cross-check: creating a wallet is not a reason to
+    // start the SDK, and `ZanoEngine` compares the native address against this
+    // phrase's derived one every time the wallet starts, which catches a
+    // JS/native disagreement before the wallet can sync.
+    if (!mnemonicMatchesKeysSeed(mnemonic, keysSeed)) {
+      throw new Error('Zano seed phrase generation did not round-trip')
+    }
+    if (!verifyMnemonicChecksum(mnemonic)) {
+      throw new Error('Zano seed phrase generation produced a bad checksum')
+    }
+
+    return await this.importPrivateKey(mnemonic, { storagePath })
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
@@ -141,11 +180,31 @@ export class ZanoTools implements EdgeCurrencyTools {
     const zanoPrivateKeys = asZanoPrivateKeys(pluginId)(walletInfo.keys)
     const { mnemonic, passphrase = '' } = zanoPrivateKeys
 
+    if (passphrase === '') {
+      // Derive offline. `makeMemoryWallet` calls this before an engine
+      // exists, so it must work without the native library.
+      return { publicKey: deriveAddressFromMnemonic(mnemonic) }
+    }
+
+    // Only the native library can decrypt a passphrase-protected seed, and it
+    // has to be initialized here rather than left to `ZanoEngine`, since
+    // `makeMemoryWallet` derives before any engine exists. `getSeedPhraseInfo`
+    // uses instance 0, so it opens no wallet and writes no wallet file.
     await this.zano.init(this.networkInfo.walletRpcAddress, -1)
     const seedPhraseInfo = await this.zano.getSeedPhraseInfo(
       mnemonic,
       passphrase
     )
+
+    // The same check `importPrivateKey` makes on this call. Without it a
+    // wrong passphrase returns `{ publicKey: '' }`, and the wallet is created
+    // with an empty address rather than failing.
+    if (
+      seedPhraseInfo.error_code !== 'OK' ||
+      seedPhraseInfo.response_data.address === ''
+    ) {
+      throw new Error('Unable to derive the Zano address from this mnemonic')
+    }
 
     return {
       publicKey: seedPhraseInfo.response_data.address
