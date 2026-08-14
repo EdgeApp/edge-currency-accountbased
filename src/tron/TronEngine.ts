@@ -43,6 +43,9 @@ import {
   asTRC20TransactionInfo,
   asTriggerSmartContract,
   asTronBlockHeight,
+  asTronContractCallExtras,
+  asTronContractCallIntent,
+  asTronContractCallOtherParams,
   asTronFreezeV2Action,
   asTronPrivateKeys,
   asTronQuery,
@@ -59,6 +62,7 @@ import {
   ReferenceBlock,
   SafeTronWalletInfo,
   TronAccountResources,
+  TronContractCallOtherParams,
   TronFreezeV2Action,
   TronNetworkFees,
   TronNetworkInfo,
@@ -984,7 +988,13 @@ export class TronEngine extends CurrencyEngine<
    * TRC20 transfers to existing (known to contract) accounts will consume same bandwidth but less energy than above
    */
   async calcTxFee(opts: CalcTxFeeOpts): Promise<string> {
-    const { note, receiverAddress, tokenOpts, unsignedTxHex } = opts
+    const {
+      contractCallOpts,
+      note,
+      receiverAddress,
+      tokenOpts,
+      unsignedTxHex
+    } = opts
 
     const denom = this.getDenomination(null)
     if (denom == null) throw new Error('calcTxFee unknown denom')
@@ -993,7 +1003,56 @@ export class TronEngine extends CurrencyEngine<
 
     let energyNeeded = 0
 
-    if (tokenOpts != null && receiverAddress != null) {
+    if (contractCallOpts != null) {
+      const { callValue, contractAddress, data } = contractCallOpts
+
+      // Every prebuilt call carries different data, so there is nothing worth
+      // caching here the way the TRC20 transfer estimate does.
+      let adjustedEnergy = DEFAULT_ENERGY_NO_BALANCE
+      try {
+        const res = await this.multicastServers(
+          'trx_estimateEnergy',
+          '/wallet/triggerconstantcontract',
+          {
+            owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+            contract_address: contractAddress,
+            call_value: callValue,
+            data
+          }
+        )
+        const json = asEstimateEnergy(res)
+        const status = json.transaction.ret[0]?.ret
+        const message = json.result?.message
+
+        // A reverted simulation burns real energy before it stops, so its
+        // `energy_used` is not an estimate of anything. Take either signal the
+        // node gives us for a revert rather than pricing the spend from it.
+        if (status != null && status !== 'SUCCESS') {
+          throw new Error('calcTxFee Failed to estimate contract call fee')
+        }
+        if (message != null && message !== '') {
+          throw new Error(
+            `calcTxFee contract call simulation failed: ${message}`
+          )
+        }
+
+        adjustedEnergy = json.energy_used
+        this.log(`Contract call energy estimate: ${adjustedEnergy}`)
+      } catch (e) {
+        // A call that depends on an approval we have not broadcast yet cannot
+        // be simulated, so fall back to a default rather than blocking the
+        // spend. The fee limit still caps what the call can actually burn.
+        this.log.warn(
+          'trx_estimateEnergy error on contract call. Using a default.',
+          e
+        )
+      }
+
+      energyNeeded = Math.max(
+        Math.ceil(adjustedEnergy - this.accountResources.ENERGY),
+        0
+      )
+    } else if (tokenOpts != null && receiverAddress != null) {
       const { contractAddress } = tokenOpts
 
       const cacheKey = `${receiverAddress}:${contractAddress}`
@@ -1502,6 +1561,142 @@ export class TronEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Builds a transaction around a contract call the caller has already crafted,
+   * such as a DEX swap routed through a smart contract. The payload is passed
+   * to the transaction builder untouched, so what gets signed is exactly the
+   * call the caller asked for rather than a transfer we re-derive.
+   */
+  async makeContractCallTransaction(
+    edgeSpendInfoIn: EdgeSpendInfo,
+    contractCall: TronContractCallOtherParams
+  ): Promise<EdgeTransaction> {
+    const { contractJson, note } = contractCall
+    const {
+      call_value: callValue,
+      contract_address: contractAddress,
+      data,
+      owner_address: ownerAddress
+    } = contractJson.parameter.value
+
+    if (hexToBase58Address(ownerAddress) !== this.walletLocalData.publicKey) {
+      throw new Error('Error: contract call is not owned by this wallet')
+    }
+
+    // Tron requires a fee limit on every smart-contract transaction, so fall
+    // back to the same default the transfer path uses rather than signing a
+    // call that dies with OUT_OF_ENERGY after the user confirms it.
+    const feeLimit = contractCall.feeLimit ?? this.networkInfo.defaultFeeLimit
+    if (!Number.isSafeInteger(feeLimit) || feeLimit < 0) {
+      throw new Error('Error: contract call fee limit must be a whole number')
+    }
+
+    // Refuse anything in the payload that would move value, or change which
+    // call gets signed, behind the accounting below.
+    const {
+      call_token_value: callTokenValue,
+      function_selector: functionSelector
+    } = asTronContractCallExtras(contractJson.parameter.value)
+    if (callTokenValue !== 0) {
+      throw new Error('Error: contract call may not attach a TRC10 token')
+    }
+    if (functionSelector != null) {
+      throw new Error(
+        'Error: contract call must describe itself in data, not a function selector'
+      )
+    }
+    if (!/^([0-9a-f]{2})+$/i.test(data)) {
+      throw new Error('Error: contract call data must be a hex string')
+    }
+
+    const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
+      edgeSpendInfoIn
+    )
+    const { memos = [], tokenId } = edgeSpendInfo
+
+    // Tron can only have one output
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+
+    const { nativeAmount } = edgeSpendInfo.spendTargets[0]
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+
+    const { transactionHex } = await this.txBuilder({
+      contractJson,
+      feeLimit,
+      note
+    })
+
+    const totalFeeSUN = await this.calcTxFee({
+      unsignedTxHex: transactionHex,
+      note,
+      contractCallOpts: { callValue, contractAddress, data }
+    })
+
+    let edgeNativeAmount: string
+    let networkFee: string
+    let parentNetworkFee: string | undefined
+    let transactionCostSUN: string
+
+    if (tokenId != null) {
+      // A token spend describes its amount inside the call data, and the only
+      // TRX it may move is the fee. TRX riding along in the call value would
+      // leave the wallet without appearing anywhere the user can see it.
+      if (callValue !== 0) {
+        throw new Error('Error: token contract call may not send TRX')
+      }
+      edgeNativeAmount = nativeAmount
+      networkFee = '0'
+      parentNetworkFee = totalFeeSUN
+      transactionCostSUN = parentNetworkFee
+    } else {
+      // The call value is the TRX the chain will actually move, which is what
+      // the transaction should report.
+      if (callValue.toString() !== nativeAmount) {
+        this.log.warn(
+          `makeContractCallTransaction call value ${callValue} does not match the requested amount ${nativeAmount}`
+        )
+      }
+      edgeNativeAmount = add(callValue.toString(), totalFeeSUN)
+      networkFee = totalFeeSUN
+      transactionCostSUN = edgeNativeAmount
+    }
+
+    const balanceSUN = this.getBalance({ tokenId: null })
+    if (gt(transactionCostSUN, balanceSUN)) {
+      throw new InsufficientFundsError({
+        networkFee: totalFeeSUN,
+        tokenId: null
+      })
+    }
+
+    const txOtherParams: TxBuilderParams = { contractJson, feeLimit, note }
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 0,
+      currencyCode,
+      date: 0,
+      isSend: true,
+      memos,
+      nativeAmount: mul(edgeNativeAmount, '-1'),
+      networkFee,
+      networkFees: [],
+      otherParams: txOtherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      tokenId,
+      txid: '',
+      walletId: this.walletId
+    }
+
+    if (parentNetworkFee != null) {
+      edgeTransaction.parentNetworkFee = parentNetworkFee
+    }
+
+    return edgeTransaction
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     // Check for other transaction types first
     if (edgeSpendInfoIn.otherParams != null) {
@@ -1526,6 +1721,25 @@ export class TronEngine extends CurrencyEngine<
       )
       if (action != null)
         return await this.makeWithdrawExpireUnfreezeTransaction()
+
+      const contractCall = asMaybe(asTronContractCallOtherParams)(
+        edgeSpendInfoIn.otherParams
+      )
+      if (contractCall != null)
+        return await this.makeContractCallTransaction(
+          edgeSpendInfoIn,
+          contractCall
+        )
+
+      // A caller that asked for a contract call gets an error, never a
+      // transfer to the contract address it named.
+      if (
+        asMaybe(asTronContractCallIntent)(edgeSpendInfoIn.otherParams) != null
+      ) {
+        throw new Error(
+          'Error: otherParams.contractJson is not a valid TriggerSmartContract call'
+        )
+      }
     }
 
     const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
