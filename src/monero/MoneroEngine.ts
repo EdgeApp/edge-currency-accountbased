@@ -1390,12 +1390,24 @@ export class MoneroEngine extends CurrencyEngine<
     }
 
     try {
-      await this.tools.cppBridge.broadcastTransaction(
+      const { txKey } = await this.tools.cppBridge.broadcastTransaction(
         nativeWalletId,
         edgeTransaction.signedTx
       )
 
       edgeTransaction.date = Date.now() / 1000
+
+      // The transaction key is the sender's only proof of payment, and the
+      // broadcast is the send path's only chance to report it: the core
+      // writes the key into the transaction's metadata file on the saveTx
+      // that follows this broadcast, and that file is the only place the key
+      // survives a resync. The native layer reports no key rather than
+      // failing an already-broadcast payment, so guard for absence:
+      if (txKey != null && txKey !== '') {
+        edgeTransaction.txSecret = txKey
+      } else {
+        this.warn(`broadcastTx: no transaction key reported`)
+      }
 
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
       return edgeTransaction
