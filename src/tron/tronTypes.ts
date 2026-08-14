@@ -149,6 +149,68 @@ export const asTronWithdrawExpireUnfreezeAction =
     type: asValue('withdrawExpireUnfreeze')
   })
 
+/**
+ * A `TriggerSmartContract` payload handed to us fully built by a caller such as
+ * a DEX swap plugin. Extra properties are preserved so the payload reaches the
+ * transaction builder exactly as the caller produced it.
+ */
+export const asTronContractCallJson = asObject({
+  type: asValue('TriggerSmartContract'),
+  parameter: asObject({
+    value: asObject({
+      owner_address: asString,
+      contract_address: asString,
+      data: asString,
+      call_value: asOptional(asNumber, 0)
+    }).withRest
+  }).withRest
+}).withRest
+
+/**
+ * Spend `otherParams` describing a prebuilt contract call. Callers that provide
+ * this bypass the transfer-building path entirely, so the exact contract call
+ * they crafted is what gets signed.
+ */
+export const asTronContractCallOtherParams = asObject({
+  contractJson: asTronContractCallJson,
+  feeLimit: asOptional(asNumber),
+  note: asOptional(asString)
+})
+
+export type TronContractCallOtherParams = ReturnType<
+  typeof asTronContractCallOtherParams
+>
+
+/**
+ * Marks `otherParams` as an attempt at a contract call, whether or not the
+ * payload turns out to describe a valid one. Without this a rejected payload
+ * would fall through to the transfer builder and quietly send the amount to
+ * the contract address, which is the rewrite this whole path exists to stop.
+ */
+export const asTronContractCallIntent = asObject({
+  // Any value at all counts as asking for a contract call, including a string
+  // or a null. Requiring an object here would let those shapes fall through to
+  // the transfer builder, which is the outcome this guard exists to prevent.
+  contractJson: (raw: unknown): unknown => {
+    if (raw === undefined) throw new Error('Expected contractJson')
+    return raw
+  }
+})
+
+/**
+ * Reads the `TriggerSmartContract` properties the contract call cleaner keeps
+ * but does not name. Both of these change what gets signed, so they have to be
+ * inspected rather than passed along unseen.
+ */
+export const asTronContractCallExtras = asObject({
+  // Moves a TRC10 balance the transaction's accounting cannot describe.
+  call_token_value: asOptional(asNumber, 0),
+  // A second way to spell the call. TronWeb encodes this instead of `data`
+  // when `data` is empty, which would sign something other than the call the
+  // fee estimate was built from.
+  function_selector: asOptional(asString)
+})
+
 export interface CalcTxFeeOpts {
   receiverAddress?: string
   unsignedTxHex: string
@@ -156,6 +218,17 @@ export interface CalcTxFeeOpts {
   tokenOpts?: {
     contractAddress: string
     data: string
+  }
+  /**
+   * Set for a prebuilt contract call. Energy is estimated by dry-running the
+   * call's own data, since the canonical TRC20 transfer estimate `tokenOpts`
+   * uses says nothing about an arbitrary contract call.
+   */
+  contractCallOpts?: {
+    /** Hex-encoded, exactly as it appears in the contract call payload */
+    contractAddress: string
+    data: string
+    callValue: number
   }
 }
 
@@ -493,7 +566,16 @@ export const asEstimateEnergy = asObject({
         ret: asOptional(asString)
       })
     )
-  })
+  }),
+  // A simulation that reverted reports `ret: 'FAILED'` above and describes
+  // itself here, e.g. a hex-encoded "REVERT opcode executed". Its
+  // `energy_used` is the energy spent reaching the revert, which says nothing
+  // about what the real call would cost.
+  result: asOptional(
+    asObject({
+      message: asOptional(asString)
+    }).withRest
+  )
 })
 
 export const asBroadcastResponse = asObject({

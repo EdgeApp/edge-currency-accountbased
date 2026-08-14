@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Tron) Spend a prebuilt `TriggerSmartContract` call when one arrives in `otherParams`, so a DEX swap executes the contract call its provider crafted instead of being rewritten into a transfer. Energy is estimated by dry-running the call's own data, and the payload reaches the signer untouched.
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.
