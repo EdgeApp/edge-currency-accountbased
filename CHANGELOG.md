@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Zcash) The sync ratio no longer holds a stale value for the whole rescan after a resync. The synchronizer is deliberately left running across a resync, so progress it sampled beforehand can be delivered after the sync tracker has been reset. The tracker trusts a first-seen 100 and never goes backwards, so one such report pinned the ratio until the next login - at 1 for a wallet that was synced, or at wherever it had reached for a wallet that was still syncing, which is a common reason to resync in the first place. Progress reports are now ignored for the span of the resync, from before the engine is torn down until the rewind has actually happened, since a stale report is indistinguishable from a fresh one and a status transition cannot mark the boundary either - iOS suppresses the synchronizer's post-rescan SYNCED entirely.
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.

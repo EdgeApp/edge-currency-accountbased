@@ -57,6 +57,15 @@ export class ZcashEngine extends CurrencyEngine<
   synchronizer?: ZcashSynchronizer
   synchronizerPromise: Promise<ZcashSynchronizer>
   synchronizerResolver!: (synchronizer: ZcashSynchronizer) => void
+  /**
+   * True for the span of `resyncBlockchain`, from before it tears the engine
+   * down until the rewind has happened. While set, progress reports describe
+   * the wallet the resync is discarding and must not reach the sync tracker,
+   * whose don't-go-backwards ratchet would otherwise hold that pre-rewind
+   * ratio - 1 for a wallet that was synced, or its last position for one that
+   * was still syncing - for the whole rescan.
+   */
+  rescanSettling = false
   autoshielding: {
     createAutoshieldTx: boolean
     threshold: string
@@ -169,6 +178,17 @@ export class ZcashEngine extends CurrencyEngine<
     this.synchronizer.on('update', async payload => {
       const { scanProgress, networkBlockHeight } = payload
       this.updateBlockHeight(networkBlockHeight)
+
+      // The synchronizer is left running across a resync, so progress sampled
+      // before the rewind can be delivered after it. Every such report
+      // describes the wallet the rewind is about to discard, and the tracker
+      // both trusts a first-seen 100 and never goes backwards, so letting one
+      // through pins the ratio for the rest of the rescan - at 1 for a stale
+      // 100, or at whatever the wallet had reached if it was still syncing
+      // when the resync was requested. Ignore all of them; the flag is cleared
+      // once the rewind has actually happened (see resyncBlockchain).
+      if (this.rescanSettling) return
+
       this.syncTracker.updateProgress(scanProgress)
       await this.checkAutoshielding()
     })
@@ -429,13 +449,32 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async resyncBlockchain(): Promise<void> {
-    // Don't bother stopping and restarting the synchronizer for a resync
-    await super.killEngine()
-    await this.clearBlockchainCache()
-    await this.startEngine()
-    await this.synchronizer
-      ?.rescan()
-      .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
+    // Ignore progress reports until the rewind has actually happened. The
+    // synchronizer is deliberately left running across a resync and every call
+    // below awaits, so anything it reports in the meantime describes the wallet
+    // this resync is discarding (see initSubscriptions). The window is bounded
+    // by this method rather than by the reports themselves: a stale report is
+    // indistinguishable from a fresh one - a wallet that was still syncing when
+    // the resync was requested emits sub-100 progress that looks exactly like
+    // early rescan progress - and a status transition cannot bound it either,
+    // since iOS suppresses the synchronizer's post-rescan SYNCED entirely.
+    this.rescanSettling = true
+    try {
+      // Don't bother stopping and restarting the synchronizer for a resync
+      await super.killEngine()
+      await this.clearBlockchainCache()
+      await this.startEngine()
+      try {
+        await this.synchronizer?.rescan()
+      } catch (e: any) {
+        this.warn('resyncBlockchain failed: ', e)
+      }
+    } finally {
+      // Unconditionally, including the paths that never reach the rewind: a
+      // throw from the calls above, or no synchronizer to rescan. Leaving this
+      // armed would swallow every report for the rest of the session.
+      this.rescanSettling = false
+    }
     this.initData()
     this.synchronizerStatus = 'SYNCING'
   }
