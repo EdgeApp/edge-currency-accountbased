@@ -1,3 +1,4 @@
+import { add, mul } from 'biggystring'
 import abi from 'ethereumjs-abi'
 import { base16 } from 'rfc4648'
 import TronWeb from 'tronweb'
@@ -57,4 +58,18 @@ export const encodeTRC20Transfer = (
     nativeAmount
   )
   return Buffer.from(dataArray).toString('hex')
+}
+
+/**
+ * The TRX balance change a confirmed contract call made to its sender. The
+ * chain moves `call_value` only when the call succeeds, but charges the fee
+ * either way.
+ */
+export const contractCallNativeAmount = (
+  callValue: number,
+  fee: number,
+  success: boolean
+): string => {
+  const spent = success ? add(String(callValue), String(fee)) : String(fee)
+  return spent === '0' ? '0' : mul(spent, '-1')
 }

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (Tron) Spend prebuilt `TriggerSmartContract` calls passed in `otherParams`
+- fixed: (Tron) Confirmed contract calls that send TRX show the TRX sent plus the fee in history
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.
