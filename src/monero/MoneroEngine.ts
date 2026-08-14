@@ -5,6 +5,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeEnginePrivateKeyOptions,
   EdgeFetchFunction,
+  EdgeGetTransactionsOptions,
   EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -134,6 +135,7 @@ export class MoneroEngine extends CurrencyEngine<
   private txSortOrder: 'asc' | 'desc' = 'asc'
   private readonly queryTxMutex = makeMutex()
   private pendingSeenReset = false
+  private txSecretsMirrored = false
   private unsubscribeWalletEvent?: () => void
   private unsubscribeNymFetch?: () => Promise<void>
   private abortKeysWait?: () => void
@@ -711,6 +713,8 @@ export class MoneroEngine extends CurrencyEngine<
         // (idempotent after the first call):
         await this.loadTransactions()
 
+        this.mirrorStoredTxSecrets()
+
         if (this.txSortOrder === 'asc') {
           await this.queryTransactionsAsc(nativeWalletId, PAGE_SIZE)
         } else {
@@ -734,6 +738,67 @@ export class MoneroEngine extends CurrencyEngine<
         this.sendTransactionEvents()
       }
     })
+  }
+
+  /**
+   * Copies each stored transaction's key into its otherParams, once per
+   * engine session.
+   *
+   * The sync path has always kept the key on the stored transaction's
+   * top-level txSecret, but the core drops that field for any transaction it
+   * has already filed, so the GUI never saw it. otherParams rides through the
+   * core untouched, and the stored list re-feeds the core every session, so
+   * mirroring the key there is what lets the GUI show keys for sends made
+   * while the send path reported none. The mirror persists with the stored
+   * list, so after the first save this pass finds nothing left to do.
+   */
+  private mirrorStoredTxSecrets(): void {
+    if (this.txSecretsMirrored) return
+
+    // loadTransactions marks itself loaded at the START of its disk reads, so
+    // a caller racing the first load can arrive here with a still-empty list
+    // even though the store has transactions. Latching the session flag on
+    // that walk would skip the real copy until the next launch, so leave the
+    // flag unset and let the caller that ran after the load finish the job.
+    // The load fills the list in one assignment, so empty-while-racing is the
+    // only shape this needs to guard:
+    const storedCount = this.walletLocalData.numTransactions[''] ?? 0
+    const loadedCount = this.transactionList['']?.length ?? 0
+    if (loadedCount === 0 && storedCount > 0) return
+
+    this.txSecretsMirrored = true
+
+    let count = 0
+    for (const transaction of this.transactionList[''] ?? []) {
+      if (transaction.txSecret == null) continue
+      if (transaction.otherParams?.txSecret != null) continue
+      transaction.otherParams = {
+        ...transaction.otherParams,
+        txSecret: transaction.txSecret
+      }
+      count++
+    }
+    if (count > 0) {
+      this.transactionListDirty = true
+      this.warn(`sync: mirrored the transaction key of ${count} tx(s)`)
+    }
+  }
+
+  /**
+   * The core pulls the full stored list through here once per session, and
+   * that pull is what carries the mirrored otherParams to the GUI for
+   * transactions the sync scans never revisit. A pull that lands before the
+   * first sync tick would snapshot the list from before the mirror ran, and
+   * nothing re-delivers until the next launch, so run the mirror before
+   * serving the list. The session flag makes this a no-op when the sync loop
+   * got there first.
+   */
+  async getTransactions(
+    options: EdgeGetTransactionsOptions
+  ): Promise<EdgeTransaction[]> {
+    await this.loadTransactions()
+    this.mirrorStoredTxSecrets()
+    return await super.getTransactions(options)
   }
 
   /** Look up the engine's stored copy of a transaction, if any. */
@@ -1086,7 +1151,14 @@ export class MoneroEngine extends CurrencyEngine<
       nativeAmount,
       networkFee,
       networkFees: [{ tokenId: null, nativeAmount: networkFee }],
-      otherParams: {},
+      // The key is mirrored into otherParams. The core drops a top-level
+      // txSecret for any transaction it has already filed - the key is only
+      // saved when the transaction's metadata file is first written - but
+      // otherParams rides through to the GUI on every report. The mirror is
+      // what lets the GUI show a key the file never got: sends made while
+      // the send path reported no key, and sends whose key the broadcast
+      // could not read.
+      otherParams: tx.txKey == null ? {} : { txSecret: tx.txKey },
       ourReceiveAddresses,
       signedTx: '',
       tokenId: null,
@@ -1166,6 +1238,7 @@ export class MoneroEngine extends CurrencyEngine<
     this.unlockedBalance = '0'
     this.txSortOrder = 'asc'
     this.pendingSeenReset = false
+    this.txSecretsMirrored = false
     this.resetLogState()
     this.syncTracker.resetSync()
     this.warn('init: killEngine complete')
