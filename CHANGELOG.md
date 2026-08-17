@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: (ARRR) Reimplement the Pirate Chain plugin over the unified `react-native-pirate-wallet` SDK, replacing `react-native-piratechain`. Every wallet lives in one device-scoped encrypted registry, so multiple ARRR wallets sync at once over a shared block cache, and amounts are encoded as strings for full precision.
+- changed: (ARRR) Require `react-native-pirate-wallet` 0.3.0, the unified wallet v1.1.6 release. It sets the Ironwood activation height, ships the Supernova sync engine, and fixes several sync issues.
 - fixed: (ARRR) Point each Pirate Chain wallet at the plugin's own lightwalletd node. The SDK ships a default node and never reads the plugin's configuration, so wallets scanned against that default instead; when it stopped serving blocks the wallet sat at "Sync in Progress, 0% Complete" indefinitely with no error, since the chain tip still resolved. The configured port also moves to the node's plain gRPC port.
 
 ## 4.87.0 (2026-08-02)

@@ -169,11 +169,24 @@ export class PiratechainEngine extends CurrencyEngine<
       const transactions = await this.synchronizer.getTransactions()
       for (const tx of transactions) {
         // The SDK returns the full history each time, so only process
-        // transactions that are new or have moved (confirmed/reorged):
+        // transactions that are new or whose height moved:
         const height = tx.height ?? 0
-        if (this.processedTxHeights.get(tx.txid) === height) continue
-        this.processTransaction(tx)
+        const seenHeight = this.processedTxHeights.get(tx.txid)
+        if (seenHeight === height) continue
         this.processedTxHeights.set(tx.txid, height)
+
+        if (seenHeight != null && height < seenHeight) {
+          // A height that moved BACKWARDS means a reorg unmined the
+          // transaction or re-mined it lower. `addTransaction` only writes a
+          // height that moved forward, so this update cannot land; say so
+          // rather than letting it vanish downstream. The stale height is
+          // wrong by the reorg depth until the transaction confirms above it.
+          this.warn(
+            `Reorged height for ${tx.txid} not applied: ${seenHeight} -> ${height}`
+          )
+          continue
+        }
+        this.processTransaction(tx)
       }
       if (this.isSynced()) {
         this.syncTracker.updateTransactionRatio(1)

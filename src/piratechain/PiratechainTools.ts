@@ -89,7 +89,9 @@ export class PiratechainTools implements EdgeCurrencyTools {
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
     await this.ensureDevicePassphrase()
-    return await this.piratechainIo.getLatestNetworkHeight()
+    return await this.piratechainIo.getLatestNetworkHeight(
+      this.networkInfo.lightwalletdUrl
+    )
   }
 
   async isValidAddress(address: string): Promise<boolean> {

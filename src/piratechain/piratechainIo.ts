@@ -1,6 +1,7 @@
 import {
   asBoolean,
   asJSON,
+  asNumber,
   asObject,
   asOptional,
   asString,
@@ -68,7 +69,12 @@ export interface PiratechainSynchronizer {
 
 export interface PiratechainIo {
   deriveViewingKey: (config: PiratechainWalletConfig) => Promise<string>
-  getLatestNetworkHeight: () => Promise<number>
+  /**
+   * @param lightwalletdUrl The node to read the chain tip from. Without it the
+   * only sources are a wallet that is already syncing and the SDK's own
+   * default node.
+   */
+  getLatestNetworkHeight: (lightwalletdUrl?: string) => Promise<number>
   isValidAddress: (address: string) => Promise<boolean>
   makeSynchronizer: (
     config: PiratechainWalletConfig
@@ -94,6 +100,13 @@ const asInvokeEnvelope = asObject({
   ok: asBoolean,
   result: asOptional(asUnknown),
   error: asOptional(asString)
+})
+
+/** The subset of `test_node` we read. It reports the tip without registering anything. */
+const asTestNodeResult = asObject({
+  success: asBoolean,
+  latest_block_height: asOptional(asNumber),
+  error_message: asOptional(asString)
 })
 
 export function makePiratechainIo(): PiratechainIo {
@@ -193,32 +206,52 @@ export function makePiratechainIo(): PiratechainIo {
       return await getSdk().exportSaplingViewingKey(walletId)
     },
 
-    async getLatestNetworkHeight() {
-      // The SDK has no wallet-free "get chain tip" call. Any wallet already in
-      // the registry carries it on its sync status, so ask one of those first:
-      // adding and removing a throwaway wallet mutates the shared registry,
-      // and the native service panics (aborting the app) when the registry
-      // changes underneath a running synchronizer.
+    async getLatestNetworkHeight(lightwalletdUrl) {
+      // Three sources, cheapest and safest first. The last one mutates the
+      // registry, and the native service panics (aborting the app) when the
+      // registry changes underneath a running synchronizer, so it is gated on
+      // the registry being genuinely empty.
       const task = registryLock.then(async () => {
         const walletSdk = getSdk()
         await ensureDeviceStorage()
 
-        if (await walletSdk.walletRegistryExists()) {
-          const wallets = await walletSdk.listWallets()
-          for (const wallet of wallets) {
-            const syncStatus = await walletSdk
-              .getSyncStatus(wallet.id)
-              .catch(() => undefined)
-            if (syncStatus != null && syncStatus.targetHeight > 0) {
-              return syncStatus.targetHeight
-            }
+        // 1. A wallet that is already syncing carries the tip for free.
+        const wallets = (await walletSdk.walletRegistryExists())
+          ? await walletSdk.listWallets()
+          : []
+        for (const wallet of wallets) {
+          const syncStatus = await walletSdk
+            .getSyncStatus(wallet.id)
+            .catch(() => undefined)
+          if (syncStatus != null && syncStatus.targetHeight > 0) {
+            return syncStatus.targetHeight
           }
         }
 
-        // Nothing in the registry to ask, so no synchronizer can be running
-        // either, and mutating it is safe. `create_wallet` with no birthday
-        // resolves the height from the lightwalletd tip, falling back to the
-        // SDK's static checkpoint:
+        // 2. Ask Edge's own node. `test_node` reports the tip without
+        // registering anything, so it is safe while synchronizers run, and it
+        // reads the configured node rather than the SDK's default (which is
+        // unreachable, and whose tip we would not want to trust anyway: a
+        // birthday taken too high leaves earlier notes unscanned).
+        if (lightwalletdUrl != null) {
+          const result = await invokeCall('test_node', {
+            url: lightwalletdUrl
+          }).then(asTestNodeResult, () => undefined)
+          const height = result?.latest_block_height
+          if (result?.success === true && height != null && height > 0) {
+            return height
+          }
+        }
+
+        // 3. Nothing registered and no reachable node, so no synchronizer can
+        // be running and mutating the registry is safe. `create_wallet` with
+        // no birthday falls back to the SDK's static checkpoint, which is
+        // below the true tip and therefore conservative.
+        if (wallets.length > 0) {
+          throw new Error(
+            'Cannot resolve the Pirate Chain height: no wallet reports a tip and the configured node is unreachable'
+          )
+        }
         const probeWalletId = await walletSdk.createWallet({
           name: 'edge-birthday-probe'
         })
@@ -317,7 +350,15 @@ export function makePiratechainIo(): PiratechainIo {
         }
       })
 
-      await realSynchronizer.start()
+      try {
+        await realSynchronizer.start()
+      } catch (error: unknown) {
+        // The caller never receives `out`, so nothing else can stop the native
+        // poller. Without this a retry would leave a second synchronizer
+        // running against the same registry wallet:
+        await realSynchronizer.close().catch(() => undefined)
+        throw error
+      }
       return out
     }
   })
