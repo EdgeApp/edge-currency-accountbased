@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (Zano) Persist the wallet file once a wallet reaches synced and every ten minutes afterwards. The native library only writes the file when a wallet closes, and a mobile app is killed rather than closed, so every launch re-scanned everything since the file was last written - a catch-up window that only grew, re-paid at full multi-core CPU on each cold start.
+- fixed: (Zano) Start the refresh worker when adopting an already-open wallet, so a wallet left open by an interrupted `startWallet` still syncs under react-native-zano's postponed-run mode (0.4.1).
+
 ## 4.88.0 (2026-08-14)
 
 - added: (Zano) Verify that the native wallet address matches the address derived from the seed phrase when a wallet starts, failing the start rather than syncing a wallet whose native address is not the one shown to the user.

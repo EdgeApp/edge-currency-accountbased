@@ -1,5 +1,5 @@
 import { abs, add, eq, gt, lt, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asJSON, asMaybe, asObject, asValue } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -50,6 +50,20 @@ import {
   ZanoWalletOtherData
 } from './zanoTypes'
 
+/**
+ * How often a synced wallet writes its file to disk. The native library only
+ * stores on close, and a mobile app is killed rather than closed, so without
+ * periodic stores every launch re-scans from wherever the file was last
+ * written - a window that only grows.
+ */
+const WALLET_STORE_INTERVAL_MS = 10 * 60 * 1000
+
+/** The wallet RPC answers a successful store with a result object. */
+const asStoreResponse = asObject({ result: asObject({}) })
+
+/** A successful run_wallet answers with error_code OK. */
+const asRunWalletResponse = asObject({ error_code: asValue('OK') })
+
 export class ZanoEngine extends CurrencyEngine<
   ZanoTools,
   SafeZanoWalletInfo,
@@ -62,6 +76,14 @@ export class ZanoEngine extends CurrencyEngine<
   private readonly nativeId: LifecycleManager<number>
   private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
   private needsNativeStorageClear: boolean = false
+  private lastStoreTime: number = 0
+  private lastStoreHeight: number = 0
+  /**
+   * Bumped whenever the store gates are reset. A store that was already in
+   * flight across a reset carries the old value and must not write its
+   * pre-reset height back into the gates.
+   */
+  private storeGeneration: number = 0
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -167,6 +189,27 @@ export class ZanoEngine extends CurrencyEngine<
           this.log(
             `initializeWallet: found existing wallet with ID ${existingWallet.wallet_id}`
           )
+
+          // From react-native-zano 0.4.1, wallets open with the refresh
+          // worker postponed, so a wallet left open by an interrupted
+          // `startWallet` may not be syncing; the postponed-run flag is
+          // process-wide and sticky, so the adopt path cannot know which way
+          // it was opened and must start the worker itself. On 0.4.0, where
+          // open auto-starts the worker, the same call is a harmless no-op.
+          // A failure here must throw: returning the id would mark the
+          // lifecycle started and hand back a wallet that never syncs,
+          // while throwing lets the next `get()` retry the whole start.
+          const runResponse = await this.tools.zano.syncCall(
+            'run_wallet',
+            existingWallet.wallet_id,
+            ''
+          )
+          if (asMaybe(asJSON(asRunWalletResponse))(runResponse) == null) {
+            throw new Error(
+              `initializeWallet: could not run the adopted wallet: ${runResponse}`
+            )
+          }
+
           return existingWallet.wallet_id
         }
       },
@@ -402,6 +445,7 @@ export class ZanoEngine extends CurrencyEngine<
       )
       await this.queryBalance()
       await this.queryTransactions()
+      await this.storeWalletFile(nativeId, status.current_wallet_height)
       return 20000
     } else {
       this.syncTracker.updateBlockRatio(
@@ -413,12 +457,61 @@ export class ZanoEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Persists the native wallet file, so the next launch resumes from this
+   * height instead of re-scanning everything since the file was last
+   * written. Called only from the synced branch of `syncNetwork`, where the
+   * refresh worker is idle and the per-wallet lock is free; a store during
+   * the catch-up scan would block behind that lock. Throttled, and skipped
+   * entirely when the wallet height has not advanced past the last store. A
+   * failure only costs the next launch a longer catch-up, so it logs and
+   * moves on.
+   */
+  private async storeWalletFile(
+    nativeId: number,
+    walletHeight: number
+  ): Promise<void> {
+    if (walletHeight <= this.lastStoreHeight) return
+    const now = Date.now()
+    if (
+      this.lastStoreTime !== 0 &&
+      now - this.lastStoreTime < WALLET_STORE_INTERVAL_MS
+    ) {
+      return
+    }
+    const generation = this.storeGeneration
+    try {
+      const response = await this.tools.zano.invoke(
+        nativeId,
+        JSON.stringify({ method: 'store', params: {} })
+      )
+      if (asMaybe(asJSON(asStoreResponse))(response) == null) {
+        throw new Error(response)
+      }
+      // A resync between the call and its answer reset the gates for a
+      // wallet that no longer holds this height. Recording it would gate the
+      // rebuilt wallet at a tip it has not re-reached, so a kill before the
+      // chain advances would re-pay the whole rescan.
+      if (generation !== this.storeGeneration) return
+      this.lastStoreTime = now
+      this.lastStoreHeight = walletHeight
+    } catch (error: unknown) {
+      this.log.warn(`storeWalletFile failed: ${String(error)}`)
+    }
+  }
+
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
 
   async resyncBlockchain(): Promise<void> {
     this.needsNativeStorageClear = true
+    // The rebuilt wallet re-earns every height, so the store gates must not
+    // carry over: left in place they would skip the first store at the
+    // re-reached tip, and a kill in that window re-pays the full rescan.
+    this.lastStoreTime = 0
+    this.lastStoreHeight = 0
+    this.storeGeneration += 1
     this.nativeId.stop()
     this.unlockedBalanceMap.clear()
     await this.killEngine()
