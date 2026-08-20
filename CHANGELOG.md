@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: `edge-currency-accountbased/node-monero` `makeMoneroIo` for Node, wrapping the react-native-monero N-API addon. The React Native `rn-monero` entry is unchanged.
+
 ## 4.90.1 (2026-08-28)
 
 - changed: (Zano) Update react-native-zano to ^0.5.1, which keeps native calls off React Native's shared native-modules thread and patches the SDK's close-during-scan deadlock - together the Android freeze that struck minutes into a sync - rebuilds a wallet file the SDK cannot read instead of retrying it forever, and reads history through the HF6-ready endpoint this release requires.
