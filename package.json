@@ -32,6 +32,8 @@
     "/LICENSE",
     "/package.json",
     "/README.md",
+    "/node-monero.d.ts",
+    "/node-monero.js",
     "/rn-monero.d.ts",
     "/rn-monero.js",
     "/rn-piratechain.d.ts",
