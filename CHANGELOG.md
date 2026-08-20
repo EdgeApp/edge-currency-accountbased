@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: `edge-currency-accountbased/node-monero` `makeMoneroIo` for Node, wrapping the react-native-monero N-API addon. The React Native `rn-monero` entry is unchanged.
+
 ## 4.88.0 (2026-08-14)
 
 - added: (Zano) Verify that the native wallet address matches the address derived from the seed phrase when a wallet starts, failing the start rather than syncing a wallet whose native address is not the one shown to the user.
