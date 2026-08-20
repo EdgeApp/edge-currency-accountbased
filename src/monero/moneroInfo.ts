@@ -9,7 +9,7 @@ import {
   MoneroUserSettings
 } from './moneroTypes'
 
-const networkInfo: MoneroNetworkInfo = {
+export const networkInfo: MoneroNetworkInfo = {
   edgeLwsServer: EDGE_MONERO_LWS_SERVER,
   networkType: 'MAINNET'
 }
