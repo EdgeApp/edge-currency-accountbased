@@ -81,10 +81,12 @@ export class MoneroTools implements EdgeCurrencyTools {
     this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
 
-    const moneroIo = nativeIo.monero as MoneroIo
-    if (moneroIo == null) throw new Error('Need monero native IO')
-    this.moneroIo = moneroIo
-    this.cppBridge = new CppBridge(moneroIo)
+    const injected = nativeIo.monero as MoneroIo | undefined
+    if (injected == null) {
+      throw new Error('Need monero native IO')
+    }
+    this.moneroIo = injected
+    this.cppBridge = new CppBridge(this.moneroIo)
     this.log.warn(
       `init: plugin created (network=${networkInfo.networkType} ` +
         `lws=${cleanServerUrl(networkInfo.edgeLwsServer)})`

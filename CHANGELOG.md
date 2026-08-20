@@ -54,6 +54,7 @@
 - fixed: (HyperEVM) Tokens are detected automatically
 - fixed: (EVM) Blockscout "Too many requests" replies are recognized as rate limits
 
+- added: Node package entry (`main` → `lib/index.node.js`) that statically wires Monero native IO from `react-native-monero/node`, storing wallet files under `io.path/native/monero`.
 - added: `edge-currency-accountbased/node-monero` `makeMoneroIo` for Node, wrapping the react-native-monero N-API addon. The React Native `rn-monero` entry is unchanged.
 
 ## 4.90.1 (2026-08-28)
