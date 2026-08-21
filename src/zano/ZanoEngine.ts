@@ -289,30 +289,48 @@ export class ZanoEngine extends CurrencyEngine<
     const nativeId = await this.nativeId.get()
     if (nativeId == null) return
 
-    while (true) {
-      const offset = this.otherData.transactionQueryOffset
-      const transactions = await this.tools.zano.getTransactions(
-        nativeId,
-        offset
-      )
+    // Sweep the mempool first. `get_recent_txs_and_info2` prepends the
+    // wallet's unconfirmed transfers only when the offset is zero, so once a
+    // wallet has any confirmed history the paged catch-up below can never see
+    // a transaction before it is mined: an incoming transfer stays invisible
+    // to the receiver, and the sender has nothing to confirm its own.
+    const pendingPage = await this.tools.zano.getTransactions(nativeId, 0)
+    const pendingTransfers = pendingPage.transfers ?? []
+    pendingTransfers.forEach(this.processTransaction)
 
-      if (offset !== transactions.last_item_index) {
-        this.otherData.transactionQueryOffset = transactions.last_item_index
+    let offset = this.otherData.transactionQueryOffset
+    while (true) {
+      const page =
+        offset === 0
+          ? pendingPage
+          : await this.tools.zano.getTransactions(nativeId, offset)
+      const transfers = page.transfers ?? []
+      transfers.forEach(this.processTransaction)
+
+      const lastItemIndex = page.last_item_index
+      const totalTransfers = page.total_transfers
+      if (offset !== lastItemIndex) {
+        this.otherData.transactionQueryOffset = lastItemIndex
         this.walletLocalDataDirty = true
       }
 
-      const transfers = transactions.transfers ?? []
-      transfers.forEach(this.processTransaction)
-
+      // Stop when the page did not move us forward. `last_item_index` counts
+      // only the transfers the wallet actually returned, so a page whose
+      // newest entries were all filtered out -- mining and defragmentation
+      // transactions are excluded by request -- leaves it permanently short of
+      // `total_transfers - 1`. Testing that identity alone spun this loop
+      // forever on such a wallet, re-requesting one page and starving every
+      // later balance and transaction update for it.
       if (
-        transactions.total_transfers === 0 ||
-        transactions.total_transfers - transactions.last_item_index === 1
+        totalTransfers === 0 ||
+        lastItemIndex <= offset ||
+        lastItemIndex + 1 >= totalTransfers
       ) {
         break
       }
-      this.syncTracker.updateHistoryRatio(
-        transactions.total_transfers / transactions.last_item_index
-      )
+
+      this.syncTracker.updateHistoryRatio(totalTransfers / lastItemIndex)
+      offset = lastItemIndex
     }
     this.sendTransactionEvents()
     this.syncTracker.updateHistoryRatio(1)

@@ -3,6 +3,8 @@
 ## Unreleased
 
 - fixed: (Zano) Persist the wallet file once a wallet reaches synced and every ten minutes afterwards. The native library only writes the file when a wallet closes, and a mobile app is killed rather than closed, so every launch re-scanned everything since the file was last written - a catch-up window that only grew, re-paid at full multi-core CPU on each cold start.
+- fixed: (Zano) Stop the transaction query from spinning forever when the newest history entries are mining or defragmentation transactions. The wallet excludes those from its answer without advancing `last_item_index`, so the loop's end-of-history test could never become true, and the wallet it happened to stopped reporting balances and transactions entirely.
+- fixed: (Zano) Show unconfirmed transactions on a wallet that already has history. The wallet reports its mempool only when asked from offset zero, so a paged catch-up starting anywhere else left an incoming transfer invisible until it was mined and a sent one pending with nothing to confirm it.
 - fixed: (Zano) Start the refresh worker when adopting an already-open wallet, so a wallet left open by an interrupted `startWallet` still syncs under react-native-zano's postponed-run mode (0.4.1).
 
 ## 4.88.0 (2026-08-14)
