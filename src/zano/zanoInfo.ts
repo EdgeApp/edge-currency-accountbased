@@ -10,7 +10,7 @@ import {
   ZanoNetworkInfo
 } from './zanoTypes'
 
-const builtinTokens: EdgeTokenMap = {
+export const builtinTokens: EdgeTokenMap = {
   f5413f195b3347a3822ea6100e4db70f10b34ea0b22822af0ba15258d139fb71: {
     currencyCode: 'TALLY',
     displayName: 'Tally Note',
@@ -139,7 +139,7 @@ const builtinTokens: EdgeTokenMap = {
   }
 }
 
-const networkInfo: ZanoNetworkInfo = {
+export const networkInfo: ZanoNetworkInfo = {
   nativeAssetId:
     'd6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a',
   walletRpcAddress: 'http://37.27.100.59:10500'
