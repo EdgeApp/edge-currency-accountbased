@@ -3,6 +3,7 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeTransaction,
+  EdgeTransactionEvent,
   makeFakeIo
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
@@ -115,6 +116,8 @@ function makeFakeTools(wallet: FakeWallet): {
 
 interface TestEngine {
   engine: ZanoEngine
+  /** Every transaction event the engine handed to the core, in order. */
+  events: EdgeTransactionEvent[]
   queryTransactions: () => Promise<void>
   requests: number[]
   storedTx: (txid: string) => EdgeTransaction | undefined
@@ -125,6 +128,7 @@ async function makeEngine(
   startOffset: number
 ): Promise<TestEngine> {
   const fakeIo = makeFakeIo()
+  const events: EdgeTransactionEvent[] = []
 
   const callbacks: EdgeCurrencyEngineCallbacks = {
     onAddressChanged() {},
@@ -137,7 +141,9 @@ async function makeEngine(
     onSubscribeAddresses() {},
     onSyncStatusChanged() {},
     onTokenBalanceChanged() {},
-    onTransactions() {},
+    onTransactions(transactionEvents) {
+      events.push(...transactionEvents)
+    },
     onTransactionsChanged() {},
     onTxidsChanged() {},
     onUnactivatedTokenIdsChanged() {},
@@ -184,8 +190,10 @@ async function makeEngine(
 
   return {
     engine,
+    events,
     queryTransactions: async () => {
       await engine.queryTransactions()
+      engine.sendTransactionEvents()
     },
     requests,
     storedTx: (txid: string) => {
@@ -255,5 +263,23 @@ describe('ZanoEngine.queryTransactions', function () {
     assert.equal(storedTx('c149')?.blockHeight, 249)
     assert.equal(engine.otherData.transactionQueryOffset, 149)
     assert.isBelow(requests.length, 5)
+  })
+
+  it('reports an unconfirmed receive as a new transaction', async function () {
+    // A mempool receive enters the store at blockHeight 0, which the base
+    // checkpoint math reads as already seen, so without the engine's
+    // `isTransactionNew` override the core would only ever hear about it as a
+    // change and the receive dropdown would never fire.
+    const wallet: FakeWallet = {
+      history: [makeTransfer('c0', 100)],
+      unconfirmed: [makeTransfer('mempool', 0)]
+    }
+    const { events, queryTransactions } = await makeEngine(wallet, 1)
+
+    await queryTransactions()
+
+    const event = events.find(event => event.transaction.txid === 'mempool')
+    assert.isDefined(event)
+    assert.isTrue(event?.isNew)
   })
 })
