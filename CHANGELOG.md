@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add Animica (ANM) support
+
 ## 4.88.0 (2026-08-14)
 
 - added: (Zano) Verify that the native wallet address matches the address derived from the seed phrase when a wallet starts, failing the start rather than syncing a wallet whose native address is not the one shown to the user.
