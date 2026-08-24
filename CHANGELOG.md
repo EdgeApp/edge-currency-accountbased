@@ -3,6 +3,8 @@
 ## Unreleased
 
 - fixed: (Zano) Payment ids reach the recipient again under HF6. The node now rejects the request-level payment id, so a payment id memo is delivered by folding it into the destination instead: a plain address plus an 8-byte id becomes the matching integrated address on the user's behalf, an integrated destination requires the supplied id to agree with the embedded one, and an id no integrated address can encode is refused with clear guidance rather than padded or silently dropped. The payment id memo field now requires exactly 8 bytes, the fixed size of an HF6 intrinsic payment id.
+- fixed: (Zano) Persist the wallet file once a wallet reaches synced and every ten minutes afterwards. The native library only writes the file when a wallet closes, and a mobile app is killed rather than closed, so every launch re-scanned everything since the file was last written -- a catch-up window that only grew, re-paid at full multi-core CPU on each cold start.
+- fixed: (Zano) Start the refresh worker when adopting an already-open wallet, so a wallet left open by an interrupted `startWallet` still syncs under react-native-zano's postponed-run mode.
 
 ## 4.88.0 (2026-08-14)
 
