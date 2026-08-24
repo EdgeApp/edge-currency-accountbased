@@ -59,6 +59,14 @@ import {
  */
 const WALLET_STORE_INTERVAL_MS = 10 * 60 * 1000
 
+/**
+ * How often a catching-up wallet checkpoints its progress to disk by cycling
+ * through close and reopen. Balances the loss window on a kill against the
+ * cost of a checkpoint: one interrupted block chunk, one file write, one
+ * reopen.
+ */
+const CATCHUP_CHECKPOINT_INTERVAL_MS = 5 * 60 * 1000
+
 /** The wallet RPC answers a successful store with a result object. */
 const asStoreResponse = asObject({ result: asObject({}) })
 
@@ -78,13 +86,22 @@ export class ZanoEngine extends CurrencyEngine<
   private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
   private needsNativeStorageClear: boolean = false
   private lastStoreTime: number = 0
+  private lastCheckpointTime: number = 0
+  private lastCheckpointHeight: number = 0
   private lastStoreHeight: number = 0
   /**
-   * Bumped whenever the store gates are reset. A store that was already in
-   * flight across a reset carries the old value and must not write its
-   * pre-reset height back into the gates.
+   * Bumped whenever the persistence gates are reset by a resync. A store or
+   * checkpoint that was already in flight across the reset carries the old
+   * value and must not write its pre-reset height back into the gates.
    */
   private storeGeneration: number = 0
+  /**
+   * True while `broadcastTx` holds a native id across its transfer call.
+   * A checkpoint restart in that window would close the handle out from
+   * under the broadcast and fail the user's send, so `checkpointCatchup`
+   * defers while this is set.
+   */
+  private spendPending: boolean = false
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -502,6 +519,7 @@ export class ZanoEngine extends CurrencyEngine<
       await this.queryBalance()
       await this.queryTransactions()
       await this.storeWalletFile(nativeId, status.current_wallet_height)
+      this.resetCatchupCheckpoint()
       return 20000
     } else {
       this.syncTracker.updateBlockRatio(
@@ -509,8 +527,76 @@ export class ZanoEngine extends CurrencyEngine<
         status.current_wallet_height,
         status.current_daemon_height
       )
+      await this.checkpointCatchup(status.current_wallet_height)
       return 1000
     }
+  }
+
+  /**
+   * Persists catch-up progress by cycling the wallet through the lifecycle
+   * manager: the close interrupts the refresh worker at its next block
+   * chunk, stores the partially-synced state, and the reopen resumes the
+   * scan from that stored height. Without this, a scan that does not finish
+   * before the app is killed persists nothing, and the next launch re-pays
+   * the entire catch-up from wherever the file was last written.
+   *
+   * A plain `store` cannot do this: the refresh worker holds the per-wallet
+   * lock for the whole scan, so a store only lands once the scan finishes --
+   * exactly when it is no longer needed. Closing is the one path that
+   * interrupts the scan (`wallet2::refresh` checks its stop flag before
+   * every block chunk) and stores what it has.
+   *
+   * Gated on the wallet height having advanced, so a wallet stalled on a
+   * dead daemon does not churn through restarts, and on an interval, so the
+   * cost -- one re-fetched block chunk, one file write, one reopen -- stays
+   * a rounding error next to the scan itself.
+   */
+  private async checkpointCatchup(walletHeight: number): Promise<void> {
+    const now = Date.now()
+    if (this.lastCheckpointTime === 0) {
+      // First sight of a catching-up wallet: it just loaded from disk, so
+      // there is nothing new to persist yet. Start the clock.
+      this.lastCheckpointTime = now
+      this.lastCheckpointHeight = walletHeight
+      return
+    }
+    if (now - this.lastCheckpointTime < CATCHUP_CHECKPOINT_INTERVAL_MS) return
+    if (walletHeight <= this.lastCheckpointHeight) return
+    // A broadcast in flight holds the native id it already resolved, and
+    // the restart below would close that handle out from under it. Defer
+    // without touching the gates, so the checkpoint fires on the first tick
+    // after the spend clears rather than waiting out another interval:
+    if (this.spendPending) return
+
+    this.log(
+      `checkpointCatchup: persisting catch-up progress at height ${walletHeight}`
+    )
+    const generation = this.storeGeneration
+    this.nativeId.stop()
+    const nativeId = await this.nativeId.get()
+    // A resync between the stop and the reopen reset the gates for a wallet
+    // that no longer holds this height. Writing them back would gate the
+    // rebuilt wallet at a tip it has not re-reached, disabling checkpoints
+    // for the entire rescan -- the costliest scan there is:
+    if (generation !== this.storeGeneration) return
+    // Reset the clock even on a failed restart, so a wallet that cannot
+    // reopen retries on the interval rather than every second:
+    this.lastCheckpointTime = Date.now()
+    this.lastCheckpointHeight = walletHeight
+    if (nativeId == null) {
+      this.log.warn('checkpointCatchup: wallet did not reopen; will retry')
+    }
+  }
+
+  /**
+   * Forgets the catch-up checkpoint gates. Called when the wallet reaches
+   * synced, so the next catch-up episode -- after a long background gap, or
+   * a burst of blocks -- baselines fresh instead of firing a restart on its
+   * first tick because the gates still hold a stale time and height.
+   */
+  private resetCatchupCheckpoint(): void {
+    this.lastCheckpointTime = 0
+    this.lastCheckpointHeight = 0
   }
 
   /**
@@ -567,6 +653,7 @@ export class ZanoEngine extends CurrencyEngine<
     // re-reached tip, and a kill in that window re-pays the full rescan.
     this.lastStoreTime = 0
     this.lastStoreHeight = 0
+    this.resetCatchupCheckpoint()
     this.storeGeneration += 1
     this.nativeId.stop()
     this.unlockedBalanceMap.clear()
@@ -761,28 +848,39 @@ export class ZanoEngine extends CurrencyEngine<
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const nativeId = await this.nativeId.get()
-    if (nativeId == null) throw new Error('Wallet is not running')
-
-    let txid: string | undefined
+    // Hold checkpoints off for the whole broadcast: a checkpoint restart
+    // between the `get` below and the transfer would close the native id
+    // this method already resolved, failing the send. Set before the `get`
+    // so no checkpoint can slip in between it and the transfer.
+    this.spendPending = true
     try {
-      const burnAssetParams = asMaybe(asZanoBurnAssetParams)(
-        edgeTransaction.otherParams
-      )
-      if (burnAssetParams != null) {
-        txid = await this.tools.zano.burnAsset(nativeId, burnAssetParams)
-      } else {
-        const transferParams = asZanoTransferParams(edgeTransaction.otherParams)
-        txid = await this.tools.zano.transfer(nativeId, transferParams)
-      }
+      const nativeId = await this.nativeId.get()
+      if (nativeId == null) throw new Error('Wallet is not running')
 
-      edgeTransaction.txid = txid
-      edgeTransaction.date = Date.now() / 1000
-      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
-      return edgeTransaction
-    } catch (e: any) {
-      this.warn('FAILURE broadcastTx failed: ', e)
-      throw e
+      let txid: string | undefined
+      try {
+        const burnAssetParams = asMaybe(asZanoBurnAssetParams)(
+          edgeTransaction.otherParams
+        )
+        if (burnAssetParams != null) {
+          txid = await this.tools.zano.burnAsset(nativeId, burnAssetParams)
+        } else {
+          const transferParams = asZanoTransferParams(
+            edgeTransaction.otherParams
+          )
+          txid = await this.tools.zano.transfer(nativeId, transferParams)
+        }
+
+        edgeTransaction.txid = txid
+        edgeTransaction.date = Date.now() / 1000
+        this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+        return edgeTransaction
+      } catch (e: any) {
+        this.warn('FAILURE broadcastTx failed: ', e)
+        throw e
+      }
+    } finally {
+      this.spendPending = false
     }
   }
 
