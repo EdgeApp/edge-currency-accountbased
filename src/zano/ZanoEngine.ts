@@ -34,6 +34,7 @@ import {
   makeWeightedSyncTracker,
   WeightedSyncTracker
 } from '../common/WeightedSyncTracker'
+import { resolvePaymentIdDestination } from './zanoPaymentId'
 import { ZanoTools } from './ZanoTools'
 import {
   asGetAliasDetailsResponse,
@@ -546,18 +547,31 @@ export class ZanoEngine extends CurrencyEngine<
     const comment = memos.find(memo => memo.memoName === 'comment')?.value
     const paymentId = memos.find(memo => memo.memoName === 'paymentId')?.value
 
+    // Since HF6 the node rejects the request-level payment id, so a payment
+    // id memo is delivered by folding it into the destination address
+    // instead -- exchanges still hand out a plain address and an id
+    // separately. With several destinations there is no way to know which
+    // one the id belongs to, so that combination is refused.
+    if (paymentId != null && cleanTargets.length > 1) {
+      throw new Error(
+        'A Zano spend with a payment id supports a single destination'
+      )
+    }
+
     const assetId = tokenId != null ? tokenId : this.networkInfo.nativeAssetId
 
     const otherParams: TransferParams = {
       transfers: cleanTargets.map(st => ({
         assetId,
         nativeAmount: safeParseInt(abs(st.nativeAmount)),
-        recipient: st.publicAddress
+        recipient:
+          paymentId == null
+            ? st.publicAddress
+            : resolvePaymentIdDestination(st.publicAddress, paymentId)
       })),
 
       comment,
-      fee: feeNumber,
-      paymentId
+      fee: feeNumber
     }
 
     // **********************************
