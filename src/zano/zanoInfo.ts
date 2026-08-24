@@ -145,7 +145,7 @@ const networkInfo: ZanoNetworkInfo = {
   walletRpcAddress: 'http://37.27.100.59:10500'
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ZANO',
   assetDisplayName: 'Zano',
   chainDisplayName: 'Zano',

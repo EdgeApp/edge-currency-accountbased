@@ -290,31 +290,65 @@ export class ZanoEngine extends CurrencyEngine<
     const nativeId = await this.nativeId.get()
     if (nativeId == null) return
 
-    while (true) {
-      const offset = this.otherData.transactionQueryOffset
-      const transactions = await this.tools.zano.getTransactions(
-        nativeId,
-        offset
-      )
+    // A resync that lands while a fetch below is in flight has already
+    // emptied the transaction cache and zeroed the cursor. Processing the
+    // stale page -- or worse, writing the old cursor back -- would leave the
+    // cleared history permanently unfetched, so bail out and let the next
+    // sync pass start from the reset state:
+    const generation = this.storeGeneration
 
-      if (offset !== transactions.last_item_index) {
-        this.otherData.transactionQueryOffset = transactions.last_item_index
+    let offset = this.otherData.transactionQueryOffset
+    while (true) {
+      const page = await this.tools.zano.getTransactions(nativeId, offset)
+      if (generation !== this.storeGeneration) return
+      const transfers = page.transfers ?? []
+      transfers.forEach(this.processTransaction)
+
+      const lastItemIndex = page.last_item_index
+      const totalTransfers = page.total_transfers
+      if (offset !== lastItemIndex) {
+        this.otherData.transactionQueryOffset = lastItemIndex
         this.walletLocalDataDirty = true
       }
 
-      const transfers = transactions.transfers ?? []
-      transfers.forEach(this.processTransaction)
-
+      // Stop when the page did not move us forward. `last_item_index` counts
+      // only the transfers the wallet actually returned, so a page whose
+      // newest entries were all filtered out -- mining and defragmentation
+      // transactions are excluded by request -- leaves it permanently short of
+      // `total_transfers - 1`. Testing that identity alone spun this loop
+      // forever on such a wallet, re-requesting one page and starving every
+      // later balance and transaction update for it.
       if (
-        transactions.total_transfers === 0 ||
-        transactions.total_transfers - transactions.last_item_index === 1
+        totalTransfers === 0 ||
+        lastItemIndex <= offset ||
+        lastItemIndex + 1 >= totalTransfers
       ) {
         break
       }
-      this.syncTracker.updateHistoryRatio(
-        transactions.total_transfers / transactions.last_item_index
-      )
+
+      this.syncTracker.updateHistoryRatio(totalTransfers / lastItemIndex)
+      offset = lastItemIndex
     }
+
+    // Sweep the mempool last. `get_recent_txs_and_info2` prepends the
+    // wallet's unconfirmed transfers only when the offset is zero, so once a
+    // wallet has any confirmed history the paged catch-up above can never
+    // see a transaction before it is mined: an incoming transfer stays
+    // invisible to the receiver, and the sender has nothing to confirm its
+    // own. Sweeping after the paging rather than before means the pool
+    // snapshot is as fresh as possible -- the loop can run long on a large
+    // catch-up, and a transfer that arrives mid-pass is caught this cycle
+    // instead of next. When the loop's final page WAS offset zero -- a new
+    // wallet, or one whose cursor never advances past it -- that fetch
+    // already carried the unconfirmed transfers, so repeating it here would
+    // just re-run the same RPC and the same processing every sync tick:
+    if (offset !== 0) {
+      const pendingPage = await this.tools.zano.getTransactions(nativeId, 0)
+      if (generation !== this.storeGeneration) return
+      const pendingTransfers = pendingPage.transfers ?? []
+      pendingTransfers.forEach(this.processTransaction)
+    }
+
     this.sendTransactionEvents()
     this.syncTracker.updateHistoryRatio(1)
   }
