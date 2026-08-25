@@ -7,6 +7,7 @@
 - fixed: (Zano) Start the refresh worker when adopting an already-open wallet, so a wallet left open by an interrupted `startWallet` still syncs under react-native-zano's postponed-run mode.
 - fixed: (Zano) Stop the transaction query from spinning forever when the newest history entries are mining or defragmentation transactions. The wallet excludes those from its answer without advancing `last_item_index`, so the loop's end-of-history test could never become true, and the wallet it happened to stopped reporting balances and transactions entirely.
 - fixed: (Zano) Show unconfirmed transactions on a wallet that already has history. The wallet reports its mempool only when asked from offset zero, so a paged catch-up starting anywhere else left an incoming transfer invisible until it was mined and a sent one pending with nothing to confirm it.
+- fixed: (Zano) Report an unconfirmed incoming transfer as a new transaction, so the app raises its receive notification. The mempool sweep files the transfer at block height zero, which the checkpoint comparison reads as already seen, and the later confirmation takes the update path, so the arrival that the sweep exists to surface was never announced.
 
 ## 4.88.0 (2026-08-14)
 

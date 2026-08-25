@@ -286,6 +286,27 @@ export class ZanoEngine extends CurrencyEngine<
     this.syncTracker.updateBalanceRatio(1)
   }
 
+  // The mempool sweep in `queryTransactions` surfaces an incoming transfer
+  // while it is still unconfirmed, so it enters the store at blockHeight 0.
+  // The base checkpoint math then treats that first sighting as already seen
+  // ('0' never advances past a synced checkpoint) and the later confirmation
+  // takes the update path, which never notifies, so the receive dropdown never
+  // fires for a transfer this engine reports. Mirror the MoneroEngine and
+  // ZcashEngine fix: an incoming unconfirmed transaction seen after the
+  // first-ever sync is new. The same multi-device caveat applies, since a
+  // second device syncing the same account tracks its own checkpoint.
+  protected isTransactionNew(edgeTransaction: EdgeTransaction): boolean {
+    if (
+      edgeTransaction.blockHeight === 0 &&
+      edgeTransaction.confirmations === 'unconfirmed' &&
+      this.seenTxCheckpoint != null &&
+      !edgeTransaction.isSend
+    ) {
+      return true
+    }
+    return super.isTransactionNew(edgeTransaction)
+  }
+
   async queryTransactions(): Promise<void> {
     const nativeId = await this.nativeId.get()
     if (nativeId == null) return
