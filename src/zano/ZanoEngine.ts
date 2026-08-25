@@ -73,6 +73,23 @@ const asStoreResponse = asObject({ result: asObject({}) })
 /** A successful run_wallet answers with error_code OK. */
 const asRunWalletResponse = asObject({ error_code: asValue('OK') })
 
+/**
+ * Converts the wallet status' `current_daemon_height` into a block height.
+ *
+ * The two height fields the Zano SDK reports are not in the same units.
+ * `current_wallet_height` is the wallet's `get_top_block_height()`, a block
+ * height, but `current_daemon_height` is the daemon's `getinfo` height, which
+ * counts blocks and therefore sits one above the chain tip. Reporting the raw
+ * count as our block height puts every transaction one confirmation ahead of
+ * the chain, since both confirmation formulas are
+ * `walletBlockHeight - txBlockHeight + 1`.
+ *
+ * Floors at zero so a disconnected daemon, which reports a height of zero,
+ * cannot produce a negative block height.
+ */
+export const daemonHeightToBlockHeight = (daemonHeight: number): number =>
+  Math.max(0, daemonHeight - 1)
+
 export class ZanoEngine extends CurrencyEngine<
   ZanoTools,
   SafeZanoWalletInfo,
@@ -500,9 +517,12 @@ export class ZanoEngine extends CurrencyEngine<
     if (nativeId == null) return 1000
 
     const status = await this.tools.zano.getWalletStatus(nativeId)
+    const daemonBlockHeight = daemonHeightToBlockHeight(
+      status.current_daemon_height
+    )
     const blockheight = Math.max(
       status.current_wallet_height,
-      status.current_daemon_height
+      daemonBlockHeight
     )
     this.updateBlockHeight(blockheight)
 
@@ -510,7 +530,7 @@ export class ZanoEngine extends CurrencyEngine<
       this.syncTracker.updateBlockRatio(
         1,
         status.current_wallet_height,
-        status.current_daemon_height
+        daemonBlockHeight
       )
       await this.tools.zano.whitelistAssets(
         nativeId,
@@ -525,7 +545,7 @@ export class ZanoEngine extends CurrencyEngine<
       this.syncTracker.updateBlockRatio(
         status.progress / 100,
         status.current_wallet_height,
-        status.current_daemon_height
+        daemonBlockHeight
       )
       await this.checkpointCatchup(status.current_wallet_height)
       return 1000
