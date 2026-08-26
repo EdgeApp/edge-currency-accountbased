@@ -1,5 +1,5 @@
 import { abs, add, eq, gt, lt, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asJSON, asMaybe, asObject, asValue } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -34,6 +34,7 @@ import {
   makeWeightedSyncTracker,
   WeightedSyncTracker
 } from '../common/WeightedSyncTracker'
+import { resolvePaymentIdDestination } from './zanoPaymentId'
 import { ZanoTools } from './ZanoTools'
 import {
   asGetAliasDetailsResponse,
@@ -50,6 +51,45 @@ import {
   ZanoWalletOtherData
 } from './zanoTypes'
 
+/**
+ * How often a synced wallet writes its file to disk. The native library only
+ * stores on close, and a mobile app is killed rather than closed, so without
+ * periodic stores every launch re-scans from wherever the file was last
+ * written - a window that only grows.
+ */
+const WALLET_STORE_INTERVAL_MS = 10 * 60 * 1000
+
+/**
+ * How often a catching-up wallet checkpoints its progress to disk by cycling
+ * through close and reopen. Balances the loss window on a kill against the
+ * cost of a checkpoint: one interrupted block chunk, one file write, one
+ * reopen.
+ */
+const CATCHUP_CHECKPOINT_INTERVAL_MS = 5 * 60 * 1000
+
+/** The wallet RPC answers a successful store with a result object. */
+const asStoreResponse = asObject({ result: asObject({}) })
+
+/** A successful run_wallet answers with error_code OK. */
+const asRunWalletResponse = asObject({ error_code: asValue('OK') })
+
+/**
+ * Converts the wallet status' `current_daemon_height` into a block height.
+ *
+ * The two height fields the Zano SDK reports are not in the same units.
+ * `current_wallet_height` is the wallet's `get_top_block_height()`, a block
+ * height, but `current_daemon_height` is the daemon's `getinfo` height, which
+ * counts blocks and therefore sits one above the chain tip. Reporting the raw
+ * count as our block height puts every transaction one confirmation ahead of
+ * the chain, since both confirmation formulas are
+ * `walletBlockHeight - txBlockHeight + 1`.
+ *
+ * Floors at zero so a disconnected daemon, which reports a height of zero,
+ * cannot produce a negative block height.
+ */
+export const daemonHeightToBlockHeight = (daemonHeight: number): number =>
+  Math.max(0, daemonHeight - 1)
+
 export class ZanoEngine extends CurrencyEngine<
   ZanoTools,
   SafeZanoWalletInfo,
@@ -62,6 +102,23 @@ export class ZanoEngine extends CurrencyEngine<
   private readonly nativeId: LifecycleManager<number>
   private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
   private needsNativeStorageClear: boolean = false
+  private lastStoreTime: number = 0
+  private lastCheckpointTime: number = 0
+  private lastCheckpointHeight: number = 0
+  private lastStoreHeight: number = 0
+  /**
+   * Bumped whenever the persistence gates are reset by a resync. A store or
+   * checkpoint that was already in flight across the reset carries the old
+   * value and must not write its pre-reset height back into the gates.
+   */
+  private storeGeneration: number = 0
+  /**
+   * True while `broadcastTx` holds a native id across its transfer call.
+   * A checkpoint restart in that window would close the handle out from
+   * under the broadcast and fail the user's send, so `checkpointCatchup`
+   * defers while this is set.
+   */
+  private spendPending: boolean = false
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -167,6 +224,27 @@ export class ZanoEngine extends CurrencyEngine<
           this.log(
             `initializeWallet: found existing wallet with ID ${existingWallet.wallet_id}`
           )
+
+          // Newer react-native-zano opens wallets with the refresh
+          // worker postponed, so a wallet left open by an interrupted
+          // `startWallet` may not be syncing; the postponed-run flag is
+          // process-wide and sticky, so the adopt path cannot know which way
+          // it was opened and must start the worker itself. On 0.4.0, where
+          // open auto-starts the worker, the same call is a harmless no-op.
+          // A failure here must throw: returning the id would mark the
+          // lifecycle started and hand back a wallet that never syncs,
+          // while throwing lets the next `get()` retry the whole start.
+          const runResponse = await this.tools.zano.syncCall(
+            'run_wallet',
+            existingWallet.wallet_id,
+            ''
+          )
+          if (asMaybe(asJSON(asRunWalletResponse))(runResponse) == null) {
+            throw new Error(
+              `initializeWallet: could not run the adopted wallet: ${runResponse}`
+            )
+          }
+
           return existingWallet.wallet_id
         }
       },
@@ -242,35 +320,90 @@ export class ZanoEngine extends CurrencyEngine<
     this.syncTracker.updateBalanceRatio(1)
   }
 
+  // The mempool sweep in `queryTransactions` surfaces an incoming transfer
+  // while it is still unconfirmed, so it enters the store at blockHeight 0.
+  // The base checkpoint math then treats that first sighting as already seen
+  // ('0' never advances past a synced checkpoint) and the later confirmation
+  // takes the update path, which never notifies, so the receive dropdown never
+  // fires for a transfer this engine reports. Mirror the MoneroEngine and
+  // ZcashEngine fix: an incoming unconfirmed transaction seen after the
+  // first-ever sync is new. The same multi-device caveat applies, since a
+  // second device syncing the same account tracks its own checkpoint.
+  protected isTransactionNew(edgeTransaction: EdgeTransaction): boolean {
+    if (
+      edgeTransaction.blockHeight === 0 &&
+      edgeTransaction.confirmations === 'unconfirmed' &&
+      this.seenTxCheckpoint != null &&
+      !edgeTransaction.isSend
+    ) {
+      return true
+    }
+    return super.isTransactionNew(edgeTransaction)
+  }
+
   async queryTransactions(): Promise<void> {
     const nativeId = await this.nativeId.get()
     if (nativeId == null) return
 
-    while (true) {
-      const offset = this.otherData.transactionQueryOffset
-      const transactions = await this.tools.zano.getTransactions(
-        nativeId,
-        offset
-      )
+    // A resync that lands while a fetch below is in flight has already
+    // emptied the transaction cache and zeroed the cursor. Processing the
+    // stale page -- or worse, writing the old cursor back -- would leave the
+    // cleared history permanently unfetched, so bail out and let the next
+    // sync pass start from the reset state:
+    const generation = this.storeGeneration
 
-      if (offset !== transactions.last_item_index) {
-        this.otherData.transactionQueryOffset = transactions.last_item_index
+    let offset = this.otherData.transactionQueryOffset
+    while (true) {
+      const page = await this.tools.zano.getTransactions(nativeId, offset)
+      if (generation !== this.storeGeneration) return
+      const transfers = page.transfers ?? []
+      transfers.forEach(this.processTransaction)
+
+      const lastItemIndex = page.last_item_index
+      const totalTransfers = page.total_transfers
+      if (offset !== lastItemIndex) {
+        this.otherData.transactionQueryOffset = lastItemIndex
         this.walletLocalDataDirty = true
       }
 
-      const transfers = transactions.transfers ?? []
-      transfers.forEach(this.processTransaction)
-
+      // Stop when the page did not move us forward. `last_item_index` counts
+      // only the transfers the wallet actually returned, so a page whose
+      // newest entries were all filtered out -- mining and defragmentation
+      // transactions are excluded by request -- leaves it permanently short of
+      // `total_transfers - 1`. Testing that identity alone spun this loop
+      // forever on such a wallet, re-requesting one page and starving every
+      // later balance and transaction update for it.
       if (
-        transactions.total_transfers === 0 ||
-        transactions.total_transfers - transactions.last_item_index === 1
+        totalTransfers === 0 ||
+        lastItemIndex <= offset ||
+        lastItemIndex + 1 >= totalTransfers
       ) {
         break
       }
-      this.syncTracker.updateHistoryRatio(
-        transactions.total_transfers / transactions.last_item_index
-      )
+
+      this.syncTracker.updateHistoryRatio(totalTransfers / lastItemIndex)
+      offset = lastItemIndex
     }
+
+    // Sweep the mempool last. `get_recent_txs_and_info2` prepends the
+    // wallet's unconfirmed transfers only when the offset is zero, so once a
+    // wallet has any confirmed history the paged catch-up above can never
+    // see a transaction before it is mined: an incoming transfer stays
+    // invisible to the receiver, and the sender has nothing to confirm its
+    // own. Sweeping after the paging rather than before means the pool
+    // snapshot is as fresh as possible -- the loop can run long on a large
+    // catch-up, and a transfer that arrives mid-pass is caught this cycle
+    // instead of next. When the loop's final page WAS offset zero -- a new
+    // wallet, or one whose cursor never advances past it -- that fetch
+    // already carried the unconfirmed transfers, so repeating it here would
+    // just re-run the same RPC and the same processing every sync tick:
+    if (offset !== 0) {
+      const pendingPage = await this.tools.zano.getTransactions(nativeId, 0)
+      if (generation !== this.storeGeneration) return
+      const pendingTransfers = pendingPage.transfers ?? []
+      pendingTransfers.forEach(this.processTransaction)
+    }
+
     this.sendTransactionEvents()
     this.syncTracker.updateHistoryRatio(1)
   }
@@ -384,9 +517,12 @@ export class ZanoEngine extends CurrencyEngine<
     if (nativeId == null) return 1000
 
     const status = await this.tools.zano.getWalletStatus(nativeId)
+    const daemonBlockHeight = daemonHeightToBlockHeight(
+      status.current_daemon_height
+    )
     const blockheight = Math.max(
       status.current_wallet_height,
-      status.current_daemon_height
+      daemonBlockHeight
     )
     this.updateBlockHeight(blockheight)
 
@@ -394,7 +530,7 @@ export class ZanoEngine extends CurrencyEngine<
       this.syncTracker.updateBlockRatio(
         1,
         status.current_wallet_height,
-        status.current_daemon_height
+        daemonBlockHeight
       )
       await this.tools.zano.whitelistAssets(
         nativeId,
@@ -402,14 +538,127 @@ export class ZanoEngine extends CurrencyEngine<
       )
       await this.queryBalance()
       await this.queryTransactions()
+      await this.storeWalletFile(nativeId, status.current_wallet_height)
+      this.resetCatchupCheckpoint()
       return 20000
     } else {
       this.syncTracker.updateBlockRatio(
         status.progress / 100,
         status.current_wallet_height,
-        status.current_daemon_height
+        daemonBlockHeight
       )
+      await this.checkpointCatchup(status.current_wallet_height)
       return 1000
+    }
+  }
+
+  /**
+   * Persists catch-up progress by cycling the wallet through the lifecycle
+   * manager: the close interrupts the refresh worker at its next block
+   * chunk, stores the partially-synced state, and the reopen resumes the
+   * scan from that stored height. Without this, a scan that does not finish
+   * before the app is killed persists nothing, and the next launch re-pays
+   * the entire catch-up from wherever the file was last written.
+   *
+   * A plain `store` cannot do this: the refresh worker holds the per-wallet
+   * lock for the whole scan, so a store only lands once the scan finishes --
+   * exactly when it is no longer needed. Closing is the one path that
+   * interrupts the scan (`wallet2::refresh` checks its stop flag before
+   * every block chunk) and stores what it has.
+   *
+   * Gated on the wallet height having advanced, so a wallet stalled on a
+   * dead daemon does not churn through restarts, and on an interval, so the
+   * cost -- one re-fetched block chunk, one file write, one reopen -- stays
+   * a rounding error next to the scan itself.
+   */
+  private async checkpointCatchup(walletHeight: number): Promise<void> {
+    const now = Date.now()
+    if (this.lastCheckpointTime === 0) {
+      // First sight of a catching-up wallet: it just loaded from disk, so
+      // there is nothing new to persist yet. Start the clock.
+      this.lastCheckpointTime = now
+      this.lastCheckpointHeight = walletHeight
+      return
+    }
+    if (now - this.lastCheckpointTime < CATCHUP_CHECKPOINT_INTERVAL_MS) return
+    if (walletHeight <= this.lastCheckpointHeight) return
+    // A broadcast in flight holds the native id it already resolved, and
+    // the restart below would close that handle out from under it. Defer
+    // without touching the gates, so the checkpoint fires on the first tick
+    // after the spend clears rather than waiting out another interval:
+    if (this.spendPending) return
+
+    this.log(
+      `checkpointCatchup: persisting catch-up progress at height ${walletHeight}`
+    )
+    const generation = this.storeGeneration
+    this.nativeId.stop()
+    const nativeId = await this.nativeId.get()
+    // A resync between the stop and the reopen reset the gates for a wallet
+    // that no longer holds this height. Writing them back would gate the
+    // rebuilt wallet at a tip it has not re-reached, disabling checkpoints
+    // for the entire rescan -- the costliest scan there is:
+    if (generation !== this.storeGeneration) return
+    // Reset the clock even on a failed restart, so a wallet that cannot
+    // reopen retries on the interval rather than every second:
+    this.lastCheckpointTime = Date.now()
+    this.lastCheckpointHeight = walletHeight
+    if (nativeId == null) {
+      this.log.warn('checkpointCatchup: wallet did not reopen; will retry')
+    }
+  }
+
+  /**
+   * Forgets the catch-up checkpoint gates. Called when the wallet reaches
+   * synced, so the next catch-up episode -- after a long background gap, or
+   * a burst of blocks -- baselines fresh instead of firing a restart on its
+   * first tick because the gates still hold a stale time and height.
+   */
+  private resetCatchupCheckpoint(): void {
+    this.lastCheckpointTime = 0
+    this.lastCheckpointHeight = 0
+  }
+
+  /**
+   * Persists the native wallet file, so the next launch resumes from this
+   * height instead of re-scanning everything since the file was last
+   * written. Called only from the synced branch of `syncNetwork`, where the
+   * refresh worker is idle and the per-wallet lock is free; a store during
+   * the catch-up scan would block behind that lock. Throttled, and skipped
+   * entirely when the wallet height has not advanced past the last store. A
+   * failure only costs the next launch a longer catch-up, so it logs and
+   * moves on.
+   */
+  private async storeWalletFile(
+    nativeId: number,
+    walletHeight: number
+  ): Promise<void> {
+    if (walletHeight <= this.lastStoreHeight) return
+    const now = Date.now()
+    if (
+      this.lastStoreTime !== 0 &&
+      now - this.lastStoreTime < WALLET_STORE_INTERVAL_MS
+    ) {
+      return
+    }
+    const generation = this.storeGeneration
+    try {
+      const response = await this.tools.zano.invoke(
+        nativeId,
+        JSON.stringify({ method: 'store', params: {} })
+      )
+      if (asMaybe(asJSON(asStoreResponse))(response) == null) {
+        throw new Error(response)
+      }
+      // A resync between the call and its answer reset the gates for a
+      // wallet that no longer holds this height. Recording it would gate the
+      // rebuilt wallet at a tip it has not re-reached, so a kill before the
+      // chain advances would re-pay the whole rescan.
+      if (generation !== this.storeGeneration) return
+      this.lastStoreTime = now
+      this.lastStoreHeight = walletHeight
+    } catch (error: unknown) {
+      this.log.warn(`storeWalletFile failed: ${String(error)}`)
     }
   }
 
@@ -419,6 +668,13 @@ export class ZanoEngine extends CurrencyEngine<
 
   async resyncBlockchain(): Promise<void> {
     this.needsNativeStorageClear = true
+    // The rebuilt wallet re-earns every height, so the store gates must not
+    // carry over: left in place they would skip the first store at the
+    // re-reached tip, and a kill in that window re-pays the full rescan.
+    this.lastStoreTime = 0
+    this.lastStoreHeight = 0
+    this.resetCatchupCheckpoint()
+    this.storeGeneration += 1
     this.nativeId.stop()
     this.unlockedBalanceMap.clear()
     await this.killEngine()
@@ -546,18 +802,31 @@ export class ZanoEngine extends CurrencyEngine<
     const comment = memos.find(memo => memo.memoName === 'comment')?.value
     const paymentId = memos.find(memo => memo.memoName === 'paymentId')?.value
 
+    // Since HF6 the node rejects the request-level payment id, so a payment
+    // id memo is delivered by folding it into the destination address
+    // instead -- exchanges still hand out a plain address and an id
+    // separately. With several destinations there is no way to know which
+    // one the id belongs to, so that combination is refused.
+    if (paymentId != null && cleanTargets.length > 1) {
+      throw new Error(
+        'A Zano spend with a payment id supports a single destination'
+      )
+    }
+
     const assetId = tokenId != null ? tokenId : this.networkInfo.nativeAssetId
 
     const otherParams: TransferParams = {
       transfers: cleanTargets.map(st => ({
         assetId,
         nativeAmount: safeParseInt(abs(st.nativeAmount)),
-        recipient: st.publicAddress
+        recipient:
+          paymentId == null
+            ? st.publicAddress
+            : resolvePaymentIdDestination(st.publicAddress, paymentId)
       })),
 
       comment,
-      fee: feeNumber,
-      paymentId
+      fee: feeNumber
     }
 
     // **********************************
@@ -599,28 +868,39 @@ export class ZanoEngine extends CurrencyEngine<
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const nativeId = await this.nativeId.get()
-    if (nativeId == null) throw new Error('Wallet is not running')
-
-    let txid: string | undefined
+    // Hold checkpoints off for the whole broadcast: a checkpoint restart
+    // between the `get` below and the transfer would close the native id
+    // this method already resolved, failing the send. Set before the `get`
+    // so no checkpoint can slip in between it and the transfer.
+    this.spendPending = true
     try {
-      const burnAssetParams = asMaybe(asZanoBurnAssetParams)(
-        edgeTransaction.otherParams
-      )
-      if (burnAssetParams != null) {
-        txid = await this.tools.zano.burnAsset(nativeId, burnAssetParams)
-      } else {
-        const transferParams = asZanoTransferParams(edgeTransaction.otherParams)
-        txid = await this.tools.zano.transfer(nativeId, transferParams)
-      }
+      const nativeId = await this.nativeId.get()
+      if (nativeId == null) throw new Error('Wallet is not running')
 
-      edgeTransaction.txid = txid
-      edgeTransaction.date = Date.now() / 1000
-      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
-      return edgeTransaction
-    } catch (e: any) {
-      this.warn('FAILURE broadcastTx failed: ', e)
-      throw e
+      let txid: string | undefined
+      try {
+        const burnAssetParams = asMaybe(asZanoBurnAssetParams)(
+          edgeTransaction.otherParams
+        )
+        if (burnAssetParams != null) {
+          txid = await this.tools.zano.burnAsset(nativeId, burnAssetParams)
+        } else {
+          const transferParams = asZanoTransferParams(
+            edgeTransaction.otherParams
+          )
+          txid = await this.tools.zano.transfer(nativeId, transferParams)
+        }
+
+        edgeTransaction.txid = txid
+        edgeTransaction.date = Date.now() / 1000
+        this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+        return edgeTransaction
+      } catch (e: any) {
+        this.warn('FAILURE broadcastTx failed: ', e)
+        throw e
+      }
+    } finally {
+      this.spendPending = false
     }
   }
 

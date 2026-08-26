@@ -145,7 +145,7 @@ const networkInfo: ZanoNetworkInfo = {
   walletRpcAddress: 'http://37.27.100.59:10500'
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ZANO',
   assetDisplayName: 'Zano',
   chainDisplayName: 'Zano',
@@ -180,7 +180,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   memoOptions: [
-    { type: 'hex', memoName: 'paymentId', maxBytes: 32 },
+    // Exactly 8 bytes: the HF6 intrinsic payment id is a fixed 8 bytes, and
+    // it is delivered by folding the id into an integrated destination
+    // address, which cannot encode any other length.
+    { type: 'hex', memoName: 'paymentId', minBytes: 8, maxBytes: 8 },
     { type: 'text', memoName: 'comment', maxLength: 1000 }
   ],
   multipleMemos: true,
