@@ -91,8 +91,7 @@ export const asZanoTransferParams = asObject<TransferParams>({
   ),
 
   comment: asOptional(asString),
-  fee: asNumber,
-  paymentId: asOptional(asString)
+  fee: asNumber
 })
 
 export const createZanoTokenId = (token: EdgeToken): string => {

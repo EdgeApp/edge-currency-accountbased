@@ -1,5 +1,5 @@
 import { abs, add, eq, gt, lt, mul, sub } from 'biggystring'
-import { asJSON, asMaybe, asObject, asValue } from 'cleaners'
+import { asJSON, asMaybe, asObject } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -69,9 +69,6 @@ const CATCHUP_CHECKPOINT_INTERVAL_MS = 5 * 60 * 1000
 
 /** The wallet RPC answers a successful store with a result object. */
 const asStoreResponse = asObject({ result: asObject({}) })
-
-/** A successful run_wallet answers with error_code OK. */
-const asRunWalletResponse = asObject({ error_code: asValue('OK') })
 
 /**
  * Converts the wallet status' `current_daemon_height` into a block height.
@@ -225,25 +222,14 @@ export class ZanoEngine extends CurrencyEngine<
             `initializeWallet: found existing wallet with ID ${existingWallet.wallet_id}`
           )
 
-          // Newer react-native-zano opens wallets with the refresh
-          // worker postponed, so a wallet left open by an interrupted
-          // `startWallet` may not be syncing; the postponed-run flag is
-          // process-wide and sticky, so the adopt path cannot know which way
-          // it was opened and must start the worker itself. On 0.4.0, where
-          // open auto-starts the worker, the same call is a harmless no-op.
-          // A failure here must throw: returning the id would mark the
-          // lifecycle started and hand back a wallet that never syncs,
-          // while throwing lets the next `get()` retry the whole start.
-          const runResponse = await this.tools.zano.syncCall(
-            'run_wallet',
-            existingWallet.wallet_id,
-            ''
-          )
-          if (asMaybe(asJSON(asRunWalletResponse))(runResponse) == null) {
-            throw new Error(
-              `initializeWallet: could not run the adopted wallet: ${runResponse}`
-            )
-          }
+          // `startWallet` opens wallets with the refresh worker postponed,
+          // so a wallet left open by an interrupted start may not be
+          // syncing; the adopt path must start the worker itself.
+          // `runWallet` is idempotent, and a failure here must throw:
+          // returning the id would mark the lifecycle started and hand back
+          // a wallet that never syncs, while throwing lets the next `get()`
+          // retry the whole start.
+          await this.tools.zano.runWallet(existingWallet.wallet_id)
 
           return existingWallet.wallet_id
         }
