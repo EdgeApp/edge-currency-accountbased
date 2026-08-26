@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.89.0 (2026-08-25)
+
 - changed: (Zano) Update react-native-zano to ^0.5.0, which delivers payment ids per destination under HF6, starts wallets with the refresh worker postponed, and refuses to run when iOS cannot protect the wallet directory.
 - fixed: (Zano) Count confirmations from the chain tip. The wallet status reports the daemon's block count next to a block height, and the engine took the larger of the two, so every wallet sat one block past the tip: a fresh transfer opened at "2 of 10 Confirmations" and reached confirmed a block early.
 - fixed: (Zano) Payment ids reach the recipient again under HF6. The node now rejects the request-level payment id, so a payment id memo is delivered by folding it into the destination instead: a plain address plus an 8-byte id becomes the matching integrated address on the user's behalf, an integrated destination requires the supplied id to agree with the embedded one, and an id no integrated address can encode is refused with clear guidance rather than padded or silently dropped. The payment id memo field now requires exactly 8 bytes, the fixed size of an HF6 intrinsic payment id.
