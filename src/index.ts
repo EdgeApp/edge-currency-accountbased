@@ -5,8 +5,9 @@ import type { EdgeCorePlugins } from 'edge-core-js/types'
 import { monero } from './monero/moneroInfo'
 import { makePluginMap } from './pluginMap'
 import { zano } from './zano/zanoInfo'
+import { zcash } from './zcash/zcashInfo'
 
-const plugins = makePluginMap(monero, zano)
+const plugins = makePluginMap(monero, zano, zcash)
 
 declare global {
   interface Window {
