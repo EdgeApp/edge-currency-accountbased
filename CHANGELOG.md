@@ -4,10 +4,7 @@
 
 - added: Robinhood Chain support (`robinhood`, EVM chain 4663), an Arbitrum Nitro L2 with ETH as its gas token. Transaction history comes from the chain's Blockscout instance, since Etherscan V2 does not cover this chain, and fees use the Arbitrum `NodeInterface` L1-component estimate. Built-in tokens are USDC, USDT, USDG, WBTC, WETH, CASHCAT and PONS.
 
-- added: Node Zcash native IO for CLI wallets, auto-injecting `nativeIo.zcash` from `io.path/native/zcash` via `react-native-zcash/node`.
-- added: `edge-currency-accountbased/node-zcash` `makeZcashIo` for Node, wrapping the react-native-zcash N-API addon. The React Native `zcashIo` entry is unchanged.
-- added: `edge-currency-accountbased/node-monero` `makeMoneroIo` for Node, wrapping the react-native-monero N-API addon. The React Native `rn-monero` entry is unchanged.
-- added: `edge-currency-accountbased/node-zano` `makeZanoIo` for Node, wrapping the react-native-zano N-API addon. The React Native `rn-zano` entry is unchanged.
+- added: Node Zcash/Monero/Zano native IO for CLI wallets, auto-injecting `nativeIo.*` from `io.path/native/<asset>` via `zcash-node`, `monero-node`, and `zano-node`.
 
 ## 4.90.1 (2026-08-28)
 
