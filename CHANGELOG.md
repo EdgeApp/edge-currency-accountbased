@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update chain-registry
+
 ## 4.89.0 (2026-08-25)
 
 - changed: (Zano) Update react-native-zano to ^0.5.0, which delivers payment ids per destination under HF6, starts wallets with the refresh worker postponed, and refuses to run when iOS cannot protect the wallet directory.
