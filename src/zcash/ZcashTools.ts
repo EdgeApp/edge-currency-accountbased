@@ -12,7 +12,6 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-import { Tools as ToolsType } from 'react-native-zcash'
 import { base64url } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -42,7 +41,7 @@ export class ZcashTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: ZcashNetworkInfo
-  nativeTools: typeof ToolsType
+  nativeTools: ZcashIo['Tools']
 
   constructor(env: PluginEnvironment<ZcashNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -74,14 +73,14 @@ export class ZcashTools implements EdgeCurrencyTools {
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    return await this.nativeTools.getBirthdayHeight(
+    return this.nativeTools.getBirthdayHeight(
       this.networkInfo.rpcNode.defaultHost,
       this.networkInfo.rpcNode.defaultPort
     )
   }
 
   async isValidAddress(address: string): Promise<boolean> {
-    return await this.nativeTools.isValidAddress(address)
+    return this.nativeTools.isValidAddress(address)
   }
 
   // will actually use MNEMONIC version of private key
