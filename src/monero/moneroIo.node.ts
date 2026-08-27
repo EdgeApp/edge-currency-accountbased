@@ -1,6 +1,6 @@
 import { mkdirSync } from 'fs'
-import type { WalletEventData } from 'monero-node'
-import { makeNodeMoneroModule } from 'monero-node'
+import type { WalletEventData } from 'monero-native/node'
+import { makeNodeMoneroModule } from 'monero-native/node'
 
 import type { MoneroIo } from './moneroTypes'
 
