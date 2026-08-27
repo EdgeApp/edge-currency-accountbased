@@ -1,6 +1,6 @@
 import { mkdirSync } from 'fs'
-import type { NativeZanoModule } from 'react-native-zano'
-import { makeNodeZanoModule } from 'react-native-zano/node'
+import type { NativeZanoModule } from 'zano-node'
+import { makeNodeZanoModule } from 'zano-node'
 
 export interface MakeNodeZanoIoOpts {
   documentDirectory: string
