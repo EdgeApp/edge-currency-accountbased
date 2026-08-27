@@ -117,6 +117,14 @@ export class ZanoEngine extends CurrencyEngine<
    */
   private spendPending: boolean = false
 
+  /**
+   * The wallet height at which the current catch-up episode began, or -1
+   * when the wallet is synced. The block ratio is measured against this,
+   * so it stays monotonic across the checkpoint restarts and daemon
+   * reconnects that reset the SDK's own per-session progress to zero.
+   */
+  private catchupStartHeight: number = -1
+
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
     tools: ZanoTools,
@@ -512,7 +520,19 @@ export class ZanoEngine extends CurrencyEngine<
     )
     this.updateBlockHeight(blockheight)
 
-    if (status.progress === 100 || status.wallet_state === 2) {
+    // Judge sync by heights, not by the SDK's state or progress. The
+    // wallet reports `wallet_state` "ready" from open until the refresh
+    // worker's first pass, and again between passes, so one 1-second poll
+    // landing in that window read a freshly restored wallet - weeks of
+    // blocks behind - as fully synced: the ratio latched at 1 and went
+    // silent for the whole scan, and this branch's store and checkpoint
+    // reset ran mid-scan. Heights cannot flicker. A daemon height of zero
+    // means the daemon is not connected yet, which is not "synced" either:
+    const synced =
+      daemonBlockHeight > 0 && status.current_wallet_height >= daemonBlockHeight
+
+    if (synced) {
+      this.catchupStartHeight = -1
       this.syncTracker.updateBlockRatio(
         1,
         status.current_wallet_height,
@@ -528,8 +548,22 @@ export class ZanoEngine extends CurrencyEngine<
       this.resetCatchupCheckpoint()
       return 20000
     } else {
+      // Measure the episode, not the SDK's session. `status.progress`
+      // restarts at zero on every refresh pass - after each checkpoint
+      // reopen, and on reconnects - and only measures the remaining gap,
+      // so it saw-toothed the GUI's circle backward every few minutes. The
+      // height where this episode began is stable across all of that. A
+      // resync drops the wallet below the baseline, so rebase when it does:
+      if (
+        this.catchupStartHeight < 0 ||
+        this.catchupStartHeight > status.current_wallet_height
+      ) {
+        this.catchupStartHeight = status.current_wallet_height
+      }
+      const scanned = status.current_wallet_height - this.catchupStartHeight
+      const target = daemonBlockHeight - this.catchupStartHeight
       this.syncTracker.updateBlockRatio(
-        status.progress / 100,
+        target > 0 ? scanned / target : 0,
         status.current_wallet_height,
         daemonBlockHeight
       )

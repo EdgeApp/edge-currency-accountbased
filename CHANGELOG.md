@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Zano) The sync ratio no longer reads a freshly started wallet as fully synced. The SDK reports its wallet state as "ready" from open until the refresh worker's first pass, and again between passes, so one 1-second poll landing in that window latched the ratio at 1 and silenced every later update - a restored wallet scanned for minutes while its row showed synced - and the spurious synced pass also reset the checkpoint gates and issued a store mid-scan. Sync is now judged by heights alone.
+- fixed: (Zano) The catch-up sync ratio is measured against the height where the catch-up began instead of the SDK's per-session progress, which restarts at zero on every checkpoint reopen and every reconnect and only measures the remaining gap, saw-toothing the GUI's progress circle backward every few minutes of a long sync.
 - fixed: (Zano) The history component of the sync ratio was computed upside down - total transfers over fetched, instead of fetched over total - so a wallet with more than one page of history reported ratios above 1 that shrank toward 1 while pages were still loading. The blended total could pass 1, which the GUI's progress circle treats as fully synced and hides while the fetch is still running.
 
 ## 4.90.0 (2026-08-27)
