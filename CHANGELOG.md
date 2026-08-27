@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- added: Node Zcash/Monero/Zano native IO for CLI wallets, auto-injecting `nativeIo.*` from `io.path/native/<asset>` via `zcash-node`, `monero-node`, and `zano-node`.
+- added: Node Zcash/Monero/Zano native IO for CLI wallets, auto-injecting `nativeIo.*` from `io.path/native/<asset>` via `zcash-native`, `monero-native`, and `zano-native`.
 
 ## 4.90.1 (2026-08-28)
 

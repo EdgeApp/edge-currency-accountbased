@@ -201,9 +201,9 @@
     "react-native-zcash": "^0.13.2"
   },
   "optionalDependencies": {
-    "monero-node": "0.1.0",
-    "zano-node": "0.1.0",
-    "zcash-node": "0.1.0"
+    "monero-native": "0.5.0",
+    "zano-native": "0.5.0",
+    "zcash-native": "0.13.3"
   },
   "overrides": {
     "@greymass/eosio": "^0.6.8",
