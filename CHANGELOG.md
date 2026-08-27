@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.90.0 (2026-08-27)
+
 - changed: Update chain-registry
 
 ## 4.89.0 (2026-08-25)
