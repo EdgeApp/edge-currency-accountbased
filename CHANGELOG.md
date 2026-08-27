@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (Zano) Disable catch-up checkpointing on Android, where the native library's close-during-scan lock inversion deadlocks the wallet subsystem permanently -- the freeze QA hit about seven minutes after login. Android trades mid-catch-up persistence for never deadlocking until the SDK fix lands; iOS checkpointing is unchanged.
+- fixed: (Zano) Run at most one checkpoint close/reopen cycle at a time across wallets. Every wallet baselines its checkpoint clock at login, so first cycles all fired together; a deferred wallet retries on its next tick.
+
 ## 4.89.0 (2026-08-25)
 
 - changed: (Zano) Update react-native-zano to ^0.5.0, which delivers payment ids per destination under HF6, starts wallets with the refresh worker postponed, and refuses to run when iOS cannot protect the wallet directory.

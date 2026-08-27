@@ -116,6 +116,36 @@ export class ZanoEngine extends CurrencyEngine<
    * defers while this is set.
    */
   private spendPending: boolean = false
+  /**
+   * True on Android, where catch-up checkpointing is disabled outright.
+   *
+   * The native `close_wallet` holds the manager's global wallets lock
+   * exclusively while it waits for the per-wallet lock, and the refresh
+   * worker -- which holds that per-wallet lock for the whole scan -- takes
+   * the same global lock shared down its own callstack (the SDK warns about
+   * exactly this ordering at wallets_manager.cpp:2159). Whether that
+   * becomes a deadlock depends on the platform's reader-writer lock policy:
+   * a waiting writer blocks new readers on Android's implementation but not
+   * on iOS's, so an identical close-during-scan deadlocks Zano permanently
+   * on Android devices (reproduced twice at first checkpoint collision;
+   * matches QA's freeze at ~7 minutes) while iOS has run hundreds of
+   * checkpoint cycles clean. Until the SDK reorders close_wallet, Android
+   * trades mid-catch-up persistence for never deadlocking: a scan killed
+   * partway re-pays the whole catch-up, exactly the pre-checkpoint cost.
+   * Detected by the native module's document directory, which only Android
+   * roots under /data.
+   */
+  private readonly checkpointUnsafe: boolean
+  /**
+   * True while any wallet's checkpoint close/reopen cycle is in flight,
+   * shared across every Zano engine in this context. Overlapping cycles
+   * multiply the close-during-scan windows -- every wallet baselines its
+   * checkpoint clock at login, so without this gate all wallets fire their
+   * first cycle nearly simultaneously. Deliberately never cleared if a
+   * cycle hangs: piling further closes into a stuck wallets_manager only
+   * stacks more blocked native calls.
+   */
+  private static checkpointInFlight: boolean = false
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -125,6 +155,12 @@ export class ZanoEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts, makeWeightedSyncTracker)
     this.networkInfo = env.networkInfo
+
+    const zanoModule = env.nativeIo?.zano as
+      | { documentDirectory?: string }
+      | undefined
+    this.checkpointUnsafe =
+      zanoModule?.documentDirectory?.startsWith('/data') ?? false
 
     this.unlockedBalanceMap = new Map()
 
@@ -566,6 +602,7 @@ export class ZanoEngine extends CurrencyEngine<
       this.lastCheckpointHeight = walletHeight
       return
     }
+    if (this.checkpointUnsafe) return
     if (now - this.lastCheckpointTime < CATCHUP_CHECKPOINT_INTERVAL_MS) return
     if (walletHeight <= this.lastCheckpointHeight) return
     // A broadcast in flight holds the native id it already resolved, and
@@ -573,6 +610,10 @@ export class ZanoEngine extends CurrencyEngine<
     // without touching the gates, so the checkpoint fires on the first tick
     // after the spend clears rather than waiting out another interval:
     if (this.spendPending) return
+    // One cycle at a time across all wallets; a deferred wallet retries on
+    // its next tick rather than waiting out a fresh interval:
+    if (ZanoEngine.checkpointInFlight) return
+    ZanoEngine.checkpointInFlight = true
 
     this.log(
       `checkpointCatchup: persisting catch-up progress at height ${walletHeight}`
@@ -580,6 +621,7 @@ export class ZanoEngine extends CurrencyEngine<
     const generation = this.storeGeneration
     this.nativeId.stop()
     const nativeId = await this.nativeId.get()
+    ZanoEngine.checkpointInFlight = false
     // A resync between the stop and the reopen reset the gates for a wallet
     // that no longer holds this height. Writing them back would gate the
     // rebuilt wallet at a tip it has not re-reached, disabling checkpoints

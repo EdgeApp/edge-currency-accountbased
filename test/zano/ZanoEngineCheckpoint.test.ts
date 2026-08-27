@@ -13,8 +13,12 @@ interface TestEngine {
   restarts: () => number
 }
 
-async function makeEngine(): Promise<TestEngine> {
-  const engine = await makeFakeZanoEngine()
+async function makeEngine(
+  opts: { nativeIo?: unknown } = {}
+): Promise<TestEngine> {
+  const engine = await makeFakeZanoEngine(opts)
+  // The single-flight gate is shared across engines; isolate each test:
+  ;(ZanoEngine as any).checkpointInFlight = false
 
   // A recording lifecycle stub: `stop` then `get` is one checkpoint cycle.
   let stops = 0
@@ -145,6 +149,54 @@ describe('ZanoEngine.checkpointCatchup', () => {
       ;(t.engine as any).resetCatchupCheckpoint()
       await t.checkpoint(9000)
       assert.equal(t.restarts(), 0)
+    })
+  })
+
+  it('never checkpoints when the native module is Android', async () => {
+    // Android's reader-writer lock policy turns the SDK's close-during-scan
+    // lock inversion into a permanent deadlock, so catch-up checkpointing
+    // is disabled there until the SDK reorders close_wallet.
+    await withClock(async advance => {
+      const t = await makeEngine({
+        nativeIo: {
+          zano: { documentDirectory: '/data/user/0/co.edgesecure.app/files' }
+        }
+      })
+      await t.checkpoint(100)
+      advance(INTERVAL_MS + 1000)
+      await t.checkpoint(5000)
+      advance(INTERVAL_MS + 1000)
+      await t.checkpoint(9000)
+      assert.equal(t.restarts(), 0)
+    })
+  })
+
+  it('runs one checkpoint cycle at a time across engines', async () => {
+    // Every wallet baselines its clock at login, so first cycles land
+    // together. While one engine's reopen is still pending, another
+    // engine's due checkpoint defers -- and retries on its next tick once
+    // the gate clears, without waiting out a fresh interval.
+    await withClock(async advance => {
+      const a = await makeEngine()
+      const b = await makeEngine()
+      // Make A's reopen hang, holding the shared gate:
+      let releaseA: (value: number) => void = () => {}
+      ;(a.engine as any).nativeId.get = async () =>
+        await new Promise<number>(resolve => {
+          releaseA = resolve
+        })
+      await a.checkpoint(100)
+      await b.checkpoint(100)
+      advance(INTERVAL_MS + 1000)
+      const pending = a.checkpoint(5000) // fires, hangs in reopen
+      await b.checkpoint(5000) // due, but deferred by the gate
+      assert.equal(b.restarts(), 0)
+
+      releaseA(0)
+      await pending
+      await b.checkpoint(6000) // next tick: gate clear, fires immediately
+      assert.equal(b.restarts(), 1)
+      assert.equal(a.restarts(), 1)
     })
   })
 

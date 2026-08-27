@@ -24,12 +24,18 @@ export const FAKE_ZANO_ADDRESS = 'ZxTestAddress'
  */
 export async function makeFakeZanoEngine(
   opts: {
+    /** Injected as `env.nativeIo`, e.g. to model a platform's native module. */
+    nativeIo?: unknown
     /** Receives every transaction event the engine hands to the core. */
     onTransactions?: (events: EdgeTransactionEvent[]) => void
     tools?: ZanoTools
   } = {}
 ): Promise<ZanoEngine> {
-  const { onTransactions = () => {}, tools = {} as unknown as ZanoTools } = opts
+  const {
+    nativeIo,
+    onTransactions = () => {},
+    tools = {} as unknown as ZanoTools
+  } = opts
   const fakeIo = makeFakeIo()
 
   const callbacks: EdgeCurrencyEngineCallbacks = {
@@ -73,6 +79,7 @@ export async function makeFakeZanoEngine(
     currencyInfo,
     io: fakeIo,
     log: fakeLog,
+    nativeIo,
     networkInfo
   } as unknown as PluginEnvironment<ZanoNetworkInfo>
 
