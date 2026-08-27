@@ -1,5 +1,5 @@
 import { mkdirSync } from 'fs'
-import { makeNodeZcashModule } from 'react-native-zcash/node'
+import { makeNodeZcashModule } from 'zcash-node'
 
 import { type ZcashIo, wrapZcashNative } from './zcashIo'
 
