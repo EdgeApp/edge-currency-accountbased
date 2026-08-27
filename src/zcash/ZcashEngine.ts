@@ -10,10 +10,13 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import type {
   CreateTransferOpts,
+  SpendFailure,
+  SpendSuccess,
   StatusEvent,
   Transaction
 } from 'react-native-zcash'
@@ -153,7 +156,7 @@ export class ZcashEngine extends CurrencyEngine<
           isSynced: true,
           orchardAvailableZatoshi: this.balances.orchardAvailableZatoshi,
           networkBlockHeight: this.walletLocalData.blockHeight,
-          activationHeight: this.ironwoodActivationHeight
+          activationHeight: this.ironwoodActivationHeight ?? null
         })
       }
     }
@@ -304,13 +307,13 @@ export class ZcashEngine extends CurrencyEngine<
 
     // Special case for shielding txs
     let metadata: EdgeMetadata | undefined
-    if (isShielding) {
+    if (isShielding === true) {
       metadata = { notes: 'Shielding' }
       netNativeAmount = `-${networkFee}`
     }
 
     let confirmations: EdgeTransaction['confirmations'] | undefined
-    if (isExpired) {
+    if (isExpired === true) {
       confirmations = 'failed'
     }
 
@@ -616,8 +619,31 @@ export class ZcashEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // Transaction is signed and broadcast at the same time
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const { proposalBase64, ironwoodMigration } =
+      getOtherParams(edgeTransaction)
+    // Ironwood migration stays fused in broadcastTx: zingolib's
+    // quick_immediate_migration has no stored-proposal sign/broadcast split.
+    if (ironwoodMigration === true) {
+      return edgeTransaction
+    }
+    if (proposalBase64 == null) {
+      throw new Error('Missing proposalBase64 from makeSpend')
+    }
+    const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(privateKeys)
+    const txParams: CreateTransferOpts = {
+      proposalBase64,
+      mnemonicSeed: zcashPrivateKeys.mnemonic
+    }
+    const synchronizer = await this.synchronizerPromise
+    const result = requireSpendSuccess(
+      await synchronizer.createTransfer(txParams)
+    )
+    edgeTransaction.txid = result.txId
+    edgeTransaction.signedTx = result.raw
     return edgeTransaction
   }
 
@@ -625,26 +651,33 @@ export class ZcashEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
-    const { proposalBase64 } = getOtherParams(edgeTransaction)
-    if (proposalBase64 == null) {
-      throw new Error('Missing proposalBase64 from makeSpend')
-    }
-    const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(
-      opts?.privateKeys
-    )
-
-    const txParams: CreateTransferOpts = {
-      proposalBase64,
-      mnemonicSeed: zcashPrivateKeys.mnemonic
-    }
+    const { proposalBase64, ironwoodMigration } =
+      getOtherParams(edgeTransaction)
 
     try {
       const synchronizer = await this.synchronizerPromise
-      const txid = await synchronizer.createTransfer(txParams)
-      if (typeof txid !== 'string') {
-        throw new Error(txid.errorMessage)
+      if (ironwoodMigration === true) {
+        if (proposalBase64 == null) {
+          throw new Error('Missing proposalBase64 from makeSpend')
+        }
+        const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(
+          opts?.privateKeys
+        )
+        const result = requireSpendSuccess(
+          await synchronizer.createTransfer({
+            proposalBase64,
+            mnemonicSeed: zcashPrivateKeys.mnemonic
+          })
+        )
+        edgeTransaction.txid = result.txId
+      } else {
+        if (edgeTransaction.txid === '' || edgeTransaction.signedTx === '') {
+          throw new Error(
+            'Invalid transaction: missing signed transaction data'
+          )
+        }
+        await synchronizer.broadcastTransfer(edgeTransaction.txid)
       }
-      edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
 
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
@@ -734,4 +767,17 @@ const extractFeeFromProposeTransferErrorString = (str: string): string => {
   const balance = parseInt(matches[0]).toString()
   const fee = sub(parseInt(matches[1]).toString(), balance)
   return fee
+}
+
+function requireSpendSuccess(
+  result: SpendSuccess | SpendFailure
+): SpendSuccess {
+  if ('txId' in result && result.txId !== '') {
+    return result
+  }
+  const message =
+    'errorMessage' in result && result.errorMessage != null
+      ? result.errorMessage
+      : 'createTransfer failed'
+  throw new Error(message)
 }
