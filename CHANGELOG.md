@@ -54,7 +54,8 @@
 - fixed: (HyperEVM) Tokens are detected automatically
 - fixed: (EVM) Blockscout "Too many requests" replies are recognized as rate limits
 
-- added: Node package entry (`main` → `lib/index.node.js`) that statically wires Monero and Zano native IO (`react-native-monero/node`, `react-native-zano/node`), storing wallet files under `io.path/native/{monero,zano}`.
+- added: Node Zcash native IO for CLI wallets, auto-injecting `nativeIo.zcash` from `io.path/native/zcash` via `react-native-zcash/node`.
+- added: `edge-currency-accountbased/node-zcash` `makeZcashIo` for Node, wrapping the react-native-zcash N-API addon. The React Native `zcashIo` entry is unchanged.
 - added: `edge-currency-accountbased/node-monero` `makeMoneroIo` for Node, wrapping the react-native-monero N-API addon. The React Native `rn-monero` entry is unchanged.
 - added: `edge-currency-accountbased/node-zano` `makeZanoIo` for Node, wrapping the react-native-zano N-API addon. The React Native `rn-zano` entry is unchanged.
 
