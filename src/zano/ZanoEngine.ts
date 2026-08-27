@@ -367,7 +367,7 @@ export class ZanoEngine extends CurrencyEngine<
         break
       }
 
-      this.syncTracker.updateHistoryRatio(totalTransfers / lastItemIndex)
+      this.syncTracker.updateHistoryRatio(lastItemIndex / totalTransfers)
       offset = lastItemIndex
     }
 

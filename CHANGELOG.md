@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Zano) The history component of the sync ratio was computed upside down - total transfers over fetched, instead of fetched over total - so a wallet with more than one page of history reported ratios above 1 that shrank toward 1 while pages were still loading. The blended total could pass 1, which the GUI's progress circle treats as fully synced and hides while the fetch is still running.
+
 ## 4.90.0 (2026-08-27)
 
 - changed: Update chain-registry

@@ -273,4 +273,36 @@ describe('ZanoEngine.queryTransactions', function () {
     assert.isDefined(event)
     assert.isTrue(event?.isNew)
   })
+
+  it('reports history progress as a climbing fraction of the total', async function () {
+    // The regression this guards: the ratio was computed upside down,
+    // `total / fetched`, so a multi-page history reported values above 1 that
+    // shrank toward 1. An unclamped ratio above 1 reads as fully synced (and
+    // pushes the blended total past 1) while pages are still being fetched.
+    const wallet: FakeWallet = {
+      history: Array.from({ length: 250 }, (_, index) =>
+        makeTransfer(`c${index}`, 100 + index)
+      ),
+      unconfirmed: []
+    }
+    const { engine, queryTransactions } = await makeEngine(wallet, 0)
+
+    const ratios: number[] = []
+    ;(engine as any).syncTracker.updateHistoryRatio = (ratio: number) => {
+      ratios.push(ratio)
+    }
+
+    await queryTransactions()
+
+    // Two mid-fetch reports (after pages one and two), then the final 1:
+    assert.equal(ratios[ratios.length - 1], 1)
+    for (const ratio of ratios) {
+      assert.isAtMost(ratio, 1, `history ratio above 1: ${ratio}`)
+      assert.isAbove(ratio, 0)
+    }
+    for (let i = 1; i < ratios.length; ++i) {
+      assert.isAtLeast(ratios[i], ratios[i - 1], 'history ratio went backward')
+    }
+    assert.isAtLeast(ratios.length, 3)
+  })
 })
