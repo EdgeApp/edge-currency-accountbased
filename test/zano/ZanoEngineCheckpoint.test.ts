@@ -142,7 +142,7 @@ describe('ZanoEngine.checkpointCatchup', () => {
       const t = await makeEngine()
       await t.checkpoint(100)
       advance(INTERVAL_MS + 1000)
-      ;(t.engine as any).resetCatchupCheckpoint()
+      ;(t.engine as any).resetCatchupState()
       await t.checkpoint(9000)
       assert.equal(t.restarts(), 0)
     })

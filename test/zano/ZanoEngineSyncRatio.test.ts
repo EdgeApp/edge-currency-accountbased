@@ -134,17 +134,72 @@ describe('ZanoEngine sync ratio', () => {
     assert.deepEqual(t.ratios[t.ratios.length - 1], [0, 5000, 5600])
   })
 
-  it('rebases the episode when a resync drops the wallet height', async () => {
+  it('measures a new wallet from its birthday, not from height zero', async () => {
+    // A restored wallet reports height ~0 until its first pull skips
+    // straight to the account birthday, and the SDK's session progress
+    // stays 0 through that skip because its own meter starts at the
+    // birthday too. The work to be done is birthday-to-tip: with a
+    // birthday at 75000 and the tip at 100000, reaching 80000 is 20% --
+    // not the ~75% a zero baseline would show the moment the skip lands:
     const t = await makeEngine()
 
-    await t.tick(catchingUp(4000, 5001, 80))
-    // Resync: the rebuilt wallet restarts far below the old baseline.
-    await t.tick(catchingUp(100, 5001, 0))
-    await t.tick(catchingUp(590, 5001, 10))
+    await t.tick(catchingUp(1, 100001, 0, 2))
+    await t.tick(catchingUp(75000, 100001, 0))
+    await t.tick(catchingUp(80000, 100001, 20))
+    await t.tick(catchingUp(87500, 100001, 50))
+
+    const values = t.ratios.map(([ratio]) => ratio)
+    assert.deepEqual(values, [0, 0, 0.2, 0.5])
+  })
+
+  it('holds the baseline through a reorg-sized dip', async () => {
+    // A checkpoint reopen re-fetches a block chunk, and a reorg detaches up
+    // to a week of blocks; the SDK re-scans both in place. Rebasing on
+    // those would restart the measurement, and clearing the freeze would
+    // report zero until the chase caught up again - the sawtooth this
+    // baseline exists to remove:
+    const t = await makeEngine()
+
+    await t.tick(catchingUp(50000, 100001, 0))
+    await t.tick(catchingUp(75000, 100001, 50))
+    // The reopened wallet reports a slightly lower height:
+    await t.tick(catchingUp(74900, 100001, 0))
+    await t.tick(catchingUp(80000, 100001, 10))
+
+    const values = t.ratios.map(([ratio]) => ratio)
+    assert.equal(values[1], 0.5)
+    assert.isAbove(values[2], 0.49)
+    assert.equal(values[3], 0.6)
+  })
+
+  it('never reports a negative ratio', async () => {
+    // Non-negativity must not rest on the rebase check running first:
+    const t = await makeEngine()
+
+    await t.tick(catchingUp(50000, 100001, 0))
+    await t.tick(catchingUp(60000, 100001, 20))
+    // A reorg deeper than the episode's own progress:
+    await t.tick(catchingUp(49000, 100001, 0))
+
+    assert.equal(t.ratios[t.ratios.length - 1][0], 0)
+  })
+
+  it('rebases the episode when a resync drops the wallet height', async () => {
+    // A rebuilt wallet restarts at genesis and skips to its birthday, far
+    // below any baseline the previous episode held, so it gets a fresh
+    // episode - including a fresh chase, so the skip is not counted as
+    // work done:
+    const t = await makeEngine()
+
+    await t.tick(catchingUp(80000, 100001, 80))
+    await t.tick(catchingUp(1, 100001, 0))
+    await t.tick(catchingUp(50000, 100001, 0))
+    await t.tick(catchingUp(55000, 100001, 10))
 
     const values = t.ratios.map(([ratio]) => ratio)
     assert.equal(values[1], 0)
-    assert.equal(values[2], 0.1)
+    assert.equal(values[2], 0)
+    assert.equal(values[3], 0.1)
   })
 
   it('treats a disconnected daemon as not synced', async () => {

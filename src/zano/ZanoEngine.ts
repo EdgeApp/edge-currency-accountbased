@@ -67,6 +67,16 @@ const WALLET_STORE_INTERVAL_MS = 10 * 60 * 1000
  */
 const CATCHUP_CHECKPOINT_INTERVAL_MS = 5 * 60 * 1000
 
+/**
+ * How far the wallet height may fall and still belong to the same catch-up
+ * episode. The SDK re-scans a reorg in place up to a week of blocks deep
+ * (`WALLET_CONCISE_MODE_MAX_REORG_BLOCKS`, at Zano's one-minute target);
+ * past that it abandons its chain and rebuilds the wallet, which is a new
+ * episode measured from wherever the rebuild lands. A checkpoint reopen
+ * re-fetches at most one block chunk, so it stays far inside this.
+ */
+const CATCHUP_EPISODE_MAX_DIP = 7 * 24 * 60
+
 /** The wallet RPC answers a successful store with a result object. */
 const asStoreResponse = asObject({ result: asObject({}) })
 
@@ -122,8 +132,23 @@ export class ZanoEngine extends CurrencyEngine<
    * when the wallet is synced. The block ratio is measured against this,
    * so it stays monotonic across the checkpoint restarts and daemon
    * reconnects that reset the SDK's own per-session progress to zero.
+   *
+   * Until `catchupBaselineFrozen` is set, this chases the wallet height
+   * instead of measuring from it: a freshly restored wallet reports height
+   * ~0 until its first pull skips straight to the account birthday, and a
+   * baseline caught before that skip would count the skip itself as most
+   * of the work. See the catch-up branch of `syncNetwork`.
    */
   private catchupStartHeight: number = -1
+
+  /**
+   * Whether `catchupStartHeight` has stopped chasing the wallet height for
+   * this episode. Set on the first tick where the SDK reports nonzero
+   * session progress - real scanning, as opposed to the birthday skip,
+   * which happens entirely inside "progress 0" territory because the
+   * SDK's own meter starts at the birthday too.
+   */
+  private catchupBaselineFrozen: boolean = false
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -532,7 +557,7 @@ export class ZanoEngine extends CurrencyEngine<
       daemonBlockHeight > 0 && status.current_wallet_height >= daemonBlockHeight
 
     if (synced) {
-      this.catchupStartHeight = -1
+      this.resetCatchupState()
       this.syncTracker.updateBlockRatio(
         1,
         status.current_wallet_height,
@@ -545,25 +570,52 @@ export class ZanoEngine extends CurrencyEngine<
       await this.queryBalance()
       await this.queryTransactions()
       await this.storeWalletFile(nativeId, status.current_wallet_height)
-      this.resetCatchupCheckpoint()
       return 20000
     } else {
       // Measure the episode, not the SDK's session. `status.progress`
       // restarts at zero on every refresh pass - after each checkpoint
       // reopen, and on reconnects - and only measures the remaining gap,
       // so it saw-toothed the GUI's circle backward every few minutes. The
-      // height where this episode began is stable across all of that. A
-      // resync drops the wallet below the baseline, so rebase when it does:
+      // height where this episode began is stable across all of that. Only
+      // a wallet that restarted from scratch begins a new episode; a
+      // shallower dip is a reorg the SDK re-scans in place, and rebasing on
+      // it would restart the measurement - and, by clearing the freeze
+      // below, report zero until the chase caught up again:
       if (
         this.catchupStartHeight < 0 ||
-        this.catchupStartHeight > status.current_wallet_height
+        status.current_wallet_height <
+          this.catchupStartHeight - CATCHUP_EPISODE_MAX_DIP
       ) {
         this.catchupStartHeight = status.current_wallet_height
+        this.catchupBaselineFrozen = false
+      }
+      // The ratio must measure only the work behind the wallet's birthday:
+      // a new wallet with a birthday at 75000 against a tip of 100000 is
+      // 0% done, not 75%, and reaching 80000 is 20%. The wallet reports
+      // height ~0 until its first pull jumps to the birthday, so chase the
+      // height upward while the SDK's session progress reads zero - the
+      // skip happens entirely in that window, since the SDK's own meter
+      // starts at the birthday too - and freeze the baseline at the first
+      // sign of real scanning. Session progress is an integer percent, so
+      // at most 1% of the gap is absorbed before the freeze. Checkpoint
+      // reopens reset session progress to zero, but the frozen flag holds
+      // across them, since their re-fetched chunk cannot dip the height far
+      // enough to start a new episode above:
+      if (!this.catchupBaselineFrozen) {
+        if (status.progress > 0) {
+          this.catchupBaselineFrozen = true
+        } else if (status.current_wallet_height > this.catchupStartHeight) {
+          this.catchupStartHeight = status.current_wallet_height
+        }
       }
       const scanned = status.current_wallet_height - this.catchupStartHeight
       const target = daemonBlockHeight - this.catchupStartHeight
+      // Clamp so a reorg that dips below the baseline cannot feed a
+      // negative ratio into the tracker, rather than resting on the rebase
+      // check above running first, as `MoneroEngine` does for the same
+      // reason:
       this.syncTracker.updateBlockRatio(
-        target > 0 ? scanned / target : 0,
+        target > 0 ? Math.max(0, scanned / target) : 0,
         status.current_wallet_height,
         daemonBlockHeight
       )
@@ -629,14 +681,20 @@ export class ZanoEngine extends CurrencyEngine<
   }
 
   /**
-   * Forgets the catch-up checkpoint gates. Called when the wallet reaches
-   * synced, so the next catch-up episode -- after a long background gap, or
-   * a burst of blocks -- baselines fresh instead of firing a restart on its
-   * first tick because the gates still hold a stale time and height.
+   * Forgets everything scoped to one catch-up episode: the checkpoint
+   * gates, so the next episode - after a long background gap, or a burst
+   * of blocks - does not fire a restart on its first tick because the
+   * gates still hold a stale time and height, and the ratio baseline, so
+   * it measures the next episode's own work. Called when the wallet
+   * reaches synced and when a resync throws its history away; keeping both
+   * halves here means a new field cannot be added to one caller and
+   * forgotten in the other.
    */
-  private resetCatchupCheckpoint(): void {
+  private resetCatchupState(): void {
     this.lastCheckpointTime = 0
     this.lastCheckpointHeight = 0
+    this.catchupStartHeight = -1
+    this.catchupBaselineFrozen = false
   }
 
   /**
@@ -693,7 +751,7 @@ export class ZanoEngine extends CurrencyEngine<
     // re-reached tip, and a kill in that window re-pays the full rescan.
     this.lastStoreTime = 0
     this.lastStoreHeight = 0
-    this.resetCatchupCheckpoint()
+    this.resetCatchupState()
     this.storeGeneration += 1
     this.nativeId.stop()
     this.unlockedBalanceMap.clear()
