@@ -404,7 +404,7 @@ export class ZanoEngine extends CurrencyEngine<
       offset = lastItemIndex
     }
 
-    // Sweep the mempool last. `get_recent_txs_and_info2` prepends the
+    // Sweep the mempool last. `get_recent_txs_and_info3` prepends the
     // wallet's unconfirmed transfers only when the offset is zero, so once a
     // wallet has any confirmed history the paged catch-up above can never
     // see a transaction before it is mined: an incoming transfer stays
@@ -428,32 +428,31 @@ export class ZanoEngine extends CurrencyEngine<
   }
 
   processTransaction = (tx: RecentTransaction): void => {
-    const { comment, fee, payment_id: paymentId } = tx
+    const { comment, fee } = tx
 
     const memos: EdgeMemo[] = []
-    if (comment != null) {
+    if (comment != null && comment !== '') {
       memos.push({
-        memoName: 'Comment',
+        memoName: 'comment',
         type: 'text',
         value: comment
       })
     }
-    if (paymentId != null) {
-      memos.push({
-        memoName: 'Payment ID',
-        type: 'hex',
-        value: paymentId
-      })
-    }
 
-    // Use subtransfers as the primary source for amounts. The Zano V2
-    // API (get_recent_txs_and_info2) documents subtransfers as the
-    // "essential part of transfer entry" while employed_entries can be
-    // empty, especially for emit/mint operations like BTCx bridging.
+    // Amounts come grouped by intrinsic payment id and then by asset --
+    // the API documents the groups as the essential part of the entry --
+    // while employed_entries can be empty, especially for emit/mint
+    // operations like BTCx bridging. The empty-string id groups a
+    // transaction's id-less amounts, which includes a sender's own spent
+    // inputs and change, so the ids seen here are those delivered TO this
+    // wallet - a sent transfer's recipient ids never appear. Sends keep
+    // theirs through the carry-forward below instead.
     const nativeAmountMap = new Map<string, string>()
-    const subtransfers = tx.subtransfers ?? []
-    if (subtransfers.length > 0) {
-      for (const transfer of subtransfers) {
+    const paymentIds = new Set<string>()
+    const groups = tx.subtransfers_by_pid ?? []
+    for (const group of groups) {
+      if (group.payment_id !== '') paymentIds.add(group.payment_id)
+      for (const transfer of group.subtransfers) {
         const { asset_id: assetId, amount } = transfer
         const currentAmount = nativeAmountMap.get(assetId) ?? '0'
         if (transfer.is_income) {
@@ -462,7 +461,15 @@ export class ZanoEngine extends CurrencyEngine<
           nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
         }
       }
-    } else {
+    }
+    for (const paymentId of paymentIds) {
+      memos.push({
+        memoName: 'paymentId',
+        type: 'hex',
+        value: paymentId
+      })
+    }
+    if (nativeAmountMap.size === 0) {
       // Fallback to employed_entries for backward compatibility
       for (const entry of tx.employed_entries.receive ?? []) {
         const { asset_id: assetId, amount } = entry
@@ -503,12 +510,23 @@ export class ZanoEngine extends CurrencyEngine<
         ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
       }
 
+      // A sent transfer's payment id exists only in the record saved at
+      // broadcast: the history entry cannot carry it, since the wallet's
+      // own balance changes all land in the empty-id group. addTransaction
+      // replaces the stored record wholesale on update, so carry the saved
+      // memos forward rather than letting the rebuild erase them:
+      let txMemos = memos
+      if (isSend && paymentIds.size === 0) {
+        const saved = this.findSavedMemos(tokenId, tx.tx_hash)
+        if (saved != null) txMemos = saved
+      }
+
       const edgeTransaction: EdgeTransaction = {
         blockHeight: tx.height,
         currencyCode,
         date: tx.timestamp,
         isSend,
-        memos,
+        memos: txMemos,
         nativeAmount,
         networkFee,
         networkFees,
@@ -522,6 +540,22 @@ export class ZanoEngine extends CurrencyEngine<
 
       this.addTransaction(tokenId, edgeTransaction)
     }
+  }
+
+  /**
+   * The memos of the already-stored copy of a transaction, or undefined
+   * when it is unknown or memo-less. Lets a history rebuild keep what only
+   * the broadcast-time save knew.
+   */
+  private findSavedMemos(
+    tokenId: EdgeTokenId,
+    txid: string
+  ): EdgeMemo[] | undefined {
+    const index = this.findTransaction(tokenId, txid.toLowerCase())
+    if (index < 0) return undefined
+    const memos = this.transactionList[tokenId ?? ''][index]?.memos
+    if (memos == null || memos.length === 0) return undefined
+    return memos
   }
 
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
