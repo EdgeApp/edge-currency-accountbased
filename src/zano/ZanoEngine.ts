@@ -67,6 +67,16 @@ const WALLET_STORE_INTERVAL_MS = 10 * 60 * 1000
  */
 const CATCHUP_CHECKPOINT_INTERVAL_MS = 5 * 60 * 1000
 
+/**
+ * How far the wallet height may fall and still belong to the same catch-up
+ * episode. The SDK re-scans a reorg in place up to a week of blocks deep
+ * (`WALLET_CONCISE_MODE_MAX_REORG_BLOCKS`, at Zano's one-minute target);
+ * past that it abandons its chain and rebuilds the wallet, which is a new
+ * episode measured from wherever the rebuild lands. A checkpoint reopen
+ * re-fetches at most one block chunk, so it stays far inside this.
+ */
+const CATCHUP_EPISODE_MAX_DIP = 7 * 24 * 60
+
 /** The wallet RPC answers a successful store with a result object. */
 const asStoreResponse = asObject({ result: asObject({}) })
 
@@ -116,6 +126,29 @@ export class ZanoEngine extends CurrencyEngine<
    * defers while this is set.
    */
   private spendPending: boolean = false
+
+  /**
+   * The wallet height at which the current catch-up episode began, or -1
+   * when the wallet is synced. The block ratio is measured against this,
+   * so it stays monotonic across the checkpoint restarts and daemon
+   * reconnects that reset the SDK's own per-session progress to zero.
+   *
+   * Until `catchupBaselineFrozen` is set, this chases the wallet height
+   * instead of measuring from it: a freshly restored wallet reports height
+   * ~0 until its first pull skips straight to the account birthday, and a
+   * baseline caught before that skip would count the skip itself as most
+   * of the work. See the catch-up branch of `syncNetwork`.
+   */
+  private catchupStartHeight: number = -1
+
+  /**
+   * Whether `catchupStartHeight` has stopped chasing the wallet height for
+   * this episode. Set on the first tick where the SDK reports nonzero
+   * session progress - real scanning, as opposed to the birthday skip,
+   * which happens entirely inside "progress 0" territory because the
+   * SDK's own meter starts at the birthday too.
+   */
+  private catchupBaselineFrozen: boolean = false
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -367,11 +400,11 @@ export class ZanoEngine extends CurrencyEngine<
         break
       }
 
-      this.syncTracker.updateHistoryRatio(totalTransfers / lastItemIndex)
+      this.syncTracker.updateHistoryRatio(lastItemIndex / totalTransfers)
       offset = lastItemIndex
     }
 
-    // Sweep the mempool last. `get_recent_txs_and_info2` prepends the
+    // Sweep the mempool last. `get_recent_txs_and_info3` prepends the
     // wallet's unconfirmed transfers only when the offset is zero, so once a
     // wallet has any confirmed history the paged catch-up above can never
     // see a transaction before it is mined: an incoming transfer stays
@@ -395,32 +428,31 @@ export class ZanoEngine extends CurrencyEngine<
   }
 
   processTransaction = (tx: RecentTransaction): void => {
-    const { comment, fee, payment_id: paymentId } = tx
+    const { comment, fee } = tx
 
     const memos: EdgeMemo[] = []
-    if (comment != null) {
+    if (comment != null && comment !== '') {
       memos.push({
-        memoName: 'Comment',
+        memoName: 'comment',
         type: 'text',
         value: comment
       })
     }
-    if (paymentId != null) {
-      memos.push({
-        memoName: 'Payment ID',
-        type: 'hex',
-        value: paymentId
-      })
-    }
 
-    // Use subtransfers as the primary source for amounts. The Zano V2
-    // API (get_recent_txs_and_info2) documents subtransfers as the
-    // "essential part of transfer entry" while employed_entries can be
-    // empty, especially for emit/mint operations like BTCx bridging.
+    // Amounts come grouped by intrinsic payment id and then by asset --
+    // the API documents the groups as the essential part of the entry --
+    // while employed_entries can be empty, especially for emit/mint
+    // operations like BTCx bridging. The empty-string id groups a
+    // transaction's id-less amounts, which includes a sender's own spent
+    // inputs and change, so the ids seen here are those delivered TO this
+    // wallet - a sent transfer's recipient ids never appear. Sends keep
+    // theirs through the carry-forward below instead.
     const nativeAmountMap = new Map<string, string>()
-    const subtransfers = tx.subtransfers ?? []
-    if (subtransfers.length > 0) {
-      for (const transfer of subtransfers) {
+    const paymentIds = new Set<string>()
+    const groups = tx.subtransfers_by_pid ?? []
+    for (const group of groups) {
+      if (group.payment_id !== '') paymentIds.add(group.payment_id)
+      for (const transfer of group.subtransfers) {
         const { asset_id: assetId, amount } = transfer
         const currentAmount = nativeAmountMap.get(assetId) ?? '0'
         if (transfer.is_income) {
@@ -429,7 +461,15 @@ export class ZanoEngine extends CurrencyEngine<
           nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
         }
       }
-    } else {
+    }
+    for (const paymentId of paymentIds) {
+      memos.push({
+        memoName: 'paymentId',
+        type: 'hex',
+        value: paymentId
+      })
+    }
+    if (nativeAmountMap.size === 0) {
       // Fallback to employed_entries for backward compatibility
       for (const entry of tx.employed_entries.receive ?? []) {
         const { asset_id: assetId, amount } = entry
@@ -470,12 +510,23 @@ export class ZanoEngine extends CurrencyEngine<
         ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
       }
 
+      // A sent transfer's payment id exists only in the record saved at
+      // broadcast: the history entry cannot carry it, since the wallet's
+      // own balance changes all land in the empty-id group. addTransaction
+      // replaces the stored record wholesale on update, so carry the saved
+      // memos forward rather than letting the rebuild erase them:
+      let txMemos = memos
+      if (isSend && paymentIds.size === 0) {
+        const saved = this.findSavedMemos(tokenId, tx.tx_hash)
+        if (saved != null) txMemos = saved
+      }
+
       const edgeTransaction: EdgeTransaction = {
         blockHeight: tx.height,
         currencyCode,
         date: tx.timestamp,
         isSend,
-        memos,
+        memos: txMemos,
         nativeAmount,
         networkFee,
         networkFees,
@@ -489,6 +540,22 @@ export class ZanoEngine extends CurrencyEngine<
 
       this.addTransaction(tokenId, edgeTransaction)
     }
+  }
+
+  /**
+   * The memos of the already-stored copy of a transaction, or undefined
+   * when it is unknown or memo-less. Lets a history rebuild keep what only
+   * the broadcast-time save knew.
+   */
+  private findSavedMemos(
+    tokenId: EdgeTokenId,
+    txid: string
+  ): EdgeMemo[] | undefined {
+    const index = this.findTransaction(tokenId, txid.toLowerCase())
+    if (index < 0) return undefined
+    const memos = this.transactionList[tokenId ?? ''][index]?.memos
+    if (memos == null || memos.length === 0) return undefined
+    return memos
   }
 
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
@@ -512,7 +579,19 @@ export class ZanoEngine extends CurrencyEngine<
     )
     this.updateBlockHeight(blockheight)
 
-    if (status.progress === 100 || status.wallet_state === 2) {
+    // Judge sync by heights, not by the SDK's state or progress. The
+    // wallet reports `wallet_state` "ready" from open until the refresh
+    // worker's first pass, and again between passes, so one 1-second poll
+    // landing in that window read a freshly restored wallet - weeks of
+    // blocks behind - as fully synced: the ratio latched at 1 and went
+    // silent for the whole scan, and this branch's store and checkpoint
+    // reset ran mid-scan. Heights cannot flicker. A daemon height of zero
+    // means the daemon is not connected yet, which is not "synced" either:
+    const synced =
+      daemonBlockHeight > 0 && status.current_wallet_height >= daemonBlockHeight
+
+    if (synced) {
+      this.resetCatchupState()
       this.syncTracker.updateBlockRatio(
         1,
         status.current_wallet_height,
@@ -525,11 +604,52 @@ export class ZanoEngine extends CurrencyEngine<
       await this.queryBalance()
       await this.queryTransactions()
       await this.storeWalletFile(nativeId, status.current_wallet_height)
-      this.resetCatchupCheckpoint()
       return 20000
     } else {
+      // Measure the episode, not the SDK's session. `status.progress`
+      // restarts at zero on every refresh pass - after each checkpoint
+      // reopen, and on reconnects - and only measures the remaining gap,
+      // so it saw-toothed the GUI's circle backward every few minutes. The
+      // height where this episode began is stable across all of that. Only
+      // a wallet that restarted from scratch begins a new episode; a
+      // shallower dip is a reorg the SDK re-scans in place, and rebasing on
+      // it would restart the measurement - and, by clearing the freeze
+      // below, report zero until the chase caught up again:
+      if (
+        this.catchupStartHeight < 0 ||
+        status.current_wallet_height <
+          this.catchupStartHeight - CATCHUP_EPISODE_MAX_DIP
+      ) {
+        this.catchupStartHeight = status.current_wallet_height
+        this.catchupBaselineFrozen = false
+      }
+      // The ratio must measure only the work behind the wallet's birthday:
+      // a new wallet with a birthday at 75000 against a tip of 100000 is
+      // 0% done, not 75%, and reaching 80000 is 20%. The wallet reports
+      // height ~0 until its first pull jumps to the birthday, so chase the
+      // height upward while the SDK's session progress reads zero - the
+      // skip happens entirely in that window, since the SDK's own meter
+      // starts at the birthday too - and freeze the baseline at the first
+      // sign of real scanning. Session progress is an integer percent, so
+      // at most 1% of the gap is absorbed before the freeze. Checkpoint
+      // reopens reset session progress to zero, but the frozen flag holds
+      // across them, since their re-fetched chunk cannot dip the height far
+      // enough to start a new episode above:
+      if (!this.catchupBaselineFrozen) {
+        if (status.progress > 0) {
+          this.catchupBaselineFrozen = true
+        } else if (status.current_wallet_height > this.catchupStartHeight) {
+          this.catchupStartHeight = status.current_wallet_height
+        }
+      }
+      const scanned = status.current_wallet_height - this.catchupStartHeight
+      const target = daemonBlockHeight - this.catchupStartHeight
+      // Clamp so a reorg that dips below the baseline cannot feed a
+      // negative ratio into the tracker, rather than resting on the rebase
+      // check above running first, as `MoneroEngine` does for the same
+      // reason:
       this.syncTracker.updateBlockRatio(
-        status.progress / 100,
+        target > 0 ? Math.max(0, scanned / target) : 0,
         status.current_wallet_height,
         daemonBlockHeight
       )
@@ -595,14 +715,20 @@ export class ZanoEngine extends CurrencyEngine<
   }
 
   /**
-   * Forgets the catch-up checkpoint gates. Called when the wallet reaches
-   * synced, so the next catch-up episode -- after a long background gap, or
-   * a burst of blocks -- baselines fresh instead of firing a restart on its
-   * first tick because the gates still hold a stale time and height.
+   * Forgets everything scoped to one catch-up episode: the checkpoint
+   * gates, so the next episode - after a long background gap, or a burst
+   * of blocks - does not fire a restart on its first tick because the
+   * gates still hold a stale time and height, and the ratio baseline, so
+   * it measures the next episode's own work. Called when the wallet
+   * reaches synced and when a resync throws its history away; keeping both
+   * halves here means a new field cannot be added to one caller and
+   * forgotten in the other.
    */
-  private resetCatchupCheckpoint(): void {
+  private resetCatchupState(): void {
     this.lastCheckpointTime = 0
     this.lastCheckpointHeight = 0
+    this.catchupStartHeight = -1
+    this.catchupBaselineFrozen = false
   }
 
   /**
@@ -659,7 +785,7 @@ export class ZanoEngine extends CurrencyEngine<
     // re-reached tip, and a kill in that window re-pays the full rescan.
     this.lastStoreTime = 0
     this.lastStoreHeight = 0
-    this.resetCatchupCheckpoint()
+    this.resetCatchupState()
     this.storeGeneration += 1
     this.nativeId.stop()
     this.unlockedBalanceMap.clear()

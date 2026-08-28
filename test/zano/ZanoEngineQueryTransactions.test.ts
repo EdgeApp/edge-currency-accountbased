@@ -19,7 +19,7 @@ const PAGE_SIZE = 100
 function makeTransfer(
   txHash: string,
   height: number,
-  opts: { isMining?: boolean } = {}
+  opts: { isMining?: boolean; paymentId?: string } = {}
 ): RecentTransaction {
   return {
     employed_entries: {},
@@ -28,10 +28,18 @@ function makeTransfer(
     is_mining: opts.isMining ?? false,
     is_mixing: false,
     is_service: false,
-    payment_id: '',
     show_sender: false,
-    subtransfers: [
-      { amount: 1000000000000, asset_id: FAKE_NATIVE_ASSET_ID, is_income: true }
+    subtransfers_by_pid: [
+      {
+        payment_id: opts.paymentId ?? '',
+        subtransfers: [
+          {
+            amount: 1000000000000,
+            asset_id: FAKE_NATIVE_ASSET_ID,
+            is_income: true
+          }
+        ]
+      }
     ],
     timestamp: 1750000000,
     transfer_internal_index: 0,
@@ -272,5 +280,61 @@ describe('ZanoEngine.queryTransactions', function () {
     const event = events.find(event => event.transaction.txid === 'mempool')
     assert.isDefined(event)
     assert.isTrue(event?.isNew)
+  })
+
+  it('attaches a payment id memo from the intrinsic id groups', async function () {
+    // Since HF6 the id arrives per output, grouped in subtransfers_by_pid.
+    // The empty-string group carries the id-less amounts and must not
+    // produce a memo:
+    const wallet: FakeWallet = {
+      history: [
+        makeTransfer('plain', 100),
+        makeTransfer('deposit', 101, { paymentId: 'a1b2c3d4e5f60718' })
+      ],
+      unconfirmed: []
+    }
+    const { queryTransactions, storedTx } = await makeEngine(wallet, 0)
+
+    await queryTransactions()
+
+    const plain = storedTx('plain')
+    assert.isDefined(plain)
+    assert.isUndefined(plain?.memos.find(memo => memo.memoName === 'paymentId'))
+    const deposit = storedTx('deposit')
+    const memo = deposit?.memos.find(memo => memo.memoName === 'paymentId')
+    assert.equal(memo?.value, 'a1b2c3d4e5f60718')
+    assert.equal(memo?.type, 'hex')
+  })
+
+  it('reports history progress as a climbing fraction of the total', async function () {
+    // The regression this guards: the ratio was computed upside down,
+    // `total / fetched`, so a multi-page history reported values above 1 that
+    // shrank toward 1. An unclamped ratio above 1 reads as fully synced (and
+    // pushes the blended total past 1) while pages are still being fetched.
+    const wallet: FakeWallet = {
+      history: Array.from({ length: 250 }, (_, index) =>
+        makeTransfer(`c${index}`, 100 + index)
+      ),
+      unconfirmed: []
+    }
+    const { engine, queryTransactions } = await makeEngine(wallet, 0)
+
+    const ratios: number[] = []
+    ;(engine as any).syncTracker.updateHistoryRatio = (ratio: number) => {
+      ratios.push(ratio)
+    }
+
+    await queryTransactions()
+
+    // Two mid-fetch reports (after pages one and two), then the final 1:
+    assert.equal(ratios[ratios.length - 1], 1)
+    for (const ratio of ratios) {
+      assert.isAtMost(ratio, 1, `history ratio above 1: ${ratio}`)
+      assert.isAbove(ratio, 0)
+    }
+    for (let i = 1; i < ratios.length; ++i) {
+      assert.isAtLeast(ratios[i], ratios[i - 1], 'history ratio went backward')
+    }
+    assert.isAtLeast(ratios.length, 3)
   })
 })
