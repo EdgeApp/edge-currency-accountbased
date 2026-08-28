@@ -74,6 +74,8 @@ export class ThorchainEngine extends MidgardEngine {
       }
     }
 
+    // thornode's ante chain has no `DeductFeeDecorator`, so the fee the
+    // transaction declares is ignored and the flat fee is the whole cost.
     return this.makeMidgardFee(networkFee)
   }
 }

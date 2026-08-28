@@ -1,5 +1,5 @@
 import { coin, Event } from '@cosmjs/stargate'
-import { abs, add, div, max } from 'biggystring'
+import { abs, div, max } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
 
@@ -29,10 +29,14 @@ const QUERY_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 /**
  * MAYAChain and THORChain price a transaction by a flat network fee rather than
- * by gas, so the declared gas fee only has to be non-zero for the ante handler
- * to accept the transaction.
+ * by gas, so we declare a token gas fee. Whether the chain then COLLECTS it
+ * differs, which is why each subclass reports its own total:
+ * - MAYAChain runs the stock cosmos-sdk `DeductFeeDecorator` and charges it on
+ *   top of the flat fee (a send emits `tx {fee: 1cacao}` at ante level).
+ * - THORChain's ante chain has no `DeductFeeDecorator`, so the declared fee is
+ *   ignored; live sends declare an empty fee and are accepted.
  */
-const MIDGARD_GAS_FEE = '1'
+export const MIDGARD_DECLARED_GAS_FEE = '1'
 const MIDGARD_GAS_LIMIT = '60000000'
 
 /**
@@ -275,21 +279,17 @@ export class MidgardEngine extends CosmosEngine {
   }
 
   /**
-   * Builds the `CosmosFee` for a chain that charges a flat network fee.
+   * Builds the `CosmosFee` shape shared by the flat-fee Midgard chains.
    *
-   * The signer pays BOTH the flat fee the chain quotes and the gas fee the
-   * transaction declares, so `networkFee` has to cover both. Reporting the flat
-   * fee alone puts a max spend exactly `MIDGARD_GAS_FEE` over the balance: the
-   * ante handler collects the declared gas fee first, which leaves the message
-   * short, and the chain accepts the transaction at CheckTx and then reverts it
-   * as `insufficient funds`.
+   * `networkFee` is the TOTAL the signer pays, which the subclass computes:
+   * whether the declared gas fee is collected on top of the chain's flat fee is
+   * chain-specific (see `MIDGARD_DECLARED_GAS_FEE`).
    */
   protected makeMidgardFee(networkFee: string): CosmosFee {
-    const gasFeeCoin = coin(MIDGARD_GAS_FEE, this.networkInfo.nativeDenom)
     return {
-      gasFeeCoin,
+      gasFeeCoin: coin(MIDGARD_DECLARED_GAS_FEE, this.networkInfo.nativeDenom),
       gasLimit: MIDGARD_GAS_LIMIT,
-      networkFee: add(networkFee, gasFeeCoin.amount)
+      networkFee
     }
   }
 

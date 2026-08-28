@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- fixed: (MAYAChain/THORChain) A max send now leaves the wallet. The signer pays the chain's flat network fee AND the transaction's declared gas fee, but only the flat fee was reported, so a max send came out exactly one base unit over the balance. The chain accepted it at CheckTx and then reverted it as `insufficient funds`, which surfaced as a successful send in the app with nothing moving on-chain.
+- fixed: (MAYAChain) A max send now leaves the wallet. mayanode collects the transaction's declared gas fee on top of the chain's flat network fee, but only the flat fee was reported, so a max send came out exactly one base unit over the balance. The chain accepted it at CheckTx and then reverted it as `insufficient funds`, which surfaced as a successful send in the app with nothing moving on-chain. The reported fee now covers both, and the fee recorded for a send that syncs back from Midgard matches it.
 
 ## 4.87.0 (2026-08-02)
 
