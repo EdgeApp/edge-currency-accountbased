@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.90.1 (2026-08-28)
+
 - changed: (Zano) Update react-native-zano to ^0.5.1, which keeps native calls off React Native's shared native-modules thread and patches the SDK's close-during-scan deadlock - together the Android freeze that struck minutes into a sync - rebuilds a wallet file the SDK cannot read instead of retrying it forever, and reads history through the HF6-ready endpoint this release requires.
 - changed: (Zano) Transaction history is read from `get_recent_txs_and_info3`, the HF6-ready endpoint, so payment ids delivered to the wallet - which now travel inside individual outputs rather than on the transaction - appear on transactions as hex `Payment ID` memos. The old endpoint reported only the deprecated transaction-wide id, empty for everything sent since the fork, which also attached an empty `Payment ID` memo to every Zano transaction; that is gone. A sent transaction keeps the memos it was saved with at broadcast: its own history entry cannot carry the recipient's id, and the rebuild used to replace the saved record wholesale.
 - fixed: (Zano) The sync ratio no longer reads a freshly started wallet as fully synced. The SDK reports its wallet state as "ready" from open until the refresh worker's first pass, and again between passes, so one 1-second poll landing in that window latched the ratio at 1 and silenced every later update - a restored wallet scanned for minutes while its row showed synced - and the spurious synced pass also reset the checkpoint gates and issued a store mid-scan. Sync is now judged by heights alone.
