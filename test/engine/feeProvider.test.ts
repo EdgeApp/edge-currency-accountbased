@@ -7,9 +7,7 @@ import {
   fetchFeesFromInfoServer
 } from '../../src/ethereum/fees/feeProviders'
 import {
-  // @ts-expect-error
   currencyInfo as ftmCurrencyInfo,
-  // @ts-expect-error
   networkInfo as ftmNetworkInfo
 } from '../../src/ethereum/info/fantomInfo'
 import { fakeLog } from '../fake/fakeLog'
