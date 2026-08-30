@@ -6,7 +6,7 @@ import {
   makeFakeIo
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
-import type { TransactionInfo, TransactionsPage } from 'react-native-monero'
+import type { TransactionInfo, TransactionsPage } from 'monero-native'
 
 import { PluginEnvironment } from '../../src/common/innerPlugin'
 import {

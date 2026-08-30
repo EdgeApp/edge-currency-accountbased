@@ -4,7 +4,7 @@ import { describe, it } from 'mocha'
 import type {
   GetRecentTransactionsResponse,
   RecentTransaction
-} from 'react-native-zano'
+} from 'zano-native'
 
 import { ZanoEngine } from '../../src/zano/ZanoEngine'
 import { ZanoTools } from '../../src/zano/ZanoTools'

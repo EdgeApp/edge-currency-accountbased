@@ -15,7 +15,7 @@ import {
   NoAmountSpecifiedError,
   PendingFundsError
 } from 'edge-core-js/types'
-import type { TransactionDirection, WalletBackend } from 'react-native-monero'
+import type { TransactionDirection, WalletBackend } from 'monero-native'
 import { base64, base64url } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
@@ -1109,7 +1109,7 @@ export class MoneroEngine extends CurrencyEngine<
       })
     }
 
-    // TransactionDirection from react-native-monero: 0 = incoming, 1 = outgoing
+    // TransactionDirection from monero-native: 0 = incoming, 1 = outgoing
     const isReceive = tx.direction === 0
     const ourReceiveAddresses: string[] = isReceive
       ? [this.walletInfo.keys.moneroAddress]
