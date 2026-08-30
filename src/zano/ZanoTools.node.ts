@@ -1,5 +1,5 @@
 import { join } from 'path'
-import type { NativeZanoModule } from 'react-native-zano'
+import type { NativeZanoModule } from 'zano-native'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { makeZanoIo } from './zanoIo.node'

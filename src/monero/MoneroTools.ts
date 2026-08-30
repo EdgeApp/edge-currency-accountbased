@@ -12,7 +12,7 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-import { CppBridge } from 'react-native-monero/lib/src/CppBridge'
+import { CppBridge } from 'monero-native/lib/src/CppBridge'
 import { base64 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'

@@ -54,6 +54,7 @@
 - fixed: (HyperEVM) Tokens are detected automatically
 - fixed: (EVM) Blockscout "Too many requests" replies are recognized as rate limits
 
+- changed: Use `monero-native`, `zano-native`, and `zcash-native` for React Native and Node IO instead of `react-native-monero` / `react-native-zano` / `react-native-zcash`.
 - added: Node Zcash/Monero/Zano native IO for CLI wallets, auto-injecting `nativeIo.*` from `io.path/native/<asset>` via `zcash-native`, `monero-native`, and `zano-native`.
 
 ## 4.90.1 (2026-08-28)
