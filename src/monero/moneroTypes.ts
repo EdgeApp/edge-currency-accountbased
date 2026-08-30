@@ -14,7 +14,7 @@ import type {
   TransactionPriority,
   WalletBackend,
   WalletEventData
-} from 'react-native-monero'
+} from 'monero-native'
 import type { Subscriber } from 'yaob'
 
 import { asIntegerString } from '../common/types'

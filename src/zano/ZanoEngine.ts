@@ -20,7 +20,7 @@ import type {
   RecentTransaction,
   TransferParams,
   WalletDetails
-} from 'react-native-zano'
+} from 'zano-native'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'

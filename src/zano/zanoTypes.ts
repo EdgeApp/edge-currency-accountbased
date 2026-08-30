@@ -13,7 +13,7 @@ import {
   EdgeTokenId,
   EdgeTransaction
 } from 'edge-core-js/types'
-import type { BurnAssetParams, TransferParams } from 'react-native-zano'
+import type { BurnAssetParams, TransferParams } from 'zano-native'
 
 import { createTokenIdFromContractAddress } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo, MakeTxParams } from '../common/types'
