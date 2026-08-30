@@ -1,5 +1,5 @@
 import { NativeEventEmitter, NativeModules } from 'react-native'
-import type { WalletEventData } from 'react-native-monero'
+import type { WalletEventData } from 'monero-native'
 import { bridgifyObject, emit, onMethod } from 'yaob'
 
 import type { MoneroIo } from './moneroTypes'

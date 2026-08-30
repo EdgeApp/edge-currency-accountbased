@@ -18,7 +18,7 @@ const fakePluginOptions: EdgeCorePluginOptions = {
       zcash: {}
     },
     monero: {},
-    // Mirrors a healthy native module: react-native-zano >=0.5.0 fails
+    // Mirrors a healthy native module: zano-native >=0.0.1 fails
     // closed at construction when the iOS side reports no document
     // directory, since that means the wallet directory could not be
     // created or excluded from device backups.

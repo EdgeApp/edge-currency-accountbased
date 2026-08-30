@@ -16,8 +16,8 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-import type { NativeZanoModule } from 'react-native-zano'
-import { CppBridge } from 'react-native-zano/lib/src/CppBridge'
+import type { NativeZanoModule } from 'zano-native'
+import { CppBridge } from 'zano-native/lib/src/CppBridge'
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
