@@ -1,3 +1,4 @@
+import { bridgifyObject, emit, onMethod, Subscriber } from 'yaob'
 import type {
   Addresses,
   BalanceEvent,
@@ -15,8 +16,7 @@ import type {
   Tools,
   TransactionEvent,
   UpdateEvent
-} from 'react-native-zcash'
-import { bridgifyObject, emit, onMethod, Subscriber } from 'yaob'
+} from 'zcash-native'
 
 export interface ZcashEvents {
   balanceChanged: BalanceEvent
@@ -145,6 +145,6 @@ export function wrapZcashNative(rnzcash: {
 
 export function makeZcashIo(): ZcashIo {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const rnzcash = require('react-native-zcash')
+  const rnzcash = require('zcash-native')
   return wrapZcashNative(rnzcash)
 }

@@ -13,14 +13,14 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16, base64 } from 'rfc4648'
 import type {
   CreateTransferOpts,
   SpendFailure,
   SpendSuccess,
   StatusEvent,
   Transaction
-} from 'react-native-zcash'
-import { base16, base64 } from 'rfc4648'
+} from 'zcash-native'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -307,13 +307,13 @@ export class ZcashEngine extends CurrencyEngine<
 
     // Special case for shielding txs
     let metadata: EdgeMetadata | undefined
-    if (isShielding === true) {
+    if (isShielding) {
       metadata = { notes: 'Shielding' }
       netNativeAmount = `-${networkFee}`
     }
 
     let confirmations: EdgeTransaction['confirmations'] | undefined
-    if (isExpired === true) {
+    if (isExpired) {
       confirmations = 'failed'
     }
 

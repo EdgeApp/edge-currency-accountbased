@@ -1,7 +1,7 @@
 import { assert } from 'chai'
 import { EdgeTransaction } from 'edge-core-js'
 import { describe, it } from 'mocha'
-import type { WalletStatus } from 'react-native-zano'
+import type { WalletStatus } from 'zano-native'
 
 import { ZanoEngine } from '../../src/zano/ZanoEngine'
 import { ZanoTools } from '../../src/zano/ZanoTools'
