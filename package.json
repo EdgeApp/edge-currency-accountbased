@@ -36,6 +36,8 @@
     "/node-monero.js",
     "/node-zano.d.ts",
     "/node-zano.js",
+    "/node-dashshielded.d.ts",
+    "/node-dashshielded.js",
     "/node-zcash.d.ts",
     "/node-zcash.js",
     "/rn-monero.d.ts",
@@ -44,6 +46,8 @@
     "/rn-piratechain.js",
     "/rn-zano.d.ts",
     "/rn-zano.js",
+    "/rn-dashshielded.d.ts",
+    "/rn-dashshielded.js",
     "/rn-zcash.d.ts",
     "/rn-zcash.js",
     "/rn.d.ts",
@@ -115,6 +119,7 @@
     "ethereumjs-wallet": "^0.6.5",
     "ethers": "^5.6.0",
     "isomorphic-ws": "^5.0.0",
+    "dash-shielded-native": "^0.1.0",
     "monero-native": "^0.0.1",
     "zano-native": "^0.0.1",
     "zcash-native": "^0.0.1",
@@ -195,12 +200,14 @@
     "webpack-dev-server": "^5.2.4"
   },
   "peerDependencies": {
+    "dash-shielded-native": "^0.1.0",
     "monero-native": "^0.0.1",
     "react-native-piratechain": "v0.5.0",
     "zano-native": "^0.0.1",
     "zcash-native": "^0.0.1"
   },
   "optionalDependencies": {
+    "dash-shielded-native": "0.1.0",
     "monero-native": "0.0.1",
     "zano-native": "0.0.1",
     "zcash-native": "0.0.1"

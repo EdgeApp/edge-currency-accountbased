@@ -1,6 +1,7 @@
 import { EdgeOtherMethods } from 'edge-core-js/types'
 import { NativeModules } from 'react-native'
 
+import { makeDashshieldedIo } from './dashshielded/dashshieldedIo'
 import { makePiratechainIo } from './piratechain/piratechainIo'
 import { makeZcashIo } from './zcash/zcashIo'
 
@@ -16,6 +17,7 @@ export const debugUri = 'http://localhost:8082/edge-currency-accountbased.js'
  */
 export function makePluginIo(): EdgeOtherMethods {
   return {
+    dashshielded: makeDashshieldedIo(),
     piratechain: makePiratechainIo(),
     zcash: makeZcashIo()
   }

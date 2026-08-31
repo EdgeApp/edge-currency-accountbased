@@ -2,12 +2,13 @@ import 'regenerator-runtime/runtime'
 
 import type { EdgeCorePlugins } from 'edge-core-js/types'
 
+import { dashshielded } from './dashshielded/dashshieldedInfo'
 import { monero } from './monero/moneroInfo'
 import { makePluginMap } from './pluginMap'
 import { zano } from './zano/zanoInfo'
 import { zcash } from './zcash/zcashInfo'
 
-const plugins = makePluginMap(monero, zano, zcash)
+const plugins = makePluginMap(monero, zano, zcash, dashshielded)
 
 declare global {
   interface Window {

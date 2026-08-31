@@ -25,10 +25,13 @@ import { tron } from './tron/tronInfo'
 type MoneroOuterPlugin = typeof import('./monero/moneroInfo').monero
 type ZanoOuterPlugin = typeof import('./zano/zanoInfo').zano
 type ZcashOuterPlugin = typeof import('./zcash/zcashInfo').zcash
+type DashshieldedOuterPlugin =
+  typeof import('./dashshielded/dashshieldedInfo').dashshielded
 
 /**
  * Shared accountbased plugin catalog. Callers pass platform-specific Monero,
- * Zano, and Zcash outer plugins so each entry keeps a static import graph.
+ * Zano, Zcash, and Dash Shielded outer plugins so each entry keeps a static
+ * import graph.
  */
 // Infer the return shape from the plugin factories; annotating as EdgeCorePlugins
 // widens values and breaks callers that expect EdgeCorePluginFactory.
@@ -36,7 +39,8 @@ type ZcashOuterPlugin = typeof import('./zcash/zcashInfo').zcash
 export function makePluginMap(
   monero: MoneroOuterPlugin,
   zano: ZanoOuterPlugin,
-  zcash: ZcashOuterPlugin
+  zcash: ZcashOuterPlugin,
+  dashshielded: DashshieldedOuterPlugin
 ) {
   return {
     ...eosPlugins,
@@ -64,6 +68,7 @@ export function makePluginMap(
     ton,
     tron,
     zano,
-    zcash
+    zcash,
+    dashshielded
   }
 }
