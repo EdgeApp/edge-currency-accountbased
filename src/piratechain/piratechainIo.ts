@@ -40,6 +40,19 @@ export interface PiratechainEvents {
   update: PiratechainUpdateEvent
 }
 
+/**
+ * Whether the wallet can build a spend right now, and why not when it cannot.
+ * `spendable` is the only load-bearing field; the rest is diagnosis.
+ */
+export interface PiratechainSpendability {
+  spendable: boolean
+  rescanRequired: boolean
+  repairQueued: boolean
+  reasonCode?: string
+  anchorHeight?: number
+  validatedAnchorHeight?: number
+}
+
 export interface PiratechainSpendOutput {
   addr: string
   /** Arrrtoshis as a decimal string to preserve precision above 2^53-1. */
@@ -68,6 +81,7 @@ export interface PiratechainSynchronizer {
   on: Subscriber<PiratechainEvents>
   getBalance: () => Promise<Balance>
   getCurrentAddress: () => Promise<string>
+  getSpendability: () => Promise<PiratechainSpendability>
   getTransactions: () => Promise<TransactionInfo[]>
   rescan: (fromHeight?: number) => Promise<void>
   send: (outputs: PiratechainSpendOutput[], fee?: string) => Promise<string>
@@ -115,6 +129,21 @@ const asInvokeEnvelope = asObject({
   ok: asBoolean,
   result: asOptional(asUnknown),
   error: asOptional(asString)
+})
+
+/**
+ * The subset of `get_spendability_status` we read. Only `spendable` is
+ * required: the SDK types the anchor heights as numbers but a finalizing
+ * wallet reports them as `null`, and a release that drops or renames a
+ * diagnosis field must cost a vaguer log line rather than the spend itself.
+ */
+const asSpendabilityStatus = asObject({
+  spendable: asBoolean,
+  rescanRequired: asOptional(asBoolean, false),
+  repairQueued: asOptional(asBoolean, false),
+  reasonCode: asOptional(asString),
+  anchorHeight: asOptional(asNumber),
+  validatedAnchorHeight: asOptional(asNumber)
 })
 
 /**
@@ -382,6 +411,11 @@ export function makePiratechainIo(): PiratechainIo {
         },
         getCurrentAddress: async () => {
           return await walletSdk.getCurrentReceiveAddress(walletId)
+        },
+        getSpendability: async () => {
+          return asSpendabilityStatus(
+            await walletSdk.getSpendabilityStatus(walletId)
+          )
         },
         getTransactions: async () => {
           // Same cache as the balance, refreshed by the poller each round. It
