@@ -9,7 +9,8 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
-  NoAmountSpecifiedError
+  NoAmountSpecifiedError,
+  PendingFundsError
 } from 'edge-core-js/types'
 import type { PirateTransaction } from 'react-native-pirate-wallet'
 import { base16, base64 } from 'rfc4648'
@@ -17,7 +18,11 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from '../common/utils'
-import type { PiratechainIo, PiratechainSynchronizer } from './piratechainIo'
+import type {
+  PiratechainIo,
+  PiratechainSpendability,
+  PiratechainSynchronizer
+} from './piratechainIo'
 import {
   makePiratechainSyncTracker,
   PiratechainSyncTracker
@@ -315,8 +320,39 @@ export class PiratechainEngine extends CurrencyEngine<
     return spendableBalance
   }
 
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+  /**
+   * The SDK reports `SYNCED` before its spend anchor is usable, and a send in
+   * that window fails inside the SDK with `ERR_SYNC_FINALIZING` only once the
+   * user has already confirmed it. `get_spendability_status` reports the
+   * window directly, so refuse the spend here instead: a `makeSpend` that
+   * throws leaves the send scene with no transaction, which is what keeps its
+   * confirm slider disabled until the wallet can actually spend.
+   */
+  async checkSpendable(): Promise<void> {
     if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
+
+    let spendability: PiratechainSpendability
+    try {
+      const synchronizer = await this.synchronizerPromise
+      spendability = await synchronizer.getSpendability()
+    } catch (error: unknown) {
+      // Reaching `SYNCED` was the entire gate before this RPC existed, so a
+      // status the plugin cannot read must not be what stops a spend. Bridge
+      // errors arrive serialized rather than as `Error` instances:
+      this.warn(
+        'Failed to read the spendability status',
+        error instanceof Error ? error : new Error(String(error))
+      )
+      return
+    }
+    if (spendability.spendable) return
+
+    this.warn(`Spend refused: ${JSON.stringify(spendability)}`)
+    throw new PendingFundsError(spendabilityMessage(spendability))
+  }
+
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    await this.checkSpendable()
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
@@ -406,7 +442,7 @@ export class PiratechainEngine extends CurrencyEngine<
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
-      throw e
+      throw asRetryableSpendError(e) ?? e
     }
     return edgeTransaction
   }
@@ -433,6 +469,56 @@ export class PiratechainEngine extends CurrencyEngine<
       }
     }
   }
+}
+
+/**
+ * SDK error codes that mean "this spend is not ready yet, retry shortly"
+ * rather than "this spend is wrong". `get_spendability_status` is checked
+ * before the transaction is built and, since SDK 0.3.4, keeps reporting a
+ * queued repair until the node will accept the wallet's anchor, so a build
+ * that passed the gate should not fail with either of these. The backstop
+ * stays because the status read `spendable: true, reasonCode: OK` through
+ * four such rejections on 0.3.2, and a wrong status costs the user a
+ * misleading network error where a mapped one costs nothing.
+ */
+const RETRYABLE_SPEND_ERROR_CODES = [
+  'ERR_SYNC_FINALIZING',
+  'ERR_WITNESS_REPAIR_QUEUED'
+]
+
+/**
+ * Restates a retryable spend failure as `PendingFundsError`, so the app can
+ * tell the user to wait instead of blaming their network connection. Anything
+ * else is left alone: an error the plugin cannot classify must keep its own
+ * text rather than be softened into a wait.
+ */
+function asRetryableSpendError(error: unknown): PendingFundsError | undefined {
+  const message = error instanceof Error ? error.message : String(error)
+  const code = RETRYABLE_SPEND_ERROR_CODES.find(code => message.includes(code))
+  if (code == null) return
+
+  return new PendingFundsError(
+    code === 'ERR_WITNESS_REPAIR_QUEUED'
+      ? 'Cannot spend until the wallet finishes repairing its transaction history'
+      : 'Cannot spend until the wallet finishes syncing'
+  )
+}
+
+/**
+ * Why the wallet cannot spend yet. Every case resolves itself by waiting, so
+ * the wording says which wait it is rather than asking the user to act. The
+ * `reasonCode` is authoritative; the booleans cover a status that arrives
+ * without one.
+ */
+function spendabilityMessage(spendability: PiratechainSpendability): string {
+  const { reasonCode, rescanRequired, repairQueued } = spendability
+  if (reasonCode === 'ERR_RESCAN_REQUIRED' || rescanRequired) {
+    return 'Cannot spend until the wallet finishes rescanning'
+  }
+  if (reasonCode === 'ERR_WITNESS_REPAIR_QUEUED' || repairQueued) {
+    return 'Cannot spend until the wallet finishes repairing its transaction history'
+  }
+  return 'Cannot spend until the wallet finishes syncing'
 }
 
 export async function makeCurrencyEngine(

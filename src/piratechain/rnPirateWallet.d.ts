@@ -52,6 +52,34 @@ declare module 'react-native-pirate-wallet' {
   }
 
   /**
+   * Why a wallet cannot sign right now. `OK` means it can. The repair and
+   * finalizing states stay reported until witness reconstruction and anchor
+   * validation have both finished, so a status that reads `OK` is one the
+   * node will accept a transaction from.
+   */
+  export type PirateSpendabilityReasonCode =
+    | 'OK'
+    | 'ERR_SYNC_FINALIZING'
+    | 'ERR_WITNESS_REPAIR_QUEUED'
+    | 'ERR_RESCAN_REQUIRED'
+
+  /**
+   * Result of the `get_spendability_status` RPC. A wallet reports `SYNCED`
+   * before its spend anchor is usable, and this is the only surface that
+   * separates the two: `spendable` is false for the whole finalizing window,
+   * with `reasonCode` naming which state the wallet is in.
+   */
+  export interface PirateSpendabilityStatus {
+    spendable: boolean
+    rescanRequired: boolean
+    repairQueued: boolean
+    reasonCode: PirateSpendabilityReasonCode
+    targetHeight: number | null
+    anchorHeight: number | null
+    validatedAnchorHeight: number | null
+  }
+
+  /**
    * Result of the wallet signing session RPCs. Once protection is enabled,
    * `sign_tx` fails with `ERR_SIGNING_SESSION_LOCKED` until the wallet is
    * unlocked with the credential it was protected with.
@@ -233,6 +261,10 @@ declare module 'react-native-pirate-wallet' {
     getCurrentReceiveAddress: (walletId: string) => Promise<string>
     getNextReceiveAddress: (walletId: string) => Promise<string>
     getBalance: (walletId: string) => Promise<PirateBalance>
+    getSpendabilityStatus: (
+      walletId: string
+    ) => Promise<PirateSpendabilityStatus>
+
     listTransactions: (
       walletId: string,
       limit?: number | null
