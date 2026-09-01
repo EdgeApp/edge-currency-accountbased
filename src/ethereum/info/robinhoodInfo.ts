@@ -19,7 +19,7 @@ import {
 // Bridged token addresses come from the canonical Arbitrum token bridge, via
 // L2GatewayRouter.calculateL2TokenAddress(l1Token). Robinhood Chain's explorer
 // lists many same-symbol imposters, so never source these from a token search.
-const builtinTokens: EdgeTokenMap = {
+export const builtinTokens: EdgeTokenMap = {
   '80e0e24718dbfcad49ecaa6f1e6c89a190586ca8': {
     currencyCode: 'USDC',
     displayName: 'Bridged USDC (Robinhood)',
@@ -152,7 +152,7 @@ const networkInfo: EthereumNetworkInfo = {
   }
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
   evmChainId: 4663,

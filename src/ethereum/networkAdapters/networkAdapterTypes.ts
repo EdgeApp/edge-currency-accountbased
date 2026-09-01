@@ -15,6 +15,7 @@ import {
 } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
+import { AlchemyAdapterConfig } from './AlchemyAdapter'
 import { AmberdataAdapterConfig } from './AmberdataAdapter'
 import { BlockbookAdapterConfig } from './BlockbookAdapter'
 import { BlockbookWsAdapterConfig } from './BlockbookWsAdapter'
@@ -32,6 +33,7 @@ export interface GetTxsParams {
 }
 
 export type NetworkAdapterConfig =
+  | AlchemyAdapterConfig
   | AmberdataAdapterConfig
   | BlockbookAdapterConfig
   | BlockbookWsAdapterConfig

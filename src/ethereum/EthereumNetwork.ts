@@ -13,6 +13,7 @@ import { normalizeAddress } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
 import { DecoyAddressConfig, EthereumNetworkInfo } from './ethereumTypes'
+import { AlchemyAdapter } from './networkAdapters/AlchemyAdapter'
 import { AmberdataAdapter } from './networkAdapters/AmberdataAdapter'
 import { BlockbookAdapter } from './networkAdapters/BlockbookAdapter'
 import { BlockbookWsAdapter } from './networkAdapters/BlockbookWsAdapter'
@@ -699,6 +700,8 @@ const makeNetworkAdapter = (
   ethEngine: EthereumEngine
 ): NetworkAdapter => {
   switch (config.type) {
+    case 'alchemy':
+      return new AlchemyAdapter(ethEngine, config)
     case 'amberdata-rpc':
       return new AmberdataAdapter(ethEngine, config)
     case 'blockbook':
