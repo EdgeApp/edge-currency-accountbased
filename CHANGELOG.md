@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-- added: Robinhood Chain support (`robinhood`, EVM chain 4663), an Arbitrum Nitro L2 with ETH as its gas token. Transaction history comes from the chain's Blockscout instance, since Etherscan V2 does not cover this chain, and fees use the Arbitrum `NodeInterface` L1-component estimate. Built-in tokens are USDC, USDT, USDG, WBTC, WETH, CASHCAT and PONS.
+- added: Robinhood Chain support (`robinhood`, EVM chain 4663)
+- added: (EVM) Alchemy and Blockscout network adapters
+- added: (Robinhood Chain) Transaction history and token balances from Alchemy, with Blockscout as fallback
 - fixed: (Avalanche) Remove unreachable avascan and snowscan evmscan servers
 - fixed: (HyperEVM) Tokens are detected automatically
+- fixed: (EVM) Blockscout "Too many requests" replies are recognized as rate limits
 
 ## 4.90.1 (2026-08-28)
 

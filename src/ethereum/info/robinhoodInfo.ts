@@ -116,17 +116,27 @@ const networkInfo: EthereumNetworkInfo = {
   addressQueryLookbackBlocks: 1250,
   networkAdapterConfigs: [
     {
+      // Keyed history source. Alchemy does not serve the `internal` category
+      // on this network; the `blockscout` adapter below supplies those rows,
+      // merged into every native-asset sync.
+      type: 'alchemy',
+      servers: ['https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}']
+    },
+    {
       type: 'rpc',
       servers: [
         'https://rpc.mainnet.chain.robinhood.com',
-        'https://robinhood-rpc.publicnode.com'
-      ]
+        'https://robinhood-rpc.publicnode.com',
+        'https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}'
+      ],
+      ethBalCheckerContract: '0x8950F12786CAE64F94a02733A260ca6FecDaeD7f'
     },
     {
-      // Etherscan V2 does not support chain 4663, so transaction history comes
-      // from the chain's Blockscout instance, which has no gastracker module.
-      type: 'evmscan',
-      gastrackerSupport: false,
+      // Etherscan V2 does not support chain 4663. The chain's public Blockscout
+      // instance (300 requests per minute per IP) supplies the internal
+      // transactions Alchemy lacks here, merged into every native-asset sync,
+      // and is the history fallback when Alchemy fails.
+      type: 'blockscout',
       servers: ['https://robinhoodchain.blockscout.com']
     }
   ],
