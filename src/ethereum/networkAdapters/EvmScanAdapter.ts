@@ -326,8 +326,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     if (
       'status' in cleanData &&
       cleanData.status === '0' &&
-      typeof cleanData.result === 'string' &&
-      cleanData.result.match(/Max calls|rate limit/) != null
+      isEvmScanRateLimitResponse(cleanData)
     ) {
       throw new RateLimitError(`fetchGetEtherscan rate limit for ${server}`)
     }
@@ -667,7 +666,26 @@ export function mergeEdgeTransactions(
   return Array.from(txidToTransaction.values())
 }
 
-interface EvmScanErrorResponse {
+/**
+ * Whether a `status: "0"` reply is the API throttling us rather than a real
+ * error. Etherscan puts the text in `result` ("Max calls per sec rate limit
+ * reached", "Max rate limit reached"); Blockscout answers with `result: null`
+ * and the text in `message` ("Too many requests. Increase limits now at
+ * https://dev.blockscout.com").
+ */
+export function isEvmScanRateLimitResponse(
+  response: EvmScanErrorResponse
+): boolean {
+  if (
+    typeof response.result === 'string' &&
+    /Max calls|rate limit/i.test(response.result)
+  ) {
+    return true
+  }
+  return /too many requests|rate limit/i.test(response.message)
+}
+
+export interface EvmScanErrorResponse {
   status: '0'
   message: string
   result: unknown
