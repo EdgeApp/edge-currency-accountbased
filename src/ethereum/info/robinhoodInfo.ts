@@ -116,15 +116,25 @@ const networkInfo: EthereumNetworkInfo = {
   addressQueryLookbackBlocks: 1250,
   networkAdapterConfigs: [
     {
+      // Keyed history source. Alchemy does not serve the `internal` category
+      // on this network, so ETH paid out to the wallet from inside a contract
+      // call is only seen while the Blockscout fallback below is answering.
+      type: 'alchemy',
+      servers: ['https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}']
+    },
+    {
       type: 'rpc',
       servers: [
         'https://rpc.mainnet.chain.robinhood.com',
-        'https://robinhood-rpc.publicnode.com'
-      ]
+        'https://robinhood-rpc.publicnode.com',
+        'https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}'
+      ],
+      ethBalCheckerContract: '0x8950F12786CAE64F94a02733A260ca6FecDaeD7f'
     },
     {
-      // Etherscan V2 does not support chain 4663, so transaction history comes
-      // from the chain's Blockscout instance, which has no gastracker module.
+      // Etherscan V2 does not support chain 4663. The chain's public Blockscout
+      // instance has no gastracker module and allows 300 requests per minute
+      // per IP, so it is the fallback history source rather than the primary.
       type: 'evmscan',
       gastrackerSupport: false,
       servers: ['https://robinhoodchain.blockscout.com']

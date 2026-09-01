@@ -106,22 +106,32 @@ sequenceDiagram
 
 The plugin is one new file plus a two-line registration.
 
-[`src/ethereum/info/robinhoodInfo.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/b821eb39fd62922dbf2c5412a5cbaaa70a702300/src/ethereum/info/robinhoodInfo.ts)
+[`src/ethereum/info/robinhoodInfo.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/master/src/ethereum/info/robinhoodInfo.ts)
 ```ts
 const networkInfo: EthereumNetworkInfo = {
   // Blocks arrive about every 96ms, so this is the usual ~2 minute overlap
   addressQueryLookbackBlocks: 1250,
   networkAdapterConfigs: [
     {
+      // Keyed history source. Alchemy does not serve the `internal` category
+      // on this network, so ETH paid out to the wallet from inside a contract
+      // call is only seen while the Blockscout fallback below is answering.
+      type: 'alchemy',
+      servers: ['https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}']
+    },
+    {
       type: 'rpc',
       servers: [
         'https://rpc.mainnet.chain.robinhood.com',
-        'https://robinhood-rpc.publicnode.com'
-      ]
+        'https://robinhood-rpc.publicnode.com',
+        'https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}'
+      ],
+      ethBalCheckerContract: '0x8950F12786CAE64F94a02733A260ca6FecDaeD7f'
     },
     {
-      // Etherscan V2 does not support chain 4663, so transaction history comes
-      // from the chain's Blockscout instance, which has no gastracker module.
+      // Etherscan V2 does not support chain 4663. The chain's public Blockscout
+      // instance has no gastracker module and allows 300 requests per minute
+      // per IP, so it is the fallback history source rather than the primary.
       type: 'evmscan',
       gastrackerSupport: false,
       servers: ['https://robinhoodchain.blockscout.com']
@@ -152,7 +162,15 @@ const networkInfo: EthereumNetworkInfo = {
 
 `arbitrumRollupParams` is what selects the L1-component fee path in `EthereumEngine`. `hdPathCoinType: 60` puts wallets on the standard Ethereum derivation path, so one seed produces the same address here as on mainnet, which is what a bridged user expects.
 
-No `ethBalCheckerContract` is set. Every one of the five [eth-balance-checker](#eth-balance-checker) addresses that other Edge plugins use returns empty code on this chain, so `RpcAdapter.fetchTokenBalances` is left undefined and token balances resolve through per-token calls, as they do on `hyperevm` and `botanix`.
+### History source
+
+`EthereumNetwork.check` runs the adapters that implement a method as a waterfall: the first one to answer wins that call, and the next one is only asked when the first fails. With `alchemy` listed first, transaction history and token balances come from Alchemy's `alchemy_getAssetTransfers` and `alchemy_getTokenBalances`, keyed by the plugin's `alchemyApiKey` init option, and the public [Blockscout](#blockscout) instance only answers while Alchemy is failing. The key reaches the plugin through `ROBINHOOD_INIT.alchemyApiKey` in the app's `env.json`; the `AlchemyAdapter` constructor drops a server whose placeholder has no init option, so a build without the key simply falls back to Blockscout.
+
+`AlchemyAdapter` lives in `src/ethereum/networkAdapters/AlchemyAdapter.ts` and is written for any network Alchemy serves. Asset transfers are value movements rather than transactions and carry no gas data, so the adapter completes the wallet's own spends with `eth_getTransactionByHash` and `eth_getTransactionReceipt` from the same endpoint, then folds the rows per transaction hash with the amount and fee conventions of `processEvmScanTransaction`. Two things it cannot see on this network: the `internal` category is not supported here (Alchemy answers `The 'internal' category is not supported for this network`), so ETH paid out to the wallet from inside a contract call is invisible to it, and a failed transaction moves no value, so a reverted send only shows up through Blockscout's `txlist`.
+
+The public Blockscout API allows 300 requests per minute per client IP. One wallet sync is 1 `txlist` + 1 `txlistinternal` + 7 `tokentx` calls, so two wallets on one IP exhaust it, and Blockscout then answers `{"message":"Too many requests. Increase limits now at https://dev.blockscout.com","result":null,"status":"0"}`. `EvmScanAdapter.fetchGetEtherscan` used to look for the throttle text in `result` only, so this reply fell through as an ordinary error and the engine kept polling at full cadence with an empty history; `isEvmScanRateLimitResponse` now classifies it as a `RateLimitError`, which makes `serialServers` back off exponentially.
+
+`ethBalCheckerContract` points at an [eth-balance-checker](#eth-balance-checker) deployed to `0x8950F12786CAE64F94a02733A260ca6FecDaeD7f` in block 52107662 on 2026-09-01, byte-for-byte the runtime that Edge's other EVM plugins use at `0x7263…`. `RpcAdapter.fetchTokenBalances` is therefore defined and sits behind Alchemy's `alchemy_getTokenBalances` in the waterfall, so token balances stay batched even when Alchemy is unavailable.
 
 ### Fees
 
@@ -291,6 +309,9 @@ That asymmetry is itself worth fixing: a chain added to `coingeckoPlatformIdMapp
 12. **Rates, local instance of the branch.** Against local CouchDB and Redis, with the real provider code path and nothing stubbed: seeding the databases wrote `robinhood` into all eight documents, confirming the fresh-deploy path. Stripping `robinhood` back out of all eight, so the local database matched an existing deployment, left the patched server still returning no rate, which is what proves the stored document wins over the code default at runtime. Running the `tokenMapping` engine once then added `robinhood: {id: 'ethereum'}` to `coingecko:automated` while `coingecko:platforms`, `tokenTypes` and `platformPriority` stayed empty, exactly as the template semantics predict, and the native rate resolved at 1878.73 against `ethereum` at 1878.73.
 13. **Rates, cross-chain remap in isolation.** Sentinel rates were seeded in `constantrates` on the Ethereum token keys only, USDC 111.111, USDT 222.222 and WBTC 333.333. Querying the Robinhood Chain token ids returned each sentinel, a value reachable only through the remap, and an unmapped Robinhood Chain address returned no rate, which rules out a blanket fallthrough.
 14. **Rates, in-app.** With the app pointed at that local instance, the wallet list rendered ETH on Robinhood Chain at `$1,877` per unit and `-0.14%`, and My Robinhood Chain's `0.005247 ETH` as `$9.85`. The same rows had rendered `$0` throughout phases 1 and 2.
+15. **Unit, history source.** `test/ethereum/network/alchemyTxProcessing.test.ts` folds captured `alchemy_getAssetTransfers` rows into EdgeTransactions for a receive, a spend, a self-send seen from both query directions, a zero-value contract call, a token receive, a token spend, and a token pull the wallet did not sign, and checks the amounts, fees and `parentNetworkFee` against the evmscan conventions. `test/ethereum/network/evmScanRateLimit.test.ts` feeds the captured Blockscout throttle reply and the Etherscan variants to `isEvmScanRateLimitResponse`.
+16. **In-app, history from Alchemy.** With the plugin linked into the app on the iOS simulator and three Robinhood Chain wallets of one account syncing at once, the engine log reports `processEthereumNetworkUpdate tokenTxs robinhood-mainnet.g.alchemy.com won` and the same for `tokenBal` on every sync, with no Blockscout request and no throttle reply in the log. The wallet's transaction list rendered the earlier sends and receives, and a real send of 0.0005389 ETH to `0xeC892dfb84B3c0567Cc2A7118A0885aC6D109Cf3` reached the "Transaction Success" scene; transaction `0xe2be5265fa03f9704960c31d7aa8bbe5fb839a82d7d9c280690be49fc0d21419` is in block 52101999.
+17. **Balance checker, on chain.** After deployment, `eth_getCode` at the new address returns the 2234-byte runtime that the Sonic and Celo checkers hold, and `balances([0x9488ee…], [USDC, 0x0])` answers `[0, <wallet balance in wei>]` through the same `ETH_BAL_CHECKER_ABI` call `RpcAdapter.fetchTokenBalances` makes.
 
 ## 10. Phase history
 
@@ -418,6 +439,14 @@ So neither direction owed anything: every token the rates PR tracks is already a
 
 Scope added in this phase: none.
 
+### Phase 8: keyed transaction history
+
+The cheese re-test of phase 7 ran two simulators on one IP and lost wallet history: Blockscout's public API allows 300 requests per minute per client IP, and past that it answered every history call with `{"message":"Too many requests…","result":null,"status":"0"}`. The engine did not recognize that reply as throttling, so it never backed off, the transaction list stayed empty, one send sat at unconfirmed, and the send slider stayed blocked with "Pending Transaction" until a wallet resync. Balances were unaffected because they come from RPC.
+
+No other Edge-held key covers chain 4663 (Etherscan V2's chain list lacks it; Blockchair, NowNodes, Amberdata and Routescan do not serve it; dRPC, QuickNode and Pocket serve RPC only), and a Blockscout Pro key is shared by every app install, so the chain was enabled on the Alchemy app the user base already runs on for every other EVM chain. This phase added the `alchemy` network adapter and put it first, kept Blockscout as the fallback, taught `EvmScanAdapter` to classify Blockscout's throttle reply as a rate limit, deployed the eth-balance-checker to the chain, and corrected the retrospective's claim that a Blockscout key would have removed the limit without a code change.
+
+Scope added in this phase: `AlchemyAdapter`, reusable on any Alchemy-served chain; the `apiKeyTemplate` helper shared with `RpcAdapter`; the balance checker at `0x8950F12786CAE64F94a02733A260ca6FecDaeD7f`.
+
 ## 11. Decisions
 
 ### Decision 1: pluginId is `robinhood`
@@ -430,9 +459,9 @@ Rejected: `hood`, from the task title. HOOD is Robinhood's stock ticker and this
 
 Reopens if: Edge adds a Robinhood brokerage ramp or swap plugin. `corePlugins.ts` merges `currencyPlugins` and `swapPlugins` into one ID space, so that plugin would have to pick a different name.
 
-### Decision 2: history comes from Blockscout, not Etherscan V2
+### Decision 2: history comes from Alchemy, with Blockscout as the fallback
 
-Chosen because it is the only Etherscan-compatible API that answers for this chain. Its `account` module serves `balance`, `txlist` and `tokentx`, and `EvmScanAdapter` already special-cases [Blockscout](#blockscout) for `eth_blockNumber`.
+Chosen because Alchemy is the one keyed provider that serves the chain on a plan the user base already runs on, and its per-key quota is not shared with every other client behind an IP. Verified on `robinhood-mainnet.g.alchemy.com`: `eth_chainId` `0x1237`, `alchemy_getAssetTransfers` for `external` and `erc20` with `pageKey` pagination and `withMetadata` timestamps, `alchemy_getTokenBalances` and `alchemy_getTokenMetadata`. Phase 1 chose Blockscout as the only Etherscan-compatible API that answers for this chain, and it stays second in the waterfall: its `account` module still serves `txlist`, `txlistinternal` and `tokentx`, and it is the only source of internal transactions here.
 
 Rejected: Etherscan V2. `GET /v2/api?chainid=4663` returns `Missing or unsupported chainid parameter`, and 4663 is absent from the 64 chains its `/v2/chainlist` lists.
 
@@ -440,15 +469,21 @@ Rejected: Routescan. `api.routescan.io/v2/network/mainnet/evm/4663` returns `cha
 
 Rejected: HoodScan, the second explorer `chainid.network` lists. It is a web application with no Etherscan-compatible `/api`.
 
-Reopens if: Etherscan adds chain 4663, which would also bring gas-oracle support and let `gastrackerSupport` flip to true.
+Rejected: a Blockscout API key. Per-instance keys are retired; a Blockscout Pro key is shared by every app install and its free tier is about 5,000 requests per day for the whole user base.
 
-### Decision 3: no `ethBalCheckerContract`
+Rejected: Alchemy's Data API `transactions/history/by-address`, which does not support this network.
 
-Chosen because nothing is deployed to check against. `eth_getCode` returns empty for all five balance-checker addresses in use across Edge's [EVM](#evm) plugins.
+Reopens if: Alchemy adds the `internal` category for this network, which would make Blockscout's `txlistinternal` redundant; or Etherscan adds chain 4663, which would also bring gas-oracle support and let `gastrackerSupport` flip to true.
+
+### Decision 3: `ethBalCheckerContract` is a fresh deployment
+
+Chosen in phase 8, reopening phase 1's "nothing is deployed to check against": `eth_getCode` returned empty for all twelve balance-checker addresses in use across Edge's [EVM](#evm) plugins, so the checker was deployed. The runtime bytecode is the one the Sonic and Celo checkers hold at `0x7263…`, copied with `eth_getCode` and wrapped in a twelve-byte `CODECOPY`/`RETURN` init stub (the contract has no constructor and no immutables), and sent from a key generated for the purpose and funded by the phase's in-app test send. The address differs from `0x7263…` because that address came from a deployer key this work did not hold.
 
 Rejected: Multicall3 at `0xcA11bde05977b3631167028862bE2a173976CA11`, which is deployed here (7,618 bytes). `RpcAdapter.fetchTokenBalances` calls `balances(address[],address[])` from the [eth-balance-checker](#eth-balance-checker) [ABI](#abi), which Multicall3 does not implement, so pointing at it would fail every call.
 
-Reopens if: someone deploys eth-balance-checker to the chain.
+Rejected: leaving the checker out now that Alchemy batches token balances. Alchemy is first in the waterfall, but the checker keeps balances batched when it is unavailable, and the twelve-checker convention is what every other EVM plugin follows.
+
+Reopens if: the deployer of `0x7263…` deploys to this chain, in which case the shared address is preferable to a one-off one.
 
 ### Decision 4: built-in token addresses come from the gateway router
 
@@ -558,7 +593,7 @@ Optimism's rollup framework, used by Base, opBNB and others. Its fee model diffe
 
 ### What held
 
-The plugin needed no engine changes. `arbitrumRollupParams`, `supportsEIP1559` and the `evmscan` adapter's existing Blockscout branch covered the chain as configured, and the HTTP 429 path already raises `RateLimitError` and retries with exponential backoff, so no rate-limit handling had to be written.
+The plugin needed no engine changes in phases 1 through 7. `arbitrumRollupParams`, `supportsEIP1559` and the `evmscan` adapter's existing Blockscout branch covered the chain as configured. The claim that no rate-limit handling had to be written did not hold: the HTTP 429 path raises `RateLimitError`, but Blockscout's per-IP throttle answers HTTP 200 with the text in `message`, which nothing classified until phase 8.
 
 ### Verification highlights
 
@@ -570,4 +605,4 @@ The plugin needed no engine changes. `arbitrumRollupParams`, `supportsEIP1559` a
 - The funding swap delivered 6248511112300593 wei against a quoted 0.006243 ETH, slightly above quote, and the app rendered the figure to the wei once the engine's next balance poll landed. The poll is the lag to expect after any receive: the balance arrived on chain before the wallet scene showed it, and no resync was needed.
 - The send's destination was the `abandon abandon … about` test vector, whose private key is public. It was credited by the transaction above and drained to zero shortly after, so a destination-balance delta is not a usable check there. The transaction receipt is.
 - The public Blockscout instance returns HTTP 429 after a small number of requests from one egress address and recovers after about three minutes. During this run the simulator's own polling and the verification probes competed for that budget, so the transaction list was verified by forcing the response instead: `fetchGetEtherscan` was temporarily stubbed to return the address's two real rows, leaving the cleaner, `processEvmScanTransaction` and the list component untouched. The stub was reverted afterwards.
-- Its v2 API (`/api/v2/addresses/<addr>/transactions`) has a SEPARATE quota from the Etherscan-compatible `/api` and answered while the latter was still returning 429. That is where the real row data above came from. No Edge-held provider key covers chain 4663: Etherscan V2 does not serve it, the dRPC key is deactivated account-wide, nowNodes and quiknode have no endpoint for it, and Alchemy supports the network but answers `ROBINHOOD_MAINNET is not enabled for this app`. Enabling it on the Alchemy app, or provisioning a Blockscout API key (which `EvmScanAdapter` already appends as `&apikey=`), removes the limit without a code change.
+- Its v2 API (`/api/v2/addresses/<addr>/transactions`) has a SEPARATE quota from the Etherscan-compatible `/api` and answered while the latter was still returning 429. That is where the real row data above came from. No Edge-held provider key covered chain 4663 at the time: Etherscan V2 does not serve it, the dRPC key is deactivated account-wide, nowNodes and quiknode have no endpoint for it, and Alchemy supported the network but answered `ROBINHOOD_MAINNET is not enabled for this app`. This retrospective originally concluded that enabling the Alchemy app, or a Blockscout API key, would remove the limit without a code change. Neither was true: per-instance Blockscout keys are retired and a Pro key is shared across every install, and Alchemy's history API is `alchemy_getAssetTransfers`, not an Etherscan-compatible `txlist`, so using it needed the adapter phase 8 added.
