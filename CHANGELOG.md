@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Robinhood Chain support (`robinhood`, EVM chain 4663), an Arbitrum Nitro L2 with ETH as its gas token. Transaction history comes from the chain's Blockscout instance, since Etherscan V2 does not cover this chain, and fees use the Arbitrum `NodeInterface` L1-component estimate. Built-in tokens are USDC, USDT, USDG, WBTC, WETH, CASHCAT and PONS.
+
 ## 4.90.1 (2026-08-28)
 
 - changed: (Zano) Update react-native-zano to ^0.5.1, which keeps native calls off React Native's shared native-modules thread and patches the SDK's close-during-scan deadlock - together the Android freeze that struck minutes into a sync - rebuilds a wallet file the SDK cannot read instead of retrying it forever, and reads history through the HF6-ready endpoint this release requires.
