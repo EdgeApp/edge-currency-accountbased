@@ -14,11 +14,8 @@ import ETH_BAL_CHECKER_ABI from '../abi/ETH_BAL_CHECKER_ABI.json'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asEtherscanGetBlockHeight } from '../ethereumSchema'
-import {
-  asEthereumInitKeys,
-  asRpcResultString,
-  RpcResultString
-} from '../ethereumTypes'
+import { asRpcResultString, RpcResultString } from '../ethereumTypes'
+import { resolveServerApiKey } from './apiKeyTemplate'
 import { NetworkAdapter } from './networkAdapterTypes'
 
 export interface RpcAdapterConfig {
@@ -425,23 +422,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
         }
 
   private addRpcApiKey(url: string): string {
-    const regex = /{{(.*?)}}/g
-    const match = regex.exec(url)
-    if (match != null) {
-      const key = match[1]
-      const cleanKey = asEthereumInitKeys(key)
-      const apiKey = this.ethEngine.initOptions[cleanKey]
-      if (typeof apiKey === 'string') {
-        url = url.replace(match[0], apiKey)
-      } else if (apiKey == null) {
-        throw new Error(
-          `Missing ${cleanKey} in 'initOptions' for ${this.ethEngine.currencyInfo.pluginId}`
-        )
-      } else {
-        throw new Error('Incorrect apikey type for RPC')
-      }
-    }
-    return url
+    return resolveServerApiKey(url, this.ethEngine)
   }
 
   // TODO: Clean return type
