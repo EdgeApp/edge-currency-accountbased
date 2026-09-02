@@ -10,6 +10,7 @@ import {
 import type { JsonObject } from 'edge-core-js/types'
 import type {
   PirateBalance,
+  PirateEndpointPoolDiagnostics,
   PirateTransaction,
   PirateWalletSdk,
   SynchronizerStatus
@@ -90,6 +91,12 @@ export interface PiratechainSynchronizer {
   on: Subscriber<PiratechainEvents>
   getBalance: () => Promise<PirateBalance>
   getCurrentAddress: () => Promise<string>
+  /**
+   * Live-probes every configured lightwalletd over the wallet's transport and
+   * reports which one the SDK would select. Slow by design (one round trip
+   * per endpoint), so callers keep it off the sync path.
+   */
+  getEndpointDiagnostics: () => Promise<PirateEndpointPoolDiagnostics>
   getSpendability: () => Promise<PiratechainSpendability>
   getStatus: () => Promise<SynchronizerStatus>
   getTransactions: () => Promise<PirateTransaction[]>
@@ -424,6 +431,9 @@ export function makePiratechainIo(): PiratechainIo {
         },
         getCurrentAddress: async () => {
           return await walletSdk.getCurrentReceiveAddress(walletId)
+        },
+        getEndpointDiagnostics: async () => {
+          return await walletSdk.getLightdEndpointPoolDiagnostics(walletId)
         },
         getSpendability: async () => {
           return asSpendabilityStatus(

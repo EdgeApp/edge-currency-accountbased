@@ -267,6 +267,7 @@ export class PiratechainEngine extends CurrencyEngine<
       this.synchronizer = await this.synchronizerPromise
       // People might be waiting on the old promise, so resolve that
       this.synchronizerResolver(this.synchronizer)
+      this.logEndpointDiagnostics(this.synchronizer)
     } catch (e) {
       // The synchronizer cannot start if the native module isn't present:
       if (String(e).includes('native module is not linked')) {
@@ -279,6 +280,28 @@ export class PiratechainEngine extends CurrencyEngine<
     return await new Promise(resolve => {
       this.stopSyncing = resolve
     })
+  }
+
+  /**
+   * Records which lightwalletd the SDK selected from the configured pool and
+   * why it rejected the others. A wallet that never syncs otherwise looks the
+   * same whether every node is down or the pool was misconfigured, and this
+   * is the only surface that tells the two apart. The probe makes a round
+   * trip per endpoint, so it runs off the sync path and never blocks it.
+   */
+  logEndpointDiagnostics(synchronizer: PiratechainSynchronizer): void {
+    synchronizer
+      .getEndpointDiagnostics()
+      .then(diagnostics => {
+        // Warn level, so it reaches the app's persisted logs at the default
+        // log level and ships with a user's log export:
+        this.log.warn(`Lightwalletd pool: ${JSON.stringify(diagnostics)}`)
+      })
+      .catch((error: unknown) => {
+        this.log.warn(
+          `Failed to read the lightwalletd pool diagnostics: ${String(error)}`
+        )
+      })
   }
 
   async killEngine(): Promise<void> {
