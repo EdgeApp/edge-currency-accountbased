@@ -57,8 +57,15 @@ export interface PiratechainSpendOutput {
   memo?: string
 }
 
+/** What identifies a wallet in the SDK registry. */
 export interface PiratechainWalletConfig {
   birthdayHeight: number
+  mnemonic: string
+  name: string
+}
+
+/** What a running synchronizer needs on top of the registry identity. */
+export interface PiratechainSynchronizerConfig extends PiratechainWalletConfig {
   /**
    * Alternate lightwalletd URLs for the SDK's multi-server pool. Empty or
    * absent leaves the wallet on `lightwalletdUrl` alone.
@@ -70,8 +77,13 @@ export interface PiratechainWalletConfig {
    * without this the wallet silently scans against whatever the SDK picked.
    */
   lightwalletdUrl?: string
-  mnemonic: string
-  name: string
+  /**
+   * Wraps the wallet's signing keys inside the SDK registry. The engine
+   * derives it from account-encrypted key material it only holds while the
+   * Edge account is unlocked, so the SDK's signing lock follows Edge's. Never
+   * persisted on either side of the bridge.
+   */
+  signingCredential: string
 }
 
 export interface PiratechainSynchronizer {
@@ -96,7 +108,7 @@ export interface PiratechainIo {
   getLatestNetworkHeight: (lightwalletdUrl?: string) => Promise<number>
   isValidAddress: (address: string) => Promise<boolean>
   makeSynchronizer: (
-    config: PiratechainWalletConfig
+    config: PiratechainSynchronizerConfig
   ) => Promise<PiratechainSynchronizer>
 }
 
@@ -349,6 +361,33 @@ export function makePiratechainIo(): PiratechainIo {
         }
       }
 
+      // The SDK keeps the seed and spending keys wrapped under a key derived
+      // from this credential and holds that key in memory only, so a locked
+      // registry can still sync (viewing keys and the block cache stay
+      // readable) but cannot sign. Protection is enabled once per wallet and
+      // unlocked on every later start. Sync does not depend on it, so a
+      // failure here logs and a send then fails with the SDK's own
+      // ERR_SIGNING_SESSION_LOCKED rather than being refused up front:
+      const { signingCredential } = config
+      const ensureSigningUnlocked = async (): Promise<void> => {
+        const status = await walletSdk.getWalletSigningStatus(walletId)
+        if (!status.protectionEnabled) {
+          await walletSdk.enableWalletSigningProtection(
+            walletId,
+            signingCredential
+          )
+        } else if (!status.unlocked) {
+          await walletSdk.unlockWalletSigning(walletId, signingCredential)
+        }
+      }
+      try {
+        await ensureSigningUnlocked()
+      } catch (error: unknown) {
+        console.warn(
+          `piratechain: wallet signing protection unavailable: ${String(error)}`
+        )
+      }
+
       const realSynchronizer = walletSdk.createSynchronizer(walletId, {
         transactionLimit: null
       })
@@ -401,6 +440,10 @@ export function makePiratechainIo(): PiratechainIo {
           await walletSdk.rescan(walletId, fromHeight ?? null)
         },
         send: async (outputs, fee) => {
+          // Another wallet's lock or a lockAll can have cleared this wallet's
+          // signing key since start, so re-establish it here and let a
+          // failure surface with its real reason:
+          await ensureSigningUnlocked()
           // The SDK's send builds, signs, and broadcasts, keeping the opaque
           // pending/signed payloads verbatim between steps and serializing
           // amounts as strings so large sends keep full precision:
@@ -408,6 +451,15 @@ export function makePiratechainIo(): PiratechainIo {
         },
         stop: async () => {
           await realSynchronizer.close()
+          // The engine stops when the account locks or logs out, which is
+          // when the signing key must leave memory:
+          await walletSdk
+            .lockWalletSigning(walletId)
+            .catch((error: unknown) => {
+              console.warn(
+                `piratechain: failed to lock wallet signing: ${String(error)}`
+              )
+            })
         }
       })
 

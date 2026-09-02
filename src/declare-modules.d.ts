@@ -89,3 +89,15 @@ declare module 'bs58' {
   export const encode: (buffer: Buffer | number[] | Uint8Array) => string
   export const decode: (string: string) => Buffer
 }
+
+declare module 'create-hmac' {
+  interface Hmac {
+    update: (data: string | Uint8Array) => Hmac
+    digest: () => Buffer
+  }
+  function createHmac(
+    algorithm: 'sha256' | 'sha512',
+    key: string | Uint8Array
+  ): Hmac
+  export = createHmac
+}
