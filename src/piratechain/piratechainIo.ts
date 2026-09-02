@@ -61,8 +61,15 @@ export interface PiratechainSpendOutput {
   memo?: string
 }
 
+/** What identifies a wallet in the SDK registry. */
 export interface PiratechainWalletConfig {
   birthdayHeight: number
+  mnemonic: string
+  name: string
+}
+
+/** What a running synchronizer needs on top of the registry identity. */
+export interface PiratechainSynchronizerConfig extends PiratechainWalletConfig {
   /**
    * Alternate lightwalletd URLs for the SDK's multi-server pool. Empty or
    * absent leaves the wallet on `lightwalletdUrl` alone.
@@ -74,8 +81,13 @@ export interface PiratechainWalletConfig {
    * without this the wallet silently scans against whatever the SDK picked.
    */
   lightwalletdUrl?: string
-  mnemonic: string
-  name: string
+  /**
+   * Wraps the wallet's signing keys inside the SDK registry. The engine
+   * derives it from account-encrypted key material it only holds while the
+   * Edge account is unlocked, so the SDK's signing lock follows Edge's. Never
+   * persisted on either side of the bridge.
+   */
+  signingCredential: string
 }
 
 export interface PiratechainSynchronizer {
@@ -105,7 +117,7 @@ export interface PiratechainIo {
   getLatestNetworkHeight: (lightwalletdUrl?: string) => Promise<number>
   isValidAddress: (address: string) => Promise<boolean>
   makeSynchronizer: (
-    config: PiratechainWalletConfig
+    config: PiratechainSynchronizerConfig
   ) => Promise<PiratechainSynchronizer>
 }
 
@@ -376,6 +388,53 @@ export function makePiratechainIo(): PiratechainIo {
         }
       }
 
+      // The SDK keeps the seed and spending keys wrapped under a key derived
+      // from this credential and holds that key in memory only, so a locked
+      // registry can still sync (viewing keys and the block cache stay
+      // readable) but cannot sign. Protection is enabled the first time a
+      // wallet is seen on this device, so its spending keys are wrapped from
+      // the first sync on, and the key is locked again at once: nothing
+      // before a send needs it, and `send` unlocks for its own span. Sync does
+      // not depend on any of this, so a failure here logs and a send then
+      // fails with the SDK's own ERR_SIGNING_SESSION_LOCKED rather than being
+      // refused up front:
+      const { signingCredential } = config
+      const ensureSigningUnlocked = async (): Promise<void> => {
+        let status = await walletSdk.getWalletSigningStatus(walletId)
+        if (!status.protectionEnabled) {
+          // Enabling may or may not leave the key unlocked, so read the
+          // status it returns rather than assuming:
+          status = await walletSdk.enableWalletSigningProtection(
+            walletId,
+            signingCredential
+          )
+        }
+        if (!status.unlocked) {
+          await walletSdk.unlockWalletSigning(walletId, signingCredential)
+        }
+      }
+      const lockSigning = async (): Promise<void> => {
+        await walletSdk.lockWalletSigning(walletId).catch((error: unknown) => {
+          console.warn(
+            `piratechain: failed to lock wallet signing: ${String(error)}`
+          )
+        })
+      }
+      try {
+        const status = await walletSdk.getWalletSigningStatus(walletId)
+        const enabled = status.protectionEnabled
+          ? status
+          : await walletSdk.enableWalletSigningProtection(
+              walletId,
+              signingCredential
+            )
+        if (enabled.unlocked) await walletSdk.lockWalletSigning(walletId)
+      } catch (error: unknown) {
+        console.warn(
+          `piratechain: wallet signing protection unavailable: ${String(error)}`
+        )
+      }
+
       const realSynchronizer = walletSdk.createSynchronizer(walletId, {
         transactionLimit: null
       })
@@ -431,10 +490,19 @@ export function makePiratechainIo(): PiratechainIo {
           await walletSdk.rescan(walletId, fromHeight ?? null)
         },
         send: async (outputs, fee) => {
-          // The SDK's send builds, signs, and broadcasts, keeping the opaque
-          // pending/signed payloads verbatim between steps and serializing
-          // amounts as strings so large sends keep full precision:
-          return await walletSdk.send(walletId, outputs, fee ?? null)
+          // The signing key is in native memory only for the span of this
+          // call: unlock here (a failure surfaces with its real reason), and
+          // lock again whether or not the send went through, so the key
+          // never outlives the spend that needed it:
+          await ensureSigningUnlocked()
+          try {
+            // The SDK's send builds, signs, and broadcasts, keeping the opaque
+            // pending/signed payloads verbatim between steps and serializing
+            // amounts as strings so large sends keep full precision:
+            return await walletSdk.send(walletId, outputs, fee ?? null)
+          } finally {
+            await lockSigning()
+          }
         },
         start: async () => {
           try {
@@ -448,7 +516,14 @@ export function makePiratechainIo(): PiratechainIo {
           }
         },
         stop: async () => {
-          await realSynchronizer.close()
+          try {
+            await realSynchronizer.close()
+          } finally {
+            // Only `send` holds the key unlocked, but the engine is killed on
+            // account lock or logout, which can land mid-send, so lock here
+            // too, whether or not the poller closed cleanly:
+            await lockSigning()
+          }
         }
       })
 
