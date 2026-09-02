@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- added: (ARRR) A lightwalletd failover pool, with the node list replaceable from the info server
+- changed: (ARRR) Pirate Chain runs on the unified `react-native-pirate-wallet` SDK (^0.3.4), replacing `react-native-piratechain`
+- changed: (ARRR) Wallets scan and broadcast over TLS against the plugin's own lightwalletd node, not the SDK's default
+- changed: (ARRR) The wallet registry credential lives in the iOS Keychain or Android Keystore
+- changed: (ARRR) Signing keys stay locked whenever a wallet's engine is not running
+- fixed: (ARRR) A send is refused with a wait-and-retry message until the wallet can spend, instead of failing after confirmation
+
 ## 4.87.0 (2026-08-02)
 
 - added: (Sui) `rpcNodes`, `rpcNodesArchival`, and `maxRequestsPerSecond` to the info payload, so nodes can be changed without a client release. Transaction sweeps start on an archival node, since the walk begins at the wallet's oldest transaction and a pruned node rejects a cursor older than its retention window.
