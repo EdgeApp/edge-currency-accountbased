@@ -1,4 +1,5 @@
 import { abs, add, eq, gt, gte, lte, mul, sub } from 'biggystring'
+import createHmac from 'create-hmac'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -258,7 +259,10 @@ export class PiratechainEngine extends CurrencyEngine<
         mnemonic: piratechainPrivateKeys.mnemonic,
         birthdayHeight: piratechainPrivateKeys.birthdayHeight,
         lightwalletdUrl: this.networkInfo.lightwalletdUrl,
-        lightwalletdFailoverUrls: this.networkInfo.lightwalletdFailoverUrls
+        lightwalletdFailoverUrls: this.networkInfo.lightwalletdFailoverUrls,
+        signingCredential: deriveSigningCredential(
+          piratechainPrivateKeys.mnemonic
+        )
       })
       this.synchronizer = await this.synchronizerPromise
       // People might be waiting on the old promise, so resolve that
@@ -503,6 +507,22 @@ function asRetryableSpendError(error: unknown): PendingFundsError | undefined {
       : 'Cannot spend until the wallet finishes syncing'
   )
 }
+
+/**
+ * The credential the SDK wraps a wallet's signing keys with. Edge has no
+ * account-session secret to hand a currency plugin, but the mnemonic is
+ * account-encrypted material the engine holds exactly while the account is
+ * unlocked, so a key derived from it locks and unlocks on Edge's schedule.
+ * The derivation is one-way and domain-separated, so the credential the SDK
+ * sees cannot recover the seed it protects, and it is never written anywhere.
+ */
+function deriveSigningCredential(mnemonic: string): string {
+  return base16.stringify(
+    createHmac('sha256', SIGNING_CREDENTIAL_DOMAIN).update(mnemonic).digest()
+  )
+}
+const SIGNING_CREDENTIAL_DOMAIN =
+  'edge-currency-accountbased/piratechain/signing-session/v1'
 
 /**
  * Why the wallet cannot spend yet. Every case resolves itself by waiting, so
