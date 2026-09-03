@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- fixed: (Avalanche) Derive C-Chain addresses at coin type 60 so seeds imported from EVM wallets (Exodus, MetaMask, Trust) produce a matching receive address. Existing wallets keep their cached address and are unaffected.
+- added: (EVM) Save the BIP-44 derivation path in wallet keys, so wallets created before a coin type correction keep deriving at the path their stored private key was built from.
+- fixed: (Avalanche) Derive C-Chain addresses at coin type 60 so seeds imported from EVM wallets (Exodus, MetaMask, Trust) produce a matching receive address. Existing wallets are unaffected.
 
 ## 4.82.1 (2026-05-27)
 

@@ -110,6 +110,10 @@ export interface EthereumNetworkInfo {
   ercTokenStandard: string
   evmGasStationUrl: string | null
   hdPathCoinType: number
+  // Coin type wallets used before `hdPathCoinType` was corrected. Wallets
+  // created back then have no `derivationPath` in their keys, so they derive
+  // from this instead and keep the address their stored private key signs for.
+  legacyHdPathCoinType?: number
   networkFees: EthereumFees
   pluginMnemonicKeyName: string
   pluginRegularKeyName: string
@@ -461,6 +465,7 @@ export const asSafeEthWalletInfo = asSafeCommonWalletInfo
 export interface EthereumPrivateKeys {
   mnemonic?: string
   privateKey: string
+  derivationPath?: string
 }
 export const asEthereumPrivateKeys = (
   pluginId: string
@@ -472,12 +477,13 @@ export const asEthereumPrivateKeys = (
   } &
     {
       [key in `${PluginId}Mnemonic`]?: string
-    }
+    } & { derivationPath?: string }
   const _pluginId = pluginId as PluginId
   // Derived cleaners from the generic parameter:
   const asFromKeys: Cleaner<FromKeys> = asObject({
     [`${_pluginId}Mnemonic`]: asOptional(asString),
-    [`${_pluginId}Key`]: asString
+    [`${_pluginId}Key`]: asString,
+    derivationPath: asOptional(asString)
   }) as Cleaner<any>
   const asFromJackedKeys = asObject({ keys: asFromKeys })
 
@@ -488,7 +494,8 @@ export const asEthereumPrivateKeys = (
       if (fromJacked != null) {
         const to: EthereumPrivateKeys = {
           mnemonic: fromJacked.keys[`${_pluginId}Mnemonic`],
-          privateKey: fromJacked.keys[`${_pluginId}Key`]
+          privateKey: fromJacked.keys[`${_pluginId}Key`],
+          derivationPath: fromJacked.keys.derivationPath
         }
         return to
       }
@@ -497,14 +504,16 @@ export const asEthereumPrivateKeys = (
       const from = asFromKeys(value)
       const to: EthereumPrivateKeys = {
         mnemonic: from[`${_pluginId}Mnemonic`],
-        privateKey: from[`${_pluginId}Key`]
+        privateKey: from[`${_pluginId}Key`],
+        derivationPath: from.derivationPath
       }
       return to
     },
     ethPrivateKey => {
       return {
         [`${_pluginId}Mnemonic`]: ethPrivateKey.mnemonic,
-        [`${_pluginId}Key`]: ethPrivateKey.privateKey
+        [`${_pluginId}Key`]: ethPrivateKey.privateKey,
+        derivationPath: ethPrivateKey.derivationPath
       }
     }
   )

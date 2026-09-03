@@ -37,6 +37,12 @@ import {
 } from './ethereumTypes'
 import { RpcAdapterConfig } from './networkAdapters/RpcAdapter'
 
+/**
+ * The BIP-44 path an EVM wallet's first account lives at.
+ */
+const makeHdPath = (hdPathCoinType: number): string =>
+  `m/44'/${hdPathCoinType}'/0'/0/0`
+
 export class EthereumTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
@@ -94,10 +100,12 @@ export class EthereumTools implements EdgeCurrencyTools {
         // was just the wrong length
         throw new Error('Invalid input')
       }
-      const hexKey = await this._mnemonicToHex(userInput)
+      const derivationPath = makeHdPath(this.networkInfo.hdPathCoinType)
+      const hexKey = await this._mnemonicToHex(userInput, derivationPath)
       return {
         [pluginMnemonicKeyName]: userInput,
-        [pluginRegularKeyName]: hexKey
+        [pluginRegularKeyName]: hexKey,
+        derivationPath
       }
     }
   }
@@ -113,17 +121,24 @@ export class EthereumTools implements EdgeCurrencyTools {
     const entropy = Buffer.from(this.io.random(32))
     const mnemonicKey = entropyToMnemonic(entropy)
 
-    const hexKey = await this._mnemonicToHex(mnemonicKey) // will not have 0x in it
+    const derivationPath = makeHdPath(this.networkInfo.hdPathCoinType)
+    // will not have 0x in it:
+    const hexKey = await this._mnemonicToHex(mnemonicKey, derivationPath)
     return {
       [pluginMnemonicKeyName]: mnemonicKey,
-      [pluginRegularKeyName]: hexKey
+      [pluginRegularKeyName]: hexKey,
+      derivationPath
     }
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const { pluginId } = this.currencyInfo
-    const { hdPathCoinType, pluginMnemonicKeyName, pluginRegularKeyName } =
-      this.networkInfo
+    const {
+      hdPathCoinType,
+      legacyHdPathCoinType,
+      pluginMnemonicKeyName,
+      pluginRegularKeyName
+    } = this.networkInfo
     if (walletInfo.type !== `wallet:${pluginId}`) {
       throw new Error('Invalid wallet type')
     }
@@ -134,8 +149,17 @@ export class EthereumTools implements EdgeCurrencyTools {
         walletInfo.keys[pluginMnemonicKeyName]
       )
       const hdwallet = hdKey.fromMasterSeed(seedBuffer)
-      const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0`
-      const walletPathDerivation = hdwallet.derivePath(`${walletHdpath}/0`)
+      // Wallets created since the plugin started saving `derivationPath` carry
+      // the path they were built from. Older ones do not, and their stored
+      // private key was derived from the coin type of that era, so they must
+      // keep deriving from it or the address would stop matching the key that
+      // signs for it.
+      const savedPath = walletInfo.keys.derivationPath
+      const walletHdpath =
+        typeof savedPath === 'string'
+          ? savedPath
+          : makeHdPath(legacyHdPathCoinType ?? hdPathCoinType)
+      const walletPathDerivation = hdwallet.derivePath(walletHdpath)
       const wallet = walletPathDerivation.getWallet()
       const publicKey = wallet.getPublicKey()
       const addressHex = EthereumUtil.pubToAddress(publicKey).toString('hex')
@@ -158,11 +182,9 @@ export class EthereumTools implements EdgeCurrencyTools {
     return { publicKey: address }
   }
 
-  async _mnemonicToHex(mnemonic: string): Promise<string> {
-    const { hdPathCoinType } = this.networkInfo
+  async _mnemonicToHex(mnemonic: string, path: string): Promise<string> {
     const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
-    const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0`
-    const walletPathDerivation = hdwallet.derivePath(`${walletHdpath}/0`)
+    const walletPathDerivation = hdwallet.derivePath(path)
     const wallet = walletPathDerivation.getWallet()
     const privKey = wallet.getPrivateKeyString().replace(/^0x/, '')
     return privKey

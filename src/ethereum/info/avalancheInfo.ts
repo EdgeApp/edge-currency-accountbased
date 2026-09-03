@@ -215,6 +215,7 @@ const networkInfo: EthereumNetworkInfo = {
   // AVAX C-Chain is EVM and standard wallets (Exodus, MetaMask, Trust) derive it
   // at Ethereum's coin type so imported seeds yield a matching receive address.
   hdPathCoinType: 60,
+  legacyHdPathCoinType: 9000,
   pluginMnemonicKeyName: 'avalancheMnemonic',
   pluginRegularKeyName: 'avalancheKey',
   evmGasStationUrl: null,
