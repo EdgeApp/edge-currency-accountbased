@@ -221,6 +221,17 @@ describe('AlchemyAdapter transfer processing', function () {
     assert.equal(tx.isSend, true)
   })
 
+  it('answers empty for a token the engine does not know', function () {
+    const hash =
+      '0x3333333333333333333333333333333333333333333333333333333333333333'
+    const txs = processAlchemyTransfers(
+      { ...nativeContext, forWhichTokenId: 'deadbeef' },
+      [makeTransfer({ hash, uniqueId: `${hash}:log:1` })],
+      new Map()
+    )
+    assert.deepEqual(txs, [])
+  })
+
   it('sums several transfers of one transaction', function () {
     const hash =
       '0x2222222222222222222222222222222222222222222222222222222222222222'

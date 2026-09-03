@@ -28,6 +28,29 @@ import { GetTxsParams, NetworkAdapter } from './networkAdapterTypes'
 /** Alchemy caps `maxCount` at 1000 transfers per page */
 const MAX_TRANSFERS_PER_PAGE = '0x3e8'
 
+/**
+ * Endpoints (by hostname) that answered `alchemy_getAssetTransfers` with the
+ * "category is not supported for this network" error for `internal`.
+ * Shared across wallets so each chain learns the answer once per session.
+ */
+const internalCategoryUnsupported = new Set<string>()
+
+/** A JSON-RPC error entry returned inside an HTTP 200 batch reply */
+class AlchemyRpcError extends Error {
+  code: number
+
+  constructor(code: number, message: string) {
+    super(message)
+    this.name = 'AlchemyRpcError'
+    this.code = code
+  }
+}
+
+const isUnsupportedCategoryError = (error: unknown): boolean =>
+  error instanceof AlchemyRpcError &&
+  error.code === -32602 &&
+  /category is not supported/i.test(error.message)
+
 export interface AlchemyAdapterConfig {
   type: 'alchemy'
   /**
@@ -45,9 +68,10 @@ export interface AlchemyAdapterConfig {
  * `alchemy_getAssetTransfers` reports value movements rather than
  * transactions, without gas data, so a wallet's outgoing transactions are
  * completed with `eth_getTransactionByHash` and `eth_getTransactionReceipt`
- * from the same endpoint. The `internal` category is not available on every
- * network Alchemy serves; where it is missing, ETH paid out to the wallet from
- * inside a contract call is not reported by this adapter.
+ * from the same endpoint. Native-asset queries ask for the `internal`
+ * category alongside `external`; Alchemy rejects that category on some
+ * networks, and the first such rejection is remembered per endpoint so the
+ * adapter keeps serving `external` transfers there without retrying it.
  */
 export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
   batchMulticastRpc = null
@@ -209,10 +233,18 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
     }
   ): Promise<AlchemyAssetTransfer[]> {
     const { startBlock, contractAddress, fromAddress, toAddress } = query
+    const hostname = parse(baseUrl).hostname
+    const withInternal =
+      contractAddress == null && !internalCategoryUnsupported.has(hostname)
     const params: JsonObject = {
       fromBlock: decimalToHex(startBlock.toString()),
       toBlock: 'latest',
-      category: contractAddress == null ? ['external'] : ['erc20'],
+      category:
+        contractAddress != null
+          ? ['erc20']
+          : withInternal
+          ? ['external', 'internal']
+          : ['external'],
       withMetadata: true,
       order: 'asc',
       maxCount: MAX_TRANSFERS_PER_PAGE
@@ -230,12 +262,24 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
     const transfers: AlchemyAssetTransfer[] = []
     let pageKey: string | undefined
     while (true) {
-      const [raw] = await this.fetchBatchRpc(baseUrl, [
-        {
-          method: 'alchemy_getAssetTransfers',
-          params: [pageKey == null ? params : { ...params, pageKey }]
-        }
-      ])
+      let raw: unknown
+      try {
+        ;[raw] = await this.fetchBatchRpc(baseUrl, [
+          {
+            method: 'alchemy_getAssetTransfers',
+            params: [pageKey == null ? params : { ...params, pageKey }]
+          }
+        ])
+      } catch (error: unknown) {
+        if (!withInternal || !isUnsupportedCategoryError(error)) throw error
+        // This network has no internal transfers on Alchemy. Remember that
+        // and answer with external transfers only.
+        this.ethEngine.warn(
+          `${hostname} does not serve internal transfers; using external only`
+        )
+        internalCategoryUnsupported.add(hostname)
+        return await this.fetchAssetTransfers(baseUrl, query)
+      }
       const page = asAssetTransfersResult(raw)
       for (const rawTransfer of page.transfers) {
         transfers.push(asAlchemyAssetTransfer(rawTransfer))
@@ -316,7 +360,7 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
         this.ethEngine.error(
           `Batch RPC error from ${hostname}: ${JSON.stringify(result.error)}`
         )
-        throw new Error(`Batch RPC error: ${result.error.message}`)
+        throw new AlchemyRpcError(result.error.code, result.error.message)
       }
       return result.result
     })
@@ -357,11 +401,9 @@ export function processAlchemyTransfers(
   let currencyCode: string = context.currencyInfo.currencyCode
   if (tokenTx) {
     const knownToken = context.allTokensMap[context.forWhichTokenId ?? '']
-    if (knownToken == null) {
-      throw new Error(
-        `Unknown token ${context.forWhichTokenId} for ${context.forWhichAddress}`
-      )
-    }
+    // The engine only asks for tokens it knows, so this is unreachable in
+    // practice; an empty result keeps one stray tokenId from failing the sync.
+    if (knownToken == null) return []
     currencyCode = knownToken.currencyCode
   }
 
