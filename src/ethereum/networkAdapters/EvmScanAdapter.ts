@@ -75,6 +75,9 @@ export class EvmScanAdapter<
     | ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>)
     | null = null
 
+  /** Extra headers on every `/api` request; subclasses set them per provider */
+  protected requestHeaders: Record<string, string> | undefined = undefined
+
   batchMulticastRpc = null
   connect = null
   disconnect = null
@@ -328,7 +331,10 @@ export class EvmScanAdapter<
       url = `${server}/api${cmd}`
     }
 
-    const response = await this.ethEngine.engineFetch(`${url}${apiKeyParam}`)
+    const response = await this.ethEngine.engineFetch(
+      `${url}${apiKeyParam}`,
+      this.requestHeaders == null ? undefined : { headers: this.requestHeaders }
+    )
 
     if (!response.ok) {
       const resBody = await response.text()
@@ -606,10 +612,13 @@ export function processEvmScanTransaction(
 export function mergeEdgeTransactions(
   transactions: EdgeTransaction[]
 ): EdgeTransaction[] {
-  // The Map key is the txid and tokenId concatenated
+  // The Map key is the txid and tokenId concatenated. The txid is compared
+  // case-insensitively because rows from two APIs may not agree on hex case.
   const txidToTransaction: Map<string, EdgeTransaction> = new Map()
   for (const transaction of transactions) {
-    const uniqueKey = `${transaction.txid}:${transaction.tokenId ?? ''}`
+    const uniqueKey = `${transaction.txid.toLowerCase()}:${
+      transaction.tokenId ?? ''
+    }`
     const existingTransaction = txidToTransaction.get(uniqueKey)
     if (existingTransaction == null) {
       txidToTransaction.set(uniqueKey, transaction)

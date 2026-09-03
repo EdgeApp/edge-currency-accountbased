@@ -292,3 +292,38 @@ describe(`mergeEdgeTransactions for token transactions`, function () {
     )
   })
 })
+
+describe('mergeEdgeTransactions across sources', function () {
+  it('merges rows whose txids differ only in hex case', function () {
+    const base = {
+      blockHeight: 100,
+      currencyCode: 'ETH',
+      date: 1,
+      memos: [],
+      networkFees: [],
+      ourReceiveAddresses: [],
+      signedTx: '',
+      tokenId: null,
+      walletId: 'w'
+    }
+    const merged = mergeEdgeTransactions([
+      {
+        ...base,
+        txid: '0xABCDEF',
+        isSend: true,
+        nativeAmount: '-1000210000000000',
+        networkFee: '210000000000'
+      },
+      {
+        ...base,
+        txid: '0xabcdef',
+        isSend: false,
+        nativeAmount: '400000000000000',
+        networkFee: '0'
+      }
+    ])
+    assert.lengthOf(merged, 1)
+    assert.equal(merged[0].nativeAmount, '-600210000000000')
+    assert.equal(merged[0].networkFee, '210000000000')
+  })
+})

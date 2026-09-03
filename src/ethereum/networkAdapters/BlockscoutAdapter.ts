@@ -21,6 +21,17 @@ import { GetTxsParams, RateLimitError } from './networkAdapterTypes'
 const internalTxsCooldownUntil = new Map<string, number>()
 const INTERNAL_TXS_COOLDOWN_MS = 60 * 1000
 
+/**
+ * Public Blockscout instances sit behind Cloudflare, and some of them (the
+ * Robinhood Chain one, measured 2026-09-03 from two unrelated IPs) answer a
+ * managed challenge page to every request whose user agent does not look
+ * like a browser: the app's own CFNetwork and OkHttp agents get HTTP 403,
+ * a browser string gets the JSON. Sending one is the same workaround
+ * `BlockbookAdapter` applies for Trezor's Blockbook servers.
+ */
+const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36'
+
 export interface BlockscoutAdapterConfig {
   type: 'blockscout'
   /** Blockscout instance origins, e.g. `https://eth.blockscout.com` */
@@ -44,6 +55,7 @@ export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
   // after three retries (1s, 2s, 4s) the call throws, the engine marks the
   // pass partial and keeps the query window open for the next attempt.
   protected rateLimitRetries = 3
+  protected requestHeaders = { 'User-Agent': BROWSER_USER_AGENT }
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     const { result: jsonObj, server } = await this.serialServers(
