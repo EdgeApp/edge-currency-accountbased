@@ -81,6 +81,7 @@ export interface AlchemyAdapterConfig {
  * adapter keeps serving `external` transfers there without retrying it.
  */
 export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
+  fetchInternalTxs = null
   batchMulticastRpc = null
   broadcast = null
   connect = null
@@ -245,12 +246,13 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
           result: { edgeTransactions, includesInternal }
         }
       })
-      const { edgeTransactions } = result
+      const { edgeTransactions, includesInternal } = result
 
       const edgeTransactionsBlockHeightTuple: EdgeTransactionsBlockHeightTuple =
         {
           blockHeight: startBlock,
-          edgeTransactions
+          edgeTransactions,
+          includesInternal
         }
       const maxBlockHeight = edgeTransactions.reduce((max, tx) => {
         return Math.max(max, tx.blockHeight)

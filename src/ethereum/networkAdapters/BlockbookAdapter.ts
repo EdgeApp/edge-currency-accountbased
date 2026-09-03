@@ -15,6 +15,7 @@ export interface BlockbookAdapterConfig {
 }
 
 export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
+  fetchInternalTxs = null
   batchMulticastRpc = null
   connect = null
   disconnect = null

@@ -20,6 +20,7 @@ export interface PulsechainScanAdapterConfig {
 }
 
 export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterConfig> {
+  fetchInternalTxs = null
   batchMulticastRpc = null
   broadcast = null
   connect = null

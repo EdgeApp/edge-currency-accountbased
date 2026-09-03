@@ -22,6 +22,7 @@ export interface FilfoxAdapterConfig {
 }
 
 export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
+  fetchInternalTxs = null
   batchMulticastRpc = null
   broadcast = null
   connect = null

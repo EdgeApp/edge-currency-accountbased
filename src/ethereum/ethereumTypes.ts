@@ -124,6 +124,7 @@ const asNetworkAdaptorConfigType = asValue(
   'blockbook-ws',
   'blockchair',
   'blockcypher',
+  'blockscout',
   'evmscan',
   'filfox',
   'pulsechain-scan',
