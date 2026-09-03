@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Avalanche) Derive C-Chain addresses at coin type 60 so seeds imported from EVM wallets (Exodus, MetaMask, Trust) produce a matching receive address. Existing wallets keep their cached address and are unaffected.
+
 ## 4.82.1 (2026-05-27)
 
 - changed: (FIO) Replace forked `@fioprotocol/fiosdk` with official npm 1.10.3.
