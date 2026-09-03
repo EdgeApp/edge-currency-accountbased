@@ -1,4 +1,5 @@
 import { assert } from 'chai'
+import { EdgeTransaction } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
 import {
@@ -8,6 +9,7 @@ import {
 import {
   AlchemyAssetTransfer,
   AlchemyTxDetails,
+  makeFailedSend,
   processAlchemyTransfers
 } from '../../../src/ethereum/networkAdapters/AlchemyAdapter'
 import { TransactionProcessingContext } from '../../../src/ethereum/networkAdapters/EvmScanAdapter'
@@ -37,7 +39,9 @@ const spendDetails: AlchemyTxDetails = {
   nonce: '2',
   gas: '21000',
   gasPrice: '10000000',
-  gasUsed: '21000'
+  gasUsed: '21000',
+  blockHeight: 35308086,
+  succeeded: true
 }
 const spendFee = '210000000000'
 
@@ -46,6 +50,7 @@ const makeTransfer = (
 ): AlchemyAssetTransfer => ({
   blockNum: '0x21ac236',
   uniqueId: `${overrides.hash}:external`,
+  category: 'external',
   from: otherAddress,
   to: ourAddress.toLowerCase(),
   rawContract: { value: '0x38d7ea4c68000', address: null },
@@ -230,6 +235,45 @@ describe('AlchemyAdapter transfer processing', function () {
       new Map()
     )
     assert.deepEqual(txs, [])
+  })
+
+  it('reports a reverted pending send as failed with its fee', function () {
+    const hash =
+      '0x4444444444444444444444444444444444444444444444444444444444444444'
+    const pending: EdgeTransaction = {
+      blockHeight: 0,
+      currencyCode: 'ETH',
+      date: 1788472800,
+      isSend: true,
+      memos: [],
+      nativeAmount: '-10000210000000000',
+      networkFee: '210000000000',
+      networkFees: [],
+      otherParams: { nonceUsed: '3', isFromMakeSpend: true },
+      ourReceiveAddresses: [],
+      signedTx: '0xdead',
+      tokenId: null,
+      txid: hash,
+      walletId
+    }
+    const failed = makeFailedSend(pending, {
+      ...spendDetails,
+      blockHeight: 53700000,
+      succeeded: false,
+      gasUsed: '23000'
+    })
+    assert.equal(failed.confirmations, 'failed')
+    assert.equal(failed.blockHeight, 53700000)
+    assert.equal(failed.nativeAmount, '-230000000000')
+    assert.equal(failed.networkFee, '230000000000')
+    assert.equal(failed.date, pending.date)
+    assert.equal(failed.otherParams?.nonceUsed, '3')
+    const failedToken = makeFailedSend(
+      { ...pending, tokenId: usdcTokenId, currencyCode: 'USDC' },
+      { ...spendDetails, blockHeight: 53700001, succeeded: false }
+    )
+    assert.equal(failedToken.nativeAmount, '0')
+    assert.equal(failedToken.parentNetworkFee, spendFee)
   })
 
   it('sums several transfers of one transaction', function () {
