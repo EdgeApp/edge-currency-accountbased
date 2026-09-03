@@ -3,7 +3,8 @@
 ## Unreleased
 
 - added: Robinhood Chain support (`robinhood`, EVM chain 4663), an Arbitrum Nitro L2 with ETH as its gas token. Transaction history comes from the chain's Blockscout instance, since Etherscan V2 does not cover this chain, and fees use the Arbitrum `NodeInterface` L1-component estimate. Built-in tokens are USDC, USDT, USDG, WBTC, WETH, CASHCAT and PONS.
-- added: (Robinhood Chain) Transaction history and token balances come from Alchemy through a new `alchemy` network adapter, keyed by the plugin's `alchemyApiKey` init option, with the chain's public Blockscout instance kept as the fallback. The public Blockscout API allows 300 requests per minute per IP, which two syncing wallets exhaust, and past that it answered every history request with an empty list.
+- added: (EVM) A `blockscout` network adapter, and a `fetchInternalTxs` adapter method the engine merges into every native-asset sync whose history source does not report internal transactions itself, so a chain whose keyed provider lacks them still shows ETH paid out by contract calls. The adapter sends a browser user agent, since Blockscout's Cloudflare front answers a challenge page to the app's own agent.
+- added: (Robinhood Chain) Transaction history and token balances come from Alchemy through a new `alchemy` network adapter, keyed by the plugin's `alchemyApiKey` init option, with internal transactions merged from the chain's public Blockscout instance and Blockscout as the fallback for everything else. The Alchemy adapter asks for internal transfers wherever Alchemy serves them and remembers when a network rejects the category. The eth-balance-checker is now deployed on the chain, so token balances resolve in one call.
 - fixed: (EVM) Blockscout's "Too many requests" reply is recognized as a rate limit, so the evmscan adapter backs off instead of polling at full cadence while history stays empty.
 
 ## 4.90.1 (2026-08-28)

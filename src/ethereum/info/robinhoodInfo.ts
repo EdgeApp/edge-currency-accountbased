@@ -133,10 +133,10 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       // Etherscan V2 does not support chain 4663. The chain's public Blockscout
-      // instance has no gastracker module and allows 300 requests per minute
-      // per IP, so it is the fallback history source rather than the primary.
-      type: 'evmscan',
-      gastrackerSupport: false,
+      // instance (300 requests per minute per IP) supplies the internal
+      // transactions Alchemy lacks here, merged into every native-asset sync,
+      // and is the history fallback when Alchemy fails.
+      type: 'blockscout',
       servers: ['https://robinhoodchain.blockscout.com']
     }
   ],
