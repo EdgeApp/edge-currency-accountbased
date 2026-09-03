@@ -21,6 +21,7 @@ import { BlockbookAdapterConfig } from './BlockbookAdapter'
 import { BlockbookWsAdapterConfig } from './BlockbookWsAdapter'
 import { BlockchairAdapterConfig } from './BlockchairAdapter'
 import { BlockcypherAdapterConfig } from './BlockcypherAdapter'
+import { BlockscoutAdapterConfig } from './BlockscoutAdapter'
 import { EvmScanAdapterConfig } from './EvmScanAdapter'
 import { FilfoxAdapterConfig } from './FilfoxAdapter'
 import { PulsechainScanAdapterConfig } from './PulsechainScanAdapter'
@@ -39,6 +40,7 @@ export type NetworkAdapterConfig =
   | BlockbookWsAdapterConfig
   | BlockchairAdapterConfig
   | BlockcypherAdapterConfig
+  | BlockscoutAdapterConfig
   | EvmScanAdapterConfig
   | FilfoxAdapterConfig
   | PulsechainScanAdapterConfig
@@ -47,6 +49,7 @@ export type NetworkAdapterConfig =
 export type NetworkAdapterUpdateMethod = keyof Pick<
   NetworkAdapter<NetworkAdapterConfig>,
   | 'fetchBlockheight'
+  | 'fetchInternalTxs'
   | 'fetchNonce'
   | 'fetchTokenBalance'
   | 'fetchTokenBalances'
@@ -75,6 +78,15 @@ export abstract class NetworkAdapter<
   abstract disconnect: (() => void) | null
 
   abstract fetchBlockheight:
+    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
+    | null
+
+  /**
+   * Native-asset value moved by contract calls (internal transactions).
+   * Only needed when `fetchTxs` cannot report them itself; the engine merges
+   * the rows into the native-asset history of the same sync pass.
+   */
+  abstract fetchInternalTxs:
     | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
     | null
 

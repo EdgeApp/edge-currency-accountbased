@@ -25,6 +25,7 @@ export interface RpcAdapterConfig {
 }
 
 export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
+  fetchInternalTxs = null
   connect = null
   disconnect = null
   fetchTxs = null

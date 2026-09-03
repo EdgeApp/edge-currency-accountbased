@@ -81,6 +81,7 @@ export interface AlchemyAdapterConfig {
  * adapter keeps serving `external` transfers there without retrying it.
  */
 export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
+  fetchInternalTxs = null
   batchMulticastRpc = null
   broadcast = null
   connect = null

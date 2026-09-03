@@ -19,9 +19,14 @@ import { BlockbookAdapter } from './networkAdapters/BlockbookAdapter'
 import { BlockbookWsAdapter } from './networkAdapters/BlockbookWsAdapter'
 import { BlockchairAdapter } from './networkAdapters/BlockchairAdapter'
 import { BlockcypherAdapter } from './networkAdapters/BlockcypherAdapter'
-import { EvmScanAdapter } from './networkAdapters/EvmScanAdapter'
+import { BlockscoutAdapter } from './networkAdapters/BlockscoutAdapter'
+import {
+  EvmScanAdapter,
+  mergeEdgeTransactions
+} from './networkAdapters/EvmScanAdapter'
 import { FilfoxAdapter } from './networkAdapters/FilfoxAdapter'
 import {
+  GetTxsParams,
   NetworkAdapter,
   NetworkAdapterConfig,
   NetworkAdapterUpdateMethod
@@ -58,6 +63,12 @@ type NotNull<T> = { [P in keyof T]: Exclude<T[P], null> }
 export interface EdgeTransactionsBlockHeightTuple {
   blockHeight: number
   edgeTransactions: EdgeTransaction[]
+  /**
+   * Set by a native-asset `fetchTxs` whose rows already carry internal
+   * transactions, so the engine skips `fetchInternalTxs` for that pass
+   * instead of counting the same value twice.
+   */
+  includesInternal?: boolean
 }
 
 export interface EthereumNetworkUpdate {
@@ -343,7 +354,46 @@ export class EthereumNetwork {
     }
 
     const update = await this.check('fetchTxs', params)
+    if (tokenId == null) await this.mergeInternalTxs(update, params)
     return this.processEthereumNetworkUpdate(update)
+  }
+
+  /**
+   * Adds internal transactions from a `fetchInternalTxs` adapter to a
+   * native-asset history update whose source did not include them.
+   *
+   * The merge has to happen inside one pass: the engine's addTransaction
+   * replaces a known transaction whose amount changed, so the external and
+   * internal parts of one transaction must reach it as a single row, the way
+   * `EvmScanAdapter` merges txlist and txlistinternal itself.
+   */
+  private async mergeInternalTxs(
+    update: EthereumNetworkUpdate,
+    params: GetTxsParams
+  ): Promise<void> {
+    const tuple = update.tokenTxs?.get(null)
+    if (tuple == null || tuple.includesInternal === true) return
+    if (this.qualifyNetworkAdapters('fetchInternalTxs').length === 0) return
+
+    const internalUpdate: EthereumNetworkUpdate = await this.check(
+      'fetchInternalTxs',
+      params
+    )
+    const internalTuple = internalUpdate.tokenTxs?.get(null)
+    if (internalTuple == null) return
+
+    tuple.edgeTransactions = mergeEdgeTransactions([
+      ...tuple.edgeTransactions,
+      ...internalTuple.edgeTransactions
+    ])
+    tuple.includesInternal = true
+    update.blockHeight = Math.max(
+      update.blockHeight ?? 0,
+      internalUpdate.blockHeight ?? 0
+    )
+    if (internalUpdate.server != null) {
+      update.server = `${update.server ?? 'none'} + ${internalUpdate.server}`
+    }
   }
 
   needsLoop = async (): Promise<void> => {
@@ -712,6 +762,8 @@ const makeNetworkAdapter = (
       return new BlockchairAdapter(ethEngine, config)
     case 'blockcypher':
       return new BlockcypherAdapter(ethEngine, config)
+    case 'blockscout':
+      return new BlockscoutAdapter(ethEngine, config)
     case 'evmscan':
       return new EvmScanAdapter(ethEngine, config)
     case 'filfox':
