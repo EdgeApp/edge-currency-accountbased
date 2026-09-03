@@ -64,6 +64,15 @@ export abstract class NetworkAdapter<
   config: Config
   ethEngine: EthereumEngine
 
+  /**
+   * How many times `serialServers` and `parallelServers` retry a call after
+   * a `RateLimitError` before giving up (1s, 2s, 4s, ... between attempts).
+   * Unbounded by default; an adapter whose failure the engine can absorb
+   * (a secondary source like `BlockscoutAdapter`) sets a small number so a
+   * throttled provider does not hold a sync open.
+   */
+  protected rateLimitRetries: number = Infinity
+
   constructor(engine: EthereumEngine, config: Config) {
     this.ethEngine = engine
     this.config = config
@@ -170,7 +179,12 @@ export abstract class NetworkAdapter<
     } catch (error) {
       if (error instanceof RateLimitError) {
         this.ethEngine.warn(error.message)
-        return await exponentialBackoff(async () => await callServers())
+        return await exponentialBackoff(
+          async () => await callServers(),
+          1000,
+          2,
+          this.rateLimitRetries
+        )
       }
       throw error
     }
@@ -193,7 +207,12 @@ export abstract class NetworkAdapter<
     } catch (error) {
       if (error instanceof RateLimitError) {
         this.ethEngine.warn(error.message)
-        return await exponentialBackoff(async () => await callServers())
+        return await exponentialBackoff(
+          async () => await callServers(),
+          1000,
+          2,
+          this.rateLimitRetries
+        )
       }
       throw error
     }

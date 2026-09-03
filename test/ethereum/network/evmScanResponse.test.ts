@@ -14,8 +14,10 @@ describe('EvmScanAdapter response cleaner', function () {
       status: '2'
     }
     const clean = asEvmScanResponse(asArray(asUnknown))(captured)
-    assert.equal(clean.status, '2')
-    assert.lengthOf(clean.result as unknown[], 1)
+    if (!('status' in clean) || clean.status !== '2') {
+      assert.fail('expected the status "2" success shape')
+    }
+    assert.lengthOf(clean.result, 1)
   })
 
   it('keeps the error shape for status "0"', function () {
@@ -24,6 +26,6 @@ describe('EvmScanAdapter response cleaner', function () {
       result: [],
       status: '0'
     })
-    assert.equal(clean.status, '0')
+    assert.isTrue('status' in clean && clean.status === '0')
   })
 })

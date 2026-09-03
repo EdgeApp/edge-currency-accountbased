@@ -69,6 +69,13 @@ export interface EdgeTransactionsBlockHeightTuple {
    * instead of counting the same value twice.
    */
   includesInternal?: boolean
+  /**
+   * Set when the internal-transaction source failed for this pass. The rows
+   * are external-only, so the engine applies just the ones it has never seen
+   * (or still holds as unconfirmed) and keeps the query window open, letting
+   * a later complete pass re-cover the range with merged rows.
+   */
+  partial?: boolean
 }
 
 export interface EthereumNetworkUpdate {
@@ -375,10 +382,18 @@ export class EthereumNetwork {
     if (tuple == null || tuple.includesInternal === true) return
     if (this.qualifyNetworkAdapters('fetchInternalTxs').length === 0) return
 
-    const internalUpdate: EthereumNetworkUpdate = await this.check(
-      'fetchInternalTxs',
-      params
-    )
+    let internalUpdate: EthereumNetworkUpdate
+    try {
+      internalUpdate = await this.check('fetchInternalTxs', params)
+    } catch (error: unknown) {
+      // Keep the history the primary source delivered rather than stalling
+      // it; the window stays open until internal transactions come back.
+      this.ethEngine.warn(
+        `fetchInternalTxs failed, applying external rows only: ${String(error)}`
+      )
+      tuple.partial = true
+      return
+    }
     const internalTuple = internalUpdate.tokenTxs?.get(null)
     if (internalTuple == null) return
 
@@ -524,15 +539,33 @@ export class EthereumNetwork {
       let highestTxBlockHeight = 0
       const syncedTokenIds: EdgeTokenId[] = []
       for (const [tokenId, tuple] of tokenTxs) {
+        const safeTokenId = tokenId ?? ''
+        highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
+        if (tuple.partial === true) {
+          // External-only rows: a known confirmed transaction may already
+          // carry an internal component these rows lack, so leave it alone.
+          // The asset is not reported as synced either; that waits for a
+          // pass whose internal source answered.
+          for (const tx of tuple.edgeTransactions) {
+            const index =
+              this.ethEngine.txIdMap[safeTokenId]?.[normalizeAddress(tx.txid)]
+            const known =
+              index == null
+                ? undefined
+                : this.ethEngine.transactionList[safeTokenId]?.[index]
+            if (known == null || known.blockHeight === 0) {
+              this.ethEngine.addTransaction(tokenId, tx)
+            }
+          }
+          continue
+        }
         syncedTokenIds.push(tokenId)
         for (const tx of tuple.edgeTransactions) {
           this.ethEngine.addTransaction(tokenId, tx)
         }
-        const safeTokenId = tokenId ?? ''
         this.ethEngine.walletLocalData.lastTransactionQueryHeight[safeTokenId] =
           preUpdateBlockHeight
         this.ethEngine.walletLocalData.lastTransactionDate[safeTokenId] = now
-        highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
       }
       this.ethEngine.walletLocalData.highestTxBlockHeight = Math.max(
         this.ethEngine.walletLocalData.highestTxBlockHeight,

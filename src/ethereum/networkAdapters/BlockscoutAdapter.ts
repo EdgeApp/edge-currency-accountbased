@@ -11,7 +11,15 @@ import {
   asEvmScanTransaction,
   EvmScanAdapter
 } from './EvmScanAdapter'
-import { GetTxsParams } from './networkAdapterTypes'
+import { GetTxsParams, RateLimitError } from './networkAdapterTypes'
+
+/**
+ * Per-instance moment (ms since epoch) before which `fetchInternalTxs` is
+ * skipped after a throttle reply, shared by every wallet on the same
+ * instance so one 429 pauses all of them instead of each rediscovering it.
+ */
+const internalTxsCooldownUntil = new Map<string, number>()
+const INTERNAL_TXS_COOLDOWN_MS = 60 * 1000
 
 export interface BlockscoutAdapterConfig {
   type: 'blockscout'
@@ -32,6 +40,11 @@ export interface BlockscoutAdapterConfig {
  * them merged into every native-asset sync by the engine.
  */
 export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
+  // A throttled public instance must not hold a native-asset sync open:
+  // after three retries (1s, 2s, 4s) the call throws, the engine marks the
+  // pass partial and keeps the query window open for the next attempt.
+  protected rateLimitRetries = 3
+
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     const { result: jsonObj, server } = await this.serialServers(
       async server => {
@@ -83,12 +96,34 @@ export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
     params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> => {
     const { startBlock } = params
-    const { allTransactions, server } = await this.getAllTxsEthscan(
-      startBlock,
-      null,
-      asEvmScanInternalTransaction,
-      { searchRegularTxs: false }
-    )
+    const cooldownKey = this.config.servers.join(',')
+    const cooldownUntil = internalTxsCooldownUntil.get(cooldownKey) ?? 0
+    if (Date.now() < cooldownUntil) {
+      throw new Error(
+        `Blockscout internal transactions paused ${Math.ceil(
+          (cooldownUntil - Date.now()) / 1000
+        )}s after a rate limit`
+      )
+    }
+
+    let response: Awaited<ReturnType<typeof this.getAllTxsEthscan>>
+    try {
+      response = await this.getAllTxsEthscan(
+        startBlock,
+        null,
+        asEvmScanInternalTransaction,
+        { searchRegularTxs: false }
+      )
+    } catch (error: unknown) {
+      if (error instanceof RateLimitError) {
+        internalTxsCooldownUntil.set(
+          cooldownKey,
+          Date.now() + INTERNAL_TXS_COOLDOWN_MS
+        )
+      }
+      throw error
+    }
+    const { allTransactions, server } = response
     return this.makeTxsUpdate(null, startBlock, allTransactions, server, {
       includesInternal: true
     })
