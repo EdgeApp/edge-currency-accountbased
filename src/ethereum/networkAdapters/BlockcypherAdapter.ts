@@ -10,6 +10,7 @@ export interface BlockcypherAdapterConfig {
 }
 
 export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig> {
+  fetchInternalTxs = null
   batchMulticastRpc = null
   connect = null
   disconnect = null

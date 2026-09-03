@@ -19,7 +19,7 @@ import {
 // Bridged token addresses come from the canonical Arbitrum token bridge, via
 // L2GatewayRouter.calculateL2TokenAddress(l1Token). Robinhood Chain's explorer
 // lists many same-symbol imposters, so never source these from a token search.
-const builtinTokens: EdgeTokenMap = {
+export const builtinTokens: EdgeTokenMap = {
   '80e0e24718dbfcad49ecaa6f1e6c89a190586ca8': {
     currencyCode: 'USDC',
     displayName: 'Bridged USDC (Robinhood)',
@@ -116,17 +116,27 @@ const networkInfo: EthereumNetworkInfo = {
   addressQueryLookbackBlocks: 1250,
   networkAdapterConfigs: [
     {
+      // Keyed history source. Alchemy does not serve the `internal` category
+      // on this network, so ETH paid out to the wallet from inside a contract
+      // call is only seen while the Blockscout fallback below is answering.
+      type: 'alchemy',
+      servers: ['https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}']
+    },
+    {
       type: 'rpc',
       servers: [
         'https://rpc.mainnet.chain.robinhood.com',
-        'https://robinhood-rpc.publicnode.com'
-      ]
+        'https://robinhood-rpc.publicnode.com',
+        'https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}'
+      ],
+      ethBalCheckerContract: '0x8950F12786CAE64F94a02733A260ca6FecDaeD7f'
     },
     {
-      // Etherscan V2 does not support chain 4663, so transaction history comes
-      // from the chain's Blockscout instance, which has no gastracker module.
-      type: 'evmscan',
-      gastrackerSupport: false,
+      // Etherscan V2 does not support chain 4663. The chain's public Blockscout
+      // instance (300 requests per minute per IP) supplies the internal
+      // transactions Alchemy lacks here, merged into every native-asset sync,
+      // and is the history fallback when Alchemy fails.
+      type: 'blockscout',
       servers: ['https://robinhoodchain.blockscout.com']
     }
   ],
@@ -152,7 +162,7 @@ const networkInfo: EthereumNetworkInfo = {
   }
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
   evmChainId: 4663,

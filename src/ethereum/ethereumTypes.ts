@@ -118,11 +118,13 @@ export interface EthereumNetworkInfo {
 }
 
 const asNetworkAdaptorConfigType = asValue(
+  'alchemy',
   'amberdata-rpc',
   'blockbook',
   'blockbook-ws',
   'blockchair',
   'blockcypher',
+  'blockscout',
   'evmscan',
   'filfox',
   'pulsechain-scan',

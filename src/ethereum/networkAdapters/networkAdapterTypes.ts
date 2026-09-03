@@ -15,11 +15,13 @@ import {
 } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
+import { AlchemyAdapterConfig } from './AlchemyAdapter'
 import { AmberdataAdapterConfig } from './AmberdataAdapter'
 import { BlockbookAdapterConfig } from './BlockbookAdapter'
 import { BlockbookWsAdapterConfig } from './BlockbookWsAdapter'
 import { BlockchairAdapterConfig } from './BlockchairAdapter'
 import { BlockcypherAdapterConfig } from './BlockcypherAdapter'
+import { BlockscoutAdapterConfig } from './BlockscoutAdapter'
 import { EvmScanAdapterConfig } from './EvmScanAdapter'
 import { FilfoxAdapterConfig } from './FilfoxAdapter'
 import { PulsechainScanAdapterConfig } from './PulsechainScanAdapter'
@@ -32,11 +34,13 @@ export interface GetTxsParams {
 }
 
 export type NetworkAdapterConfig =
+  | AlchemyAdapterConfig
   | AmberdataAdapterConfig
   | BlockbookAdapterConfig
   | BlockbookWsAdapterConfig
   | BlockchairAdapterConfig
   | BlockcypherAdapterConfig
+  | BlockscoutAdapterConfig
   | EvmScanAdapterConfig
   | FilfoxAdapterConfig
   | PulsechainScanAdapterConfig
@@ -45,6 +49,7 @@ export type NetworkAdapterConfig =
 export type NetworkAdapterUpdateMethod = keyof Pick<
   NetworkAdapter<NetworkAdapterConfig>,
   | 'fetchBlockheight'
+  | 'fetchInternalTxs'
   | 'fetchNonce'
   | 'fetchTokenBalance'
   | 'fetchTokenBalances'
@@ -58,6 +63,15 @@ export abstract class NetworkAdapter<
 > {
   config: Config
   ethEngine: EthereumEngine
+
+  /**
+   * How many times `serialServers` and `parallelServers` retry a call after
+   * a `RateLimitError` before giving up (1s, 2s, 4s, ... between attempts).
+   * Unbounded by default; an adapter whose failure the engine can absorb
+   * (a secondary source like `BlockscoutAdapter`) sets a small number so a
+   * throttled provider does not hold a sync open.
+   */
+  protected rateLimitRetries: number = Infinity
 
   constructor(engine: EthereumEngine, config: Config) {
     this.ethEngine = engine
@@ -73,6 +87,15 @@ export abstract class NetworkAdapter<
   abstract disconnect: (() => void) | null
 
   abstract fetchBlockheight:
+    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
+    | null
+
+  /**
+   * Native-asset value moved by contract calls (internal transactions).
+   * Only needed when `fetchTxs` cannot report them itself; the engine merges
+   * the rows into the native-asset history of the same sync pass.
+   */
+  abstract fetchInternalTxs:
     | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
     | null
 
@@ -156,7 +179,12 @@ export abstract class NetworkAdapter<
     } catch (error) {
       if (error instanceof RateLimitError) {
         this.ethEngine.warn(error.message)
-        return await exponentialBackoff(async () => await callServers())
+        return await exponentialBackoff(
+          async () => await callServers(),
+          1000,
+          2,
+          this.rateLimitRetries
+        )
       }
       throw error
     }
@@ -179,7 +207,12 @@ export abstract class NetworkAdapter<
     } catch (error) {
       if (error instanceof RateLimitError) {
         this.ethEngine.warn(error.message)
-        return await exponentialBackoff(async () => await callServers())
+        return await exponentialBackoff(
+          async () => await callServers(),
+          1000,
+          2,
+          this.rateLimitRetries
+        )
       }
       throw error
     }
