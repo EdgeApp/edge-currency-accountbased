@@ -196,19 +196,20 @@ const networkInfo: EthereumNetworkInfo = {
       ethBalCheckerContract: '0xd023d153a0dfa485130ecfde2faa7e612ef94818'
     },
     {
-      // Routescan is the only working etherscan-compatible source for
-      // Avalanche C-Chain. Etherscan V2 gates chain 43114 behind a paid plan,
-      // api.avascan.info no longer resolves, and api.snowscan.xyz only serves
-      // the retired V1 API.
+      // Etherscan V2 covers chain 43114 only on a paid plan. A free-tier key
+      // answers "Free API access is not supported for this chain", which reads
+      // as a dead server and leaves history blank; the etherscanApiKey shipped
+      // for Avalanche has to be a paid one.
       //
-      // gastracker is intentionally left off: Routescan's gasoracle reports
-      // wei, but fetchFeesFromEvmScan assumes the Etherscan convention of gwei
-      // and multiplies by 1e9. Avalanche derives its gas price from the RPC
-      // adapter instead.
+      // api.avascan.info and api.snowscan.xyz used to sit alongside Etherscan
+      // here, and both are dead: avascan.info's API host resolves to a
+      // CloudFront distribution that no longer exists, and snowscan.xyz answers
+      // every request with "You are using a deprecated V1 endpoint". Neither
+      // comes back with a different key or plan, and a dead server in this list
+      // costs a failed request on every waterfall pass.
       type: 'evmscan',
-      servers: [
-        'https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan'
-      ]
+      gastrackerSupport: true,
+      servers: ['https://api.etherscan.io']
     }
   ],
   uriNetworks: ['avalanche'],
