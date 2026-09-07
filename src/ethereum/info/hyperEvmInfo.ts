@@ -127,7 +127,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://rpc.hypurrscan.io',
         'https://hyperliquid-json-rpc.stakely.io',
         'https://hyperliquid-json-rpc.stakely.io'
-      ]
+      ],
+      ethBalCheckerContract: '0x75c246EaCe343aCe287c1A37B45D7BD4214C6f27'
     },
     {
       type: 'evmscan',
