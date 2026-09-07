@@ -13,14 +13,20 @@ import { normalizeAddress } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
 import { DecoyAddressConfig, EthereumNetworkInfo } from './ethereumTypes'
+import { AlchemyAdapter } from './networkAdapters/AlchemyAdapter'
 import { AmberdataAdapter } from './networkAdapters/AmberdataAdapter'
 import { BlockbookAdapter } from './networkAdapters/BlockbookAdapter'
 import { BlockbookWsAdapter } from './networkAdapters/BlockbookWsAdapter'
 import { BlockchairAdapter } from './networkAdapters/BlockchairAdapter'
 import { BlockcypherAdapter } from './networkAdapters/BlockcypherAdapter'
-import { EvmScanAdapter } from './networkAdapters/EvmScanAdapter'
+import { BlockscoutAdapter } from './networkAdapters/BlockscoutAdapter'
+import {
+  EvmScanAdapter,
+  mergeEdgeTransactions
+} from './networkAdapters/EvmScanAdapter'
 import { FilfoxAdapter } from './networkAdapters/FilfoxAdapter'
 import {
+  GetTxsParams,
   NetworkAdapter,
   NetworkAdapterConfig,
   NetworkAdapterUpdateMethod
@@ -57,6 +63,19 @@ type NotNull<T> = { [P in keyof T]: Exclude<T[P], null> }
 export interface EdgeTransactionsBlockHeightTuple {
   blockHeight: number
   edgeTransactions: EdgeTransaction[]
+  /**
+   * Set by a native-asset `fetchTxs` whose rows already carry internal
+   * transactions, so the engine skips `fetchInternalTxs` for that pass
+   * instead of counting the same value twice.
+   */
+  includesInternal?: boolean
+  /**
+   * Set when the internal-transaction source failed for this pass. The rows
+   * are external-only, so the engine applies just the ones it has never seen
+   * (or still holds as unconfirmed) and keeps the query window open, letting
+   * a later complete pass re-cover the range with merged rows.
+   */
+  partial?: boolean
 }
 
 export interface EthereumNetworkUpdate {
@@ -342,7 +361,54 @@ export class EthereumNetwork {
     }
 
     const update = await this.check('fetchTxs', params)
+    if (tokenId == null) await this.mergeInternalTxs(update, params)
     return this.processEthereumNetworkUpdate(update)
+  }
+
+  /**
+   * Adds internal transactions from a `fetchInternalTxs` adapter to a
+   * native-asset history update whose source did not include them.
+   *
+   * The merge has to happen inside one pass: the engine's addTransaction
+   * replaces a known transaction whose amount changed, so the external and
+   * internal parts of one transaction must reach it as a single row, the way
+   * `EvmScanAdapter` merges txlist and txlistinternal itself.
+   */
+  private async mergeInternalTxs(
+    update: EthereumNetworkUpdate,
+    params: GetTxsParams
+  ): Promise<void> {
+    const tuple = update.tokenTxs?.get(null)
+    if (tuple == null || tuple.includesInternal === true) return
+    if (this.qualifyNetworkAdapters('fetchInternalTxs').length === 0) return
+
+    let internalUpdate: EthereumNetworkUpdate
+    try {
+      internalUpdate = await this.check('fetchInternalTxs', params)
+    } catch (error: unknown) {
+      // Keep the history the primary source delivered rather than stalling
+      // it; the window stays open until internal transactions come back.
+      this.ethEngine.warn(
+        `fetchInternalTxs failed, applying external rows only: ${String(error)}`
+      )
+      tuple.partial = true
+      return
+    }
+    const internalTuple = internalUpdate.tokenTxs?.get(null)
+    if (internalTuple == null) return
+
+    tuple.edgeTransactions = mergeEdgeTransactions([
+      ...tuple.edgeTransactions,
+      ...internalTuple.edgeTransactions
+    ])
+    tuple.includesInternal = true
+    update.blockHeight = Math.max(
+      update.blockHeight ?? 0,
+      internalUpdate.blockHeight ?? 0
+    )
+    if (internalUpdate.server != null) {
+      update.server = `${update.server ?? 'none'} + ${internalUpdate.server}`
+    }
   }
 
   needsLoop = async (): Promise<void> => {
@@ -473,15 +539,33 @@ export class EthereumNetwork {
       let highestTxBlockHeight = 0
       const syncedTokenIds: EdgeTokenId[] = []
       for (const [tokenId, tuple] of tokenTxs) {
+        const safeTokenId = tokenId ?? ''
+        highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
+        if (tuple.partial === true) {
+          // External-only rows: a known confirmed transaction may already
+          // carry an internal component these rows lack, so leave it alone.
+          // The asset is not reported as synced either; that waits for a
+          // pass whose internal source answered.
+          for (const tx of tuple.edgeTransactions) {
+            const index =
+              this.ethEngine.txIdMap[safeTokenId]?.[normalizeAddress(tx.txid)]
+            const known =
+              index == null
+                ? undefined
+                : this.ethEngine.transactionList[safeTokenId]?.[index]
+            if (known == null || known.blockHeight === 0) {
+              this.ethEngine.addTransaction(tokenId, tx)
+            }
+          }
+          continue
+        }
         syncedTokenIds.push(tokenId)
         for (const tx of tuple.edgeTransactions) {
           this.ethEngine.addTransaction(tokenId, tx)
         }
-        const safeTokenId = tokenId ?? ''
         this.ethEngine.walletLocalData.lastTransactionQueryHeight[safeTokenId] =
           preUpdateBlockHeight
         this.ethEngine.walletLocalData.lastTransactionDate[safeTokenId] = now
-        highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
       }
       this.ethEngine.walletLocalData.highestTxBlockHeight = Math.max(
         this.ethEngine.walletLocalData.highestTxBlockHeight,
@@ -699,6 +783,8 @@ const makeNetworkAdapter = (
   ethEngine: EthereumEngine
 ): NetworkAdapter => {
   switch (config.type) {
+    case 'alchemy':
+      return new AlchemyAdapter(ethEngine, config)
     case 'amberdata-rpc':
       return new AmberdataAdapter(ethEngine, config)
     case 'blockbook':
@@ -709,6 +795,8 @@ const makeNetworkAdapter = (
       return new BlockchairAdapter(ethEngine, config)
     case 'blockcypher':
       return new BlockcypherAdapter(ethEngine, config)
+    case 'blockscout':
+      return new BlockscoutAdapter(ethEngine, config)
     case 'evmscan':
       return new EvmScanAdapter(ethEngine, config)
     case 'filfox':

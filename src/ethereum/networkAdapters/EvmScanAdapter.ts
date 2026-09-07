@@ -38,6 +38,7 @@ import {
   RpcResultString
 } from '../ethereumTypes'
 import { getEvmScanApiKey } from '../fees/feeProviders'
+import type { BlockscoutAdapterConfig } from './BlockscoutAdapter'
 import {
   GetTxsParams,
   NetworkAdapter,
@@ -64,7 +65,19 @@ export interface EvmScanAdapterConfig {
   gastrackerSupport?: boolean
 }
 
-export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
+export class EvmScanAdapter<
+  Config extends
+    | EvmScanAdapterConfig
+    | BlockscoutAdapterConfig = EvmScanAdapterConfig
+> extends NetworkAdapter<Config> {
+  /** Blockscout serves these separately; see `BlockscoutAdapter` */
+  fetchInternalTxs:
+    | ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>)
+    | null = null
+
+  /** Extra headers on every `/api` request; subclasses set them per provider */
+  protected requestHeaders: Record<string, string> | undefined = undefined
+
   batchMulticastRpc = null
   connect = null
   disconnect = null
@@ -219,6 +232,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     const { startBlock, tokenId } = params
     let server: string
     let allTransactions
+    let includesInternal = false
 
     if (tokenId === null) {
       const txsRegularResp = await this.getAllTxsEthscan(
@@ -244,6 +258,8 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         ...txsRegularResp.allTransactions,
         ...txsInternalResp.allTransactions
       ])
+      includesInternal =
+        this.ethEngine.networkInfo.disableEvmScanInternal !== true
     } else {
       const tokenInfo = this.ethEngine.allTokensMap[tokenId]
       if (
@@ -266,7 +282,8 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
     const edgeTransactionsBlockHeightTuple: EdgeTransactionsBlockHeightTuple = {
       blockHeight: startBlock,
-      edgeTransactions: allTransactions
+      edgeTransactions: allTransactions,
+      includesInternal
     }
     const maxBlockHeight = allTransactions.reduce((max, tx) => {
       return Math.max(max, tx.blockHeight)
@@ -279,7 +296,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
   }
 
   // TODO: Clean return type
-  private async fetchGetEtherscan(
+  protected async fetchGetEtherscan(
     server: string,
     cmd: string
   ): Promise<EvmScanResponse<unknown>> {
@@ -314,7 +331,10 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       url = `${server}/api${cmd}`
     }
 
-    const response = await this.ethEngine.engineFetch(`${url}${apiKeyParam}`)
+    const response = await this.ethEngine.engineFetch(
+      `${url}${apiKeyParam}`,
+      this.requestHeaders == null ? undefined : { headers: this.requestHeaders }
+    )
 
     if (!response.ok) {
       const resBody = await response.text()
@@ -326,15 +346,14 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     if (
       'status' in cleanData &&
       cleanData.status === '0' &&
-      typeof cleanData.result === 'string' &&
-      cleanData.result.match(/Max calls|rate limit/) != null
+      isEvmScanRateLimitResponse(cleanData)
     ) {
       throw new RateLimitError(`fetchGetEtherscan rate limit for ${server}`)
     }
     return cleanData
   }
 
-  private async getAllTxsEthscan(
+  protected async getAllTxsEthscan(
     startBlock: number,
     tokenId: EdgeTokenId,
     asTransaction: Cleaner<
@@ -421,7 +440,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     return { allTransactions, server }
   }
 
-  private async getL1RollupFee(
+  protected async getL1RollupFee(
     tx:
       | EvmScanTransaction
       | EvmScanInternalTransaction
@@ -460,7 +479,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     return l1RollupFee
   }
 
-  private handledUnexpectedResponse(
+  protected handledUnexpectedResponse(
     server: string,
     action: string,
     response: EvmScanErrorResponse
@@ -593,10 +612,13 @@ export function processEvmScanTransaction(
 export function mergeEdgeTransactions(
   transactions: EdgeTransaction[]
 ): EdgeTransaction[] {
-  // The Map key is the txid and tokenId concatenated
+  // The Map key is the txid and tokenId concatenated. The txid is compared
+  // case-insensitively because rows from two APIs may not agree on hex case.
   const txidToTransaction: Map<string, EdgeTransaction> = new Map()
   for (const transaction of transactions) {
-    const uniqueKey = `${transaction.txid}:${transaction.tokenId ?? ''}`
+    const uniqueKey = `${transaction.txid.toLowerCase()}:${
+      transaction.tokenId ?? ''
+    }`
     const existingTransaction = txidToTransaction.get(uniqueKey)
     if (existingTransaction == null) {
       txidToTransaction.set(uniqueKey, transaction)
@@ -667,7 +689,26 @@ export function mergeEdgeTransactions(
   return Array.from(txidToTransaction.values())
 }
 
-interface EvmScanErrorResponse {
+/**
+ * Whether a `status: "0"` reply is the API throttling us rather than a real
+ * error. Etherscan puts the text in `result` ("Max calls per sec rate limit
+ * reached", "Max rate limit reached"); Blockscout answers with `result: null`
+ * and the text in `message` ("Too many requests. Increase limits now at
+ * https://dev.blockscout.com").
+ */
+export function isEvmScanRateLimitResponse(
+  response: EvmScanErrorResponse
+): boolean {
+  if (
+    typeof response.result === 'string' &&
+    /Max calls|rate limit/i.test(response.result)
+  ) {
+    return true
+  }
+  return /too many requests|rate limit/i.test(response.message)
+}
+
+export interface EvmScanErrorResponse {
   status: '0'
   message: string
   result: unknown
@@ -679,7 +720,13 @@ const asEvmScanErrorResponse = asObject<EvmScanErrorResponse>({
 })
 
 interface EvmScanSuccessResponse<T> {
-  status: '1'
+  /**
+   * "1" is a complete answer. Blockscout answers "2" with the rows it has
+   * when part of the requested block range is still being indexed
+   * ("Some internal transactions within this block range have not yet been
+   * processed"); the lookback overlap on the next sync picks up the rest.
+   */
+  status: '1' | '2'
   message: string
   result: T
 }
@@ -687,7 +734,7 @@ const asEvmScanSuccessResponse =
   <T>(asT: Cleaner<T>): Cleaner<EvmScanSuccessResponse<T>> =>
   (raw: unknown) => {
     return asObject<EvmScanSuccessResponse<T>>({
-      status: asValue('1'),
+      status: asValue('1', '2'),
       message: asString,
       result: asT
     })(raw)
@@ -708,11 +755,11 @@ const asEvmScanProxyResponse =
     })(raw)
   }
 
-type EvmScanResponse<T> =
+export type EvmScanResponse<T> =
   | EvmScanSuccessResponse<T>
   | EvmScanProxyResponse<T>
   | EvmScanErrorResponse
-const asEvmScanResponse =
+export const asEvmScanResponse =
   <T>(asT: Cleaner<T>): Cleaner<EvmScanResponse<T>> =>
   (raw: unknown) => {
     return asEither(
