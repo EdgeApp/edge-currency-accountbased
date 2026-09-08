@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.91.0 (2026-09-08)
+
 - added: Robinhood Chain support (`robinhood`, EVM chain 4663)
 - added: (EVM) Alchemy and Blockscout network adapters
 - added: (Robinhood Chain) Transaction history and token balances from Alchemy, with Blockscout as fallback
