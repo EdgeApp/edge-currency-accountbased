@@ -58,7 +58,9 @@ export class EthereumTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const keys = asEthereumPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.privateKey
+    // Wallets imported from a raw hex key have no mnemonic, so the private
+    // key remains the fallback:
+    return keys.mnemonic ?? keys.privateKey
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
