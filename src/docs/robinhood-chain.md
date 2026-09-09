@@ -11,6 +11,8 @@
 | Supersedes | - |
 | Related | [Asana 1217382370104887](https://app.asana.com/1/9976422036640/project/1213843652804305/task/1217382370104887) |
 
+<!-- tdd-code-fingerprint: 8b64794e51099c389e3b42536aa835d2e69fe1f1 -->
+
 File and branch references point at the `jon/robinhood-chain` branch in all four repos. The task description carried a single link, `https://docs.robinhood.com/chain/`, so every chain parameter below was read from Robinhood's published documentation and then confirmed against the live network.
 
 ## Contents

@@ -24,13 +24,27 @@ const INTERNAL_TXS_COOLDOWN_MS = 60 * 1000
 /**
  * Public Blockscout instances sit behind Cloudflare, and some of them (the
  * Robinhood Chain one, measured 2026-09-03 from two unrelated IPs) answer a
- * managed challenge page to every request whose user agent does not look
- * like a browser: the app's own CFNetwork and OkHttp agents get HTTP 403,
- * a browser string gets the JSON. Sending one is the same workaround
- * `BlockbookAdapter` applies for Trezor's Blockbook servers.
+ * managed challenge page to every request that does not look like it came
+ * from a browser: the app's own CFNetwork and OkHttp agents get HTTP 403,
+ * a browser's headers get the JSON. Sending them is the same workaround
+ * `BlockbookAdapter` applies for Trezor's Blockbook servers. The agent alone
+ * stopped being enough on that instance by 2026-09-09, when it began
+ * challenging a request that carried only the agent string; it serves one
+ * that also carries the `sec-ch-ua` client hint naming the same browser,
+ * which is what a Chromium build sends alongside this agent.
+ *
+ * Getting past the challenge is all these buy. That instance answers
+ * `x-ratelimit-limit: 10` per window (measured 2026-09-09, reset roughly
+ * every 16 minutes), not the 300 per minute it used to document, so one
+ * wallet's sync spends the whole budget in a single pass and every call
+ * after that is throttled. A chain whose internal transactions have to come
+ * from Blockscout needs a keyed server, not this one.
  */
-const BROWSER_USER_AGENT =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36'
+const BROWSER_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36',
+  'sec-ch-ua': '"Chromium";v="128", "Not;A=Brand";v="24"'
+}
 
 export interface BlockscoutAdapterConfig {
   type: 'blockscout'
@@ -55,7 +69,7 @@ export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
   // after three retries (1s, 2s, 4s) the call throws, the engine marks the
   // pass partial and keeps the query window open for the next attempt.
   protected rateLimitRetries = 3
-  protected requestHeaders = { 'User-Agent': BROWSER_USER_AGENT }
+  protected requestHeaders = BROWSER_HEADERS
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     const { result: jsonObj, server } = await this.serialServers(
