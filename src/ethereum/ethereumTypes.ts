@@ -28,6 +28,14 @@ export interface EthereumInitOptions {
   amberdataApiKey?: string
   blockchairApiKey?: string
   blockcypherApiKey?: string
+  /**
+   * For Blockscout's hosted API at `api.blockscout.com`, which bills per key
+   * and answers 402 without one. Kept apart from `evmScanApiKey` because that
+   * option holds a chain's Etherscan keys and one is picked at random per
+   * request, so a key for a different service mixed in there would be skipped
+   * on most calls.
+   */
+  blockscoutApiKey?: string | string[]
   drpcApiKey?: string
   /** For Etherscan v2 API */
   etherscanApiKey?: string | string[]
@@ -45,6 +53,7 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   amberdataApiKey: asOptional(asString),
   blockchairApiKey: asOptional(asString),
   blockcypherApiKey: asOptional(asString),
+  blockscoutApiKey: asOptional(asEither(asString, asArray(asString))),
   drpcApiKey: asOptional(asString),
   etherscanApiKey: asOptional(asEither(asString, asArray(asString))),
   evmScanApiKey: asOptional(asEither(asString, asArray(asString))),

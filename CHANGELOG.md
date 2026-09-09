@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added: (EVM) `blockscoutApiKey` init option, keying Blockscout's hosted API
+- added: (Robinhood Chain) Internal transactions from Blockscout's hosted API
+- fixed: (Robinhood Chain) Blockscout requests carry the client hint the chain's own instance requires
+
 ## 4.91.1 (2026-09-11)
 
 - fixed: (Axelar) Replace the retired `axelar.tendermintrpc.lava.build` RPC node, which answers every request with HTTP 410 "This endpoint has been discontinued.", and the unreachable `axelar-archrpc.chainode.tech` archive node. Axelar wallets could reach neither balances nor transaction history, so their sync ratio sat at 0 forever with no visible error.

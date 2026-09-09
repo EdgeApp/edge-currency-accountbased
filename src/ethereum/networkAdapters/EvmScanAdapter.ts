@@ -39,6 +39,7 @@ import {
 } from '../ethereumTypes'
 import { getEvmScanApiKey } from '../fees/feeProviders'
 import type { BlockscoutAdapterConfig } from './BlockscoutAdapter'
+import { makeEvmScanUrl } from './evmScanUrl'
 import {
   GetTxsParams,
   NetworkAdapter,
@@ -86,32 +87,34 @@ export class EvmScanAdapter<
   multicastRpc = null
   subscribeAddressSync = null
 
-  fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
-    const { result: jsonObj, server } = await this.serialServers(
-      async server => {
-        if (!server.includes('etherscan') && !server.includes('blockscout')) {
-          throw new Error(`Unsupported command eth_blockNumber in ${server}`)
-        }
-        let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
-        // special case for blockscout
-        if (server.includes('blockscout')) {
-          blockNumberUrlSyntax = `?module=block&action=eth_block_number`
-        }
+  /** Nullable so a subclass can leave the waterfall; see `BlockscoutAdapter` */
+  fetchBlockheight: (() => Promise<EthereumNetworkUpdate>) | null =
+    async (): Promise<EthereumNetworkUpdate> => {
+      const { result: jsonObj, server } = await this.serialServers(
+        async server => {
+          if (!server.includes('etherscan') && !server.includes('blockscout')) {
+            throw new Error(`Unsupported command eth_blockNumber in ${server}`)
+          }
+          let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
+          // special case for blockscout
+          if (server.includes('blockscout')) {
+            blockNumberUrlSyntax = `?module=block&action=eth_block_number`
+          }
 
-        const response = await this.fetchGetEtherscan(
-          server,
-          blockNumberUrlSyntax
-        )
-        if ('status' in response && response.status === '0') {
-          this.handledUnexpectedResponse(server, 'eth_blockNumber', response)
+          const response = await this.fetchGetEtherscan(
+            server,
+            blockNumberUrlSyntax
+          )
+          if ('status' in response && response.status === '0') {
+            this.handledUnexpectedResponse(server, 'eth_blockNumber', response)
+          }
+          return { server, result: response }
         }
-        return { server, result: response }
-      }
-    )
+      )
 
-    const clean = asEtherscanGetBlockHeight(jsonObj)
-    return { blockHeight: clean.result, server }
-  }
+      const clean = asEtherscanGetBlockHeight(jsonObj)
+      return { blockHeight: clean.result, server }
+    }
 
   broadcast = async (
     edgeTransaction: EdgeTransaction
@@ -228,72 +231,74 @@ export class EvmScanAdapter<
     }
   }
 
-  fetchTxs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
-    const { startBlock, tokenId } = params
-    let server: string
-    let allTransactions
-    let includesInternal = false
+  fetchTxs: ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>) | null =
+    async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
+      const { startBlock, tokenId } = params
+      let server: string
+      let allTransactions
+      let includesInternal = false
 
-    if (tokenId === null) {
-      const txsRegularResp = await this.getAllTxsEthscan(
-        startBlock,
-        tokenId,
-        asEvmScanTransaction,
-        { searchRegularTxs: true }
-      )
-      let txsInternalResp: GetEthscanAllTxsResponse = {
-        allTransactions: [],
-        server: ''
-      }
-      if (this.ethEngine.networkInfo.disableEvmScanInternal !== true) {
-        txsInternalResp = await this.getAllTxsEthscan(
+      if (tokenId === null) {
+        const txsRegularResp = await this.getAllTxsEthscan(
           startBlock,
           tokenId,
-          asEvmScanInternalTransaction,
-          { searchRegularTxs: false }
+          asEvmScanTransaction,
+          { searchRegularTxs: true }
         )
-      }
-      server = txsRegularResp.server ?? txsInternalResp.server ?? ''
-      allTransactions = mergeEdgeTransactions([
-        ...txsRegularResp.allTransactions,
-        ...txsInternalResp.allTransactions
-      ])
-      includesInternal =
-        this.ethEngine.networkInfo.disableEvmScanInternal !== true
-    } else {
-      const tokenInfo = this.ethEngine.allTokensMap[tokenId]
-      if (
-        tokenInfo != null &&
-        typeof tokenInfo?.networkLocation?.contractAddress === 'string'
-      ) {
-        const contractAddress = tokenInfo.networkLocation.contractAddress
-        const resp = await this.getAllTxsEthscan(
-          startBlock,
-          tokenId,
-          asEvmScanTokenTransaction,
-          { contractAddress }
-        )
-        server = resp.server ?? ''
-        allTransactions = resp.allTransactions
+        let txsInternalResp: GetEthscanAllTxsResponse = {
+          allTransactions: [],
+          server: ''
+        }
+        if (this.ethEngine.networkInfo.disableEvmScanInternal !== true) {
+          txsInternalResp = await this.getAllTxsEthscan(
+            startBlock,
+            tokenId,
+            asEvmScanInternalTransaction,
+            { searchRegularTxs: false }
+          )
+        }
+        server = txsRegularResp.server ?? txsInternalResp.server ?? ''
+        allTransactions = mergeEdgeTransactions([
+          ...txsRegularResp.allTransactions,
+          ...txsInternalResp.allTransactions
+        ])
+        includesInternal =
+          this.ethEngine.networkInfo.disableEvmScanInternal !== true
       } else {
-        return {}
+        const tokenInfo = this.ethEngine.allTokensMap[tokenId]
+        if (
+          tokenInfo != null &&
+          typeof tokenInfo?.networkLocation?.contractAddress === 'string'
+        ) {
+          const contractAddress = tokenInfo.networkLocation.contractAddress
+          const resp = await this.getAllTxsEthscan(
+            startBlock,
+            tokenId,
+            asEvmScanTokenTransaction,
+            { contractAddress }
+          )
+          server = resp.server ?? ''
+          allTransactions = resp.allTransactions
+        } else {
+          return {}
+        }
+      }
+
+      const edgeTransactionsBlockHeightTuple: EdgeTransactionsBlockHeightTuple =
+        {
+          blockHeight: startBlock,
+          edgeTransactions: allTransactions,
+          includesInternal
+        }
+      const maxBlockHeight = allTransactions.reduce((max, tx) => {
+        return Math.max(max, tx.blockHeight)
+      }, 0)
+      return {
+        tokenTxs: new Map([[tokenId, edgeTransactionsBlockHeightTuple]]),
+        blockHeight: maxBlockHeight,
+        server
       }
     }
-
-    const edgeTransactionsBlockHeightTuple: EdgeTransactionsBlockHeightTuple = {
-      blockHeight: startBlock,
-      edgeTransactions: allTransactions,
-      includesInternal
-    }
-    const maxBlockHeight = allTransactions.reduce((max, tx) => {
-      return Math.max(max, tx.blockHeight)
-    }, 0)
-    return {
-      tokenTxs: new Map([[tokenId, edgeTransactionsBlockHeightTuple]]),
-      blockHeight: maxBlockHeight,
-      server
-    }
-  }
 
   // TODO: Clean return type
   protected async fetchGetEtherscan(
@@ -316,20 +321,11 @@ export class EvmScanAdapter<
       : scanApiKey ?? ''
     const apiKeyParam = apiKey !== '' ? `&apikey=${apiKey}` : ''
 
-    // Get the chainId from the network info
-    const chainId = this.ethEngine.networkInfo.chainParams.chainId
-
-    // Determine if we should use v2 API
-    let url: string
-    if (server.includes('etherscan.io')) {
-      // For etherscan.io API - use v2 with chainId
-      url = `${server}/v2/api?chainid=${chainId}${
-        cmd.startsWith('?') ? cmd.replace('?', '&') : cmd
-      }`
-    } else {
-      // For non-etherscan APIs like blockscout, continue using the old format
-      url = `${server}/api${cmd}`
-    }
+    const url = makeEvmScanUrl(
+      server,
+      cmd,
+      this.ethEngine.networkInfo.chainParams.chainId
+    )
 
     const response = await this.ethEngine.engineFetch(
       `${url}${apiKeyParam}`,

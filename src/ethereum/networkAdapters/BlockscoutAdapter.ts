@@ -1,5 +1,6 @@
 import { EdgeTokenId } from 'edge-core-js/types'
 
+import { EthereumEngine } from '../EthereumEngine'
 import {
   EdgeTransactionsBlockHeightTuple,
   EthereumNetworkUpdate
@@ -11,6 +12,7 @@ import {
   asEvmScanTransaction,
   EvmScanAdapter
 } from './EvmScanAdapter'
+import { BLOCKSCOUT_PRO_HOST } from './evmScanUrl'
 import { GetTxsParams, RateLimitError } from './networkAdapterTypes'
 
 /**
@@ -48,7 +50,12 @@ const BROWSER_HEADERS = {
 
 export interface BlockscoutAdapterConfig {
   type: 'blockscout'
-  /** Blockscout instance origins, e.g. `https://eth.blockscout.com` */
+  /**
+   * Blockscout origins, e.g. `https://eth.blockscout.com` for an instance
+   * someone runs, or `https://api.blockscout.com` for the hosted API. The
+   * hosted one needs the `blockscoutApiKey` init option and is dropped
+   * without it; a list left empty takes the whole adapter out.
+   */
   servers: string[]
 }
 
@@ -71,56 +78,109 @@ export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
   protected rateLimitRetries = 3
   protected requestHeaders = BROWSER_HEADERS
 
-  fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
-    const { result: jsonObj, server } = await this.serialServers(
-      async server => {
-        const response = await this.fetchGetEtherscan(
-          server,
-          '?module=block&action=eth_block_number'
-        )
-        if ('status' in response && response.status === '0') {
-          this.handledUnexpectedResponse(server, 'eth_block_number', response)
-        }
-        return { server, result: response }
+  constructor(ethEngine: EthereumEngine, config: BlockscoutAdapterConfig) {
+    super(ethEngine, config)
+
+    // The hosted API answers 402 without a key, which `throwError` classifies
+    // as a rate limit, so `serialServers` would spend its whole backoff (1s,
+    // 2s, 4s) rediscovering that on every call before the waterfall reaches an
+    // instance that answers. A keyless build drops the server instead. The
+    // app's `env.json` schema fills an unset key with an empty string or an
+    // empty list rather than leaving it out, so all three shapes mean no key.
+    const { blockscoutApiKey } = ethEngine.initOptions
+    const hasApiKey = Array.isArray(blockscoutApiKey)
+      ? blockscoutApiKey.length > 0
+      : blockscoutApiKey != null && blockscoutApiKey !== ''
+
+    if (!hasApiKey) {
+      this.config = {
+        ...config,
+        servers: config.servers.filter(server => {
+          if (!server.includes(BLOCKSCOUT_PRO_HOST)) return true
+          ethEngine.warn(
+            `Blockscout server dropped: no blockscoutApiKey for ${server}`
+          )
+          return false
+        })
       }
-    )
-
-    const clean = asEtherscanGetBlockHeight(jsonObj)
-    return { blockHeight: clean.result, server }
-  }
-
-  fetchTxs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
-    const { startBlock, tokenId } = params
-
-    let contractAddress: string | undefined
-    if (tokenId != null) {
-      const tokenInfo = this.ethEngine.allTokensMap[tokenId]
-      if (typeof tokenInfo?.networkLocation?.contractAddress !== 'string') {
-        return {}
-      }
-      contractAddress = tokenInfo.networkLocation.contractAddress
     }
 
-    const { allTransactions, server } =
-      tokenId == null
-        ? await this.getAllTxsEthscan(startBlock, null, asEvmScanTransaction, {
-            searchRegularTxs: true
-          })
-        : await this.getAllTxsEthscan(
-            startBlock,
-            tokenId,
-            asEvmScanTokenTransaction,
-            { contractAddress }
-          )
-
-    return this.makeTxsUpdate(tokenId, startBlock, allTransactions, server, {
-      includesInternal: false
-    })
+    // With no server left the adapter leaves the waterfall entirely, the way
+    // `AlchemyAdapter` does. What that prevents is a false claim and a throw,
+    // not a complete-looking history: kept in, `getAllTxsEthscan` would answer
+    // an empty server list with zero rows, so `fetchInternalTxs` would mark
+    // the tuple `includesInternal` on rows it never fetched, and
+    // `fetchBlockheight` would throw on the `undefined` an empty waterfall
+    // resolves to. Dropped, the sync still reaches 100%: with no adapter
+    // implementing the method, `mergeInternalTxs` returns at its zero-adapter
+    // guard, before the `partial` flag that withholds the asset is ever set.
+    // Robinhood never reaches here, since only the hosted server carries a key
+    // requirement; a chain served by the hosted API alone would sync
+    // complete-looking on a keyless build, which this drop does not cover.
+    if (this.config.servers.length === 0) {
+      this.fetchBlockheight = null
+      this.fetchInternalTxs = null
+      this.fetchTxs = null
+    }
   }
 
-  fetchInternalTxs = async (
-    params: GetTxsParams
-  ): Promise<EthereumNetworkUpdate> => {
+  fetchBlockheight: (() => Promise<EthereumNetworkUpdate>) | null =
+    async (): Promise<EthereumNetworkUpdate> => {
+      const { result: jsonObj, server } = await this.serialServers(
+        async server => {
+          const response = await this.fetchGetEtherscan(
+            server,
+            '?module=block&action=eth_block_number'
+          )
+          if ('status' in response && response.status === '0') {
+            this.handledUnexpectedResponse(server, 'eth_block_number', response)
+          }
+          return { server, result: response }
+        }
+      )
+
+      const clean = asEtherscanGetBlockHeight(jsonObj)
+      return { blockHeight: clean.result, server }
+    }
+
+  fetchTxs: ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>) | null =
+    async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
+      const { startBlock, tokenId } = params
+
+      let contractAddress: string | undefined
+      if (tokenId != null) {
+        const tokenInfo = this.ethEngine.allTokensMap[tokenId]
+        if (typeof tokenInfo?.networkLocation?.contractAddress !== 'string') {
+          return {}
+        }
+        contractAddress = tokenInfo.networkLocation.contractAddress
+      }
+
+      const { allTransactions, server } =
+        tokenId == null
+          ? await this.getAllTxsEthscan(
+              startBlock,
+              null,
+              asEvmScanTransaction,
+              {
+                searchRegularTxs: true
+              }
+            )
+          : await this.getAllTxsEthscan(
+              startBlock,
+              tokenId,
+              asEvmScanTokenTransaction,
+              { contractAddress }
+            )
+
+      return this.makeTxsUpdate(tokenId, startBlock, allTransactions, server, {
+        includesInternal: false
+      })
+    }
+
+  fetchInternalTxs:
+    | ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>)
+    | null = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
     const { startBlock } = params
     const cooldownKey = this.config.servers.join(',')
     const cooldownUntil = internalTxsCooldownUntil.get(cooldownKey) ?? 0
