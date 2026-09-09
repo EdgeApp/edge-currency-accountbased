@@ -282,7 +282,7 @@ const networkFees: EthereumFees = {
 }
 
 // Exported for fee provider test
-const networkInfo: EthereumNetworkInfo = {
+export const networkInfo: EthereumNetworkInfo = {
   addressQueryLookbackBlocks: 60, // 2 minutes
   networkAdapterConfigs: [
     {
@@ -322,7 +322,7 @@ const networkInfo: EthereumNetworkInfo = {
   }
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'FTM',
   evmChainId: 250,
@@ -369,7 +369,3 @@ export const fantom = makeOuterPlugin<
     return await import('../EthereumTools')
   }
 })
-
-if (process.env.npm_lifecycle_event === 'test') {
-  module.exports = { ...module.exports, currencyInfo, networkInfo }
-}

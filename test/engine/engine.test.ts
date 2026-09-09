@@ -113,6 +113,9 @@ describe('Engine', function () {
     let tools: EdgeCurrencyTools
     let engine: EdgeCurrencyEngine
     before(async function () {
+      // `makeCurrencyTools` dynamically imports the plugin's tools module, and
+      // compiling it on demand can outrun mocha's 2s default.
+      this.timeout(30000)
       tools = await plugin.makeCurrencyTools()
       const privateKeys = await tools.createPrivateKey(WALLET_TYPE)
       privateWalletInfo = {
