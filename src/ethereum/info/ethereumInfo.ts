@@ -1303,7 +1303,3 @@ export const ethereum = makeOuterPlugin<
     )
   }
 })
-
-if (process.env.npm_lifecycle_event === 'test') {
-  module.exports = { ...module.exports, currencyInfo }
-}

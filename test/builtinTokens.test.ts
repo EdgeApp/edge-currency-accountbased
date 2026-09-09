@@ -34,6 +34,12 @@ const pluginsWithoutMetatokens: Record<string, boolean> = {
 }
 
 describe('builtinTokens', function () {
+  // Each case awaits `makeCurrencyTools`, which dynamically imports that
+  // plugin's tools module. Compiling one of the larger ones on demand can
+  // outrun mocha's 2s default, and which plugin pays that cost depends on
+  // what a previous test already warmed.
+  this.timeout(30000)
+
   for (const pluginId of pluginIds) {
     if (pluginsWithoutMetatokens[pluginId]) continue
     const plugin = plugins[pluginId](fakePluginOptions)
