@@ -13,6 +13,7 @@ import {
   MessageV0,
   PublicKey,
   RecentPrioritizationFees,
+  SolanaJSONRPCErrorCode,
   SystemProgram,
   TokenAmount,
   TokenBalance,
@@ -23,7 +24,7 @@ import {
   VersionedTransactionResponse
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
-import { asMaybe, asString } from 'cleaners'
+import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -74,6 +75,25 @@ import {
 
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+
+const asRpcErrorCode = asMaybe(asObject({ code: asNumber }))
+
+/**
+ * An unsupported transaction version is a property of our request, not of the
+ * node: every node answers it the same way on every sync, so asking again can
+ * never succeed. Timeouts, rate limits and unhealthy nodes are the opposite,
+ * and are the only failures worth freezing the watermark for.
+ */
+const isUnsupportedTransactionVersion = (error: unknown): boolean =>
+  asRpcErrorCode(error)?.code ===
+  SolanaJSONRPCErrorCode.JSON_RPC_SERVER_ERROR_UNSUPPORTED_TRANSACTION_VERSION
+
+interface TransactionChunk {
+  /** One entry per requested signature, in the order they were requested. */
+  transactions: Array<VersionedTransactionResponse | null>
+  /** Signatures no node answered for a retryable reason. */
+  unavailable: Set<string>
+}
 
 export class SolanaEngine extends CurrencyEngine<
   SolanaTools,
@@ -359,12 +379,12 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  processSolanaTransaction(
+  makeSolanaTransaction(
     tx: TransactionResponse | VersionedTransactionResponse,
     amounts: ParsedTxAmount,
     timestamp: number,
     memos: string[]
-  ): void {
+  ): EdgeTransaction | undefined {
     const ourReceiveAddresses = []
 
     const { amount, networkFee, parentNetworkFee, tokenId = null } = amounts
@@ -392,7 +412,7 @@ export class SolanaEngine extends CurrencyEngine<
       txid: tx.transaction.signatures[0],
       walletId: this.walletId
     }
-    this.addTransaction(tokenId, edgeTransaction)
+    return edgeTransaction
   }
 
   parseTxAmounts(
@@ -523,6 +543,70 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Fetches the transaction bodies for a chunk of signatures.
+   *
+   * The batch call is the fast path, but `getTransactions` throws on the first
+   * error in the batch and discards every good result alongside it. Because the
+   * history loop walks oldest to newest, one transaction the RPC or the client
+   * cannot serve would otherwise freeze the wallet's history at that signature.
+   * Retrying the chunk one signature at a time turns that into a single missing
+   * row.
+   *
+   * `unavailable` holds the signatures no node answered for a retryable
+   * reason. Two failures stay out of it, because asking again cannot change
+   * the answer: a null result, which is a node saying the transaction is not
+   * there, and an unsupported transaction version, which every node reports
+   * identically until the client learns the new version.
+   */
+  async fetchTransactionChunk(signatures: string[]): Promise<TransactionChunk> {
+    const options = {
+      commitment: this.networkInfo.commitment,
+      // Solana v1 transactions arrive with Agave 4.2. The RPC answers
+      // -32015 for any transaction newer than the version declared here.
+      maxSupportedTransactionVersion: 1
+    }
+
+    try {
+      const funcs = this.tools.archiveConnections.map(
+        connection => async () => {
+          return await connection.getTransactions(signatures, options)
+        }
+      )
+      const transactions: Array<VersionedTransactionResponse | null> =
+        await asyncStaggeredRace(funcs)
+      return { transactions, unavailable: new Set() }
+    } catch (error: unknown) {
+      this.error(
+        'getTransactions batch failed, retrying one at a time: ',
+        error instanceof Error ? error : new Error(String(error))
+      )
+    }
+
+    const transactions: Array<VersionedTransactionResponse | null> = []
+    const unavailable = new Set<string>()
+    for (const signature of signatures) {
+      try {
+        const funcs = this.tools.archiveConnections.map(
+          connection => async () => {
+            return await connection.getTransaction(signature, options)
+          }
+        )
+        const tx: VersionedTransactionResponse | null =
+          await asyncStaggeredRace(funcs)
+        transactions.push(tx)
+      } catch (error: unknown) {
+        this.error(
+          `getTransaction failed for ${signature}: `,
+          error instanceof Error ? error : new Error(String(error))
+        )
+        transactions.push(null)
+        if (!isUnsupportedTransactionVersion(error)) unavailable.add(signature)
+      }
+    }
+    return { transactions, unavailable }
+  }
+
   async queryTransactionsInner(
     tokenId: EdgeTokenId,
     pubkey: PublicKey
@@ -568,39 +652,45 @@ export class SolanaEngine extends CurrencyEngine<
     let numProcessedTx = 0
     const transactionRequests = txids.map(txid => txid.signature).reverse()
 
+    // A row we could not read for a retryable reason freezes the watermark for
+    // the rest of the pass. Without that, a later chunk's success would write
+    // its own signature into `newestTxid` and the next sync's `until` would
+    // skip straight past the rows we never got.
+    let sawRetryableGap = false
+
     for (let i = 0; i < transactionRequests.length; i += CHUNK_SIZE) {
       const transactionRequest = transactionRequests.slice(i, i + CHUNK_SIZE)
-      const funcs = this.tools.archiveConnections.map(
-        connection => async () => {
-          return await connection.getTransactions(transactionRequest, {
-            commitment: this.networkInfo.commitment,
-            maxSupportedTransactionVersion: 0
-          })
-        }
+      const { transactions, unavailable } = await this.fetchTransactionChunk(
+        transactionRequest
       )
-      const txResponse: Array<
-        TransactionResponse | VersionedTransactionResponse
-      > = await asyncStaggeredRace(funcs)
 
       // Process the transactions from oldest to newest
-      for (let i = 0; i < txResponse.length; i++) {
+      for (let i = 0; i < transactions.length; i++) {
         numProcessedTx++
-        if (txResponse[i].meta?.err != null) continue // ignore these
+        const tx = transactions[i]
+        if (tx == null) {
+          if (unavailable.has(transactionRequest[i])) sawRetryableGap = true
+          continue
+        }
+        if (tx.meta?.err != null) continue // ignore these
         const matchingTxid = txids.find(
-          t => t.signature === txResponse[i].transaction.signatures[0]
+          t => t.signature === tx.transaction.signatures[0]
         )
         if (matchingTxid == null) continue
 
-        let blocktime = matchingTxid.blockTime ?? txResponse[i].blockTime
+        let blocktime = matchingTxid.blockTime ?? tx.blockTime
         if (blocktime == null) {
           const funcs = this.tools.archiveConnections.map(
             connection => async () => {
-              return await connection.getBlockTime(txResponse[i].slot)
+              return await connection.getBlockTime(tx.slot)
             }
           )
           const blocktimeRaw = await asyncStaggeredRace(funcs)
           const blocktimeClean = asMaybe(asBlocktime)(blocktimeRaw)
-          if (blocktimeClean == null) continue
+          if (blocktimeClean == null) {
+            sawRetryableGap = true
+            continue
+          }
 
           blocktime = blocktimeClean.result
         }
@@ -614,12 +704,32 @@ export class SolanaEngine extends CurrencyEngine<
             memos.push(match[1])
           }
         }
-        const amounts = this.parseTxAmounts(txResponse[i], pubkey)
-        amounts.forEach(amount => {
-          this.processSolanaTransaction(txResponse[i], amount, timestamp, memos)
-        })
-        this.otherData.newestTxid[safeTokenId] =
-          txResponse[i].transaction.signatures[0]
+        let edgeTransactions: EdgeTransaction[] = []
+        try {
+          edgeTransactions = this.parseTxAmounts(tx, pubkey)
+            .map(amount =>
+              this.makeSolanaTransaction(tx, amount, timestamp, memos)
+            )
+            .filter(
+              (edgeTransaction): edgeTransaction is EdgeTransaction =>
+                edgeTransaction != null
+            )
+        } catch (error: unknown) {
+          // A transaction we cannot interpret costs one history row. Advancing
+          // the watermark past it keeps the rest of the history flowing.
+          this.error(
+            `Could not process transaction ${tx.transaction.signatures[0]}: `,
+            error instanceof Error ? error : new Error(String(error))
+          )
+        }
+        // Nothing is recorded until every amount has built, so a transaction
+        // that fails part way through leaves no half-recorded row behind.
+        for (const edgeTransaction of edgeTransactions) {
+          this.addTransaction(edgeTransaction.tokenId, edgeTransaction)
+        }
+        if (!sawRetryableGap) {
+          this.otherData.newestTxid[safeTokenId] = tx.transaction.signatures[0]
+        }
 
         // Update progress
         const percent = 1 - numProcessedTx / txids.length
