@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- changed: (Solana) Update @solana/web3.js to ^1.99.0
+- changed: (Solana) An unreadable transaction costs one history row, not the chunk
+- fixed: (Solana) Transaction history syncs past version 1 transactions
+
 ## 4.91.0 (2026-09-08)
 
 - added: Robinhood Chain support (`robinhood`, EVM chain 4663)
