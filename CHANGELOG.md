@@ -45,6 +45,8 @@
 - fixed: (Osmosis) Replace the `rpc.osmosis.zone` RPC node, which now returns HTTP 403 to every request. Osmosis wallets stalled partway through their sync ratio because the balance query never completed for enabled tokens.
 - fixed: (Monad) Wallets stuck at 50% sync with no balance
 
+- fixed: Restore webpack code splitting, so each plugin loads on demand instead of shipping in the initial bundle
+
 ## 4.91.0 (2026-09-08)
 
 - added: Robinhood Chain support (`robinhood`, EVM chain 4663)
