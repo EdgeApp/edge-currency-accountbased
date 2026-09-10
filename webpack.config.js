@@ -43,7 +43,14 @@ module.exports = {
         test: /\.ts$/,
         use: {
           loader: 'esbuild-loader',
-          options: { loader: 'ts', target: 'chrome55' }
+          options: {
+            loader: 'ts',
+            // Keep `import()` intact for webpack to turn into a chunk. The
+            // `chrome55` target predates dynamic import, so ESBuild would
+            // otherwise lower it to `require()` and inline every plugin.
+            supported: { 'dynamic-import': true },
+            target: 'chrome55'
+          }
         }
       }
     ]
