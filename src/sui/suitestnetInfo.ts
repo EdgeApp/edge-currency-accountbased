@@ -78,6 +78,9 @@ export const suitestnet = makeOuterPlugin<
   },
 
   async getInnerPlugin() {
-    return await import('./SuiTools')
+    return await import(
+      /* webpackChunkName: "sui" */
+      './SuiTools'
+    )
   }
 })

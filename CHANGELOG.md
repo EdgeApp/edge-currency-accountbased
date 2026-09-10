@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Restore webpack code splitting, so each plugin loads on demand instead of shipping in the initial bundle
+
 ## 4.91.0 (2026-09-08)
 
 - added: Robinhood Chain support (`robinhood`, EVM chain 4663)

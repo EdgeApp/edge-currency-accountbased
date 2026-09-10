@@ -203,7 +203,7 @@ export const coreum = makeOuterPlugin<
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "coreum" */
+      /* webpackChunkName: "cosmos" */
       '../CosmosTools'
     )
   }
