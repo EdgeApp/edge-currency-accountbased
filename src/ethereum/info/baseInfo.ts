@@ -149,6 +149,9 @@ export const base = makeOuterPlugin<
   networkInfo,
 
   async getInnerPlugin() {
-    return await import('../EthereumTools')
+    return await import(
+      /* webpackChunkName: "ethereum" */
+      '../EthereumTools'
+    )
   }
 })

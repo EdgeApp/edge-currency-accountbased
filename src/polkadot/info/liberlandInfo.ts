@@ -74,6 +74,9 @@ export const liberland = makeOuterPlugin<
   },
 
   async getInnerPlugin() {
-    return await import('../PolkadotTools')
+    return await import(
+      /* webpackChunkName: "polkadot" */
+      '../PolkadotTools'
+    )
   }
 })

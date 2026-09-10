@@ -54,6 +54,9 @@ export const hederatestnet = makeOuterPlugin<
   networkInfo,
 
   async getInnerPlugin() {
-    return await import('./HederaTools')
+    return await import(
+      /* webpackChunkName: "hedera" */
+      './HederaTools'
+    )
   }
 })
