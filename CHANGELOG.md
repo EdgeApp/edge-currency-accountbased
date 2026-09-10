@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fixed: (EVM) A rate-limited block explorer no longer stops the wallet's sync until restart
 - fixed: (Axelar) Replace the retired `axelar.tendermintrpc.lava.build` RPC node, which answers every request with HTTP 410 "This endpoint has been discontinued.", and the unreachable `axelar-archrpc.chainode.tech` archive node. Axelar wallets could reach neither balances nor transaction history, so their sync ratio sat at 0 forever with no visible error.
 - fixed: (Osmosis) Replace the `rpc.osmosis.zone` RPC node, which now returns HTTP 403 to every request. Osmosis wallets stalled partway through their sync ratio because the balance query never completed for enabled tokens.
 

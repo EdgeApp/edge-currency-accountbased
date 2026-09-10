@@ -78,6 +78,14 @@ export class EvmScanAdapter<
   /** Extra headers on every `/api` request; subclasses set them per provider */
   protected requestHeaders: Record<string, string> | undefined = undefined
 
+  /**
+   * Explorer API keys are shared by every EVM wallet, so throttle replies are
+   * routine. Unbounded retries double the wait each time and hold the engine's
+   * sync open, which also stops token detection until the app restarts. Give
+   * up after a few tries and let the next sync pass ask again.
+   */
+  protected rateLimitRetries = 3
+
   batchMulticastRpc = null
   connect = null
   disconnect = null
