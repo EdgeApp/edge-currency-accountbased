@@ -366,7 +366,10 @@ export const fantom = makeOuterPlugin<
   networkInfo,
 
   async getInnerPlugin() {
-    return await import('../EthereumTools')
+    return await import(
+      /* webpackChunkName: "ethereum" */
+      '../EthereumTools'
+    )
   }
 })
 

@@ -89,7 +89,7 @@ export const algorandtestnet = makeOuterPlugin<
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "algorandtestnet" */
+      /* webpackChunkName: "algorand" */
       './AlgorandTools'
     )
   }

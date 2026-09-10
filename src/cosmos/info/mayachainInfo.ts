@@ -84,7 +84,7 @@ export const mayachain = makeOuterPlugin<
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "mayachain" */
+      /* webpackChunkName: "cosmos" */
       '../CosmosTools'
     )
   }

@@ -106,7 +106,7 @@ export const osmosis = makeOuterPlugin<
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "osmosis" */
+      /* webpackChunkName: "cosmos" */
       '../CosmosTools'
     )
   }

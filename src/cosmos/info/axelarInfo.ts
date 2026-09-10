@@ -80,7 +80,7 @@ export const axelar = makeOuterPlugin<
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "axelar" */
+      /* webpackChunkName: "cosmos" */
       '../CosmosTools'
     )
   }
