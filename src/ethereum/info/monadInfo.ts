@@ -85,9 +85,11 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://monad.rpc.blxrbdn.com',
+        'https://rpc.monad.xyz',
+        'https://rpc1.monad.xyz',
         'https://rpc2.monad.xyz',
-        'https://monad-mainnet.drpc.org'
+        'https://rpc3.monad.xyz',
+        'https://rpc-mainnet.monadinfra.com'
       ],
       ethBalCheckerContract: '0x726391B6cA41761c4c332aa556Cf804A50279b52'
     },
