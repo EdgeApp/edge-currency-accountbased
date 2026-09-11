@@ -27,6 +27,7 @@ import {
 } from '../ethereumTypes'
 import { calculateFeeForPriority } from '../feeAlgorithms/ethFeeHistory'
 import { EvmScanAdapterConfig } from '../networkAdapters/EvmScanAdapter'
+import { BLOCKSCOUT_PRO_HOST } from '../networkAdapters/evmScanUrl'
 import { RpcAdapterConfig } from '../networkAdapters/RpcAdapter'
 
 export const printFees = (log: EdgeLog, fees: EthereumBaseMultiplier): void => {
@@ -346,8 +347,13 @@ export const getEvmScanApiKey = (
   log: EdgeLog,
   serverUrl: string
 ): string | string[] | undefined => {
-  const { evmScanApiKey, etherscanApiKey, bscscanApiKey, polygonscanApiKey } =
-    initOptions
+  const {
+    blockscoutApiKey,
+    evmScanApiKey,
+    etherscanApiKey,
+    bscscanApiKey,
+    polygonscanApiKey
+  } = initOptions
 
   const { currencyCode } = info
 
@@ -357,6 +363,14 @@ export const getEvmScanApiKey = (
       throw new Error(`Missing etherscanApiKey for etherscan.io`)
     return etherscanApiKey
   }
+
+  // Blockscout's hosted API has its own key, never `evmScanApiKey`: that
+  // option holds a chain's Etherscan keys and one is picked at random per
+  // request, so a key for this host mixed in there would be skipped on most
+  // calls. A missing key leaves the request unauthenticated, which the host
+  // answers 402; `BlockscoutAdapter` drops the server rather than let that
+  // happen.
+  if (serverUrl.includes(BLOCKSCOUT_PRO_HOST)) return blockscoutApiKey
 
   if (evmScanApiKey != null) return evmScanApiKey
 

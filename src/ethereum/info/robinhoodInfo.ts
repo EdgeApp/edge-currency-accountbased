@@ -132,12 +132,22 @@ const networkInfo: EthereumNetworkInfo = {
       ethBalCheckerContract: '0x8950F12786CAE64F94a02733A260ca6FecDaeD7f'
     },
     {
-      // Etherscan V2 does not support chain 4663. The chain's public Blockscout
-      // instance (300 requests per minute per IP) supplies the internal
-      // transactions Alchemy lacks here, merged into every native-asset sync,
-      // and is the history fallback when Alchemy fails.
+      // Etherscan V2 does not support chain 4663 and Alchemy does not serve
+      // the `internal` category here, so Blockscout is this chain's only
+      // source for the internal transactions the engine merges into every
+      // native-asset sync, and its history fallback when Alchemy fails.
+      //
+      // Blockscout's hosted API is the one that answers: it needs the
+      // `blockscoutApiKey` init option and drops out of the list without it.
+      // The chain's own instance is listed as a keyless fallback, but its
+      // budget is 10 requests per window, so it answers 429 to most of a
+      // wallet's sync. `serialServers` shuffles this list, so neither is
+      // tried first; the first to answer wins the call.
       type: 'blockscout',
-      servers: ['https://robinhoodchain.blockscout.com']
+      servers: [
+        'https://api.blockscout.com',
+        'https://robinhoodchain.blockscout.com'
+      ]
     }
   ],
   uriNetworks: ['robinhood'],
