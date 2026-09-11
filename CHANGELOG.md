@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.92.0 (2026-09-11)
+
 - added: (EVM) `blockscoutApiKey` init option, keying Blockscout's hosted API
 - added: (Robinhood Chain) Internal transactions from Blockscout's hosted API
 - fixed: (Robinhood Chain) Blockscout requests carry the client hint the chain's own instance requires
