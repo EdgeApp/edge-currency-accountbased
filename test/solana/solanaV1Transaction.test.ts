@@ -41,6 +41,13 @@ interface JsonRpcRequest {
 interface StubOptions {
   /** Signatures `getSignaturesForAddress` returns, newest first. */
   history?: string[]
+  /**
+   * When false, neither the signature list nor the transaction body carries a
+   * block time, so the pass has to fall back to `getBlockTime`.
+   */
+  rowsCarryBlockTime?: boolean
+  /** What `getBlockTime` answers: a timestamp, a null result, or an outage. */
+  blockTimeAnswer?: number | null | 'error'
 }
 
 /**
@@ -50,7 +57,11 @@ interface StubOptions {
  * for less than version 1 and the v1 transaction comes back as error -32015.
  */
 const makeStubConnection = (options: StubOptions = {}): Connection => {
-  const { history = [] } = options
+  const {
+    history = [],
+    rowsCarryBlockTime = true,
+    blockTimeAnswer = v1TransactionFixture.blockTime
+  } = options
 
   const answer = (request: JsonRpcRequest): unknown => {
     const reply = (payload: object): unknown => ({
@@ -66,9 +77,14 @@ const makeStubConnection = (options: StubOptions = {}): Connection => {
           slot: v1TransactionFixture.slot,
           err: null,
           memo: null,
-          blockTime: v1TransactionFixture.blockTime
+          blockTime: rowsCarryBlockTime ? v1TransactionFixture.blockTime : null
         }))
       })
+    }
+    if (request.method === 'getBlockTime') {
+      if (blockTimeAnswer === 'error')
+        return reply({ error: nodeUnhealthyError })
+      return reply({ result: blockTimeAnswer })
     }
     if (request.method !== 'getTransaction') {
       throw new Error(`Unexpected RPC method ${request.method}`)
@@ -83,9 +99,12 @@ const makeStubConnection = (options: StubOptions = {}): Connection => {
       return reply({ error: nodeUnhealthyError })
     }
     if (signature === V1_SIGNATURE) {
-      return maxVersion >= 1
-        ? reply({ result: v1TransactionFixture })
-        : reply({ error: versionUnsupportedError(1) })
+      if (maxVersion < 1) return reply({ error: versionUnsupportedError(1) })
+      return reply({
+        result: rowsCarryBlockTime
+          ? v1TransactionFixture
+          : { ...v1TransactionFixture, blockTime: null }
+      })
     }
     return reply({ result: null })
   }
@@ -352,5 +371,52 @@ describe('Solana history watermark', function () {
     // A transaction we cannot interpret fails the same way on every sync, so
     // the watermark still moves past it.
     assert.equal(engine.otherData.newestTxid[''], V1_SIGNATURE)
+  })
+
+  it('takes the block time a node answers in the fallback', async function () {
+    const engine = makeHistoryEngine(
+      makeStubConnection({
+        history: [V1_SIGNATURE],
+        rowsCarryBlockTime: false,
+        blockTimeAnswer: 1757030400
+      })
+    )
+    await syncHistory(engine)
+
+    assert.equal(engine.captured.length, 1)
+    assert.equal(engine.captured[0].date, 1757030400)
+    // An answered lookup is not a gap, so the watermark still advances.
+    assert.equal(engine.otherData.newestTxid[''], V1_SIGNATURE)
+  })
+
+  it('drops a row the nodes say has no block time', async function () {
+    const engine = makeHistoryEngine(
+      makeStubConnection({
+        history: [V1_SIGNATURE],
+        rowsCarryBlockTime: false,
+        blockTimeAnswer: null
+      })
+    )
+    await syncHistory(engine)
+
+    // A null is an answer, and the same answer comes back on every sync, so the
+    // row is dropped rather than recorded against a placeholder timestamp.
+    // Nothing latches, so a later row in the pass still moves the watermark.
+    assert.equal(engine.captured.length, 0)
+    assert.equal(engine.otherData.newestTxid[''], '')
+  })
+
+  it('holds still when no node answers the block time lookup', async function () {
+    const engine = makeHistoryEngine(
+      makeStubConnection({
+        history: [V1_SIGNATURE],
+        rowsCarryBlockTime: false,
+        blockTimeAnswer: 'error'
+      })
+    )
+    await syncHistory(engine)
+
+    assert.equal(engine.captured.length, 0)
+    assert.equal(engine.otherData.newestTxid[''], '')
   })
 })

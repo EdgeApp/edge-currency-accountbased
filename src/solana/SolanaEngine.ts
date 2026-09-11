@@ -56,7 +56,6 @@ import { SolanaTools } from './SolanaTools'
 import {
   AccountBalance,
   asAccountBalance,
-  asBlocktime,
   asSafeSolanaWalletInfo,
   asSolanaCustomFee,
   asSolanaMakeTxParams,
@@ -685,14 +684,26 @@ export class SolanaEngine extends CurrencyEngine<
               return await connection.getBlockTime(tx.slot)
             }
           )
-          const blocktimeRaw = await asyncStaggeredRace(funcs)
-          const blocktimeClean = asMaybe(asBlocktime)(blocktimeRaw)
-          if (blocktimeClean == null) {
+          // `getBlockTime` hands back a bare `number | null`, not an RPC
+          // envelope, so the three answers mean different things. A number is
+          // the timestamp. A `null` is the node saying the slot carries no
+          // block time, which no retry changes, so the row is dropped and the
+          // watermark keeps moving. Every node throwing is the only case where
+          // nobody answered, and that one holds the watermark.
+          let blocktimeClean: number | undefined
+          try {
+            blocktimeClean = asMaybe(asNumber)(await asyncStaggeredRace(funcs))
+          } catch (error: unknown) {
+            this.error(
+              `getBlockTime failed for slot ${tx.slot}: `,
+              error instanceof Error ? error : new Error(String(error))
+            )
             sawRetryableGap = true
             continue
           }
+          if (blocktimeClean == null) continue
 
-          blocktime = blocktimeClean.result
+          blocktime = blocktimeClean
         }
         const timestamp = blocktime
 

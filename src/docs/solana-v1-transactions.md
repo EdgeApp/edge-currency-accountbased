@@ -5,7 +5,7 @@
 | Status | Implemented |
 | Author | Jon Tzeng |
 | Reviewer | - |
-| Last updated | 2026-09-10 |
+| Last updated | 2026-09-11 |
 | Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased) |
 | Implementation | branch `jon/solana-v1-transactions` |
 | Supersedes | - |
@@ -90,7 +90,7 @@ Everything below lands in edge-currency-accountbased.
 - A `null` result, which is a node saying the transaction is not there.
 - -32015, an unsupported transaction version. That is a property of our request rather than of the node, so it recurs until the client learns the next version. `isUnsupportedTransactionVersion` reads the code off web3.js's `SolanaJSONRPCError` and compares it to `SolanaJSONRPCErrorCode.JSON_RPC_SERVER_ERROR_UNSUPPORTED_TRANSACTION_VERSION` ([7.5](#75-treat-only-an-unsupported-version-as-a-permanent-fetch-failure)).
 
-[`src/solana/SolanaEngine.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/4795a57427d1925218987917abe1d767320a1245/src/solana/SolanaEngine.ts)
+[`src/solana/SolanaEngine.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/9e216902c523e69f7daa0c489b5e9286d271481c/src/solana/SolanaEngine.ts)
 ```typescript
 interface TransactionChunk {
   /** One entry per requested signature, in the order they were requested. */
@@ -104,9 +104,11 @@ async fetchTransactionChunk(signatures: string[]): Promise<TransactionChunk>
 
 The processing loop then guards `null` and builds each row in two steps. `parseTxAmounts` plus `makeSolanaTransaction` turn the transaction into its `EdgeTransaction`s (one for the native coin, one per token it moved) inside a `try`, and `addTransaction` records them only after every one has built. A transaction the engine cannot interpret is logged and skipped whole, never half-recorded ([7.6](#76-build-every-amount-before-recording-any)).
 
+**Block time.** A row whose signature entry and transaction body both lack `blockTime` falls back to `getBlockTime`, raced across the archive connections. That call resolves to a bare `number | null` rather than a [JSON-RPC](#rpc) envelope, so its three answers are read separately: a number is the timestamp, a `null` is the nodes saying the slot carries no block time, and every node throwing is the only answer that nobody gave ([7.7](#77-read-getblocktime-as-a-bare-number)).
+
 Which skips move `newestTxid` is the whole design:
 
-- A failure asking again cannot fix (a parse failure, a `null` result, -32015) advances the watermark past the row and the row is lost. Retrying it forever is the wall this change removes. That is the missing-row-not-frozen-wallet trade.
+- A failure asking again cannot fix (a parse failure, a `null` result, -32015, a slot with no block time) advances the watermark past the row and the row is lost. Retrying it forever is the wall this change removes. That is the missing-row-not-frozen-wallet trade.
 - A failure asking again can fix (a signature in `unavailable`, or a `getBlockTime` lookup no node answered) freezes the watermark for the rest of the pass, so a later chunk's success cannot write its own signature into `newestTxid` and carry the next sync's `until` past the rows we never got. Rows after the gap are still processed and shown; the next sync re-requests them and `addTransaction` deduplicates by txid.
 
 ```mermaid
@@ -118,7 +120,13 @@ flowchart TD
     E -->|a transaction| C
     E -->|null or -32015| F[skip row, watermark free to move]
     E -->|outage| G[skip row, freeze watermark for the pass]
-    C --> H{every amount builds?}
+    C --> N{row carries a block time?}
+    N -->|yes| H{every amount builds?}
+    N -->|no| O[getBlockTime across the archive nodes]
+    O --> P{what did the nodes say?}
+    P -->|a timestamp| H
+    P -->|null| F
+    P -->|every node threw| G
     H -->|no| F
     H -->|yes| J[record all its EdgeTransactions]
     J --> K{watermark frozen?}
@@ -145,8 +153,11 @@ The stub enforces `maxSupportedTransactionVersion` the way the [RPC](#rpc) does,
 | 9 | History: an outage before a good row | `newestTxid` stays empty, the good row is still recorded |
 | 10 | History: -32015 before a good row | `newestTxid` advances past both |
 | 11 | History: a row whose second amount fails to build | nothing is recorded, `newestTxid` still advances |
+| 12 | History: a block time the nodes answer in the fallback | the row carries that timestamp, `newestTxid` advances |
+| 13 | History: a slot the nodes say has no block time | nothing is recorded, no placeholder timestamp |
+| 14 | History: no node answers the block time lookup | nothing is recorded, `newestTxid` stays empty |
 
-Each fix has a case that fails without it: re-adding -32015 to `unavailable` fails 6 and 10, dropping the freeze fails 9, and recording each amount as it builds fails 11.
+Each fix has a case that fails without it: re-adding -32015 to `unavailable` fails 6 and 10, dropping the freeze fails 9, recording each amount as it builds fails 11, and restoring the envelope cleaner on `getBlockTime` fails 12 and 14.
 
 Cases 2 and 3 assert the engine's existing fee convention rather than a new one: the send's `nativeAmount` is the balance delta (`75889606355 - 75891049735`) less the fee the engine subtracts for a send.
 
@@ -175,6 +186,18 @@ Code review found three problems with the phase 1 freeze, all accepted:
 | The freeze itself was untested; `newestTxid` appeared nowhere under `test/`. | Cases 8 to 11 drive `queryTransactionsInner` through a fake engine. |
 
 Deferred: the QA cases on the task that need a post-activation mainnet build (a v1 transaction paid to a QA wallet, and the rent-reduction fee comparison) run against the staging 4.51.0 build, since mainnet had not reached [epoch](#epoch) 1032 when this shipped.
+
+### Phase 3 (2026-09-11): the block time fallback
+
+Review of the phase 2 freeze found one path left that could still freeze the watermark permanently, accepted:
+
+| Found | Shipped as |
+|---|---|
+| `getBlockTime`'s answer was cleaned with `asRpcResponse(asNumber)`, but the web3.js `Connection` hands back a bare `number \| null`. `asMaybe` therefore returned `null` for every answer, a valid timestamp included, and latched the freeze on every fallback. Nothing counts attempts or clears the latch, so a row lacking `blockTime` on both the signature list and the transaction body stalled history there on every sync. | The three answers are read apart, and only "every node threw" freezes ([7.7](#77-read-getblocktime-as-a-bare-number)). The now-unused `asBlocktime` cleaner is deleted. |
+
+The same round repointed [section 4](#4-design-overview)'s file citation, which still pinned the commit before the phase 2 fixes.
+
+The `try` also closes a path that predates this branch: with the envelope cleaner in place, a `getBlockTime` lookup where every node threw rejected out of `queryTransactionsInner` and ended the whole sync pass rather than skipping one row.
 
 ## 7. Decisions
 
@@ -239,6 +262,16 @@ Evidence: one Solana transaction can produce several rows (the native coin plus 
 Rejected: narrowing the `try` to `parseTxAmounts` alone. A throw while building would then escape the loop and end the whole pass, which is a wall again.
 
 Reopens if: recording itself (`addTransaction`) can throw part way, which would need the engine's own record to become transactional.
+
+### 7.7 Read `getBlockTime` as a bare number
+
+Chosen: clean the raced `getBlockTime` result with `asNumber`, wrap the race in a `try`, and map its three answers separately. A number is the timestamp. A `null` drops the row and leaves the watermark free to move. A rejection, which is every node throwing, freezes the watermark.
+
+Evidence: `Connection.getBlockTime(slot): Promise<number | null>` in web3.js 1.99.0 resolves the [RPC](#rpc) envelope's `result` itself, so the envelope cleaner never matched. `asyncStaggeredRace` resolves on the first success, `null` included, and rejects only once every function has thrown, so the resolve/reject split is exactly the answered/unanswered split the freeze rule needs. A `null` is a property of the slot rather than of the node, which puts it with the permanent failures of [7.5](#75-treat-only-an-unsupported-version-as-a-permanent-fetch-failure).
+
+Rejected: fixing `asBlocktime` to `asNumber` and keeping one `null` branch for both answers. That reads a slot with no block time as an outage and freezes on it forever, which is the [section 1](#1-problem) wall again. Also rejected: coercing a `null` to `0` or to the chunk's neighboring block time, which records a row against a timestamp no node gave and puts it in the wrong place in history.
+
+Reopens if: `getBlockTime` starts distinguishing "pruned, ask an archive node" from "this slot has no block time", which would move the `null` answer into the retryable set.
 
 ## 8. Glossary
 
