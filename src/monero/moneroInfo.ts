@@ -30,8 +30,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:monero',
 
   addressExplorer: 'https://xmrchain.net/search?value=%s',
-  transactionExplorer:
-    'https://blockchair.com/monero/transaction/%s?from=edgeapp',
+  transactionExplorer: 'https://monerospace.org/tx/%s',
 
   denominations: [
     {
