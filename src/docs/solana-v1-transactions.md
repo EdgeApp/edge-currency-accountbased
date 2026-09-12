@@ -11,7 +11,7 @@
 | Supersedes | - |
 | Related | [Asana 1218333177692561](https://app.asana.com/0/1215088146871429/1218333177692561) |
 
-<!-- tdd-code-fingerprint: b8be129485eea17e385ffc3ca8d1398362b26277 -->
+<!-- tdd-code-fingerprint: 5ce58982e18f8b86d8226f2e9b4de47a4eb4248c -->
 
 Code references point at `jon/solana-v1-transactions` in edge-currency-accountbased. Direction came from the Asana task, which scoped the dependency bump, the version declaration, the resilience requirement and the unit test.
 
