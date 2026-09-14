@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Monero) Transaction explorer link now points to monerospace.org instead of Blockchair
+
 ## 4.92.0 (2026-09-11)
 
 - added: (EVM) `blockscoutApiKey` init option, keying Blockscout's hosted API
