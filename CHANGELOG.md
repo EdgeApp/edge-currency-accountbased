@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.93.0 (2026-09-14)
+
 - changed: (Monero) Transaction explorer link now points to monerospace.org instead of Blockchair
 
 ## 4.92.0 (2026-09-11)
