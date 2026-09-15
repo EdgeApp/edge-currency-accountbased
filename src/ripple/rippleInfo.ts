@@ -41,6 +41,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
   multipleMemos: true,
 
+  usesChangeServer: true,
+
   // Deprecated:
   displayName: 'XRPL' // Matches chainDisplayName
 }
