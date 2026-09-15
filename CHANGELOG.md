@@ -3,7 +3,7 @@
 ## Unreleased
 
 - added: (Tron) Spend prebuilt `TriggerSmartContract` calls passed in `otherParams`
-- fixed: (Tron) Confirmed contract calls that send TRX show the TRX sent plus the fee in history
+- fixed: (Tron) Confirmed contract calls show the net TRX they moved in history, including TRX paid back
 
 ## 4.87.0 (2026-08-02)
 
