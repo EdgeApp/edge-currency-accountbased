@@ -79,7 +79,8 @@ import {
   base58ToHexAddress,
   contractCallNativeAmount,
   encodeTRC20Transfer,
-  hexToBase58Address
+  hexToBase58Address,
+  internalTrxReceived
 } from './tronUtils'
 
 const {
@@ -470,7 +471,8 @@ export class TronEngine extends CurrencyEngine<
       blockNumber,
       ret: retArray,
       unfreeze_amount: unfreezeAmount,
-      raw_data: { contract: contractArray, data }
+      raw_data: { contract: contractArray, data },
+      internal_transactions: internalTransactions
     } = tx
 
     const out = { txid, timestamp }
@@ -579,21 +581,32 @@ export class TronEngine extends CurrencyEngine<
         const feeNativeAmount = retArray[0].fee.toString()
 
         // A contract call can send TRX along with it (a DEX swap selling
-        // TRX), so the balance change is `call_value` plus the fee.
+        // TRX) and have the contract pay TRX back (a swap buying TRX), so the
+        // balance change nets both against the fee.
         const nativeAmount = contractCallNativeAmount(
           callValue,
           retArray[0].fee,
-          success
+          success,
+          internalTrxReceived(internalTransactions, fromAddress)
         )
 
-        // Don't create edgeTransaction for TRX if nothing moved
-        if (nativeAmount === '0') break
+        // Don't create edgeTransaction for TRX if nothing moved, unless it
+        // confirms a spend we already saved. A call our staked resources paid
+        // for in full still has to replace the pending copy, or that copy is
+        // eventually marked dropped.
+        if (nativeAmount === '0' && this.findTransaction(null, txid) === -1) {
+          break
+        }
+
+        // A payout larger than what the call spent is a net receive
+        const isSend = !gt(nativeAmount, '0')
+        if (!isSend) ourReceiveAddresses.push(this.walletLocalData.publicKey)
 
         const edgeTransaction: EdgeTransaction = {
           blockHeight: blockNumber,
           currencyCode,
           date,
-          isSend: true,
+          isSend,
           memos,
           nativeAmount,
           networkFee: feeNativeAmount,

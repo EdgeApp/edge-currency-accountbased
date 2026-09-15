@@ -12,7 +12,10 @@ import {
   asTronFreezeV2Action,
   asTronUnfreezeAction
 } from '../../src/tron/tronTypes'
-import { contractCallNativeAmount } from '../../src/tron/tronUtils'
+import {
+  contractCallNativeAmount,
+  internalTrxReceived
+} from '../../src/tron/tronUtils'
 
 const {
   utils: {
@@ -248,7 +251,70 @@ describe('confirmed tron contract calls', function () {
     assert.equal(contractCallNativeAmount(0, 1739600, true), '-1739600')
   })
 
+  it('nets TRX the contract paid back against the fee', function () {
+    // USDT -> TRX swap d44d1e67: the router paid 8.92637 TRX for a 1.5774 fee
+    assert.equal(
+      contractCallNativeAmount(0, 1577400, true, '8926370'),
+      '7348970'
+    )
+  })
+
+  it('ignores a payout when the call failed', function () {
+    assert.equal(
+      contractCallNativeAmount(0, 1577400, false, '8926370'),
+      '-1577400'
+    )
+  })
+
   it('reports no change when nothing moved', function () {
     assert.equal(contractCallNativeAmount(0, 0, true), '0')
+  })
+})
+
+describe('tron internal transactions', function () {
+  const wallet = '415188e13a382d3562b6023996340cc52b6f6a0c16'
+  const router = '414ab38f7ae7eadad03981b2a7d7883760aa63e564'
+
+  it('sums the TRX paid to an address', function () {
+    assert.equal(
+      internalTrxReceived(
+        [
+          {
+            to_address: router,
+            data: { call_value: { _: 8926370 }, rejected: false }
+          },
+          {
+            to_address: wallet,
+            data: { call_value: { _: 8926370 }, rejected: false }
+          },
+          {
+            to_address: wallet.toUpperCase(),
+            data: { call_value: { _: 1 }, rejected: false }
+          },
+          {
+            to_address: wallet,
+            data: { call_value: { _: 0 }, rejected: false }
+          }
+        ],
+        wallet
+      ),
+      '8926371'
+    )
+  })
+
+  it('skips rejected and unreadable internal calls', function () {
+    assert.equal(
+      internalTrxReceived(
+        [
+          undefined,
+          {
+            to_address: wallet,
+            data: { call_value: { _: 8926370 }, rejected: true }
+          }
+        ],
+        wallet
+      ),
+      '0'
+    )
   })
 })

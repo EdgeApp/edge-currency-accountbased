@@ -398,6 +398,24 @@ export const asTRC20Balance = asObject({
   // }
 })
 
+export const asTronInternalTransaction = asObject({
+  to_address: asString, // hex, e.g. "415188e13a382d3562b6023996340cc52b6f6a0c16"
+  data: asObject({
+    // Keyed by token, where "_" is TRX. Absent when the call moved no value.
+    call_value: asOptional(
+      asObject({
+        _: asOptional(asNumber, 0)
+      }),
+      { _: 0 }
+    ),
+    rejected: asOptional(asBoolean, false)
+  })
+})
+
+export type TronInternalTransaction = ReturnType<
+  typeof asTronInternalTransaction
+>
+
 export const asTransaction = asObject({
   ret: asArray(
     asObject({
@@ -423,8 +441,14 @@ export const asTransaction = asObject({
     // ref_block_hash: "cf53f47765aeb938",
     // expiration: 1663916925000,
     // timestamp: 1663916867997
-  })
-  // "internal_transactions": []
+  }),
+  // TRX a contract moved while running this transaction, such as a DEX router
+  // paying out a swap. An entry this cleaner can't read is dropped rather than
+  // dropping the whole transaction.
+  internal_transactions: asOptional(
+    asArray(asMaybe(asTronInternalTransaction)),
+    []
+  )
 })
 
 export const asTRC20Transaction = asObject({

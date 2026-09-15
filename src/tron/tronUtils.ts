@@ -1,9 +1,10 @@
-import { add, mul } from 'biggystring'
+import { add, eq, mul, sub } from 'biggystring'
 import abi from 'ethereumjs-abi'
 import { base16 } from 'rfc4648'
 import TronWeb from 'tronweb'
 
 import { hexToDecimal } from '../common/utils'
+import type { TronInternalTransaction } from './tronTypes'
 
 const {
   utils: {
@@ -61,15 +62,35 @@ export const encodeTRC20Transfer = (
 }
 
 /**
+ * The TRX a transaction's internal calls paid to `addressHex`, such as a DEX
+ * router paying out a swap. Rejected internal calls moved nothing.
+ */
+export const internalTrxReceived = (
+  internalTransactions: Array<TronInternalTransaction | undefined>,
+  addressHex: string
+): string => {
+  let received = '0'
+  for (const internal of internalTransactions) {
+    if (internal == null || internal.data.rejected) continue
+    if (internal.to_address.toLowerCase() !== addressHex.toLowerCase()) continue
+    received = add(received, String(internal.data.call_value._))
+  }
+  return received
+}
+
+/**
  * The TRX balance change a confirmed contract call made to its sender. The
- * chain moves `call_value` only when the call succeeds, but charges the fee
- * either way.
+ * chain moves `call_value`, and any TRX the contract pays back, only when the
+ * call succeeds, but charges the fee either way.
  */
 export const contractCallNativeAmount = (
   callValue: number,
   fee: number,
-  success: boolean
+  success: boolean,
+  received: string = '0'
 ): string => {
-  const spent = success ? add(String(callValue), String(fee)) : String(fee)
-  return spent === '0' ? '0' : mul(spent, '-1')
+  const change = success
+    ? sub(received, add(String(callValue), String(fee)))
+    : mul(String(fee), '-1')
+  return eq(change, '0') ? '0' : change
 }
