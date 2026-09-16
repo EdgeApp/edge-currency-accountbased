@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.94.0 (2026-09-16)
+
 - added: (Tron) Spend prebuilt `TriggerSmartContract` calls passed in `otherParams`
 - changed: (Solana) Update @solana/web3.js to ^1.99.0
 - changed: (Solana) An unreadable transaction costs one history row, not the chunk
