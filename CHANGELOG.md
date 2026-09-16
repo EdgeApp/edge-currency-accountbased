@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+- added: (Tron) Spend prebuilt `TriggerSmartContract` calls passed in `otherParams`
 - changed: (Solana) Update @solana/web3.js to ^1.99.0
 - changed: (Solana) An unreadable transaction costs one history row, not the chunk
 - fixed: (Solana) Transaction history syncs past version 1 transactions
+- fixed: (Tron) Confirmed contract calls show the net TRX they moved in history, including TRX paid back
 
 ## 4.93.0 (2026-09-14)
 
