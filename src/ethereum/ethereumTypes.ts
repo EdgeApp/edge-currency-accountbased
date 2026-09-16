@@ -113,6 +113,18 @@ export interface EthereumNetworkInfo {
     nodeInterfaceAddress: string
   }
   disableEvmScanInternal?: boolean
+  /**
+   * A contract that exposes the native asset as an ERC-20 token at its own
+   * precision, such as Arc's USDC at 0x3600…0000 (native 18 decimals, the
+   * interface 6). A transfer through it moves the native balance without an
+   * external or internal value transfer, so native history must include the
+   * contract's Transfer events, scaled up to the native denomination.
+   */
+  nativeErc20Interface?: {
+    contractAddress: string
+    /** One whole unit at the interface's precision, such as '1000000' */
+    multiplier: string
+  }
   // Engine behavior flags (chain-specific quirks)
   useRpcBalanceForMaxSpendNative?: boolean
   nativeSendPrechargeWei?: string
