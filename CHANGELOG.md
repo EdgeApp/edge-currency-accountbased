@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: Arc support (`arc`, EVM chain 5042)
+- added: (EVM) `nativeErc20Interface` network option, counting ERC-20 interface transfers as native history
+
 ## 4.94.0 (2026-09-16)
 
 - added: (Tron) Spend prebuilt `TriggerSmartContract` calls passed in `otherParams`

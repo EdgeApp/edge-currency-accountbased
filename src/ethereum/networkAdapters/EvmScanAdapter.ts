@@ -1,4 +1,4 @@
-import { add, max, mul, sub } from 'biggystring'
+import { add, div, max, mul, sub } from 'biggystring'
 import {
   asArray,
   asEither,
@@ -48,6 +48,11 @@ import {
 
 interface GetEthscanAllTxsOptions {
   contractAddress?: string
+  /**
+   * Set when `contractAddress` is the native asset's ERC-20 interface: the
+   * factor from the interface's units to native units.
+   */
+  nativeInterfaceScale?: string
   searchRegularTxs?: boolean
 }
 
@@ -257,10 +262,32 @@ export class EvmScanAdapter<
             { searchRegularTxs: false }
           )
         }
+        // Transfers through the native asset's ERC-20 interface move native
+        // value that neither list above reports:
+        let txsInterfaceResp: GetEthscanAllTxsResponse = {
+          allTransactions: [],
+          server: ''
+        }
+        const { nativeErc20Interface } = this.ethEngine.networkInfo
+        if (nativeErc20Interface != null) {
+          txsInterfaceResp = await this.getAllTxsEthscan(
+            startBlock,
+            tokenId,
+            asEvmScanTokenTransaction,
+            {
+              contractAddress: nativeErc20Interface.contractAddress,
+              nativeInterfaceScale: div(
+                this.ethEngine.currencyInfo.denominations[0].multiplier,
+                nativeErc20Interface.multiplier
+              )
+            }
+          )
+        }
         server = txsRegularResp.server ?? txsInternalResp.server ?? ''
         allTransactions = mergeEdgeTransactions([
           ...txsRegularResp.allTransactions,
-          ...txsInternalResp.allTransactions
+          ...txsInternalResp.allTransactions,
+          ...txsInterfaceResp.allTransactions
         ])
         includesInternal =
           this.ethEngine.networkInfo.disableEvmScanInternal !== true
@@ -357,7 +384,11 @@ export class EvmScanAdapter<
     >,
     options: GetEthscanAllTxsOptions
   ): Promise<GetEthscanAllTxsResponse> {
-    const { contractAddress, searchRegularTxs = false } = options
+    const {
+      contractAddress,
+      nativeInterfaceScale,
+      searchRegularTxs = false
+    } = options
     const address = this.ethEngine.walletLocalData.publicKey
     let page = 1
 
@@ -367,7 +398,7 @@ export class EvmScanAdapter<
       const offset = NUM_TRANSACTIONS_TO_QUERY
 
       let startUrl
-      if (tokenId === null) {
+      if (contractAddress == null) {
         startUrl = `?action=${
           searchRegularTxs ? 'txlist' : 'txlistinternal'
         }&module=account`
@@ -404,7 +435,13 @@ export class EvmScanAdapter<
       const transactions = asArray(asUnknown)(response.response.result)
       for (let i = 0; i < transactions.length; i++) {
         try {
-          const cleanedTx = asTransaction(transactions[i])
+          let cleanedTx = asTransaction(transactions[i])
+          if (nativeInterfaceScale != null && 'tokenDecimal' in cleanedTx) {
+            cleanedTx = asNativeInterfaceTransaction(
+              cleanedTx,
+              nativeInterfaceScale
+            )
+          }
           const l1RollupFee = await this.getL1RollupFee(cleanedTx)
           const tx = processEvmScanTransaction(
             {
@@ -603,6 +640,22 @@ export function processEvmScanTransaction(
 
   return edgeTransaction
   // or should be this.addTransaction(4, tokenId, edgeTransaction)?
+}
+
+/**
+ * Restates a transfer through the native asset's ERC-20 interface as a native
+ * value movement. The gas price is zeroed because the same transaction's
+ * `txlist` row already carries its fee, and merging adds amounts.
+ */
+export function asNativeInterfaceTransaction(
+  tx: EvmScanTokenTransaction,
+  nativeInterfaceScale: string
+): EvmScanTokenTransaction {
+  return {
+    ...tx,
+    value: mul(tx.value, nativeInterfaceScale),
+    gasPrice: '0'
+  }
 }
 
 export function mergeEdgeTransactions(
