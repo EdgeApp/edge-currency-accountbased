@@ -109,9 +109,6 @@ const asBulkTokenBalances = asObject({
 })
 export const asTokenBalances = asRpcResponse(asBulkTokenBalances)
 
-export const asBlocktime = asRpcResponse(asNumber)
-export type Blocktime = ReturnType<typeof asBlocktime>
-
 export interface ParsedTxAmount {
   amount: string
   tokenId?: string

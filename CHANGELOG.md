@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- changed: (Solana) Update @solana/web3.js to ^1.99.0
+- changed: (Solana) An unreadable transaction costs one history row, not the chunk
+- fixed: (Solana) Transaction history syncs past version 1 transactions
+
 ## 4.93.0 (2026-09-14)
 
 - changed: (Monero) Transaction explorer link now points to monerospace.org instead of Blockchair
