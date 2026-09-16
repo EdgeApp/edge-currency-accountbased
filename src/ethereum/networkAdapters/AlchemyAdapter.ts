@@ -1,4 +1,4 @@
-import { add, gt, mul, sub } from 'biggystring'
+import { add, div, gt, mul, sub } from 'biggystring'
 import {
   asArray,
   asEither,
@@ -21,7 +21,7 @@ import {
   EthereumNetworkUpdate,
   getFeeRateUsed
 } from '../EthereumNetwork'
-import { EthereumTxOtherParams } from '../ethereumTypes'
+import { EthereumNetworkInfo, EthereumTxOtherParams } from '../ethereumTypes'
 import { resolveServerApiKey } from './apiKeyTemplate'
 import { TransactionProcessingContext } from './EvmScanAdapter'
 import { GetTxsParams, NetworkAdapter } from './networkAdapterTypes'
@@ -192,9 +192,14 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
         contractAddress = location.contractAddress
       }
 
+      // The native asset's ERC-20 interface moves native value without an
+      // external or internal transfer, so a native sync asks for its rows too.
+      const { nativeErc20Interface } = this.ethEngine.networkInfo
+      const nativeInterface = tokenId == null ? nativeErc20Interface : undefined
+
       const { result, server } = await this.serialServers(async baseUrl => {
         const hostname = parse(baseUrl).hostname
-        const [sent, received] = await Promise.all([
+        const [sent, received, interfaceTransfers] = await Promise.all([
           this.fetchAssetTransfers(baseUrl, {
             startBlock,
             contractAddress,
@@ -204,7 +209,14 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
             startBlock,
             contractAddress,
             toAddress: address
-          })
+          }),
+          nativeInterface == null
+            ? []
+            : this.fetchNativeInterfaceTransfers(baseUrl, {
+                startBlock,
+                address,
+                nativeInterface
+              })
         ])
 
         // A native query that kept the `internal` category through both
@@ -214,9 +226,12 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
         // consistently external-only and the engine fetches them elsewhere.
         const includesInternal =
           sent.includedInternal && received.includedInternal
-        const transfers = [...sent.transfers, ...received.transfers].filter(
-          transfer => includesInternal || transfer.category !== 'internal'
-        )
+        const transfers = [
+          ...[...sent.transfers, ...received.transfers].filter(
+            transfer => includesInternal || transfer.category !== 'internal'
+          ),
+          ...interfaceTransfers
+        ]
 
         // Only the wallet's own outgoing transactions need gas data:
         const spendTxids = new Set<string>()
@@ -263,6 +278,39 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
         server
       }
     }
+
+  /**
+   * Both directions of the native asset's ERC-20 interface transfers, with
+   * each value scaled from the interface's precision to the native one.
+   */
+  private async fetchNativeInterfaceTransfers(
+    baseUrl: string,
+    query: {
+      startBlock: number
+      address: string
+      nativeInterface: NonNullable<EthereumNetworkInfo['nativeErc20Interface']>
+    }
+  ): Promise<AlchemyAssetTransfer[]> {
+    const { startBlock, address, nativeInterface } = query
+    const { contractAddress } = nativeInterface
+    const [sent, received] = await Promise.all([
+      this.fetchAssetTransfers(baseUrl, {
+        startBlock,
+        contractAddress,
+        fromAddress: address
+      }),
+      this.fetchAssetTransfers(baseUrl, {
+        startBlock,
+        contractAddress,
+        toAddress: address
+      })
+    ])
+    return scaleInterfaceTransfers(
+      [...sent.transfers, ...received.transfers],
+      this.ethEngine.currencyInfo.denominations[0].multiplier,
+      nativeInterface.multiplier
+    )
+  }
 
   /**
    * Pages through `alchemy_getAssetTransfers` for one direction of one asset.
@@ -615,6 +663,27 @@ export function processAlchemyTransfers(
   }
 
   return edgeTransactions
+}
+
+/**
+ * Restates ERC-20 interface transfers of the native asset in native units,
+ * so they sum with the external and internal transfers of the same asset.
+ */
+export function scaleInterfaceTransfers(
+  transfers: AlchemyAssetTransfer[],
+  nativeMultiplier: string,
+  interfaceMultiplier: string
+): AlchemyAssetTransfer[] {
+  const scale = div(nativeMultiplier, interfaceMultiplier)
+  return transfers.map(transfer => ({
+    ...transfer,
+    rawContract: {
+      ...transfer.rawContract,
+      value: decimalToHex(
+        mul(hexToDecimal(transfer.rawContract.value ?? '0x0'), scale)
+      )
+    }
+  }))
 }
 
 export type AlchemyAssetTransfer = ReturnType<typeof asAlchemyAssetTransfer>

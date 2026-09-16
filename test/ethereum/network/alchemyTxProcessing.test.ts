@@ -10,7 +10,8 @@ import {
   AlchemyAssetTransfer,
   AlchemyTxDetails,
   makeFailedSend,
-  processAlchemyTransfers
+  processAlchemyTransfers,
+  scaleInterfaceTransfers
 } from '../../../src/ethereum/networkAdapters/AlchemyAdapter'
 import { TransactionProcessingContext } from '../../../src/ethereum/networkAdapters/EvmScanAdapter'
 
@@ -129,6 +130,42 @@ describe('AlchemyAdapter transfer processing', function () {
     assert.equal(txs[0].networkFee, spendFee)
     assert.equal(txs[0].isSend, true)
     assert.deepEqual(txs[0].ourReceiveAddresses, [])
+  })
+
+  it('sums native ERC-20 interface transfers with internal ones', function () {
+    // From Arc tx 0xc5925f9d: an internal transfer of 2 USDC and an
+    // ERC-20 interface transfer of 24.75, the interface at 6 decimals.
+    const hash =
+      '0xc5925f9d7f7b05d8fc1ee3a74976e3ca73e2b6a68d4c54dda708a4192fb1601a'
+    const interfaceAddress = '0x3600000000000000000000000000000000000000'
+    const [scaled] = scaleInterfaceTransfers(
+      [
+        makeTransfer({
+          hash,
+          uniqueId: `${hash}:log:7`,
+          category: 'erc20',
+          rawContract: { value: '0x179a7b0', address: interfaceAddress }
+        })
+      ],
+      '1000000000000000000',
+      '1000000'
+    )
+    assert.equal(scaled.rawContract.value, '0x15779a9de6eeb0000')
+    const [tx] = processAlchemyTransfers(
+      nativeContext,
+      [
+        makeTransfer({
+          hash,
+          uniqueId: `${hash}:internal:0_0`,
+          category: 'internal',
+          rawContract: { value: '0x1bc16d674ec80000', address: null }
+        }),
+        scaled
+      ],
+      new Map()
+    )
+    assert.equal(tx.nativeAmount, '26750000000000000000')
+    assert.equal(tx.isSend, false)
   })
 
   it('keeps a zero-value contract call as a fee-only spend', function () {
