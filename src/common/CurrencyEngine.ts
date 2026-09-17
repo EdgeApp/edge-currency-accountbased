@@ -38,7 +38,9 @@ import {
   joinTransaction,
   splitTransaction,
   TxDetail,
-  txStoreTables
+  txStoreTables,
+  WALLET_META_KEY,
+  WalletMetaRow
 } from './txStore'
 import {
   asMaybeOtherParamsLastSeenTime,
@@ -602,6 +604,72 @@ export class CurrencyEngine<
     }
   }
 
+  /**
+   * The engine's own counters and per-chain cursors.
+   *
+   * A row where the platform has a database, and the JSON file otherwise. A
+   * wallet with a file and no row imports from the file once: a row exists
+   * from the first save onwards, so it is never read twice.
+   */
+  protected async loadWalletLocalData(): Promise<void> {
+    const { txDatabase } = this
+    if (txDatabase != null) {
+      await txDatabase.defineTables(txStoreTables)
+      const [result] = await txDatabase.getRows([
+        { table: 'meta', keys: [WALLET_META_KEY] }
+      ])
+      const row = result.rows[0] as WalletMetaRow | undefined
+      if (row != null) {
+        this.walletLocalData = asWalletLocalData(row.wallet)
+        this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
+        return
+      }
+      this.log('No stored walletLocalData. Importing from disk...')
+    }
+
+    const disklet = this.walletLocalDisklet
+    try {
+      const result = await disklet.getText(DATA_STORE_FILE)
+      this.walletLocalData = asWalletLocalData(JSON.parse(result))
+      this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
+      // Nothing has written the row yet, so the next save has to:
+      if (txDatabase != null) this.walletLocalDataDirty = true
+      return
+    } catch (err) {
+      this.log('No walletLocalData setup yet: Failure is ok')
+    }
+
+    this.walletLocalData = asWalletLocalData({})
+    this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
+    try {
+      await this.saveWalletLocalData()
+    } catch (e: any) {
+      this.error('Error writing to localDataStore. Engine not started: ', e)
+      throw e
+    }
+  }
+
+  /** Writes the state, wherever this platform keeps it. */
+  protected async saveWalletLocalData(): Promise<void> {
+    this.walletLocalData.otherData = this.otherData
+
+    const { txDatabase } = this
+    if (txDatabase != null) {
+      await txDatabase.putRows([
+        {
+          table: 'meta',
+          rows: [{ id: WALLET_META_KEY, wallet: this.walletLocalData }]
+        }
+      ])
+      return
+    }
+
+    await this.walletLocalDisklet.setText(
+      DATA_STORE_FILE,
+      JSON.stringify(this.walletLocalData)
+    )
+  }
+
   // Called by engine startup code
   async loadEngine(): Promise<void> {
     const { walletInfo } = this
@@ -610,25 +678,7 @@ export class CurrencyEngine<
       this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
     }
 
-    const disklet = this.walletLocalDisklet
-    try {
-      const result = await disklet.getText(DATA_STORE_FILE)
-      this.walletLocalData = asWalletLocalData(JSON.parse(result))
-      this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
-    } catch (err) {
-      try {
-        this.log('No walletLocalData setup yet: Failure is ok')
-        this.walletLocalData = asWalletLocalData({})
-        this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
-        await disklet.setText(
-          DATA_STORE_FILE,
-          JSON.stringify(this.walletLocalData)
-        )
-      } catch (e: any) {
-        this.error('Error writing to localDataStore. Engine not started: ', e)
-        throw e
-      }
-    }
+    await this.loadWalletLocalData()
     this.setOtherData(this.walletLocalData.otherData ?? {})
     this.walletLocalDataDirty = !matchJson(
       this.otherData,
@@ -978,16 +1028,12 @@ export class CurrencyEngine<
     }
     if (this.walletLocalDataDirty) {
       this.log('walletLocalDataDirty. Saving...')
-      this.walletLocalData.otherData = this.otherData
-      const jsonString = JSON.stringify(this.walletLocalData)
-      await disklet
-        .setText(DATA_STORE_FILE, jsonString)
-        .then(() => {
-          this.walletLocalDataDirty = false
-        })
-        .catch(e => {
-          this.error('Error saving walletLocalData ', e)
-        })
+      try {
+        await this.saveWalletLocalData()
+        this.walletLocalDataDirty = false
+      } catch (e: any) {
+        this.error('Error saving walletLocalData ', e)
+      }
     }
   }
 

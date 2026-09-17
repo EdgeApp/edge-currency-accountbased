@@ -131,3 +131,19 @@ export function joinTransaction(
   if (asset?.otherParams != null) out.otherParams = asset.otherParams
   return out
 }
+
+/** The one row the `meta` table holds. */
+export const WALLET_META_KEY = 'wallet'
+
+/**
+ * The engine's own state, as a row.
+ *
+ * `WalletLocalData` is a blob and stays one: it is a few kilobytes of
+ * counters and per-chain cursors that change together, so splitting it into
+ * columns would buy nothing and cost a migration every time an engine adds a
+ * field.
+ */
+export interface WalletMetaRow {
+  id: string
+  wallet: unknown
+}
