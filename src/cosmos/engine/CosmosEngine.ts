@@ -67,7 +67,11 @@ import {
 } from '../../common/SyncTracker'
 import { asMaybeContractLocation } from '../../common/tokenHelpers'
 import { MakeTxParams } from '../../common/types'
-import { cleanTxLogs, makeEngineFetch } from '../../common/utils'
+import {
+  cleanTxLogs,
+  makeEngineFetch,
+  normalizeAddress
+} from '../../common/utils'
 import { CosmosTools } from '../CosmosTools'
 import {
   asCosmosPrivateKeys,
@@ -107,6 +111,7 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TWO_WEEKS = 1000 * 60 * 60 * 24 * 14
 const TWO_MINUTES = 1000 * 60 * 2
 const TXS_PER_PAGE = 50
+const MAX_PAGE_RETRIES = 3
 
 // RANGO-specific provider payload cleaner (provider-shaped Cosmos tx payloads)
 const asRangoProviderTxData = asObject({
@@ -139,6 +144,18 @@ const asRangoProviderTxData = asObject({
 
 const asRangoProviderTxDataFromJson = asJSON(asRangoProviderTxData)
 
+// CometBFT's answer for a height below the node's earliest stored block:
+const isPrunedHeight = (error: unknown): boolean =>
+  String(error).includes('is not available, lowest height is')
+
+const queryBlockTime = async (
+  clients: CosmosClients,
+  height: number
+): Promise<number> => {
+  const block = await clients.stargateClient.getBlock(height)
+  return toSeconds(fromRfc3339WithNanoseconds(block.header.time)).seconds
+}
+
 export class CosmosEngine extends CurrencyEngine<
   CosmosTools,
   SafeCosmosWalletInfo,
@@ -152,6 +169,9 @@ export class CosmosEngine extends CurrencyEngine<
     cacheSequence: number
     txids: Map<string, Date>
   }
+
+  /** Cached by `getArchiveClients`. */
+  archiveClients: CosmosClients[] | undefined
 
   otherData!: CosmosWalletOtherData
   otherMethods: CosmosOtherMethods
@@ -765,9 +785,19 @@ export class CosmosEngine extends CurrencyEngine<
       per_page: TXS_PER_PAGE, // sdk default 50
       order_by: 'asc'
     }
-    let newestTxid: string | undefined
+    let newestTxid = this.otherData[queryString]?.newestTxid
+    // Set once a transaction goes undated. The watermark then stays below it, so
+    // a later pass sees that transaction again and can date it once some node
+    // serves its block.
+    let sawUndatedTx = false
+    const advanceWatermark = (txid: string): void => {
+      if (sawUndatedTx) return
+      newestTxid = txid
+      this.otherData[queryString] = { newestTxid: txid }
+    }
     let lastTimestamp = 0
     let page = 1
+    let pageRetries = 0
     do {
       try {
         const { totalCount, txs } = await clients.cometClient.txSearch({
@@ -798,11 +828,17 @@ export class CosmosEngine extends CurrencyEngine<
             this.log.warn('reduceCoinEventsForAddress error:', String(e))
           }
           if (netBalanceChanges.length === 0) continue
+          // Nothing to date or add for a transaction we already recorded:
+          if (this.hasConfirmedTx(txidHex, netBalanceChanges)) continue
 
-          const block = await clients.stargateClient.getBlock(tx.height)
-          const date = toSeconds(
-            fromRfc3339WithNanoseconds(block.header.time)
-          ).seconds
+          const date = await this.queryBlockDate(clients, tx.height)
+          if (date == null) {
+            this.log.warn(
+              `No node has block ${tx.height}, skipping tx ${txidHex}`
+            )
+            sawUndatedTx = true
+            continue
+          }
           const { height, tx: txRaw } = tx
           const signedTx = base16.stringify(txRaw)
           const {
@@ -821,8 +857,7 @@ export class CosmosEngine extends CurrencyEngine<
             )
           })
 
-          newestTxid = txidHex
-          this.otherData[queryString] = { newestTxid: txidHex }
+          advanceWatermark(txidHex)
           lastTimestamp = date * 1000
           this.walletLocalDataDirty = true
         }
@@ -831,10 +866,16 @@ export class CosmosEngine extends CurrencyEngine<
           break
         }
       } catch (e) {
-        if (String(e).includes('page should be within')) {
+        if (
+          String(e).includes('page should be within') &&
+          pageRetries < MAX_PAGE_RETRIES
+        ) {
           // Some public nodes return an empty array when there are actually transactions to return.
           // We can't determine the node is wrong if the very first request is empty,
-          // but we can once we start paging. These queries should be tried again.
+          // but we can once we start paging. These queries should be tried again,
+          // though only a few times: a node that keeps reporting the same page as
+          // out of range would otherwise hold this loop forever.
+          pageRetries++
           continue
         }
 
@@ -843,11 +884,81 @@ export class CosmosEngine extends CurrencyEngine<
       }
 
       page++
+      pageRetries = 0
       this.otherData[queryString] = { newestTxid }
       this.walletLocalDataDirty = true
     } while (true)
 
     return { newestTxid, lastTimestamp }
+  }
+
+  /**
+   * Archive clients for block lookups, created on demand. The sync lists the
+   * archive nodes only every two weeks, but a transaction older than the main
+   * node's pruning window can turn up on any pass.
+   */
+  async getArchiveClients(): Promise<CosmosClients[]> {
+    if (this.archiveClients == null) {
+      const clients: CosmosClients[] = []
+      for (const node of this.networkInfo.archiveNodes ?? []) {
+        clients.push(
+          await createCosmosClients(
+            this.engineFetch,
+            rpcWithApiKey(node.endpoint, this.tools.initOptions)
+          )
+        )
+      }
+      this.archiveClients = clients
+    }
+    return this.archiveClients
+  }
+
+  /**
+   * The block time in seconds, or undefined when no node has the block. Nodes
+   * keep transactions in their search index after pruning the blocks those
+   * transactions came from, so the node that returned a transaction cannot
+   * always date it. Anything other than a pruned height throws, since nobody
+   * answered and the sync pass should run again later.
+   */
+  async queryBlockDate(
+    clients: CosmosClients,
+    height: number
+  ): Promise<number | undefined> {
+    try {
+      return await queryBlockTime(clients, height)
+    } catch (error: unknown) {
+      if (!isPrunedHeight(error)) throw error
+    }
+    for (const archive of await this.getArchiveClients()) {
+      try {
+        return await queryBlockTime(archive, height)
+      } catch (error: unknown) {
+        if (!isPrunedHeight(error)) throw error
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * True when every coin in the transaction is already recorded at a block
+   * height, which leaves nothing to date or add.
+   */
+  hasConfirmedTx(txid: string, coins: CosmosCoin[]): boolean {
+    for (const coin of coins) {
+      let tokenId: EdgeTokenId
+      try {
+        tokenId = this.tokenIdFromDenom(coin.denom)
+      } catch (error: unknown) {
+        continue // processCosmosTransaction ignores unknown denoms as well
+      }
+      // `addTransaction` keys the transaction map through `normalizeAddress`,
+      // so an uppercase Cosmos txid only matches once normalized:
+      const index = this.findTransaction(tokenId, normalizeAddress(txid))
+      if (index < 0) return false
+      const tx = this.transactionList[tokenId ?? '']?.[index]
+      if (tx == null || tx.blockHeight <= 0) return false
+    }
+    return true
   }
 
   processCosmosTransaction(

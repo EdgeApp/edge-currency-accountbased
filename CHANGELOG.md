@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- fixed: (Axelar) Restore the `axelar-archrpc.chainode.tech` archive node. Its replacement, `axelar-rpc.polkachu.com`, stores blocks only from June 2026, so older transactions could not be dated.
+- fixed: (Cosmos) Wallets stuck partway through syncing when an RPC node returned transactions from blocks it no longer stores. Block times now come from an archive node when the transaction's own node has pruned the block, and a transaction is skipped only when no node can date it.
+- fixed: (Cosmos) Transaction history no longer re-requests the same `tx_search` page without limit when a node reports that page as out of range.
+
 ## 4.94.0 (2026-09-16)
 
 - added: (Tron) Spend prebuilt `TriggerSmartContract` calls passed in `otherParams`

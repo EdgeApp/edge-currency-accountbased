@@ -29,7 +29,7 @@ const networkInfo: CosmosNetworkInfo = {
         start: 0
       },
       endpoint: {
-        url: 'https://axelar-rpc.polkachu.com',
+        url: 'https://axelar-archrpc.chainode.tech',
         headers: {}
       }
     }
