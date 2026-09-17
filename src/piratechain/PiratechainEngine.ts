@@ -18,7 +18,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { cleanTxLogs } from '../common/utils'
+import { cleanTxLogs, normalizeAddress } from '../common/utils'
 import type {
   PiratechainIo,
   PiratechainSpendability,
@@ -150,6 +150,8 @@ export class PiratechainEngine extends CurrencyEngine<
         if (edgeTransaction.ourReceiveAddresses.length === 0) continue
         edgeTransaction.ourReceiveAddresses = []
         this.transactionListDirty = true
+        // The database saves only the transactions named here:
+        this.dirtyTxids.add(normalizeAddress(edgeTransaction.txid))
       }
     }
   }
