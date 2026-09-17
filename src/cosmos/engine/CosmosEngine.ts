@@ -111,6 +111,7 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TWO_WEEKS = 1000 * 60 * 60 * 24 * 14
 const TWO_MINUTES = 1000 * 60 * 2
 const TXS_PER_PAGE = 50
+const MAX_PAGE_RETRIES = 3
 
 // RANGO-specific provider payload cleaner (provider-shaped Cosmos tx payloads)
 const asRangoProviderTxData = asObject({
@@ -796,6 +797,7 @@ export class CosmosEngine extends CurrencyEngine<
     }
     let lastTimestamp = 0
     let page = 1
+    let pageRetries = 0
     do {
       try {
         const { totalCount, txs } = await clients.cometClient.txSearch({
@@ -864,10 +866,16 @@ export class CosmosEngine extends CurrencyEngine<
           break
         }
       } catch (e) {
-        if (String(e).includes('page should be within')) {
+        if (
+          String(e).includes('page should be within') &&
+          pageRetries < MAX_PAGE_RETRIES
+        ) {
           // Some public nodes return an empty array when there are actually transactions to return.
           // We can't determine the node is wrong if the very first request is empty,
-          // but we can once we start paging. These queries should be tried again.
+          // but we can once we start paging. These queries should be tried again,
+          // though only a few times: a node that keeps reporting the same page as
+          // out of range would otherwise hold this loop forever.
+          pageRetries++
           continue
         }
 
@@ -876,6 +884,7 @@ export class CosmosEngine extends CurrencyEngine<
       }
 
       page++
+      pageRetries = 0
       this.otherData[queryString] = { newestTxid }
       this.walletLocalDataDirty = true
     } while (true)

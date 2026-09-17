@@ -64,9 +64,23 @@ const makeTx = (
   }
 })
 
+interface FakePage {
+  totalCount: number
+  txs: FakeTxRow[]
+}
+
+/** Rows carrying no coin events, so a pass pages through without dating any. */
+const makeEmptyRows = (count: number): FakeTxRow[] =>
+  Array.from({ length: count }, () => {
+    const row = makeTx(HEIGHT)
+    return { ...row, result: { ...row.result, events: [] } }
+  })
+
 interface FakeNode {
   /** `tx_search` results, one entry per page. */
-  pages?: Array<{ totalCount: number; txs: FakeTxRow[] }>
+  pages?: FakePage[]
+  /** Answers `tx_search` directly, for nodes that misreport their paging. */
+  txSearch?: (page: number) => Promise<FakePage>
   /** Set when the node still stores the block. */
   blockTime?: string
   /** Raised when the node has no block to return. */
@@ -79,6 +93,7 @@ const makeClients = (node: FakeNode): CosmosClients => {
   const clients = {
     cometClient: {
       txSearch: async ({ page }: { page: number }) => {
+        if (node.txSearch != null) return await node.txSearch(page)
         const result = node.pages?.[page - 1]
         if (result == null) {
           throw new Error(
@@ -322,5 +337,48 @@ describe('getArchiveClients', function () {
     const clients = await CosmosEngine.prototype.getArchiveClients.call(engine)
 
     assert.deepEqual(clients, [])
+  })
+})
+
+describe('queryTransactionsInner page retries', function () {
+  it('gives up on a page the node keeps reporting as out of range', async function () {
+    const pageRequests: number[] = []
+    const node = makeClients({
+      txSearch: async page => {
+        pageRequests.push(page)
+        if (page === 1) return { totalCount: 60, txs: makeEmptyRows(50) }
+        throw new Error('page should be within [1, 1] range, given 2')
+      }
+    })
+
+    let thrown: unknown
+    try {
+      await syncQuery(makeEngine([], []), node)
+    } catch (error: unknown) {
+      thrown = error
+    }
+
+    assert.match(String(thrown), /page should be within/)
+    // The first request for page 2, plus a bounded number of retries:
+    assert.equal(pageRequests.filter(page => page === 2).length, 4)
+  })
+
+  it('keeps paging when a retried page answers', async function () {
+    const pageRequests: number[] = []
+    const node = makeClients({
+      txSearch: async page => {
+        pageRequests.push(page)
+        if (page === 1) return { totalCount: 60, txs: makeEmptyRows(50) }
+        if (pageRequests.filter(request => request === 2).length === 1) {
+          throw new Error('page should be within [1, 1] range, given 2')
+        }
+        return { totalCount: 60, txs: makeEmptyRows(10) }
+      }
+    })
+
+    const { newestTxid } = await syncQuery(makeEngine([], []), node)
+
+    assert.isUndefined(newestTxid)
+    assert.equal(pageRequests.filter(page => page === 2).length, 2)
   })
 })
