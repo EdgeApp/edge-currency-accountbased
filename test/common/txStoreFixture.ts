@@ -16,6 +16,7 @@ import {
   TokenSyncTracker
 } from '../../src/common/SyncTracker'
 import {
+  DATA_STORE_FILE,
   SafeCommonWalletInfo,
   TRANSACTION_STORE_FILE,
   TXID_LIST_FILE,
@@ -73,6 +74,15 @@ export class TestEngine extends CurrencyEngine<
   SafeCommonWalletInfo,
   TokenSyncTracker
 > {
+  /**
+   * The base class leaves the shape of `otherData` to its subclasses, and
+   * drops it entirely for one that never claims it -- so a test of where it
+   * gets stored has to claim it.
+   */
+  setOtherData(raw: any): void {
+    this.otherData = { ...raw }
+  }
+
   // Both are protected, which is right for the plugin surface and useless
   // for a test of the storage they drive.
   async save(): Promise<void> {
@@ -98,10 +108,16 @@ export async function makeStoreFixture(
     txDatabase?: EdgeTxDatabase | undefined
     /** Transactions already on disk, as an older version would have left them. */
     legacyTxs?: EdgeTransaction[]
+    /** Engine state already on disk, likewise. */
+    legacyState?: object
   } = {}
 ): Promise<Fixture> {
   const fakeIo = makeFakeIo()
   const disklet = fakeIo.disklet
+
+  if (opts.legacyState != null) {
+    await disklet.setText(DATA_STORE_FILE, JSON.stringify(opts.legacyState))
+  }
 
   if (opts.legacyTxs != null) {
     const txs = opts.legacyTxs
