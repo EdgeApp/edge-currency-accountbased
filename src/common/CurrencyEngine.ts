@@ -23,6 +23,8 @@ import {
   EdgeTokenMap,
   EdgeTransaction,
   EdgeTransactionEvent,
+  EdgeTx,
+  EdgeTxDatabase,
   InsufficientFundsError,
   JsonObject,
   SpendToSelfError
@@ -32,6 +34,12 @@ import { PluginEnvironment } from './innerPlugin'
 import { makePeriodicTask, PeriodicTask } from './periodicTask'
 import type { SyncEngine, SyncTracker } from './SyncTracker'
 import { makeMetaTokens, validateToken } from './tokenHelpers'
+import {
+  joinTransaction,
+  splitTransaction,
+  TxDetail,
+  txStoreTables
+} from './txStore'
 import {
   asMaybeOtherParamsLastSeenTime,
   asWalletLocalData,
@@ -53,6 +61,7 @@ import { validateMemos } from './validateMemos'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 2500
+const SAVE_BATCH_SIZE = 250
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
 interface TxidList {
@@ -99,6 +108,23 @@ export class CurrencyEngine<
   transactionList: TransactionList
   txIdMap: TxidMap // Maps txid to index of tx in
   txIdList: TxidList // Map of array of txids in chronological order
+
+  /**
+   * This wallet's own storage, where the platform has one.
+   *
+   * Undefined on a platform with no database, or while the feature is off, so
+   * every use of it is guarded and the disklet path below still works.
+   */
+  txDatabase: EdgeTxDatabase | undefined
+
+  /**
+   * Transactions changed since the last save.
+   *
+   * The whole point of writing through the database: the three JSON files
+   * were rewritten entire on every pass, so one new transaction in a
+   * 2500-transaction wallet cost megabytes of disk writes.
+   */
+  dirtyTxids: Set<string>
   transactionEvents: EdgeTransactionEvent[] // Transaction events when new transactions are added or have changed
   currencyInfo: EdgeCurrencyInfo
   currentSettings: any
@@ -158,6 +184,8 @@ export class CurrencyEngine<
     this.subscribedAddresses = opts.subscribedAddresses ?? []
     this.transactionEvents = []
     this.transactionListDirty = false
+    this.txDatabase = opts.txDatabase
+    this.dirtyTxids = new Set()
     this.transactionsLoaded = false
     this.walletInfo = walletInfo
     this.walletId = walletInfo.id
@@ -362,6 +390,115 @@ export class CurrencyEngine<
     }
     this.transactionsLoaded = true
 
+    const { txDatabase } = this
+    if (txDatabase != null) {
+      await txDatabase.defineTables(txStoreTables)
+      if (await this.loadTransactionsFromDatabase(txDatabase)) return
+
+      /*
+       * Nothing stored yet, so fall through to the files and write what they
+       * hold back through the database on the next save. There is no marker
+       * saying the import happened: a wallet with transactions in the
+       * database never takes this branch again, and one with none has
+       * nothing to import twice.
+       */
+      this.log('No stored transactions. Importing from disk...')
+    }
+
+    await this.loadTransactionsFromDisklet()
+
+    if (txDatabase != null) {
+      for (const safeTokenId of Object.keys(this.txIdList)) {
+        for (const txid of this.txIdList[safeTokenId]) {
+          this.dirtyTxids.add(txid)
+        }
+      }
+      if (this.dirtyTxids.size > 0) this.transactionListDirty = true
+    }
+  }
+
+  /**
+   * Reads this wallet's transactions back out of the database.
+   *
+   * False when it holds none, which is what sends the caller to the files.
+   */
+  protected async loadTransactionsFromDatabase(
+    txDatabase: EdgeTxDatabase
+  ): Promise<boolean> {
+    let loaded = 0
+    let after: string | undefined
+
+    /*
+     * Newest first, and capped: the in-memory list has always been a cache of
+     * the recent history rather than all of it -- `addTransaction` stops
+     * adding at the same bound -- and the database is what holds the rest.
+     */
+    while (loaded < MAX_TRANSACTIONS) {
+      const page = await txDatabase.getTxPage({ limit: 500, after })
+      if (page.transactions.length === 0) break
+
+      // One call for the whole page rather than one per transaction, because
+      // every one of them is a bridge round trip:
+      const [detailRows] = await txDatabase.getRows([
+        {
+          table: 'txDetail',
+          keys: page.transactions.map(tx => tx.txid)
+        }
+      ])
+
+      page.transactions.forEach((tx, i) => {
+        const detail = detailRows.rows[i] as TxDetail | undefined
+
+        // The assets this engine reported, and only those. `networkFees`
+        // names the chain asset for every token transfer, so reading that
+        // too would invent an `EdgeTransaction` the engine never had.
+        for (const tokenId of tx.nativeAmounts.keys()) {
+          const edgeTransaction = joinTransaction(tx, tokenId, detail, id =>
+            this.currencyCodeFor(id)
+          )
+          if (edgeTransaction == null) continue
+
+          const safeTokenId = tokenId ?? ''
+          if (this.transactionList[safeTokenId] == null) {
+            this.transactionList[safeTokenId] = []
+          }
+          if (this.transactionList[safeTokenId].length >= MAX_TRANSACTIONS) {
+            continue
+          }
+          this.transactionList[safeTokenId].push(edgeTransaction)
+          ++loaded
+
+          this.highestSeenCheckpoint = this.selectSeenTxCheckpoint(
+            this.highestSeenCheckpoint,
+            this.getTxCheckpoint(edgeTransaction)
+          )
+        }
+      })
+
+      after = page.cursor
+      if (after == null) break
+    }
+
+    if (loaded === 0) return false
+
+    // The page arrived newest first, which is the order the list keeps, but
+    // this is what builds `txIdList` and `txIdMap` from it:
+    for (const safeTokenId of Object.keys(this.transactionList)) {
+      this.sortTransactions(safeTokenId)
+      this.walletLocalData.numTransactions[safeTokenId] =
+        this.transactionList[safeTokenId].length
+    }
+    this.log(`Loaded ${loaded} transactions from the database`)
+    return true
+  }
+
+  /** The currency code an asset goes by, or nothing if it is unknown here. */
+  protected currencyCodeFor(tokenId: EdgeTokenId): string | undefined {
+    if (tokenId == null) return this.currencyInfo.currencyCode
+    return this.allTokensMap[tokenId]?.currencyCode
+  }
+
+  protected async loadTransactionsFromDisklet(): Promise<void> {
     const disklet = this.walletLocalDisklet
 
     let txIdList: TxidList | undefined
@@ -568,6 +705,7 @@ export class CurrencyEngine<
       this.walletLocalDataDirty = true
 
       this.transactionListDirty = true
+      this.dirtyTxids.add(txid)
       const isNew = this.isTransactionNew(edgeTransaction)
       this.transactionEvents.push({ isNew, transaction: edgeTransaction })
       this.highestSeenCheckpoint = this.selectSeenTxCheckpoint(
@@ -744,8 +882,61 @@ export class CurrencyEngine<
     // Update the transaction
     this.transactionList[safeTokenId][idx] = edgeTransaction
     this.transactionListDirty = true
+    this.dirtyTxids.add(normalizeAddress(edgeTransaction.txid))
     this.transactionEvents.push({ isNew: false, transaction: edgeTransaction })
     this.warn(`updateTransaction: ${edgeTransaction.txid}`)
+  }
+
+  /**
+   * Writes the transactions that changed since the last pass.
+   *
+   * False when the write failed, which leaves them dirty for the next pass
+   * rather than losing them -- the same thing the disklet path does by
+   * keeping its flag set.
+   */
+  protected async saveTransactionsToDatabase(
+    txDatabase: EdgeTxDatabase
+  ): Promise<boolean> {
+    const txids = [...this.dirtyTxids]
+    this.dirtyTxids.clear()
+    if (txids.length === 0) return true
+
+    const { pluginId } = this.currencyInfo
+    try {
+      // Chunked, because the first pass after an import is the whole wallet
+      // and a batch is one SQL transaction carried across the bridge whole.
+      for (let i = 0; i < txids.length; i += SAVE_BATCH_SIZE) {
+        const txs: EdgeTx[] = []
+        const rows: TxDetail[] = []
+
+        for (const txid of txids.slice(i, i + SAVE_BATCH_SIZE)) {
+          // Every asset of this transaction, because the detail row holds
+          // them all and is replaced rather than merged:
+          const assets: Array<[string, EdgeTransaction]> = []
+          for (const safeTokenId of Object.keys(this.transactionList)) {
+            const idx = this.txIdMap[safeTokenId]?.[txid]
+            if (idx == null) continue
+            assets.push([safeTokenId, this.transactionList[safeTokenId][idx]])
+          }
+          if (assets.length === 0) continue
+
+          const split = splitTransaction(assets, pluginId)
+          txs.push(...split.txs)
+          rows.push(split.detail)
+        }
+
+        if (txs.length === 0) continue
+        await txDatabase.batchWrite({
+          saveTxs: txs,
+          putRows: [{ table: 'txDetail', rows }]
+        })
+      }
+      return true
+    } catch (e: any) {
+      this.error('Error saving transactions ', e)
+      for (const txid of txids) this.dirtyTxids.add(txid)
+      return false
+    }
   }
 
   /**
@@ -757,26 +948,33 @@ export class CurrencyEngine<
     if (this.transactionListDirty) {
       await this.loadTransactions()
       this.log('transactionListDirty. Saving...')
-      let jsonString = JSON.stringify(this.transactionList)
-      promises.push(
-        disklet.setText(TRANSACTION_STORE_FILE, jsonString).catch(e => {
-          this.error('Error saving transactionList ', e)
-        })
-      )
-      jsonString = JSON.stringify(this.txIdList)
-      promises.push(
-        disklet.setText(TXID_LIST_FILE, jsonString).catch(e => {
-          this.error('Error saving txIdList ', e)
-        })
-      )
-      jsonString = JSON.stringify(this.txIdMap)
-      promises.push(
-        disklet.setText(TXID_MAP_FILE, jsonString).catch(e => {
-          this.error('Error saving txIdMap ', e)
-        })
-      )
-      await Promise.all(promises)
-      this.transactionListDirty = false
+      const { txDatabase } = this
+      if (txDatabase != null) {
+        this.transactionListDirty = !(await this.saveTransactionsToDatabase(
+          txDatabase
+        ))
+      } else {
+        let jsonString = JSON.stringify(this.transactionList)
+        promises.push(
+          disklet.setText(TRANSACTION_STORE_FILE, jsonString).catch(e => {
+            this.error('Error saving transactionList ', e)
+          })
+        )
+        jsonString = JSON.stringify(this.txIdList)
+        promises.push(
+          disklet.setText(TXID_LIST_FILE, jsonString).catch(e => {
+            this.error('Error saving txIdList ', e)
+          })
+        )
+        jsonString = JSON.stringify(this.txIdMap)
+        promises.push(
+          disklet.setText(TXID_MAP_FILE, jsonString).catch(e => {
+            this.error('Error saving txIdMap ', e)
+          })
+        )
+        await Promise.all(promises)
+        this.transactionListDirty = false
+      }
     }
     if (this.walletLocalDataDirty) {
       this.log('walletLocalDataDirty. Saving...')
@@ -957,6 +1155,20 @@ export class CurrencyEngine<
   }
 
   protected async clearBlockchainCache(): Promise<void> {
+    const { txDatabase } = this
+    // As the transactions spell them, which is how the rows are keyed --
+    // `txIdList` holds the engine's own normalized form.
+    const txids =
+      txDatabase == null
+        ? []
+        : [
+            ...new Set(
+              Object.values(this.transactionList)
+                .flat()
+                .map(tx => tx.txid)
+            )
+          ]
+
     this.walletLocalData = asWalletLocalData({
       publicKey: this.walletLocalData.publicKey
     })
@@ -967,7 +1179,34 @@ export class CurrencyEngine<
     this.txIdList = {}
     this.txIdMap = {}
     this.transactionListDirty = true
+    this.dirtyTxids.clear()
     this.setOtherData({})
+
+    if (txDatabase != null) {
+      /*
+       * A resync means the chain is the truth again, so the stored copy has
+       * to go. Leaving it would resurrect every transaction on the next
+       * start, since an empty database is what sends the load path to the
+       * files -- and a non-empty one never asks the chain to refill it.
+       *
+       * The view, not the table: it is the only door onto this wallet's own
+       * transactions, and the trigger behind it scopes the delete.
+       */
+      await txDatabase.runSql`DELETE FROM ${txDatabase.tx_chain}`
+      if (txids.length > 0) {
+        await txDatabase.removeRows([{ table: 'txDetail', keys: txids }])
+      }
+
+      // The files are what a wallet with nothing stored imports from, so a
+      // resync has to empty them too -- otherwise the next start reads the
+      // history it was just told to forget straight back in.
+      await Promise.all([
+        this.walletLocalDisklet.setText(TRANSACTION_STORE_FILE, '{}'),
+        this.walletLocalDisklet.setText(TXID_LIST_FILE, '{}'),
+        this.walletLocalDisklet.setText(TXID_MAP_FILE, '{}')
+      ])
+    }
+
     await this.saveWalletLoop()
   }
 
