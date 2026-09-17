@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { TRANSACTION_STORE_FILE } from '../../src/common/types'
+import { DATA_STORE_FILE, TRANSACTION_STORE_FILE } from '../../src/common/types'
 import {
   db,
   makeStoreFixture,
@@ -189,5 +189,60 @@ describe('engine transaction store', function () {
       await fixture.disklet.getText(TRANSACTION_STORE_FILE)
     )
     expect(stored[''].length).equals(1)
+  })
+})
+
+describe('engine state', function () {
+  it('round-trips through its row', async function () {
+    const fixture = await makeStoreFixture()
+    fixture.engine.walletLocalData.blockHeight = 19000123
+    fixture.engine.walletLocalData.totalBalances[''] = '4200000000000000000'
+    fixture.engine.walletLocalData.lastTransactionQueryHeight[TOKEN_ID] = 777
+    fixture.engine.walletLocalDataDirty = true
+    await fixture.engine.save()
+
+    const engine = await fixture.restart()
+    expect(engine.walletLocalData.blockHeight).equals(19000123)
+    expect(engine.walletLocalData.totalBalances['']).equals(
+      '4200000000000000000'
+    )
+    expect(engine.walletLocalData.lastTransactionQueryHeight[TOKEN_ID]).equals(
+      777
+    )
+  })
+
+  it('imports state that is already on disk', async function () {
+    const fixture = await makeStoreFixture({
+      legacyState: {
+        blockHeight: 18000000,
+        lastAddressQueryHeight: 17999000,
+        otherData: { lastQueryCursor: 'abc' }
+      }
+    })
+
+    expect(fixture.engine.walletLocalData.blockHeight).equals(18000000)
+    await fixture.engine.save()
+
+    // And a restart reads the row, not the file:
+    const [result] = await db(fixture).getRows([
+      { table: 'meta', keys: ['wallet'] }
+    ])
+    expect(result.rows.length).equals(1)
+
+    const engine = await fixture.restart()
+    expect(engine.walletLocalData.lastAddressQueryHeight).equals(17999000)
+    expect(engine.walletLocalData.otherData).deep.equals({
+      lastQueryCursor: 'abc'
+    })
+  })
+
+  it('still uses the file where there is no database', async function () {
+    const fixture = await makeStoreFixture({ txDatabase: undefined })
+    fixture.engine.walletLocalData.blockHeight = 19000999
+    fixture.engine.walletLocalDataDirty = true
+    await fixture.engine.save()
+
+    const stored = JSON.parse(await fixture.disklet.getText(DATA_STORE_FILE))
+    expect(stored.blockHeight).equals(19000999)
   })
 })
