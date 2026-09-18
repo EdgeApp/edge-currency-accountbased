@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- fixed: (Solana) Sends that landed no longer report "block height exceeded". A send now fails only when every RPC node fails to confirm it and no node holds the transaction, rather than as soon as any one node answers wrong.
+- fixed: (Solana) Drop the `solana.api.pocket.network` RPC node, which answers `getBlockHeight` with the slot.
+- fixed: (Solana) Transactions that fail on-chain with an object error, such as `InstructionError`, now report the failure instead of succeeding.
+
 ## 4.94.1 (2026-09-17)
 
 - fixed: (Axelar) Restore the `axelar-archrpc.chainode.tech` archive node. Its replacement, `axelar-rpc.polkachu.com`, stores blocks only from June 2026, so older transactions could not be dated.
