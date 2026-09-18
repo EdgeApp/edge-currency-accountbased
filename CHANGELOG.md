@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- fixed: (EVM) Show the seed phrase rather than the hex private key
+- fixed: (EVM) Show the seed phrase alongside the hex private key
 - fixed: (FIO) Show the seed phrase rather than the FIO private key
 
 ## 4.91.0 (2026-09-08)
