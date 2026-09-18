@@ -9,14 +9,17 @@ import {
   BlockhashWithExpiryBlockHeight,
   ComputeBudgetProgram,
   ConfirmedSignatureInfo,
+  Connection,
   Keypair,
   MessageV0,
   PublicKey,
   RecentPrioritizationFees,
+  SignatureStatus,
   SolanaJSONRPCErrorCode,
   SystemProgram,
   TokenAmount,
   TokenBalance,
+  TransactionError,
   TransactionInstruction,
   TransactionMessage,
   TransactionResponse,
@@ -24,7 +27,7 @@ import {
   VersionedTransactionResponse
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
-import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+import { asMaybe, asNumber, asObject } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -74,6 +77,17 @@ import {
 
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+
+// How long broadcastTx waits on one node before counting it as failed. Sends
+// and status lookups are single requests.
+const NODE_REQUEST_TIMEOUT_MS = 10000
+// Confirming outlasts the blockhash, which expires about a minute after
+// signing, so a slow but healthy node still gets the whole window.
+const NODE_CONFIRM_TIMEOUT_MS = 90000
+// Much tighter than the other two, because the resubmit loop asks every node
+// for the height every 400ms: a node that cannot answer within a blocktime is
+// left out of that pass rather than holding up the next resubmission.
+const NODE_HEIGHT_TIMEOUT_MS = 1000
 
 const asRpcErrorCode = asMaybe(asObject({ code: asNumber }))
 
@@ -1116,64 +1130,93 @@ export class SolanaEngine extends CurrencyEngine<
     const { blockhash, lastValidBlockHeight } = asSolanaTxOtherParams(
       getOtherParams(edgeTransaction)
     )
+    const rpcConnections = this.tools.connections
+    // promiseAny never settles over an empty list:
+    if (rpcConnections.length === 0) {
+      throw new Error('No Solana RPC connections')
+    }
     const stakedConnections = this.tools.makeConnections(
       this.networkInfo.stakedConnectionRpcNodes
     )
-    const rpcConnections = this.tools.connections
-    const allConnections = [...this.tools.connections, ...stakedConnections]
+    const allConnections = [...rpcConnections, ...stakedConnections]
 
     const confirmationController = new AbortController()
     const retryTxController = new AbortController()
 
+    // Each stage below asks every node and takes the first success. A node's
+    // failure only counts once every node has failed or timed out, so one
+    // node answering wrong cannot fail a send that landed.
+
     const submitTx = async (): Promise<string> => {
-      const broadcastPromises = allConnections.map(async connection => {
-        const txid = await connection.sendEncodedTransaction(
-          edgeTransaction.signedTx,
-          { skipPreflight: true }
-        )
-        return txid
-      })
-      const txid = await formatAggregateError(
+      const broadcastPromises = allConnections.map(
+        async connection =>
+          await timeout(
+            connection.sendEncodedTransaction(edgeTransaction.signedTx, {
+              skipPreflight: true
+            }),
+            NODE_REQUEST_TIMEOUT_MS
+          )
+      )
+      return await formatAggregateError(
         promiseAny(broadcastPromises),
         'Broadcast failed:'
       )
-      return txid
     }
 
-    const checkBlockheight = async (): Promise<number> => {
-      const broadcastPromises = rpcConnections.map(async connection => {
-        const blockheight = await timeout(
-          connection.getBlockHeight('confirmed'),
-          1000
+    // The lowest height any node reports, so a node reporting too high cannot
+    // end the resubmissions early. A lagging node only adds a few extra
+    // resubmissions.
+    const checkBlockheight = async (): Promise<number | undefined> => {
+      const blockheightResults = await Promise.allSettled(
+        rpcConnections.map(
+          async connection =>
+            await timeout(
+              connection.getBlockHeight('confirmed'),
+              NODE_HEIGHT_TIMEOUT_MS
+            )
         )
-        return blockheight
-      })
-      const blockheightResults = await Promise.allSettled(broadcastPromises)
+      )
       const blockheights = blockheightResults
         .filter(p => p.status === 'fulfilled')
         .map(r => (r as PromiseFulfilledResult<number>).value)
-      const maxHeight = Math.max(...blockheights)
-      return maxHeight
+      if (blockheights.length === 0) return
+      return Math.min(...blockheights)
     }
 
+    // Resubmits until the confirmations settle or the blockhash expires. It
+    // only stops resubmitting; the confirmations decide whether the send
+    // failed.
+    let loggedResubmitFailure = false
     const retryTxSubmission = async (): Promise<void> => {
       while (!retryTxController.signal.aborted) {
         await snooze(400) // pause for roughly a blocktime
+        if (retryTxController.signal.aborted) return
         const height = await checkBlockheight()
-        if (height < lastValidBlockHeight) {
-          await submitTx()
-        } else {
-          confirmationController.abort()
-          throw new Error('transaction expired')
-        }
+        if (height != null && height > lastValidBlockHeight) return
+        // A node already accepted the transaction, so a failed resubmission
+        // does not fail the send. Only the first one is logged: every node
+        // rejecting is worth seeing, but this loop runs every 400ms.
+        await submitTx().catch((error: unknown) => {
+          if (!loggedResubmitFailure) {
+            this.warn(
+              'broadcastTx resubmit failed: ',
+              error instanceof Error ? error : new Error(String(error))
+            )
+          }
+          loggedResubmitFailure = true
+        })
       }
     }
 
-    try {
-      const txid = await submitTx()
-
-      const confirmPromises = rpcConnections.map(async connection => {
-        const confirmTxRes = await connection.confirmTransaction(
+    // Resolves with the on-chain error, or null, once this node sees the
+    // transaction confirm. Rejects if the node sees the blockhash expire,
+    // cannot answer, or takes too long.
+    const confirmOn = async (
+      connection: Connection,
+      txid: string
+    ): Promise<TransactionError | null> => {
+      const { value } = await timeout(
+        connection.confirmTransaction(
           {
             signature: txid,
             blockhash,
@@ -1181,17 +1224,73 @@ export class SolanaEngine extends CurrencyEngine<
             abortSignal: confirmationController.signal
           },
           'confirmed'
-        )
-        const txError = asMaybe(asString)(confirmTxRes.value.err)
-        if (txError != null) {
-          throw new Error(txError)
-        }
+        ),
+        NODE_CONFIRM_TIMEOUT_MS
+      )
+      return value.err
+    }
 
-        // Confirmed!!
-        retryTxController.abort()
+    // Every node failing to confirm does not mean the transaction missed, so
+    // look it up before reporting a failure. Resolves with the first confirmed
+    // status any node holds.
+    const checkSignatureStatus = async (
+      txid: string
+    ): Promise<SignatureStatus> => {
+      const statusPromises = rpcConnections.map(async connection => {
+        const { value } = await timeout(
+          connection.getSignatureStatuses([txid], {
+            searchTransactionHistory: true
+          }),
+          NODE_REQUEST_TIMEOUT_MS
+        )
+        const status = value[0]
+        if (
+          status == null ||
+          (status.confirmationStatus !== 'confirmed' &&
+            status.confirmationStatus !== 'finalized')
+        ) {
+          throw new Error(`Transaction ${txid} is not confirmed`)
+        }
+        return status
+      })
+      return await promiseAny(statusPromises)
+    }
+
+    try {
+      const txid = await submitTx()
+      // The loop swallows its own failures, so this only fires if a later
+      // change makes it throw:
+      retryTxSubmission().catch((error: unknown) => {
+        this.warn(
+          'broadcastTx resubmit loop failed: ',
+          error instanceof Error ? error : new Error(String(error))
+        )
       })
 
-      await Promise.race([retryTxSubmission(), ...confirmPromises])
+      let txError: TransactionError | null
+      try {
+        txError = await formatAggregateError(
+          promiseAny(
+            rpcConnections.map(
+              async connection => await confirmOn(connection, txid)
+            )
+          ),
+          'Confirmation failed:'
+        )
+      } catch (error: unknown) {
+        const status = await checkSignatureStatus(txid).catch(() => undefined)
+        if (status == null) throw error
+        txError = status.err
+      }
+      // Any error means the transaction failed on-chain, whether the node
+      // reports it as a string or as an object like InstructionError:
+      if (txError != null) {
+        throw new Error(
+          `Transaction failed: ${
+            typeof txError === 'string' ? txError : JSON.stringify(txError)
+          }`
+        )
+      }
 
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
@@ -1199,6 +1298,10 @@ export class SolanaEngine extends CurrencyEngine<
     } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
       throw e
+    } finally {
+      // Stop resubmitting, and release the nodes still confirming:
+      retryTxController.abort()
+      confirmationController.abort()
     }
 
     return edgeTransaction
