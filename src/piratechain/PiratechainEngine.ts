@@ -1,5 +1,4 @@
-import { abs, add, eq, gt, gte, lte, mul, sub } from 'biggystring'
-import createHmac from 'create-hmac'
+import { abs, add, eq, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -10,20 +9,19 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
-  NoAmountSpecifiedError,
-  PendingFundsError
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import type { TransactionInfo } from 'react-native-pirate-wallet'
+import type {
+  ConfirmedTransaction,
+  SpendInfo,
+  StatusEvent
+} from 'react-native-piratechain'
 import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from '../common/utils'
-import type {
-  PiratechainIo,
-  PiratechainSpendability,
-  PiratechainSynchronizer
-} from './piratechainIo'
+import type { PiratechainIo, PiratechainSynchronizer } from './piratechainIo'
 import {
   makePiratechainSyncTracker,
   PiratechainSyncTracker
@@ -46,13 +44,11 @@ export class PiratechainEngine extends CurrencyEngine<
   pluginId: string
   networkInfo: PiratechainNetworkInfo
   otherData!: PiratechainWalletOtherData
-  synchronizerStatus!: 'STOPPED' | 'SYNCING' | 'SYNCED'
+  synchronizerStatus!: StatusEvent['name']
   availableZatoshi!: string
+  initialNumBlocksToDownload!: number
   birthdayHeight: number
   queryMutex: boolean
-  /** Heights at which each txid was last processed, to skip stable
-   * transactions when reprocessing the SDK's full history list: */
-  processedTxHeights: Map<string, number>
   makeSynchronizer: PiratechainIo['makeSynchronizer']
 
   // Synchronizer management
@@ -61,6 +57,7 @@ export class PiratechainEngine extends CurrencyEngine<
   synchronizer?: PiratechainSynchronizer
   synchronizerPromise: Promise<PiratechainSynchronizer>
   synchronizerResolver!: (synchronizer: PiratechainSynchronizer) => void
+  lastUpdateFromSynchronizer?: number
 
   constructor(
     env: PluginEnvironment<PiratechainNetworkInfo>,
@@ -79,7 +76,6 @@ export class PiratechainEngine extends CurrencyEngine<
       this.synchronizerResolver = resolve
     })
     this.queryMutex = false
-    this.processedTxHeights = new Map()
 
     this.started = false
   }
@@ -89,16 +85,23 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   initData(): void {
+    // walletLocalData
+    if (this.otherData.blockRange.first === 0) {
+      this.otherData.blockRange = {
+        first: this.birthdayHeight,
+        last: this.birthdayHeight
+      }
+    }
+
     // Engine variables
-    this.synchronizerStatus = 'STOPPED'
+    this.initialNumBlocksToDownload = -1
+    this.synchronizerStatus = 'DISCONNECTED'
     this.availableZatoshi = '0'
-    this.processedTxHeights.clear()
   }
 
   initSubscriptions(): void {
     if (this.synchronizer == null) return
-    const { synchronizer } = this
-    synchronizer.on('update', async payload => {
+    this.synchronizer.on('update', async payload => {
       const { lastDownloadedHeight, networkBlockHeight } = payload
       this.updateBlockHeight(networkBlockHeight)
       this.syncTracker.updateBlockProgress({
@@ -108,17 +111,22 @@ export class PiratechainEngine extends CurrencyEngine<
       })
       await this.queryAll()
     })
-    synchronizer.on('statusChanged', async payload => {
+    this.synchronizer.on('statusChanged', async payload => {
       this.synchronizerStatus = payload.name
       await this.queryAll()
     })
-    synchronizer.on('error', payload => {
-      // The polling synchronizer retries transient errors on its own:
+    this.synchronizer.on('error', async payload => {
       this.log.warn(`Synchronizer error: ${payload.message}`)
+      if (payload.level === 'critical') {
+        await this.killEngine()
+        this.lastUpdateFromSynchronizer = undefined
+        await this.startEngine()
+      }
     })
   }
 
   async queryAll(): Promise<void> {
+    this.lastUpdateFromSynchronizer = Date.now()
     if (this.queryMutex) return
     this.queryMutex = true
     try {
@@ -142,10 +150,10 @@ export class PiratechainEngine extends CurrencyEngine<
   async queryBalance(): Promise<void> {
     if (!this.isSynced() || this.synchronizer == null) return
     try {
-      const balance = await this.synchronizer.getBalance()
-      // `total` includes pending; `spendable` is the confirmed balance:
-      this.availableZatoshi = String(balance.spendable)
-      this.updateBalance(null, String(balance.total))
+      const balances = await this.synchronizer.getBalance()
+      if (balances.totalZatoshi === '-1') return
+      this.availableZatoshi = balances.availableZatoshi
+      this.updateBalance(null, balances.totalZatoshi)
       this.syncTracker.updateBalanceRatio(1)
     } catch (e: any) {
       this.warn('Failed to update balances', e)
@@ -156,33 +164,42 @@ export class PiratechainEngine extends CurrencyEngine<
   async queryTransactions(): Promise<void> {
     if (this.synchronizer == null) return
     try {
-      const transactions = await this.synchronizer.getTransactions()
-      for (const tx of transactions) {
-        // The SDK returns the full history each time, so only process
-        // transactions that are new or whose height moved:
-        const height = tx.height ?? 0
-        const seenHeight = this.processedTxHeights.get(tx.txid)
-        if (seenHeight === height) continue
+      let first = this.otherData.blockRange.first
+      let last = this.otherData.blockRange.last
+      const blocksToHeight =
+        this.walletLocalData.blockHeight - this.birthdayHeight
+      while (this.isSynced() && last <= this.walletLocalData.blockHeight) {
+        const transactions = await this.synchronizer.getTransactions({
+          first,
+          last
+        })
 
-        if (seenHeight != null && height < seenHeight) {
-          // A height that moved BACKWARDS means a reorg unmined the
-          // transaction or re-mined it lower. `addTransaction` only writes a
-          // height that moved forward, so this update cannot land; say so
-          // rather than letting it vanish downstream. The stale height is
-          // wrong by the reorg depth until the transaction confirms above it.
-          this.warn(
-            `Reorged height for ${tx.txid} not applied: ${seenHeight} -> ${height}`
-          )
-          this.processedTxHeights.set(tx.txid, height)
-          continue
+        for (const tx of transactions) this.processTransaction(tx)
+
+        if (last === this.walletLocalData.blockHeight) {
+          first = this.walletLocalData.blockHeight
+          this.walletLocalDataDirty = true
+          this.syncTracker.updateTransactionRatio(1)
+          break
         }
-        // Record the height only once the transaction is in, so one that
-        // throws here is retried on the next poll instead of skipped forever:
-        this.processTransaction(tx)
-        this.processedTxHeights.set(tx.txid, height)
-      }
-      if (this.isSynced()) {
-        this.syncTracker.updateTransactionRatio(1)
+
+        first = last + 1
+        last =
+          last + this.networkInfo.transactionQueryLimit <
+          this.walletLocalData.blockHeight
+            ? last + this.networkInfo.transactionQueryLimit
+            : this.walletLocalData.blockHeight
+
+        this.otherData.blockRange = {
+          first,
+          last
+        }
+        this.walletLocalDataDirty = true
+
+        if (blocksToHeight > 0) {
+          const historyRatio = (last - this.birthdayHeight) / blocksToHeight
+          this.syncTracker.updateTransactionRatio(historyRatio)
+        }
       }
     } catch (e: any) {
       this.error(
@@ -192,39 +209,41 @@ export class PiratechainEngine extends CurrencyEngine<
     }
   }
 
-  processTransaction(tx: TransactionInfo): void {
-    // A negative amount is a send and already includes the network fee:
-    const netNativeAmount = String(tx.amount)
+  processTransaction(tx: ConfirmedTransaction): void {
+    let netNativeAmount = tx.value
     const ourReceiveAddresses = []
-    if (gte(netNativeAmount, '0')) {
+    if (tx.toAddress != null) {
+      // check if tx is a spend
+      netNativeAmount = `-${add(
+        netNativeAmount,
+        this.networkInfo.defaultNetworkFee
+      )}`
+    } else {
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
     }
 
-    const edgeMemos: EdgeMemo[] =
-      tx.memo != null && tx.memo !== ''
-        ? [
-            {
-              memoName: 'memo',
-              type: 'text',
-              value: tx.memo
-            }
-          ]
-        : []
+    const edgeMemos: EdgeMemo[] = tx.memos
+      .filter(text => text !== '')
+      .map(text => ({
+        memoName: 'memo',
+        type: 'text',
+        value: text
+      }))
 
     const edgeTransaction: EdgeTransaction = {
-      blockHeight: tx.height ?? 0,
+      blockHeight: tx.minedHeight,
       currencyCode: this.currencyInfo.currencyCode,
-      date: tx.timestamp,
+      date: tx.blockTimeInSeconds,
       isSend: netNativeAmount.startsWith('-'),
       memos: edgeMemos,
       nativeAmount: netNativeAmount,
-      networkFee: String(tx.fee),
+      networkFee: this.networkInfo.defaultNetworkFee,
       networkFees: [],
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
       tokenId: null,
-      txid: tx.txid,
+      txid: tx.rawTransactionId,
       walletId: this.walletId
     }
     this.addTransaction(null, edgeTransaction)
@@ -237,62 +256,35 @@ export class PiratechainEngine extends CurrencyEngine<
       this.currencyInfo.pluginId
     )(opts?.privateKeys)
 
+    const { rpcNode } = this.networkInfo
     this.birthdayHeight = piratechainPrivateKeys.birthdayHeight
 
     try {
       // Replace this.synchronizerPromise with a fresh promise. The old promise might have already been resolved
       this.synchronizerPromise = this.makeSynchronizer({
-        name: base16.stringify(base64.parse(this.walletId)),
-        mnemonic: piratechainPrivateKeys.mnemonic,
+        mnemonicSeed: piratechainPrivateKeys.mnemonic,
         birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-        lightwalletdUrl: this.networkInfo.lightwalletdUrl,
-        lightwalletdFailoverUrls: this.networkInfo.lightwalletdFailoverUrls,
-        signingCredential: deriveSigningCredential(
-          piratechainPrivateKeys.mnemonic
-        )
+        alias: base16.stringify(base64.parse(this.walletId)),
+        ...rpcNode
       })
       this.synchronizer = await this.synchronizerPromise
       // People might be waiting on the old promise, so resolve that
       this.synchronizerResolver(this.synchronizer)
-      this.logEndpointDiagnostics(this.synchronizer)
     } catch (e) {
-      // The synchronizer cannot start if the native module isn't present:
-      if (String(e).includes('native module is not linked')) {
+      // The synchronizer cannot start if it isn't present.
+      if (
+        String(e) ===
+        'Invariant Violation: `new NativeEventEmitter()` requires a non-null argument.'
+      ) {
         this.log.warn('SDK not present')
       } else throw e
     }
     this.initData()
     this.initSubscriptions()
-    // Start the poller only now that the listeners exist: its first status
-    // change fires synchronously inside `start`, and one emitted before the
-    // subscriptions would leave the engine stranded at STOPPED.
-    await this.synchronizer?.start()
 
     return await new Promise(resolve => {
       this.stopSyncing = resolve
     })
-  }
-
-  /**
-   * Records which lightwalletd the SDK selected from the configured pool and
-   * why it rejected the others. A wallet that never syncs otherwise looks the
-   * same whether every node is down or the pool was misconfigured, and this
-   * is the only surface that tells the two apart. The probe makes a round
-   * trip per endpoint, so it runs off the sync path and never blocks it.
-   */
-  logEndpointDiagnostics(synchronizer: PiratechainSynchronizer): void {
-    synchronizer
-      .getEndpointDiagnostics()
-      .then(diagnostics => {
-        // Warn level, so it reaches the app's persisted logs at the default
-        // log level and ships with a user's log export:
-        this.log.warn(`Lightwalletd pool: ${JSON.stringify(diagnostics)}`)
-      })
-      .catch((error: unknown) => {
-        this.log.warn(
-          `Failed to read the lightwalletd pool diagnostics: ${String(error)}`
-        )
-      })
   }
 
   async killEngine(): Promise<void> {
@@ -317,10 +309,8 @@ export class PiratechainEngine extends CurrencyEngine<
     await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
-    this.synchronizerPromise
-      .then(async synchronizer => {
-        await synchronizer.rescan(this.birthdayHeight)
-      })
+    this.synchronizer
+      ?.rescan()
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
     this.initData()
     this.syncTracker.resetSync()
@@ -328,9 +318,6 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(): Promise<string> {
-    // Before the wallet is synced `availableZatoshi` is still '0', which would
-    // read as no funds; refuse for the same reason `makeSpend` would instead:
-    await this.checkSpendable()
     const spendableBalance = sub(
       this.availableZatoshi,
       this.networkInfo.defaultNetworkFee
@@ -341,47 +328,8 @@ export class PiratechainEngine extends CurrencyEngine<
     return spendableBalance
   }
 
-  /**
-   * The SDK reports `SYNCED` before its spend anchor is usable, and a send in
-   * that window fails inside the SDK with `ERR_SYNC_FINALIZING` only once the
-   * user has already confirmed it. `get_spendability_status` reports the
-   * window directly, so refuse the spend here instead: a `makeSpend` that
-   * throws leaves the send scene with no transaction, which is what keeps its
-   * confirm slider disabled until the wallet can actually spend.
-   */
-  async checkSpendable(): Promise<void> {
-    // Before sync the wallet has no spend anchor at all, which is the same
-    // wait the SDK reports after `SYNCED`, so it gets the same error type and
-    // text: the app renders `PendingFundsError` with its message on both the
-    // amount modal and the send scene's error card.
-    if (!this.isSynced()) {
-      throw new PendingFundsError(
-        'Cannot spend until the wallet finishes syncing'
-      )
-    }
-
-    let spendability: PiratechainSpendability
-    try {
-      const synchronizer = await this.synchronizerPromise
-      spendability = await synchronizer.getSpendability()
-    } catch (error: unknown) {
-      // Reaching `SYNCED` was the entire gate before this RPC existed, so a
-      // status the plugin cannot read must not be what stops a spend. Bridge
-      // errors arrive serialized rather than as `Error` instances:
-      this.warn(
-        'Failed to read the spendability status',
-        error instanceof Error ? error : new Error(String(error))
-      )
-      return
-    }
-    if (spendability.spendable) return
-
-    this.warn(`Spend refused: ${JSON.stringify(spendability)}`)
-    throw new PendingFundsError(spendabilityMessage(spendability))
-  }
-
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    await this.checkSpendable()
+    if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
@@ -433,45 +381,45 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async broadcastTx(
-    edgeTransaction: EdgeTransaction
+    edgeTransaction: EdgeTransaction,
+    opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
     const { memos } = edgeTransaction
+    const piratechainPrivateKeys = asPiratechainPrivateKeys(this.pluginId)(
+      opts?.privateKeys
+    )
     if (
       edgeTransaction.spendTargets == null ||
       edgeTransaction.spendTargets.length !== 1
     )
       throw new Error('Invalid spend targets')
 
+    const memo = memos[0]?.type === 'text' ? memos[0].value : ''
     const spendTarget = edgeTransaction.spendTargets[0]
-    if (spendTarget.publicAddress == null)
-      throw new Error('Missing publicAddress')
-
-    // The registry wallet holds the spending keys, so the send call
-    // only needs the outputs. Edge's nativeAmount includes the fee:
-    const memo = memos[0]?.type === 'text' ? memos[0].value : undefined
-    const spendAmount = sub(
-      abs(edgeTransaction.nativeAmount),
-      edgeTransaction.networkFee
-    )
+    const txParams: SpendInfo = {
+      zatoshi: sub(
+        abs(edgeTransaction.nativeAmount),
+        edgeTransaction.networkFee
+      ),
+      toAddress: spendTarget.publicAddress,
+      memo,
+      mnemonicSeed: piratechainPrivateKeys.mnemonic
+    }
 
     try {
       const synchronizer = await this.synchronizerPromise
-      const txid = await synchronizer.send(
-        [
-          {
-            addr: spendTarget.publicAddress,
-            amount: spendAmount,
-            memo
-          }
-        ],
-        edgeTransaction.networkFee
-      )
-      edgeTransaction.txid = txid
-      edgeTransaction.date = Date.now() / 1000
-      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      const signedTx = await synchronizer.sendToAddress(txParams)
+      if ('txId' in signedTx) {
+        edgeTransaction.txid = signedTx.txId
+        edgeTransaction.signedTx = signedTx.raw
+        edgeTransaction.date = Date.now() / 1000
+        this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      } else {
+        throw new Error(signedTx.errorMessage)
+      }
     } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
-      throw asRetryableSpendError(e) ?? e
+      throw e
     }
     return edgeTransaction
   }
@@ -479,11 +427,11 @@ export class PiratechainEngine extends CurrencyEngine<
   async getFreshAddress(): Promise<EdgeFreshAddress> {
     const getSynchronizerAddresses = async (): Promise<EdgeFreshAddress> => {
       const synchronizer = await this.synchronizerPromise
-      const publicAddress = await synchronizer.getCurrentAddress()
-      this.otherData.cachedAddress = publicAddress
+      const { saplingAddress } = await synchronizer.deriveUnifiedAddress()
+      this.otherData.cachedAddress = saplingAddress
       this.walletLocalDataDirty = true
       return {
-        publicAddress
+        publicAddress: saplingAddress
       }
     }
 
@@ -498,72 +446,6 @@ export class PiratechainEngine extends CurrencyEngine<
       }
     }
   }
-}
-
-/**
- * SDK error codes that mean "this spend is not ready yet, retry shortly"
- * rather than "this spend is wrong". `get_spendability_status` is checked
- * before the transaction is built and, since SDK 0.3.4, keeps reporting a
- * queued repair until the node will accept the wallet's anchor, so a build
- * that passed the gate should not fail with either of these. The backstop
- * stays because the status read `spendable: true, reasonCode: OK` through
- * four such rejections on 0.3.2, and a wrong status costs the user a
- * misleading network error where a mapped one costs nothing.
- */
-const RETRYABLE_SPEND_ERROR_CODES = [
-  'ERR_SYNC_FINALIZING',
-  'ERR_WITNESS_REPAIR_QUEUED'
-]
-
-/**
- * Restates a retryable spend failure as `PendingFundsError`, so the app can
- * tell the user to wait instead of blaming their network connection. Anything
- * else is left alone: an error the plugin cannot classify must keep its own
- * text rather than be softened into a wait.
- */
-function asRetryableSpendError(error: unknown): PendingFundsError | undefined {
-  const message = error instanceof Error ? error.message : String(error)
-  const code = RETRYABLE_SPEND_ERROR_CODES.find(code => message.includes(code))
-  if (code == null) return
-
-  return new PendingFundsError(
-    code === 'ERR_WITNESS_REPAIR_QUEUED'
-      ? 'Cannot spend until the wallet finishes repairing its transaction history'
-      : 'Cannot spend until the wallet finishes syncing'
-  )
-}
-
-/**
- * The credential the SDK wraps a wallet's signing keys with. Edge has no
- * account-session secret to hand a currency plugin, but the mnemonic is
- * account-encrypted material the engine holds exactly while the account is
- * unlocked, so a key derived from it locks and unlocks on Edge's schedule.
- * The derivation is one-way and domain-separated, so the credential the SDK
- * sees cannot recover the seed it protects, and it is never written anywhere.
- */
-function deriveSigningCredential(mnemonic: string): string {
-  return base16.stringify(
-    createHmac('sha256', SIGNING_CREDENTIAL_DOMAIN).update(mnemonic).digest()
-  )
-}
-const SIGNING_CREDENTIAL_DOMAIN =
-  'edge-currency-accountbased/piratechain/signing-session/v1'
-
-/**
- * Why the wallet cannot spend yet. Every case resolves itself by waiting, so
- * the wording says which wait it is rather than asking the user to act. The
- * `reasonCode` is authoritative; the booleans cover a status that arrives
- * without one.
- */
-function spendabilityMessage(spendability: PiratechainSpendability): string {
-  const { reasonCode, rescanRequired, repairQueued } = spendability
-  if (reasonCode === 'ERR_RESCAN_REQUIRED' || rescanRequired) {
-    return 'Cannot spend until the wallet finishes rescanning'
-  }
-  if (reasonCode === 'ERR_WITNESS_REPAIR_QUEUED' || repairQueued) {
-    return 'Cannot spend until the wallet finishes repairing its transaction history'
-  }
-  return 'Cannot spend until the wallet finishes syncing'
 }
 
 export async function makeCurrencyEngine(

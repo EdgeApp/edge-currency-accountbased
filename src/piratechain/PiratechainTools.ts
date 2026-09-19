@@ -12,7 +12,7 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-import { base16, base64 } from 'rfc4648'
+import { Tools as ToolsType } from 'react-native-piratechain'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
@@ -32,7 +32,7 @@ export class PiratechainTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: PiratechainNetworkInfo
-  piratechainIo: PiratechainIo
+  nativeTools: typeof ToolsType
 
   constructor(env: PluginEnvironment<PiratechainNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -48,7 +48,7 @@ export class PiratechainTools implements EdgeCurrencyTools {
       throw new Error('Need piratechain native IO')
     }
 
-    this.piratechainIo = piratechainIo
+    this.nativeTools = piratechainIo.Tools
   }
 
   async getDisplayPrivateKey(
@@ -65,13 +65,14 @@ export class PiratechainTools implements EdgeCurrencyTools {
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    return await this.piratechainIo.getLatestNetworkHeight(
-      this.networkInfo.lightwalletdUrl
+    return await this.nativeTools.getBirthdayHeight(
+      this.networkInfo.rpcNode.defaultHost,
+      this.networkInfo.rpcNode.defaultPort
     )
   }
 
   async isValidAddress(address: string): Promise<boolean> {
-    return await this.piratechainIo.isValidAddress(address)
+    return await this.nativeTools.isValidAddress(address)
   }
 
   // will actually use MNEMONIC version of private key
@@ -142,17 +143,13 @@ export class PiratechainTools implements EdgeCurrencyTools {
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
-
-    // Registers the wallet with the SDK's registry as a side effect,
-    // using the same alias name the engine looks up later:
-    const viewingKey = await this.piratechainIo.deriveViewingKey({
-      name: base16.stringify(base64.parse(walletInfo.id)),
+    const unifiedViewingKey: string = await this.nativeTools.deriveViewingKey(
       mnemonic,
-      birthdayHeight: piratechainPrivateKeys.birthdayHeight
-    })
+      this.networkInfo.rpcNode.networkName
+    )
     return {
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-      publicKey: viewingKey
+      publicKey: unifiedViewingKey
     }
   }
 
