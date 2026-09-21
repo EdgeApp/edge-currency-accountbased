@@ -1,6 +1,6 @@
 # edge-currency-accountbased
 
-## Unreleased
+## 4.95.0 (2026-09-21)
 
 - added: (ARRR) A lightwalletd failover pool, with the node list replaceable from the info server
 - changed: (ARRR) Pirate Chain runs on the unified `react-native-pirate-wallet` SDK (^0.3.4), replacing `react-native-piratechain`
