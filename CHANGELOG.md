@@ -152,6 +152,8 @@
 - fixed: (Monero) Update the wallet balance as soon as a pending transaction is received and on every sync poll, instead of only after a new block, so an incoming pending amount appears immediately.
 - fixed: (Monero) Calculate the max sendable amount from the wallet's live unlocked balance instead of a stale cached value, so tapping Max no longer intermittently returns 0 or an unsendable amount.
 
+- added: (ethereum, ton) Implement the `makeMaxSpend` engine method, which atomically builds a transaction that spends the maximum amount.
+
 ## 4.84.1 (2026-06-23)
 
 - fixed: (Stellar) Resolve the "undefined is not an object (evaluating 'Horizon')" crash on login by importing stellar-sdk v13 symbols (Horizon, Keypair, Account, TransactionBuilder, etc.) as named exports. The plugin's WebView uses stellar-sdk's browser build, whose default export is undefined, so the previous default-namespace access (stellarApi.Horizon.Server) threw.

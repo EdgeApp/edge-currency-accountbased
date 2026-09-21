@@ -1212,6 +1212,22 @@ export class EthereumEngine extends CurrencyEngine<
     }
   }
 
+  async makeMaxSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    // Compute the max spendable amount and build the transaction back-to-back
+    // so the fee pricing stays consistent (getMaxSpendable caches L1 pricing
+    // for makeSpend) and network state cannot change between the two steps:
+    const maxNativeAmount = await this.getMaxSpendable(edgeSpendInfoIn)
+    const edgeSpendInfo: EdgeSpendInfo = {
+      ...edgeSpendInfoIn,
+      spendTargets: edgeSpendInfoIn.spendTargets.map((spendTarget, index) =>
+        index === 0
+          ? { ...spendTarget, nativeAmount: maxNativeAmount }
+          : spendTarget
+      )
+    }
+    return await this.makeSpend(edgeSpendInfo)
+  }
+
   getTxParameterInformation(
     edgeSpendInfo: EdgeSpendInfo,
     tokenId: EdgeTokenId,
