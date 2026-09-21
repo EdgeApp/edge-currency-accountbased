@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- added: (ARRR) A lightwalletd failover pool, with the node list replaceable from the info server
+- changed: (ARRR) Pirate Chain runs on the unified `react-native-pirate-wallet` SDK (^0.3.4), replacing `react-native-piratechain`
+- changed: (ARRR) Wallets scan and broadcast over TLS against the plugin's own lightwalletd node, not the SDK's default
+- changed: (ARRR) The wallet registry credential lives in the iOS Keychain or Android Keystore
+- changed: (ARRR) Signing keys stay locked except while a send is in flight
+- fixed: (ARRR) A send is refused with a wait-and-retry message until the wallet can spend, instead of failing after confirmation
+
 ## 4.94.2 (2026-09-21)
 
 - fixed: (Solana) Sends that landed no longer report "block height exceeded". A send now fails only when every RPC node fails to confirm it and no node holds the transaction, rather than as soon as any one node answers wrong.
