@@ -208,8 +208,6 @@ const builtinTokens: EdgeTokenMap = {
 const networkInfo: SolanaNetworkInfo = {
   rpcNodes: [
     'https://api.mainnet-beta.solana.com',
-
-    'https://solana.api.pocket.network',
     'https://mainnet.helius-rpc.com/?api-key={{heliusApiKey}}'
   ],
   rpcNodesArchival: [
