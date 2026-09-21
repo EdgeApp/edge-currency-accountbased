@@ -3,6 +3,7 @@ import 'regenerator-runtime/runtime'
 import type { EdgeCorePlugins } from 'edge-core-js/types'
 
 import { algorand } from './algorand/algorandInfo'
+import { animica } from './animica/animicaInfo'
 import { binance } from './binance/binanceInfo'
 import { cardano } from './cardano/cardanoInfo'
 import { cardanotestnet } from './cardano/cardanoTestnetInfo'
@@ -34,6 +35,7 @@ const plugins = {
   ...ethereumPlugins,
   ...cosmosPlugins,
   algorand,
+  animica,
   binance,
   cardano,
   cardanotestnet,

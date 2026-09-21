@@ -78,6 +78,8 @@
 - fixed: (Zano) Report an unconfirmed incoming transfer as a new transaction, so the app raises its receive notification. The mempool sweep files the transfer at block height zero, which the checkpoint comparison reads as already seen, and the later confirmation takes the update path, so the arrival that the sweep exists to surface was never announced.
 - fixed: (Zano) Persist catch-up progress every five minutes, so a scan interrupted by the app being killed resumes from its last checkpoint instead of re-paying the entire catch-up. A store cannot land while the refresh worker holds the wallet lock for the scan, so the engine cycles the wallet through close and reopen: the close interrupts the scan at its next block chunk and writes the partially-synced state, and the reopen resumes from that height. Skipped while the wallet height is not advancing, so a wallet stalled on an unreachable node does not churn through restarts, and the gates reset once the wallet reaches synced, so each catch-up episode baselines fresh.
 
+- added: Add Animica (ANM) support
+
 ## 4.88.0 (2026-08-14)
 
 - added: (Zano) Verify that the native wallet address matches the address derived from the seed phrase when a wallet starts, failing the start rather than syncing a wallet whose native address is not the one shown to the user.
