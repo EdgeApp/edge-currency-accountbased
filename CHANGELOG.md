@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.94.2 (2026-09-21)
+
 - fixed: (Solana) Sends that landed no longer report "block height exceeded". A send now fails only when every RPC node fails to confirm it and no node holds the transaction, rather than as soon as any one node answers wrong.
 - fixed: (Solana) Drop the `solana.api.pocket.network` RPC node, which answers `getBlockHeight` with the slot.
 - fixed: (Solana) Transactions that fail on-chain with an object error, such as `InstructionError`, now report the failure instead of succeeding.
