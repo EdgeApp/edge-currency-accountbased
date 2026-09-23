@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## Unreleased
+
+- fixed: (ARRR) Wallets show their receive address again instead of failing with "Watch-only account key not found"
+
 ## 4.95.0 (2026-09-21)
 
 - added: (ARRR) A lightwalletd failover pool, with the node list replaceable from the info server

@@ -53,6 +53,8 @@ export class PiratechainEngine extends CurrencyEngine<
   /** Heights at which each txid was last processed, to skip stable
    * transactions when reprocessing the SDK's full history list: */
   processedTxHeights: Map<string, number>
+  /** Set once this engine start has refreshed the cached address: */
+  addressRefreshed: boolean
   makeSynchronizer: PiratechainIo['makeSynchronizer']
 
   // Synchronizer management
@@ -80,6 +82,7 @@ export class PiratechainEngine extends CurrencyEngine<
     })
     this.queryMutex = false
     this.processedTxHeights = new Map()
+    this.addressRefreshed = false
 
     this.started = false
   }
@@ -300,6 +303,7 @@ export class PiratechainEngine extends CurrencyEngine<
       this.synchronizerResolver = resolve
     })
     this.started = false
+    this.addressRefreshed = false
     if (this.stopSyncing != null) {
       await this.stopSyncing(1000)
       this.stopSyncing = undefined
@@ -488,14 +492,23 @@ export class PiratechainEngine extends CurrencyEngine<
     }
 
     if (this.otherData.cachedAddress == null) {
-      return await getSynchronizerAddresses()
-    } else {
-      getSynchronizerAddresses().catch(e => {
-        throw e
+      const address = await getSynchronizerAddresses()
+      this.addressRefreshed = true
+      return address
+    }
+
+    // Each read unlocks and relocks signing, and the address only changes
+    // once, at Ironwood activation, so one refresh per engine start keeps the
+    // cache honest. Rethrowing here would reject with nobody waiting, which
+    // surfaces as an app-wide error alert over whatever scene the user is on:
+    if (!this.addressRefreshed) {
+      this.addressRefreshed = true
+      getSynchronizerAddresses().catch((error: unknown) => {
+        this.warn(`getFreshAddress refresh failed: ${String(error)}`)
       })
-      return {
-        publicAddress: this.otherData.cachedAddress
-      }
+    }
+    return {
+      publicAddress: this.otherData.cachedAddress
     }
   }
 }
