@@ -21,6 +21,8 @@ import type {
 import { createPirateWalletSdk } from 'react-native-pirate-wallet'
 import { bridgifyObject, emit, onMethod, Subscriber } from 'yaob'
 
+import { makeSerialQueue } from '../common/promiseUtils'
+
 export interface PiratechainStatusEvent {
   name: SynchronizerStatus
 }
@@ -251,11 +253,11 @@ export function makePiratechainIo(): PiratechainIo {
    * are serialized so two wallets starting at once cannot interleave. Syncing
    * itself is wallet-scoped and stays concurrent.
    */
-  let registryLock: Promise<unknown> = Promise.resolve()
+  const registryQueue = makeSerialQueue()
   const ensureWallet = async (
     config: PiratechainWalletConfig
-  ): Promise<string> => {
-    const task = registryLock.then(async () => {
+  ): Promise<string> =>
+    await registryQueue(async () => {
       const { birthdayHeight, mnemonic, name } = config
       const walletSdk = getSdk()
       await ensureDeviceStorage()
@@ -267,9 +269,6 @@ export function makePiratechainIo(): PiratechainIo {
       }
       return await walletSdk.restoreWallet({ name, mnemonic, birthdayHeight })
     })
-    registryLock = task.catch(() => undefined)
-    return await task
-  }
 
   return bridgifyObject<PiratechainIo>({
     async deriveViewingKey(config) {
@@ -282,7 +281,7 @@ export function makePiratechainIo(): PiratechainIo {
       // registry, and the native service panics (aborting the app) when the
       // registry changes underneath a running synchronizer, so it is gated on
       // the registry being genuinely empty.
-      const task = registryLock.then(async () => {
+      return await registryQueue(async () => {
         const walletSdk = getSdk()
         await ensureDeviceStorage()
 
@@ -336,8 +335,6 @@ export function makePiratechainIo(): PiratechainIo {
           await walletSdk.deleteWallet(probeWalletId).catch(() => undefined)
         }
       })
-      registryLock = task.catch(() => undefined)
-      return await task
     },
 
     async isValidAddress(address) {
@@ -397,11 +394,10 @@ export function makePiratechainIo(): PiratechainIo {
       // registry can still sync (viewing keys and the block cache stay
       // readable) but cannot sign. Protection is enabled the first time a
       // wallet is seen on this device, so its spending keys are wrapped from
-      // the first sync on, and the key is locked again at once: nothing
-      // before a send needs it, and `send` unlocks for its own span. Sync does
-      // not depend on any of this, so a failure here logs and a send then
-      // fails with the SDK's own ERR_SIGNING_SESSION_LOCKED rather than being
-      // refused up front:
+      // the first sync on, and the key is locked again at once. Sync does not
+      // depend on any of this, so a failure here logs and the call that
+      // needed the key fails with the SDK's own reason rather than the wallet
+      // being refused up front:
       const { signingCredential } = config
       const ensureSigningUnlocked = async (): Promise<void> => {
         let status = await walletSdk.getWalletSigningStatus(walletId)
@@ -438,6 +434,25 @@ export function makePiratechainIo(): PiratechainIo {
           `piratechain: wallet signing protection unavailable: ${String(error)}`
         )
       }
+
+      /**
+       * Runs `task` with the wallet's signing key unlocked, then locks it
+       * again. Spans are serialized: a send holds the key for as long as it
+       * takes to build and broadcast, and an address read landing in the
+       * middle of one must not lock the key out from under it.
+       */
+      const signingQueue = makeSerialQueue()
+      const withSigningUnlocked = async <T>(
+        task: () => Promise<T>
+      ): Promise<T> =>
+        await signingQueue(async () => {
+          await ensureSigningUnlocked()
+          try {
+            return await task()
+          } finally {
+            await lockSigning()
+          }
+        })
 
       const realSynchronizer = walletSdk.createSynchronizer(walletId, {
         transactionLimit: null
@@ -476,7 +491,17 @@ export function makePiratechainIo(): PiratechainIo {
           )
         },
         getCurrentAddress: async () => {
-          return await walletSdk.getCurrentReceiveAddress(walletId)
+          // Reading an address needs no spending key, but the SDK demands the
+          // account's primary key before it will return one, and a locked
+          // signing session hides that key behind the same envelope as the
+          // spending material. So the read fails with `Watch-only account key
+          // not found` unless the key is unlocked for its span, which also
+          // strands the receive scene and every scene that refreshes an
+          // address. Unlock around the read until the SDK guards that call the
+          // way it already guards `list_key_groups`:
+          return await withSigningUnlocked(
+            async () => await walletSdk.getCurrentReceiveAddress(walletId)
+          )
         },
         getEndpointDiagnostics: async () => {
           return await walletSdk.getLightdEndpointPoolDiagnostics(walletId)
@@ -510,18 +535,13 @@ export function makePiratechainIo(): PiratechainIo {
         },
         send: async (outputs, fee) => {
           // The signing key is in native memory only for the span of this
-          // call: unlock here (a failure surfaces with its real reason), and
-          // lock again whether or not the send went through, so the key
-          // never outlives the spend that needed it:
-          await ensureSigningUnlocked()
-          try {
-            // The SDK's send builds, signs, and broadcasts, keeping the opaque
-            // pending/signed payloads verbatim between steps and serializing
-            // amounts as strings so large sends keep full precision:
-            return await walletSdk.send(walletId, outputs, fee ?? null)
-          } finally {
-            await lockSigning()
-          }
+          // call, so it never outlives the spend that needed it. The SDK's
+          // send builds, signs, and broadcasts, keeping the opaque
+          // pending/signed payloads verbatim between steps and serializing
+          // amounts as strings so large sends keep full precision:
+          return await withSigningUnlocked(
+            async () => await walletSdk.send(walletId, outputs, fee ?? null)
+          )
         },
         start: async () => {
           try {

@@ -5,13 +5,13 @@
 | Status | Implemented; a funded end-to-end send verified on the iOS sim on `0.3.4` through the [keychain](#keychain) registry and a signing session, and the shippable build verified green on CI ([section 7](#7-testing)). Human review addressed through the 2026-09-15 re-review |
 | Author | Jon Tzeng |
 | Reviewer | peachbits |
-| Last updated | 2026-09-16 |
+| Last updated | 2026-09-24 |
 | Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), react-native-pirate-wallet (npm `0.3.4`) |
 | Implementation | [edge-currency-accountbased#1055](https://github.com/EdgeApp/edge-currency-accountbased/pull/1055), [edge-react-gui#6021](https://github.com/EdgeApp/edge-react-gui/pull/6021) |
 | Supersedes | - |
 | Related | [PirateNetwork/Pirate-Unified-Light-Wallet#19](https://github.com/PirateNetwork/Pirate-Unified-Light-Wallet/pull/19), Asana 1216926437132721 |
 
-<!-- tdd-code-fingerprint: 0c5220c6d4ceb925ca8c4146b5d62b4fc7b68c30 -->
+<!-- tdd-code-fingerprint: d2e33fa2a867b3de1f8e32f61bd61e68ce25024e -->
 
 Branch references point at `agent/1214721783909451` in both Edge repos. Direction came from Asana task 1216926437132721 (reconcile the open rewrite PRs with the released v1.1.5 and confirm it removes the piratechain crash workaround) and the recorded review thread with the Pirate Chain team.
 
@@ -86,9 +86,11 @@ sequenceDiagram
   Bridge->>SDK: createSynchronizer
   Engine->>Bridge: start() (after the engine has subscribed)
   Engine->>Bridge: send(outputs[amount as string], fee as string)
-  Bridge->>SDK: unlockWalletSigning, send(walletId, outputs, fee), lockWalletSigning in finally
-  SDK->>Rust: build_tx -> sign_tx -> broadcast_tx (amounts as strings)
-  Rust-->>Engine: txid
+  Bridge->>SDK: unlockWalletSigning, buildTransaction, signTransaction, lockWalletSigning in finally
+  SDK->>Rust: build_tx -> sign_tx (amounts as strings)
+  Bridge->>SDK: broadcastTransaction(walletId, signed), repeated while the outcome is unknown
+  SDK->>Rust: broadcast_tx
+  Bridge-->>Engine: txid from the signed payload
 ```
 
 ## 5. Detailed design: edge-currency-accountbased
@@ -99,7 +101,7 @@ The plugin's public shape and the engine's transaction mapping are unchanged.
 
 The SDK's storage entry points select a registry directory and create or unlock it with a passphrase, and that selection is **device-global**: one registry is active at a time, and switching cancels any running sync and clears the registry and block caches. So the bridge configures exactly one device-scoped registry, `DEVICE_ACCOUNT_ID = 'edge-pirate-keychain'`, and every [ARRR](#arrr) wallet lives inside it keyed by its alias `name` (the `base16(walletId)` the tools layer already passes). Wallet-free reads (`isValidAddress`, the chain-tip probe in `getLatestNetworkHeight`) use that same registry, so no throwaway namespace exists.
 
-`ensureDeviceStorage()` performs the configuration at most once, memoized on a promise so concurrent wallet starts share one setup. It configures storage and then sets the transport (`set_tunnel` Direct, because the SDK's default Tor tunnel does not reliably bootstrap inside Edge); a failure clears the memo so the next call retries the whole setup rather than proceeding on an unconfigured registry. Registry mutations (restore, and the probe wallet's create/delete) run under a `registryLock` serialization. Syncing does not: each wallet gets its own `PirateWalletSynchronizer`, and with no namespace switching left they run concurrently over a shared block cache.
+`ensureDeviceStorage()` performs the configuration at most once, memoized on a promise so concurrent wallet starts share one setup. It configures storage and then sets the transport (`set_tunnel` Direct, because the SDK's default Tor tunnel does not reliably bootstrap inside Edge); a failure clears the memo so the next call retries the whole setup rather than proceeding on an unconfigured registry. Registry mutations (restore, and the probe wallet's create/delete) run one at a time through a serial queue (`makeSerialQueue`). Syncing does not: each wallet gets its own `PirateWalletSynchronizer`, and with no namespace switching left they run concurrently over a shared block cache.
 
 The registry passphrase never exists in JavaScript. `configureSecureAccountStorage({ accountId })`, added in SDK 0.3.4, has the native module mint a random credential on first use and keep it in the iOS [Keychain](#keychain) or the Android [Keystore](#keystore): the Kotlin bridge wraps it with [AES-GCM](#aes-gcm) under an `AndroidKeyStore` key and stores the ciphertext in private shared preferences, and the iOS bridge stores a Keychain item. Every later launch reads it back natively and passes it to `configure_wallet_storage` without returning it across the bridge. The registry directory is derived from `accountId` alone on both platforms, so the secure registry takes a fresh id rather than pointing a Keychain credential at a directory whose registry was encrypted under the earlier JS-minted passphrase. Nothing shipped with that passphrase, so the only registries it orphans are on development devices, and their wallets re-restore from seed into the new registry on first run.
 
@@ -136,7 +138,9 @@ function deriveSigningCredential(mnemonic: string): string {
 const SIGNING_CREDENTIAL_DOMAIN = 'edge-currency-accountbased/piratechain/signing-session/v1'
 ```
 
-The bridge reads `get_wallet_signing_status` after the wallet is restored and enables protection the first time a wallet is seen on this device, so its spending keys are wrapped from the first sync on; it then locks the wallet at once, because nothing before a send needs the key. The key is in native memory only for the span of a `send`: the bridge unlocks immediately before it (another wallet's `lock_wallet_signing` or a `lock_all_wallet_signing` can have cleared it, and a failure surfaces with its real reason) and locks in a `finally`, whether or not the send went through. `stop` locks too, for a send in flight when the engine is killed on account lock or logout, and that lock runs whether or not `close()` threw. Sync never depends on any of this: a signing call that fails logs and the synchronizer starts anyway, and the eventual send then reports the SDK's own reason rather than a softened one. An earlier revision unlocked at every start and relied on `stop` to lock, which kept the key in memory for the life of the engine; the review on 2026-09-11 pointed out that `send` re-established the unlock anyway, so the start-time unlock bought nothing.
+The bridge reads `get_wallet_signing_status` after the wallet is restored and enables protection the first time a wallet is seen on this device, so its spending keys are wrapped from the first sync on; it then locks the wallet at once. The key returns to native memory only for the span of a call that needs it, through one `withSigningUnlocked` helper: it unlocks immediately before the call (another wallet's `lock_wallet_signing` or a `lock_all_wallet_signing` can have cleared it, and a failure surfaces with its real reason) and locks in a `finally`, whether or not the call went through. Those spans run one at a time through a serial queue (`makeSerialQueue`, shared with the registry mutations), because a send holds the key for as long as it takes to build and sign and a concurrent unlock span must not lock the key out from under it. `stop` locks too, for a send in flight when the engine is killed on account lock or logout, and that lock runs whether or not `close()` threw. Sync never depends on any of this: a signing call that fails logs and the synchronizer starts anyway, and the eventual send then reports the SDK's own reason rather than a softened one. An earlier revision unlocked at every start and relied on `stop` to lock, which kept the key in memory for the life of the engine; the review on 2026-09-11 pointed out that `send` re-established the unlock anyway, so the start-time unlock bought nothing.
+
+Two calls take that span: `send`, which genuinely signs, and `getCurrentReceiveAddress`, which does not. Reading an address needs only viewing keys, but the SDK runs `ensure_primary_account_key` first, and that function reads the wallet secret through the same envelope the signing session wraps. A locked session yields an empty spending key rather than an error, so the function takes its watch-only branch, finds no imported viewing key on a seed-restored wallet, and fails with `Watch-only account key not found`. The SDK already guards this in `list_key_groups`, which skips the call when protection is on and the session is locked; the address entry points do not, so until they do, the bridge unlocks around the read ([phase 13](#phase-13-addresses-under-a-locked-signing-session)).
 
 [`src/piratechain/piratechainIo.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/6973f77d3b200fe9f9cb9dc0804c77203e2595d3/src/piratechain/piratechainIo.ts)
 ```ts
@@ -155,14 +159,18 @@ The bridge reads `get_wallet_signing_status` after the wallet is restored and en
         )
       }
       // ...
-        send: async (outputs, fee) => {
+      const signingQueue = makeSerialQueue()
+      const withSigningUnlocked = async <T>(
+        task: () => Promise<T>
+      ): Promise<T> =>
+        await signingQueue(async () => {
           await ensureSigningUnlocked()
           try {
-            return await walletSdk.send(walletId, outputs, fee ?? null)
+            return await task()
           } finally {
             await lockSigning()
           }
-        },
+        })
 ```
 
 ### Endpoint pool diagnostics
@@ -191,11 +199,32 @@ The plugin does not choose which wallets get a synchronizer; the core starts eng
 
 ### Amounts as strings
 
-The package's own `index.d.ts` declares `Balance`, `TransactionInfo` and `TransactionOutput` amounts as `AmountString`, and the plugin compiles against those types: `react-native-pirate-wallet` is a devDependency, like the other native SDKs, and the hand-written ambient declaration an earlier revision carried is gone, since an ambient `declare module` shadows an installed package and let a wrong shape (`FeeInfo.defaultFee` as a number) compile clean. The poller's snapshot fields the SDK leaves untyped (`balance`, `syncStatus`, `transactions`) pass through cleaners before the engine reads them. `balance` starts as `null`, so a snapshot that does not clean falls back to the wallet-scoped [RPC](#rpc), which covers the window before the first poll. `transactions` starts as `[]` and the engine only reads it after the poller has filled it, so it has no such window and no RPC fallback: each entry is cleaned on its own and a row that fails the shape is dropped with a warning, which keeps the rest of the history rather than rejecting all of it over one bad row. The engine drops `safeParseInt` on the send path and passes `spendAmount` and `networkFee` as strings straight through; the read path already wrapped values in `String(...)` and biggystring, so it needed only the sign check at `processTransaction` switched from a numeric comparison to `gte(netNativeAmount, '0')`.
+The package's own `index.d.ts` declares `Balance`, `TransactionInfo` and `TransactionOutput` amounts as `AmountString`, and the plugin compiles against those types: `react-native-pirate-wallet` is a devDependency, like the other native SDKs, and the hand-written ambient declaration an earlier revision carried is gone, since an ambient `declare module` shadows an installed package and let a wrong shape (`FeeInfo.defaultFee` as a number) compile clean. The poller's snapshot fields the SDK leaves untyped (`balance`, `syncStatus`, `transactions`) pass through cleaners before the engine reads them. `balance` starts as `null`, so a snapshot that does not clean falls back to the wallet-scoped [RPC](#rpc), which covers the window before the first poll. `transactions` starts as `[]` and the engine only reads it after the poller has filled it, so it has no such window and no RPC fallback: each entry is cleaned on its own and a row that fails the shape is dropped with a warning, which keeps the rest of the history rather than rejecting all of it over one bad row. The engine drops `safeParseInt` on the send path and passes `spendAmount` and `networkFee` as strings straight through; the read path already wrapped values in `String(...)` and biggystring, so it needed nothing beyond the biggystring comparisons `processTransaction` already made.
+
+### Receive addresses
+
+`processTransaction` reports `ourReceiveAddresses: []` for every transaction, as the Zcash engine has since 2023. Before this, every incoming transaction carried `walletInfo.keys.publicKey`, and for this plugin that key is the wallet's extended viewing key (`derivePublicKey` returns `publicKey: viewingKey`), not an address. The GUI prints the field in Advanced Details, writes it to the `OUR_RECEIVE_ADDRESSES` column of a transaction export and uses its first entry as the export's `toAddress`, and hands it to EdgeProvider plugins, so a routine export wrote the key that reveals the wallet's whole history to a file. The current `zs1` address is not a substitute: the SDK's `TransactionInfo` names no recipient, and with diversified addresses from `next_receive_address` the current address is a guess about which one received the funds.
+
+Stopping the push does not repair wallets that already saved history. `CurrencyEngine.addTransaction` rewrites a stored transaction only when its height, fee, amount, `lastSeenTime` or date changes, so reprocessing a confirmed incoming transaction leaves the saved copy, key included, as it was. edge-core-js keeps no copy of the field, which makes the engine's `transactionList.json` the only persisted one. The engine therefore overrides `loadTransactions`: on the first load it clears `ourReceiveAddresses` on every stored transaction that has entries and marks the list dirty, and the next save loop writes the clean list. Since the engine now records no receive addresses at all, any entry it finds is the leaked key, whatever its shape: current builds derive `zxviews1...` keys, and history saved by earlier builds also carries `uview1...` ones.
 
 ### Sends
 
-`makeSynchronizer(...).send` previously ran `build_tx` / `sign_tx` / `broadcast_tx` over the raw `invoke` bridge to dodge a camelization bug. v1.1.5's `send()` keeps the opaque pending and signed payloads verbatim (via `_callRaw`) and normalizes amounts to strings, so the bridge calls `walletSdk.send(walletId, outputs, fee)` directly. SDK 0.3.4 made `broadcast_tx` wallet-scoped (`broadcastTransaction(walletId, signed)`; the one-argument form is gone) so endpoint selection and repair state belong to the wallet that built the transaction. `send()` routes through it, so the plugin's call is unchanged.
+`makeSynchronizer(...).send` previously ran `build_tx` / `sign_tx` / `broadcast_tx` over the raw `invoke` bridge to dodge a camelization bug. Since v1.1.5 the SDK's wrappers keep the opaque pending and signed payloads verbatim (via `_callRaw`) and normalize amounts to strings in the request builder every call shares, so the bridge calls them directly. SDK 0.3.4 made `broadcast_tx` wallet-scoped (`broadcastTransaction(walletId, signed)`; the one-argument form is gone) so endpoint selection and repair state belong to the wallet that built the transaction.
+
+The bridge makes the three calls `walletSdk.send()` makes, `buildTransaction`, `signTransaction` and `broadcastTransaction`, itself, with the same arguments, so it can hold the signed payload across more than one broadcast. Only building and signing run inside the signing span; broadcasting needs no key. The txid is read off the signed payload with a cleaner, while the payload itself goes back to the SDK untouched, since cleaning it would drop the fields `broadcast_tx` needs. The signed payload's txid is already in display order, unlike the internal-order hash `broadcast_tx` resolves with, so `send` returns it as is ([phase 14](#phase-14-one-transaction-under-two-byte-orders)).
+
+### Broadcasts with an unknown outcome
+
+A broadcast can fail after the node already has the transaction. The gRPC request goes out, and the connection drops while the answer comes back: `Broadcast failed: Status error: status: Internal, message: "h2 protocol error: error reading a body from connection"` from the nginx front of the lightwalletd node. The SDK retries five times within about 1.5 seconds and then gives up, so one burst of dropped connections turns a send that landed into a send the app reports as "Transaction Status Unknown" ([phase 15](#phase-15-sends-that-landed-but-reported-a-broadcast-error)).
+
+`broadcastUntilKnown` answers that from the plugin side:
+
+- A broadcast failing with a gRPC status that can arrive after the node accepted the transaction (`Internal`, `Unavailable`, `Unknown`, `DeadlineExceeded`) is repeated with the same signed payload after 2, 4 and 8 seconds. Identical bytes are one transaction, so a rebroadcast cannot pay twice, and the SDK keeps the transaction's broadcast context until a broadcast succeeds, so a later success still marks its notes spent.
+- A node that already holds the transaction answers a rebroadcast with `already in mempool`, `txn-already-in-mempool` or `transaction already in block chain`, optionally after a numeric code. That counts as success. The match is exact, the same set upstream adopted after `0.3.4`, because a duplicate-nullifier rejection can come from a different transaction spending the same notes.
+- Any other failure on the first broadcast throws at once, as it did before.
+- Once the first broadcast's outcome is unknown, no later answer can prove the send failed: a rejection can come from the send itself having landed. So when the rebroadcasts end without success, the first error is thrown, and the app keeps showing "Transaction Status Unknown" rather than a failure.
+
+A send the plugin accepted through a known-transaction answer never had a broadcast succeed inside the SDK, so its notes stay unspent in the local database until the next scan finds the spend. A second send in that window can pick the same notes and be rejected by the node. The window is one scan round, and the rejection names the conflict.
 
 ### The spendability window after `SYNCED`
 
@@ -349,6 +378,10 @@ The durable fix belongs in `react-native-monero`: flag `text_env` as `regular,pu
 28. Max and the not-spendable copy (VERIFIED, iOS sim, 2026-09-14). On a spendable wallet Max filled 257.12750237 ARRR, the balance less the 0.0001 fee, and armed the slider. The refusing branch was driven by forcing the bridge's `getSpendability` to report `spendable: false` in the throwaway build (reverted afterwards): with `ERR_WITNESS_REPAIR_QUEUED` both Max and a 0.044 ARRR `makeSpend` were refused and the send scene showed the plugin's text, "Cannot spend until the wallet finishes repairing its transaction history"; with `ERR_SYNC_FINALIZING` it showed "Cannot spend until the wallet finishes syncing". The forced frames prove the rendering and the gate; they do not prove the SDK emits those codes on its own, which rests on the real `ERR_WITNESS_REPAIR_QUEUED` rejections of 2026-08-31.
 29. Funded send with signing protection enabled from scratch, after the unlock fix (VERIFIED, iOS sim, real broadcast, 2026-09-14). A review bot found that `ensureSigningUnlocked` returned after enabling protection without checking whether the key came back unlocked. With that fix built in, the device registry was moved aside so `My Pirate` was restored into a new registry and protection was enabled fresh on its first start, then a 0.044 ARRR self-send reached "Transaction Success" on the first slide, txid `caab1e3298e6e8f275bc17f249c9d9a9fc4185f5c21bb2a978971035601dcba9`. The branch the fix touches, enabling inside `send` itself, only runs when the start-time enable failed, and that failure was not forced.
 
+30. Broadcasts with an unknown outcome (VERIFIED, iOS sim, real broadcast, 2026-09-24). Three sends from the agent account to a shielded address in the same account, all reaching Transaction Success. A plain send of 0.367 ARRR from `My Pirate 3`. A second send of 0.363 ARRR from `My Pirate` on a throwaway build whose broadcast callback ran the real `broadcastTransaction` and then threw the reported `status: Internal ... h2 protocol error` string on the first call; the app's console, read over the Chrome DevTools Protocol, showed the first broadcast succeeding and the rebroadcast of the same bytes succeeding 2.6 seconds later. The throwaway edit was reverted and the bundle checked clean afterwards. Both of those resolve on `insight-api-komodo` only under their byte reversals, which is the txid regression recorded under [phase 15](#phase-15-sends-that-landed-but-reported-a-broadcast-error): the pre-fix build showed `787c149b...0e00` and `84b9dadb...3de1`, whose reversals are the mined hashes `000ed186...7c78` and `e13ddce3...b984`. A third send of 0.182 ARRR from `My Pirate 3` on the fixed build showed `78ca8e6d...f44d`, which resolves as shown and was mined at block 4147496.
+
+31. The viewing key as a receive address (VERIFIED, unit tests and iOS sim, 2026-09-24). `test/piratechain/PiratechainEngine.test.ts` covers three cases: an incoming transaction reports `ourReceiveAddresses: []` and no field of it contains the viewing key; a transaction stored with the key comes back scrubbed and the save loop rewrites the file without it, even after the same confirmed transaction is reprocessed; and a store that is already clean is not marked dirty. Run against the pre-fix engine, the first two fail. On the simulator, the `My Pirate` wallet's saved `transactionList.json` held 17 transactions before the fixed build, 8 of them incoming with a `uview1...` key in `ourReceiveAddresses`; after the first load on the fixed build it held the same 17 txids with all 8 lists empty and no other field changed, and an incoming transaction synced afterwards (`8d2e25d0...a579`) was stored with an empty list. Advanced Details for `d00db5f3...`, one of the 8, shows no receive address row. A CSV export of the wallet from August 2023 to September 2026 has 20 rows, an empty `OUR_RECEIVE_ADDRESSES` on every one, including the 9 incoming rows, and no `zxviews`, `uview` or `view1` string anywhere in the file. Wallets in accounts that were not logged in during the test still hold the key on disk until their first load on the fixed build.
+
 Sync note (superseded): the earlier claim that a clean baked build syncs in roughly 90 seconds at 8000 blocks/sec, and that "sync stuck at 0%" was only a broken-build artifact, was wrong. Item 4 above identifies the real cause: the SDK scans against its own default node unless the plugin sets one, and that default stopped serving blocks.
 
 ## 8. Phase history
@@ -459,7 +492,7 @@ Old per-wallet registries are abandoned rather than migrated: wallets re-restore
 | Before | After |
 |---|---|
 | Registry passphrase minted in JS, plaintext on the plugin [disklet](#disklet) (`piratechainDeviceStorage.ts`), handed over through `setDevicePassphrase` | `configureSecureAccountStorage({ accountId: 'edge-pirate-keychain' })`; the native module mints and keeps the credential ([registry storage](#registry-storage)) |
-| Signing keys unlocked whenever the registry is | Wrapped under an HMAC of the mnemonic, unlocked per synchronizer start and before each send, locked on stop ([wallet signing sessions](#wallet-signing-sessions)) |
+| Signing keys unlocked whenever the registry is | Wrapped under an HMAC of the mnemonic, unlocked only for the span of a call that needs the key, locked on stop ([wallet signing sessions](#wallet-signing-sessions)) |
 | `reasonCode` an undocumented string; copy branched on the two booleans | Closed set typed and documented; copy branches on it, booleans as fallback |
 | No view into which pool node the SDK uses | `get_lightd_endpoint_pool_diagnostics` logged once per start ([endpoint pool diagnostics](#endpoint-pool-diagnostics)) |
 | `PiratechainWalletConfig` carried endpoint config and identity together | Split into the registry identity and `PiratechainSynchronizerConfig`, since `deriveViewingKey` needs only the former |
@@ -487,10 +520,42 @@ Old per-wallet registries are abandoned rather than migrated: wallets re-restore
 - **Shipped:** both, folded into the commits that own each surface. The same review corrected its own earlier premise, that `makeSpend` already raised `PendingFundsError` before sync; it does so only once the wallet reports `SYNCED` and still cannot spend.
 - **Found on the way:** the array fallback could only ever return what the cleaner had just rejected, and it re-ran the poller's own full-history fetch on every `getTransactions` call for as long as the malformed row existed.
 
+### Phase 13: addresses under a locked signing session
+
+- **Reported (2026-09-23, task 1218753833235509):** a red `Watch-only account key not found` alert on the ARRR send scene, and a receive scene stuck on "Your Wallet Address / Loading..." on a wallet holding 85.695 ARRR.
+- **Root cause:** the enable-then-lock bootstrap phase 10 shipped leaves the signing session locked for everything but a send, and `get_wallet_secret` reveals a locked spending key as an empty value rather than an error (`reveal_for_active_session` returns `None`, `unwrap_or_default` turns it into an empty vector). `ensure_primary_account_key_at_birthday` reads that as a watch-only wallet, looks for an imported viewing key, and finds none on a wallet restored from a seed. Both address entry points call it before they even look up a stored address, so every address read failed from the first launch after protection was enabled.
+- **Shipped:** the unlock and lock pair became one `withSigningUnlocked` helper serialized on a promise chain, and `getCurrentAddress` takes that span alongside `send` ([wallet signing sessions](#wallet-signing-sessions)). `getFreshAddress`'s background refresh logs its failure instead of rethrowing inside a `.catch`, which is what turned a failed refresh into an app-wide alert over whatever scene was open rather than a warning in the logs.
+- **Diverged:** the real fix belongs in the SDK, which ships prebuilt, so the plugin works around it and the ask is filed below.
+
+### Phase 14: one transaction under two byte orders
+
+- **Found (2026-09-23, driving the send this task's fix unblocked):** a completed ARRR send left two rows in the transaction list, one of them pending forever with an explorer link that resolved to nothing.
+- **Root cause:** the SDK reports a transaction's hash in internal byte order while it is unconfirmed, and in the reversed display order once it is mined. `send` resolves with the internal order too. The engine recorded both verbatim, so the poller opened a pending row under a hash no later update ever matched, then opened a second row when the confirmed copy arrived under the reversed hash. Proven with a recorder polling `list_transactions` through one send: `f14bd6be...df28` unconfirmed and `28dffff2...4bf1` at block 4147153, an exact byte reversal, and only the second resolves on `insight-api-komodo`.
+- **Shipped:** `toDisplayTxid` reverses at both boundaries, the value `send` resolves with and unconfirmed rows out of `getTransactions`; confirmed rows already carry the display order and pass through. Anything that is not a 32-byte hash passes through as well.
+- **Verified:** a post-fix send of 0.353 ARRR (`3af0187f...0e4f`, block 4147193) shows exactly one row in the same wallet where the two pre-fix sends still show their permanently pending twins.
+- **Diverged:** an earlier pass normalized only the `send` return value and read the persisting duplicate as a stale Metro bundle. Introspecting the running app over the Chrome DevTools Protocol disproved that: the app already carried the change, which forced the re-diagnosis above.
+
+### Phase 15: sends that landed but reported a broadcast error
+
+- **Reported (2026-09-24, task 1218753833235509):** a 7.206 ARRR send on a physical iPhone ended on "Transaction Status Unknown" with `Broadcast failed: Status error: status: Internal, message: "h2 protocol error: error reading a body from connection"` from the lightwalletd node's nginx front, and the transaction went through. The simulator had shown the same pattern the day before: one send hit the error and broadcast anyway, another hit it and did not.
+- **Root cause:** the error arrives while the answer is being read, after the node may already have the transaction. The SDK's broadcast retries five times within about 1.5 seconds; a burst of dropped connections outlasts that, and a retry that reaches a node already holding the transaction fails with `txn-already-in-mempool`, which `0.3.4` treats as a failure. Upstream treats it as success on `main` since 2026-09-15, in no release yet.
+- **Shipped:** the bridge builds and signs inside the signing span, then broadcasts through `broadcastUntilKnown`, which rebroadcasts the same signed bytes while the outcome stays unknown and counts a known-transaction answer as success ([broadcasts with an unknown outcome](#broadcasts-with-an-unknown-outcome)). `send` returns the signed payload's txid, which is already in display order, so phase 14's reversal now applies only to unconfirmed rows.
+- **Verified:** three real sends reached Transaction Success on the simulator ([section 7](#7-testing) item 30), one of them with its first broadcast forced to fail with the reported error after the node had accepted it; the rebroadcast of the same bytes succeeded two seconds later. The send on the fixed build showed a txid the explorer resolves as shown.
+- **Diverged:** the first drive showed txids the explorer did not resolve, while their byte reversals did. The old `send` resolved with the broadcast's internal-order hash; the signed payload carries the display order, and reversing it produced the internal order again.
+
+### Phase 16: the viewing key as a receive address
+
+- **Found (2026-09-24, reported by Paul):** `processTransaction` pushed `walletInfo.keys.publicKey` into `ourReceiveAddresses` for every incoming transaction. For this plugin that value is the wallet's extended viewing key, not an address, and the GUI shows it in Advanced Details, writes it to transaction exports and hands it to EdgeProvider plugins.
+- **Root cause:** Zcash had the same line and dropped it in 238e0849 ("Don't store our public key as receive address", 2023-10-05). Piratechain had been split into its own engine in 8acd7084 (2023-05-31), so the fix never reached it, and the rewrite carried the mapping over unchanged.
+- **Shipped:** `ourReceiveAddresses: []`, matching the Zcash engine, and a scrub on the first `loadTransactions` that clears the field on stored transactions and marks the list dirty, since reprocessing never rewrites a confirmed transaction ([receive addresses](#receive-addresses)).
+- **Verified:** three unit tests, two of which fail on the pre-fix engine, and on the simulator a wallet with pre-fix history: 8 leaked incoming transactions scrubbed on the first load, Advanced Details without the key, and a 20-row CSV export with no viewing key in it ([section 7](#7-testing) item 31).
+
 ### Open with the Pirate Chain team
 
 - The SDK's baked-in default lightwalletd, `64.23.167.130:9067`, drops packets. An unconfigured wallet sits in `Headers` at zero blocks per second with no error: `test_node` against a named node still succeeds, the chain tip still resolves, and `sync_status` reports `SYNCING`. The ask is a default that answers, or an unreachable endpoint surfaced through the synchronizer's `onError` callback.
 - `set_tunnel` is absent from the README's [RPC](#rpc) list, so the plugin still reaches it through raw `invoke`.
+- `current_receive_address` and `next_receive_address` call `ensure_primary_account_key` before they will return even an address the wallet already stored, and that call fails on a seed wallet whose signing session is locked. Address derivation downstream uses viewing keys only, and `list_key_groups` already skips the call in exactly this state; the two address entry points should skip it the same way ([phase 13](#phase-13-addresses-under-a-locked-signing-session)).
+- `0.3.4` reports a rebroadcast of a transaction the node already holds as a failure carrying the node's answer and code, e.g. `Broadcast failed: Network error: Broadcast failed: 18: txn-already-in-mempool (code -26)`; every node rejection the shipped library builds ends in that `(code N)` trailer. Upstream `main` counts that as success since 2026-09-15; a release carrying it lets the plugin's known-transaction match go ([phase 15](#phase-15-sends-that-landed-but-reported-a-broadcast-error)).
 - `broadcast_tx` does not follow the pool's failover: with the primary returning 502 and the sync engine already on the alternate, every broadcast still went to the primary and failed ([section 7](#7-testing) item 26). A wallet that can sync over the pool should be able to broadcast over it.
 - The two Android binary packages carry no `os` or `cpu` metadata, so every Linux runner and every Mac downloads 280MB it cannot use; an `os`/`cpu` gate on them would be a cheap win for every consumer.
 - `SpendabilityStatus` types `anchorHeight` and `validatedAnchorHeight` as `number`, but a finalizing wallet reports them as `null`; the declaration should say `number | null`.
@@ -508,10 +573,10 @@ Old per-wallet registries are abandoned rather than migrated: wallets re-restore
 - **Reopen if:** the SDK gains per-wallet or per-context storage selection, making isolation possible without cancelling sync.
 
 ### Decision 2: send through the SDK, not raw invoke
-- **Chosen:** `walletSdk.send(walletId, outputs, fee)`.
+- **Chosen:** the SDK's own wrappers, `buildTransaction`, `signTransaction` and `broadcastTransaction`, the three calls `walletSdk.send` makes. The bridge calls them itself so it can rebroadcast the signed payload ([phase 15](#phase-15-sends-that-landed-but-reported-a-broadcast-error)).
 - **Evidence:** v1.1.5 fixed the camelization bug (merged from [PR #19](https://github.com/PirateNetwork/Pirate-Unified-Light-Wallet/pull/19)) that forced the raw path, and its `send()` both preserves the opaque intermediate payloads and normalizes amounts to strings.
 - **Rejected:** keeping the manual `build_tx` / `sign_tx` / `broadcast_tx` over raw `invoke`, which now duplicates SDK logic and, because raw `invoke` skips the SDK's amount normalization, would send unnormalized numeric amounts.
-- **Reopen if:** a future SDK release changes `send()` semantics or reintroduces the payload rewrite.
+- **Reopen if:** a future SDK release changes the wrappers' semantics, reintroduces the payload rewrite, or recovers an unknown broadcast outcome itself.
 
 ### Decision 3: the registry credential lives in the OS keychain
 - **Chosen:** `configureSecureAccountStorage({ accountId: 'edge-pirate-keychain' })`. The native module mints the passphrase, keeps it in the iOS [Keychain](#keychain) or Android [Keystore](#keystore), and never returns it to JavaScript.
@@ -541,7 +606,7 @@ Old per-wallet registries are abandoned rather than migrated: wallets re-restore
 - **Reopen if:** the SDK adds a spendability signal to the synchronizer's update events, which would let the send scene disable its slider before the user reaches it rather than at `makeSpend`. The `reasonCode` values are documented as of 0.3.4 and the copy branches on them.
 
 ### Decision 6: the signing session credential is an HMAC of the mnemonic
-- **Chosen:** `deriveSigningCredential(mnemonic)`, an [HMAC](#hmac) keyed by a fixed domain string over [SHA-256](#sha-256), computed in the engine on every synchronizer start and held only in the config object handed to the bridge ([wallet signing sessions](#wallet-signing-sessions)). Protection is enabled the first time a wallet is seen and locked at once; the credential unlocks the key only for the span of a send.
+- **Chosen:** `deriveSigningCredential(mnemonic)`, an [HMAC](#hmac) keyed by a fixed domain string over [SHA-256](#sha-256), computed in the engine on every synchronizer start and held only in the config object handed to the bridge ([wallet signing sessions](#wallet-signing-sessions)). Protection is enabled the first time a wallet is seen and locked at once; the credential unlocks the key only for the span of the call that needs it.
 - **Evidence:** the SDK asks for "the Edge account session credential", and edge-core-js exposes no such thing to a currency plugin: engines receive wallet keys through `syncNetwork`'s `privateKeys`, nothing account-scoped. The mnemonic has the lifecycle the SDK wants, present exactly while the account is unlocked and gone when the engine is killed, and it is already the secret the wallet's spending keys derive from, so a one-way function of it adds no new secret to protect. `create-hmac` is declared as a direct dependency at the version the repo's `overrides` already pinned, with `@types/create-hmac` for its types; before the 2026-09-11 review it resolved only through npm hoisting, behind a hand-written declaration.
 - **Rejected:** leaving signing protection off. Then the Keychain credential alone unlocks signing, and anything that can call the native module while the device is unlocked can sign, which is the residual [decision 3](#decision-3-the-registry-credential-lives-in-the-os-keychain) leaves open.
 - **Rejected:** a random per-wallet secret on the disklet, which reintroduces the plaintext-secret-in-the-sandbox problem this round retires.
@@ -650,6 +715,7 @@ Written from the two branches as they stand, before merge.
 5. Every round through phase 7 treated "one reachable clearnet node" as a fact about the world. It was a fact about what had been looked at: the Pirate team named two more in a review comment on the plugin PR on 2026-08-17, and phase 8 found it there eight days later. The doc's [failover pool](#the-lightwalletd-failover-pool) section argued for an empty default from that premise, and [section 7](#7-testing) item 14 blamed sync throughput on the SDK from the same blind spot.
 6. Phase 7 recorded "3 to 5 blocks/sec on `0.3.2`" without recording what wallet produced it. The figure came from a wallet whose birthday sat 64k blocks below the tip, which is not comparable to a scan from a 2024 birthday, and it sent phase 8 looking for an SDK regression that turned out to be an endpoint problem. A rate without its block range is not a measurement.
 7. [Decision 3](#decision-3-the-registry-credential-lives-in-the-os-keychain) rejected the OS keychain in its earlier form as "a native dependency for a secret that guards device-local data the OS already sandboxes". The security review's point was that the sandbox is exactly the boundary a plaintext file trusts too much, and the SDK's 0.3.4 entry point made the keychain free. The rejection was cost reasoning applied to a security question.
+8. [What held](#what-held) listed the engine's transaction mapping as unchanged by the rewrite, and treated that as a strength. Unchanged meant a 2023 leak came along with it: every incoming transaction named the wallet's viewing key as its receive address ([phase 16](#phase-16-the-viewing-key-as-a-receive-address)). No phase checked what the mapping put in each field.
 
 ### What held
 

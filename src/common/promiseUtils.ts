@@ -256,3 +256,20 @@ export async function asyncStaggeredRace(
     setTimers()
   })
 }
+
+/**
+ * Returns a runner that starts each task only once every task queued before
+ * it has settled, so tasks never interleave. A task's rejection reaches only
+ * its own caller: the tasks queued behind it still run.
+ */
+export function makeSerialQueue(): <T>(task: () => Promise<T>) => Promise<T> {
+  let tail: Promise<unknown> = Promise.resolve()
+  return async <T>(task: () => Promise<T>): Promise<T> => {
+    const run = tail.then(task)
+    tail = run.then(
+      () => undefined,
+      () => undefined
+    )
+    return await run
+  }
+}
