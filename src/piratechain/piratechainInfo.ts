@@ -10,7 +10,7 @@ import {
   PiratechainNetworkInfo
 } from './piratechainTypes'
 
-const networkInfo: PiratechainNetworkInfo = {
+export const networkInfo: PiratechainNetworkInfo = {
   rpcNode: {
     networkName: 'mainnet',
     defaultHost: 'lightd1.pirate.black',
@@ -37,7 +37,7 @@ const networkInfo: PiratechainNetworkInfo = {
   defaultNetworkFee: '10000'
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ARRR',
   assetDisplayName: 'Pirate Chain',
   chainDisplayName: 'Pirate Chain',
