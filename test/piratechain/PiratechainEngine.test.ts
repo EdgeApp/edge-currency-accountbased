@@ -7,7 +7,7 @@ import {
   makeFakeIo
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
-import type { TransactionInfo } from 'react-native-pirate-wallet'
+import type { TransactionInfo } from 'piratechain-native'
 
 import { PluginEnvironment } from '../../src/common/innerPlugin'
 import { TRANSACTION_STORE_FILE } from '../../src/common/types'

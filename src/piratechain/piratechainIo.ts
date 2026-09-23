@@ -17,8 +17,8 @@ import type {
   PirateWalletSdk,
   SynchronizerStatus,
   TransactionInfo
-} from 'react-native-pirate-wallet'
-import { createPirateWalletSdk } from 'react-native-pirate-wallet'
+} from 'piratechain-native'
+import { createPirateWalletSdk } from 'piratechain-native'
 import { bridgifyObject, emit, onMethod, Subscriber } from 'yaob'
 
 import { makeSerialQueue } from '../common/promiseUtils'
@@ -307,12 +307,33 @@ export async function broadcastUntilKnown(
   }
 }
 
-export function makePiratechainIo(): PiratechainIo {
+/**
+ * Everything the plugin does with Pirate Chain, over an SDK this module does
+ * not build itself.
+ *
+ * React Native and Node reach the same native service through different
+ * transports, so the caller supplies the SDK and every rule below — the
+ * device-scoped registry, the serialized registry mutations, the signing
+ * session — is shared rather than written twice.
+ */
+export interface PiratechainPlatform {
+  /**
+   * Hands the SDK its Sapling proving parameters before the first spend, on
+   * builds whose native binary leaves them out. Omit it where the binary
+   * embeds them (built with the SDK's `embedded-sapling-params` feature).
+   */
+  configureSaplingParams?: (sdk: PirateWalletSdk) => Promise<void>
+}
+
+export function wrapPiratechainNative(
+  createSdk: () => PirateWalletSdk,
+  platform: PiratechainPlatform = {}
+): PiratechainIo {
   // The SDK constructor throws when the native module isn't linked, so
-  // create it lazily to keep `makePiratechainIo` safe on every platform:
+  // create it lazily to keep this safe on every platform:
   let sdk: PirateWalletSdk | undefined
   const getSdk = (): PirateWalletSdk => {
-    if (sdk == null) sdk = createPirateWalletSdk()
+    if (sdk == null) sdk = createSdk()
     return sdk
   }
 
@@ -365,17 +386,20 @@ export function makePiratechainIo(): PiratechainIo {
   }
 
   /**
-   * The Android SDK binary leaves the Sapling proving parameters out, so a
-   * spend needs them downloaded and handed to the SDK first. The SDK verifies
-   * the files and caches the prover for the life of the process, so success is
-   * cached here too; a failure clears the cache so the next call tries again.
-   * iOS builds embed the parameters and skip this.
+   * Some SDK binaries leave the Sapling proving parameters out, so a spend
+   * needs them handed to the SDK first. Which binaries those are is the
+   * caller's knowledge, passed in as `platform.configureSaplingParams`; this
+   * shared code never asks what platform it is on, since it also runs under
+   * Node, where React Native cannot load. The SDK verifies the files and
+   * caches the prover for the life of the process, so success is cached here
+   * too; a failure clears the cache so the next call tries again.
    */
   let saplingParamsPromise: Promise<void> | undefined
   const ensureSaplingParamsConfigured = async (): Promise<void> => {
-    if (!isAndroid()) return
+    const { configureSaplingParams } = platform
+    if (configureSaplingParams == null) return
     if (saplingParamsPromise == null) {
-      saplingParamsPromise = configureSaplingParams().catch(
+      saplingParamsPromise = configureSaplingParams(getSdk()).catch(
         (error: unknown) => {
           saplingParamsPromise = undefined
           throw error
@@ -383,16 +407,6 @@ export function makePiratechainIo(): PiratechainIo {
       )
     }
     await saplingParamsPromise
-  }
-
-  const configureSaplingParams = async (): Promise<void> => {
-    const { disk, documentDir } = makeFileAccessDisk()
-    const paramsDir = `${documentDir}/${SAPLING_PARAMS_DIR_NAME}`
-    await ensureSaplingParams(disk, paramsDir)
-    await getSdk().initializeSaplingParameters({
-      spendPath: `${paramsDir}/${SAPLING_SPEND_PARAMS}`,
-      outputPath: `${paramsDir}/${SAPLING_OUTPUT_PARAMS}`
-    })
   }
 
   /**
@@ -759,4 +773,27 @@ function isAndroid(): boolean {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { Platform }: { Platform: { OS: string } } = require('react-native')
   return Platform.OS === 'android'
+}
+
+/**
+ * The Android SDK binary leaves the Sapling proving parameters out, so they
+ * are downloaded and handed to the SDK. iOS builds embed them and skip this.
+ */
+async function configureAndroidSaplingParams(
+  sdk: PirateWalletSdk
+): Promise<void> {
+  if (!isAndroid()) return
+  const { disk, documentDir } = makeFileAccessDisk()
+  const paramsDir = `${documentDir}/${SAPLING_PARAMS_DIR_NAME}`
+  await ensureSaplingParams(disk, paramsDir)
+  await sdk.initializeSaplingParameters({
+    spendPath: `${paramsDir}/${SAPLING_SPEND_PARAMS}`,
+    outputPath: `${paramsDir}/${SAPLING_OUTPUT_PARAMS}`
+  })
+}
+
+export function makePiratechainIo(): PiratechainIo {
+  return wrapPiratechainNative(() => createPirateWalletSdk(), {
+    configureSaplingParams: configureAndroidSaplingParams
+  })
 }

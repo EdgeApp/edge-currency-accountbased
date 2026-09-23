@@ -13,7 +13,7 @@ import {
   NoAmountSpecifiedError,
   PendingFundsError
 } from 'edge-core-js/types'
-import type { TransactionInfo } from 'react-native-pirate-wallet'
+import type { TransactionInfo } from 'piratechain-native'
 import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'

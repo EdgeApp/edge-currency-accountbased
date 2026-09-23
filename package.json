@@ -117,6 +117,7 @@
     "ethers": "^5.6.0",
     "isomorphic-ws": "^5.0.0",
     "monero-native": "^0.0.1",
+    "piratechain-native": "^0.0.1",
     "zano-native": "^0.0.1",
     "zcash-native": "^0.0.1",
     "rfc4648": "^1.5.0",
@@ -179,7 +180,7 @@
     "prettier": "^2.2.0",
     "process": "^0.11.10",
     "querystring": "^0.2.1",
-    "react-native-pirate-wallet": "0.3.9",
+    "piratechain-native": "^0.0.1",
     "monero-native": "^0.0.1",
     "zano-native": "^0.0.1",
     "zcash-native": "^0.0.1",
@@ -198,7 +199,7 @@
   },
   "peerDependencies": {
     "react-native-file-access": "^3.1.1",
-    "react-native-pirate-wallet": "^0.3.9",
+    "piratechain-native": "^0.0.1",
     "monero-native": "^0.0.1",
     "zano-native": "^0.0.1",
     "zcash-native": "^0.0.1"
@@ -207,7 +208,7 @@
     "monero-native": {
       "optional": true
     },
-    "react-native-pirate-wallet": {
+    "piratechain-native": {
       "optional": true
     },
     "zano-native": {
@@ -219,6 +220,7 @@
   },
   "optionalDependencies": {
     "monero-native": "0.0.1",
+    "piratechain-native": "0.0.1",
     "zano-native": "0.0.1",
     "zcash-native": "0.0.1"
   },
