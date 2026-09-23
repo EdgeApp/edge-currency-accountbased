@@ -59,6 +59,70 @@ describe('wrapPiratechainNative', function () {
   })
 })
 
+describe('getCurrentAddress signing session', function () {
+  it('unlocks for the read and re-locks afterwards', async function () {
+    const calls: string[] = []
+    let unlocked = false
+    const sdk: any = {
+      configureSecureAccountStorage: async () => ({}),
+      invoke: async () => JSON.stringify({ ok: true, result: {} }),
+      walletRegistryExists: async () => false,
+      listWallets: async () => [],
+      restoreWallet: async () => 'wallet-1',
+      getWalletSigningStatus: async () => ({
+        protectionEnabled: true,
+        unlocked
+      }),
+      enableWalletSigningProtection: async () => ({
+        protectionEnabled: true,
+        unlocked
+      }),
+      unlockWalletSigning: async () => {
+        unlocked = true
+        calls.push('unlock')
+      },
+      lockWalletSigning: async () => {
+        unlocked = false
+        calls.push('lock')
+      },
+      getCurrentReceiveAddress: async () => {
+        // The SDK resolves the account key only through an unlocked session.
+        if (!unlocked) throw new Error('Watch-only account key not found')
+        calls.push('read')
+        return 'zs1probe'
+      },
+      createSynchronizer: () => ({
+        subscribe: () => undefined,
+        balance: null,
+        transactions: [],
+        start: async () => undefined,
+        close: async () => undefined
+      }),
+      getLightdEndpointPoolDiagnostics: async () => ({}),
+      setLightdEndpoint: async () => ({}),
+      setLightdEndpointPool: async () => ({}),
+      getSyncStatus: async () => ({ targetHeight: 0 }),
+      getSpendabilityStatus: async () => ({}),
+      exportSaplingViewingKey: async () => 'zxviews1probe'
+    }
+
+    const io = wrapPiratechainNative(() => sdk)
+    const sync = await io.makeSynchronizer({
+      name: 'PROBE',
+      mnemonic: 'x',
+      birthdayHeight: 1,
+      signingCredential: 'cred'
+    } as any)
+
+    const address = await sync.getCurrentAddress()
+
+    expect(address).to.equal('zs1probe')
+    // The read must sit between an unlock and a re-lock, or a fresh device
+    // gets "Watch-only account key not found" on its first address lookup.
+    expect(calls.slice(-3)).to.deep.equal(['unlock', 'read', 'lock'])
+  })
+})
+
 describe('makePiratechainIo (node)', function () {
   it('creates its document directory and returns the same surface', function () {
     const documentDirectory = join(

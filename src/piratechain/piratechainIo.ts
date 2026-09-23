@@ -487,7 +487,20 @@ export function wrapPiratechainNative(
           )
         },
         getCurrentAddress: async () => {
-          return await walletSdk.getCurrentReceiveAddress(walletId)
+          // Reading the receive address resolves the account key, which the
+          // SDK only exposes through an unlocked signing session — the same
+          // gate the spend path passes. Synchronizer setup deliberately leaves
+          // the wallet locked, so a read has to open and close the session
+          // itself. Without this, the very first address lookup on a device
+          // fails with "Watch-only account key not found": the engine only
+          // calls the SDK when `otherData.cachedAddress` is empty, which is
+          // exactly the state a fresh install or a new-device login is in.
+          await ensureSigningUnlocked()
+          try {
+            return await walletSdk.getCurrentReceiveAddress(walletId)
+          } finally {
+            await lockSigning()
+          }
         },
         getEndpointDiagnostics: async () => {
           return await walletSdk.getLightdEndpointPoolDiagnostics(walletId)
