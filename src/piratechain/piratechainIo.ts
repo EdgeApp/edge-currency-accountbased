@@ -17,8 +17,8 @@ import type {
   PirateWalletSdk,
   SynchronizerStatus,
   TransactionInfo
-} from 'react-native-pirate-wallet'
-import { createPirateWalletSdk } from 'react-native-pirate-wallet'
+} from 'piratechain-native'
+import { createPirateWalletSdk } from 'piratechain-native'
 import { bridgifyObject, emit, onMethod, Subscriber } from 'yaob'
 
 export interface PiratechainStatusEvent {
@@ -188,12 +188,23 @@ const asTransactionInfo = asObject<TransactionInfo>({
   confirmed: asBoolean
 })
 
-export function makePiratechainIo(): PiratechainIo {
+/**
+ * Everything the plugin does with Pirate Chain, over an SDK this module does
+ * not build itself.
+ *
+ * React Native and Node reach the same native service through different
+ * transports, so the caller supplies the SDK and every rule below — the
+ * device-scoped registry, the serialized registry mutations, the signing
+ * session — is shared rather than written twice.
+ */
+export function wrapPiratechainNative(
+  createSdk: () => PirateWalletSdk
+): PiratechainIo {
   // The SDK constructor throws when the native module isn't linked, so
-  // create it lazily to keep `makePiratechainIo` safe on every platform:
+  // create it lazily to keep this safe on every platform:
   let sdk: PirateWalletSdk | undefined
   const getSdk = (): PirateWalletSdk => {
-    if (sdk == null) sdk = createPirateWalletSdk()
+    if (sdk == null) sdk = createSdk()
     return sdk
   }
 
@@ -549,4 +560,8 @@ export function makePiratechainIo(): PiratechainIo {
       return out
     }
   })
+}
+
+export function makePiratechainIo(): PiratechainIo {
+  return wrapPiratechainNative(() => createPirateWalletSdk())
 }

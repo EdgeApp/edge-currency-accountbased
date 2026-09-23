@@ -9,7 +9,6 @@ import { calibration } from './filecoin/calibrationInfo'
 import { filecoin } from './filecoin/filecoinInfo'
 import { fio } from './fio/fioInfo'
 import { hedera } from './hedera/hederaInfo'
-import { piratechain } from './piratechain/piratechainInfo'
 import { liberland } from './polkadot/info/liberlandInfo'
 import { liberlandtestnet } from './polkadot/info/liberlandTestnetInfo'
 import { polkadot } from './polkadot/info/polkadotInfo'
@@ -23,18 +22,22 @@ import { ton } from './ton/tonInfo'
 import { tron } from './tron/tronInfo'
 
 type MoneroOuterPlugin = typeof import('./monero/moneroInfo').monero
+type PiratechainOuterPlugin =
+  typeof import('./piratechain/piratechainInfo').piratechain
 type ZanoOuterPlugin = typeof import('./zano/zanoInfo').zano
 type ZcashOuterPlugin = typeof import('./zcash/zcashInfo').zcash
 
 /**
  * Shared accountbased plugin catalog. Callers pass platform-specific Monero,
- * Zano, and Zcash outer plugins so each entry keeps a static import graph.
+ * Pirate Chain, Zano, and Zcash outer plugins so each entry keeps a static
+ * import graph.
  */
 // Infer the return shape from the plugin factories; annotating as EdgeCorePlugins
 // widens values and breaks callers that expect EdgeCorePluginFactory.
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function makePluginMap(
   monero: MoneroOuterPlugin,
+  piratechain: PiratechainOuterPlugin,
   zano: ZanoOuterPlugin,
   zcash: ZcashOuterPlugin
 ) {
