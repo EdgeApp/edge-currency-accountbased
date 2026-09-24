@@ -5,6 +5,7 @@ import { describe, it } from 'mocha'
 import plugins from '../../src/index'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore } from '../fake/fakeStorage'
 
 const fakeIo = makeFakeIo()
 const opts: EdgeCorePluginOptions = {
@@ -13,6 +14,7 @@ const opts: EdgeCorePluginOptions = {
   io: fakeIo,
   log: fakeLog,
   nativeIo: {},
+  pluginDatabase: makeMemoryPluginStore(),
   pluginDisklet: fakeIo.disklet
 }
 

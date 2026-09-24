@@ -1,10 +1,12 @@
 import { expect } from 'chai'
+import { Disklet } from 'disklet'
 import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeTransaction,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 import type { TransactionInfo } from 'react-native-pirate-wallet'
@@ -18,6 +20,7 @@ import {
   SafePiratechainWalletInfo
 } from '../../src/piratechain/piratechainTypes'
 import { fakeLog } from '../fake/fakeLog'
+import { makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 /** The shape of an extended viewing key, which is the wallet's publicKey: */
 const VIEWING_KEY = 'zxviews1qfakeextendedviewingkeyforthisunittestonly'
@@ -80,10 +83,16 @@ function makeLeakedTx(txid: string): EdgeTransaction {
   }
 }
 
-async function makeEngine(
-  storedTxs?: EdgeTransaction[]
-): Promise<{ engine: PiratechainEngine; readStore: () => Promise<string> }> {
+async function makeEngine(storedTxs?: EdgeTransaction[]): Promise<{
+  engine: PiratechainEngine
+  disklet: Disklet
+  readStore: () => Promise<string>
+}> {
   const fakeIo = makeFakeIo()
+  const txDatabase = await makeMemoryTxDatabase({
+    walletId: 'wallet-1',
+    pluginId: 'piratechain'
+  })
   if (storedTxs != null) {
     await fakeIo.disklet.setText(
       TRANSACTION_STORE_FILE,
@@ -98,7 +107,8 @@ async function makeEngine(
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: fakeIo.disklet,
+    legacyDisklet: makeReadOnlyDisklet(fakeIo.disklet),
+    txDatabase,
     walletLocalEncryptedDisklet: fakeIo.disklet,
     walletSettings: {}
   }
@@ -128,7 +138,9 @@ async function makeEngine(
 
   return {
     engine,
-    readStore: async () => await fakeIo.disklet.getText(TRANSACTION_STORE_FILE)
+    disklet: fakeIo.disklet,
+    // The stored copy is the wallet's rows, which the files import into:
+    readStore: async () => JSON.stringify(await txDatabase.getTxs())
   }
 }
 
@@ -153,13 +165,24 @@ describe('PiratechainEngine receive addresses', function () {
     expect(tx.ourReceiveAddresses).deep.equals([])
 
     // Reprocessing the same confirmed transaction leaves the stored copy
-    // alone, so the scrub is what has to reach the disk:
+    // alone, so the scrub is what has to reach the rows:
     engine.processTransaction(makeIncomingTx(txid))
     expect(engine.transactionListDirty).equals(true)
     await (engine as any).saveWalletLoop()
     const stored = await readStore()
     expect(stored).includes(txid)
     expect(stored).not.includes(VIEWING_KEY)
+  })
+
+  it('deletes the file an earlier build leaked the key into', async function () {
+    const txid = 'dd'.repeat(32)
+    const { engine, disklet } = await makeEngine([makeLeakedTx(txid)])
+
+    // The import moved it into rows, then the file went:
+    const listing = await disklet.list('txEngineFolder')
+    expect(Object.keys(listing)).not.includes(TRANSACTION_STORE_FILE)
+    const [tx] = await engine.getTransactions({ tokenId: null })
+    expect(tx.txid).equals(txid)
   })
 
   it('leaves an already clean store unchanged', async function () {

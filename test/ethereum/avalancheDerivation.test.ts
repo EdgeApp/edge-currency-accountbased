@@ -11,6 +11,7 @@ import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore } from '../fake/fakeStorage'
 
 // A 12-word seed and the receive address it yields on EVM wallets (Exodus,
 // MetaMask, Trust) which all derive at coin type 60. Ethereum, Polygon and
@@ -35,6 +36,7 @@ const makeOpts = (): EdgeCorePluginOptions => {
     io: { ...fakeIo, fetch, fetchCors: fetch },
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: fakeIo.disklet
   }
 }

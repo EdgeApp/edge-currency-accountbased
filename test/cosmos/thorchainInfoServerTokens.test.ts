@@ -12,6 +12,7 @@ import { createCosmosTokenId } from '../../src/common/tokenHelpers'
 import { thorchainrune } from '../../src/cosmos/info/thorchainruneInfo'
 import { thorchainrunestagenet } from '../../src/cosmos/info/thorchainruneStagenetInfo'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore } from '../fake/fakeStorage'
 
 // The THORChain bank tokens Edge serves from the info server,
 // as [currencyCode, raw denom, tokenId]:
@@ -54,6 +55,7 @@ function makePlugin(
     io: fakeIo,
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: fakeIo.disklet
   })
 }
