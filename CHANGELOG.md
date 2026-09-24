@@ -5,6 +5,7 @@
 - fixed: (ARRR) Wallets show their receive address again instead of failing with "Watch-only account key not found"
 - fixed: (ARRR) Sent transactions no longer appear twice, once permanently pending
 - fixed: (ARRR) Sends that reach the network no longer end on "Transaction Status Unknown" after a dropped connection
+- fixed: (ARRR) Transaction exports and details no longer show the wallet's viewing key as a receive address
 
 ## 4.95.0 (2026-09-21)
 

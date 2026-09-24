@@ -1,4 +1,4 @@
-import { abs, add, eq, gt, gte, lte, mul, sub } from 'biggystring'
+import { abs, add, eq, gt, lte, mul, sub } from 'biggystring'
 import createHmac from 'create-hmac'
 import {
   EdgeCurrencyEngine,
@@ -132,6 +132,28 @@ export class PiratechainEngine extends CurrencyEngine<
     this.queryMutex = false
   }
 
+  protected async loadTransactions(): Promise<void> {
+    const alreadyLoaded = this.transactionsLoaded
+    await super.loadTransactions()
+    if (!alreadyLoaded) this.scrubReceiveAddresses()
+  }
+
+  /**
+   * Earlier builds stored the wallet's viewing key as the receive address
+   * of every incoming transaction. Reprocessing a confirmed transaction does
+   * not rewrite its stored copy, so clear the field here. The engine never
+   * records receive addresses, so any entry is the leaked key.
+   */
+  scrubReceiveAddresses(): void {
+    for (const tokenId of Object.keys(this.transactionList)) {
+      for (const edgeTransaction of this.transactionList[tokenId]) {
+        if (edgeTransaction.ourReceiveAddresses.length === 0) continue
+        edgeTransaction.ourReceiveAddresses = []
+        this.transactionListDirty = true
+      }
+    }
+  }
+
   async startEngine(): Promise<void> {
     this.started = true
     await super.startEngine()
@@ -198,10 +220,6 @@ export class PiratechainEngine extends CurrencyEngine<
   processTransaction(tx: TransactionInfo): void {
     // A negative amount is a send and already includes the network fee:
     const netNativeAmount = String(tx.amount)
-    const ourReceiveAddresses = []
-    if (gte(netNativeAmount, '0')) {
-      ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
-    }
 
     const edgeMemos: EdgeMemo[] =
       tx.memo != null && tx.memo !== ''
@@ -224,7 +242,10 @@ export class PiratechainEngine extends CurrencyEngine<
       networkFee: String(tx.fee),
       networkFees: [],
       otherParams: {},
-      ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
+      // The SDK does not report which of our diversified addresses received
+      // the funds, and the wallet's public key is its viewing key, which must
+      // never leave the engine:
+      ourReceiveAddresses: [],
       signedTx: '',
       tokenId: null,
       txid: tx.txid,
