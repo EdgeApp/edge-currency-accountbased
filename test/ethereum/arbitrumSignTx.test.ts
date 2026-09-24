@@ -3,7 +3,8 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeTransaction,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { ethers } from 'ethers'
 import { createServer, Server } from 'http'
@@ -19,6 +20,7 @@ import {
 } from '../../src/ethereum/ethereumTypes'
 import { currencyInfo } from '../../src/ethereum/info/robinhoodInfo'
 import { fakeLog } from '../fake/fakeLog'
+import { makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 const PRIVATE_KEY = '01'.repeat(32)
 const WALLET = new ethers.Wallet(`0x${PRIVATE_KEY}`).address
@@ -93,7 +95,11 @@ describe('EthereumEngine.signTx on an Arbitrum rollup', function () {
       enabledTokenIds: [],
       log: fakeLog,
       userSettings: {},
-      walletLocalDisklet: fakeIo.disklet,
+      legacyDisklet: makeReadOnlyDisklet(fakeIo.disklet),
+      txDatabase: await makeMemoryTxDatabase({
+        walletId: 'wallet-1',
+        pluginId: 'arbitrum'
+      }),
       walletLocalEncryptedDisklet: fakeIo.disklet,
       walletSettings: {}
     }

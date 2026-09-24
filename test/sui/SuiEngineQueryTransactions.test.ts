@@ -7,7 +7,8 @@ import {
   EdgeIo,
   EdgeTokenMap,
   EdgeTransaction,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 import { base64 } from 'rfc4648'
@@ -25,6 +26,7 @@ import { currencyInfo } from '../../src/sui/suiInfo'
 import { SuiTools } from '../../src/sui/SuiTools'
 import type { SuiNetworkInfo } from '../../src/sui/suiTypes'
 import { fakeLog } from '../fake/fakeLog'
+import { makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 const GRAPHQL_URL = 'https://graphql.test'
 const GRAPHQL_URL_2 = 'https://graphql2.test'
@@ -219,7 +221,11 @@ async function makeFakeSui(opts: {
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: io.disklet,
+    legacyDisklet: makeReadOnlyDisklet(io.disklet),
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: 'wallet-1',
+      pluginId: 'sui'
+    }),
     walletLocalEncryptedDisklet: io.disklet,
     walletSettings: {}
   }

@@ -18,6 +18,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { TRANSACTION_STORE_FILE } from '../common/types'
 import { cleanTxLogs, normalizeAddress } from '../common/utils'
 import type {
   PiratechainIo,
@@ -72,6 +73,9 @@ export class PiratechainEngine extends CurrencyEngine<
     makeSynchronizer: PiratechainIo['makeSynchronizer']
   ) {
     super(env, tools, walletInfo, opts, makePiratechainSyncTracker)
+    // Earlier builds wrote the viewing key into this file as each incoming
+    // transaction's receive address. Once it is rows, it goes:
+    this.deleteAfterImport = [TRANSACTION_STORE_FILE]
     const { networkInfo } = env
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo

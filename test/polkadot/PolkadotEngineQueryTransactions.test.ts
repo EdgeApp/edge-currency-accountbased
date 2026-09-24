@@ -5,7 +5,8 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeIo,
   EdgeSyncStatus,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
@@ -16,6 +17,7 @@ import { PolkadotEngine } from '../../src/polkadot/PolkadotEngine'
 import { PolkadotTools } from '../../src/polkadot/PolkadotTools'
 import type { PolkadotNetworkInfo } from '../../src/polkadot/polkadotTypes'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore, makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 const RELAY_URL = 'https://relay.subscan.test/api'
 const ASSET_HUB_URL = 'https://assethub.subscan.test/api'
@@ -104,6 +106,7 @@ async function makeFakePolkadot(
     io,
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: io.disklet
   })
 
@@ -154,7 +157,11 @@ async function makeFakePolkadot(
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: io.disklet,
+    legacyDisklet: makeReadOnlyDisklet(io.disklet),
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: 'wallet-1',
+      pluginId: 'polkadot'
+    }),
     walletLocalEncryptedDisklet: io.disklet,
     walletSettings: {}
   }

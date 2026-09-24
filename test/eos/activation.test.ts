@@ -7,7 +7,8 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyPlugin,
   EdgeWalletInfo,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import { before, describe, it } from 'mocha'
@@ -15,6 +16,7 @@ import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore, makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 describe(`EOS activation`, function () {
   let engine: EdgeCurrencyEngine
@@ -31,6 +33,7 @@ describe(`EOS activation`, function () {
     },
     nativeIo: {},
     log: fakeLog,
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: fakeIo.disklet
   }
   const factory = edgeCorePlugins.eos
@@ -89,7 +92,7 @@ describe(`EOS activation`, function () {
     log: fakeLog,
     userSettings: {},
     walletSettings: {},
-    walletLocalDisklet,
+    legacyDisklet: makeReadOnlyDisklet(walletLocalDisklet),
     walletLocalEncryptedDisklet: walletLocalDisklet,
     customTokens: {},
     enabledTokenIds: []
@@ -107,6 +110,10 @@ describe(`EOS activation`, function () {
   }
 
   before('Engine', async function () {
+    currencyEngineOptions.txDatabase = await makeMemoryTxDatabase({
+      walletId: info.id,
+      pluginId: 'eos'
+    })
     return await plugin
       .makeCurrencyEngine(info, currencyEngineOptions)
       .then(result => {

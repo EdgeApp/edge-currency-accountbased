@@ -23,6 +23,7 @@ import { makeEdgeFetchAdapter } from '../../src/stellar/stellarHttp'
 import { stellar } from '../../src/stellar/stellarInfo'
 import type { StellarTools } from '../../src/stellar/StellarTools'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore } from '../fake/fakeStorage'
 
 // A fixed test key (the raw seed is 32 bytes of 0x07), plus an address to pay:
 const SECRET = 'SADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP54X'
@@ -94,6 +95,7 @@ async function makeHorizon(
     io,
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: io.disklet
   })
   const tools = (await plugin.makeCurrencyTools()) as StellarTools

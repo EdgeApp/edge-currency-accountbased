@@ -5,6 +5,7 @@ import { describe, it } from 'mocha'
 import { stellar } from '../../src/stellar/stellarInfo'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore } from '../fake/fakeStorage'
 
 // The account GB3C74…347YR5 with the routing ID 1234:
 const MUXED =
@@ -23,6 +24,7 @@ async function makeTools(): Promise<EdgeCurrencyTools> {
     io,
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: io.disklet
   }).makeCurrencyTools()
 }

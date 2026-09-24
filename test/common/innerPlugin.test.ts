@@ -15,6 +15,7 @@ import type { InnerPlugin } from '../../src/common/innerPlugin'
 import { makeOuterPlugin } from '../../src/common/innerPlugin'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore } from '../fake/fakeStorage'
 
 type FakeInnerPlugin = InnerPlugin<{}, EdgeCurrencyTools, {}>
 
@@ -25,6 +26,7 @@ const fakePluginOptions: EdgeCorePluginOptions = {
   io: fakeIo,
   log: fakeLog,
   nativeIo: {},
+  pluginDatabase: makeMemoryPluginStore(),
   pluginDisklet: fakeIo.disklet
 }
 

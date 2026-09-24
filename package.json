@@ -46,6 +46,7 @@
   "scripts": {
     "clean": "rimraf dist lib android/src/main/assets/edge-currency-accountbased",
     "cli": "node -r sucrase/register cli/cli.ts",
+    "coverage:rows": "nyc --check-coverage --lines 90 --include 'src/common/importFromDisklet.ts' --include 'src/common/txStore.ts' mocha",
     "fix": "eslint . --fix",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint .",
     "make-checkpoints": "node -r sucrase/register scripts/makeCheckpoints.ts",

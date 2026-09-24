@@ -5,7 +5,8 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
@@ -17,6 +18,7 @@ import {
 } from '../../src/stellar/stellarTypes'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore, makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 // A fixed test key (the raw seed is 32 bytes of 0x07), plus an address to pay:
 const SECRET = 'SADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP54X'
@@ -97,6 +99,7 @@ async function makeEngine(
     io,
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: io.disklet
   }
   const callbacks: EdgeCurrencyEngineCallbacks = {
@@ -123,7 +126,11 @@ async function makeEngine(
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: io.disklet,
+    legacyDisklet: makeReadOnlyDisklet(io.disklet),
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: 'wallet-1',
+      pluginId: 'stellar'
+    }),
     walletLocalEncryptedDisklet: io.disklet,
     walletSettings: {}
   }

@@ -1,5 +1,5 @@
 import { assert } from 'chai'
-import { makeFakeIo } from 'edge-core-js'
+import { EdgeTxDatabase, makeFakeIo, makeMemoryTxDatabase } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
 import {
@@ -13,6 +13,22 @@ import { ZanoTools } from '../../src/zano/ZanoTools'
 import { FAKE_ZANO_ADDRESS, makeFakeZanoEngine } from '../fake/fakeZanoEngine'
 
 const STORAGE_PATH = 'wallet-1-storage'
+
+/** One wallet's storage: its legacy files and its database. */
+interface Storage {
+  disklet: ReturnType<typeof makeFakeIo>['disklet']
+  txDatabase: EdgeTxDatabase
+}
+
+async function makeStorage(): Promise<Storage> {
+  return {
+    disklet: makeFakeIo().disklet,
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: 'zano-wallet',
+      pluginId: 'zano'
+    })
+  }
+}
 
 interface Launch {
   /** Native-asset balances the engine reported to the core, in order. */
@@ -28,9 +44,9 @@ interface Launch {
   save: () => Promise<void>
 }
 
-/** Loads the wallet stored on `disklet`, as one app launch does. */
+/** Loads the wallet in `storage`, as one app launch does. */
 async function launch(
-  disklet: ReturnType<typeof makeFakeIo>['disklet'],
+  storage: Storage,
   files: Set<string> = new Set([STORAGE_PATH])
 ): Promise<Launch> {
   const balances: string[] = []
@@ -59,7 +75,8 @@ async function launch(
   } as unknown as ZanoTools
 
   const engine = await makeFakeZanoEngine({
-    disklet,
+    disklet: storage.disklet,
+    txDatabase: storage.txDatabase,
     onTokenBalanceChanged: (tokenId, balance) => balances.push(balance),
     tools
   })
@@ -80,7 +97,7 @@ async function launch(
   }
 }
 
-/** Stores wallet-local data as a pre-HF7 build left it. */
+/** Leaves wallet-local data as a pre-HF7 build wrote it. */
 async function seedPreEpochWallet(
   disklet: ReturnType<typeof makeFakeIo>['disklet']
 ): Promise<void> {
@@ -124,10 +141,11 @@ async function seedPreEpochTransaction(
 
 describe('ZanoEngine chain epoch', () => {
   it('rebuilds a wallet from before the current epoch', async () => {
-    const { disklet } = makeFakeIo()
+    const storage = await makeStorage()
+    const { disklet } = storage
     await seedPreEpochWallet(disklet)
 
-    const first = await launch(disklet)
+    const first = await launch(storage)
     const raw = first.engine as any
     // The cached history and query cursor are dropped at load:
     assert.equal(raw.walletLocalData.blockHeight, 0)
@@ -143,28 +161,31 @@ describe('ZanoEngine chain epoch', () => {
 
   it('drops the cached transactions', async () => {
     // The fake engine has a seen-tx checkpoint, so the base load leaves
-    // the transaction files unread, as it does for any synced wallet:
-    const { disklet } = makeFakeIo()
+    // the imported transactions unread, as it does for any synced wallet:
+    const storage = await makeStorage()
+    const { disklet } = storage
     await seedPreEpochWallet(disklet)
     await seedPreEpochTransaction(disklet)
 
-    const first = await launch(disklet)
+    const first = await launch(storage)
     assert.deepEqual(await first.engine.getTransactions({ tokenId: null }), [])
-    assert.deepEqual(
-      JSON.parse(await disklet.getText(TRANSACTION_STORE_FILE)),
-      {}
-    )
+    assert.deepEqual(await storage.txDatabase.getTxs(), [])
+    // And the file it was imported from, so it cannot come back:
+    let missing = false
+    await disklet.getText(TRANSACTION_STORE_FILE).catch(() => (missing = true))
+    assert.equal(missing, true)
   })
 
   it('rebuilds only once', async () => {
-    const { disklet } = makeFakeIo()
+    const storage = await makeStorage()
+    const { disklet } = storage
     await seedPreEpochWallet(disklet)
 
-    const first = await launch(disklet)
+    const first = await launch(storage)
     await first.start()
     await first.save()
 
-    const second = await launch(disklet, first.files)
+    const second = await launch(storage, first.files)
     await second.start()
     assert.deepEqual(second.deleted, [])
     assert.equal((second.engine as any).otherData.chainEpoch, ZANO_CHAIN_EPOCH)
@@ -174,22 +195,24 @@ describe('ZanoEngine chain epoch', () => {
     // The load-time cache clear is saved to disk before `onStart` runs.
     // A kill in that window must not record the wallet as rebuilt, since
     // its native file still holds the pre-epoch chain.
-    const { disklet } = makeFakeIo()
+    const storage = await makeStorage()
+    const { disklet } = storage
     await seedPreEpochWallet(disklet)
 
-    const first = await launch(disklet)
+    const first = await launch(storage)
     await first.save()
 
-    const second = await launch(disklet, first.files)
+    const second = await launch(storage, first.files)
     await second.start()
     assert.deepEqual(second.deleted, [STORAGE_PATH])
   })
 
   it('rebuilds again when the native delete leaves the file', async () => {
-    const { disklet } = makeFakeIo()
+    const storage = await makeStorage()
+    const { disklet } = storage
     await seedPreEpochWallet(disklet)
 
-    const first = await launch(disklet)
+    const first = await launch(storage)
     const raw = first.engine as any
     raw.tools.zano.deleteWallet = async () => ({
       result: { return_code: 'OK' }
@@ -198,17 +221,18 @@ describe('ZanoEngine chain epoch', () => {
     assert.equal(raw.otherData.chainEpoch, 0)
     await first.save()
 
-    const second = await launch(disklet, first.files)
+    const second = await launch(storage, first.files)
     await second.start()
     assert.deepEqual(second.deleted, [STORAGE_PATH])
     assert.equal((second.engine as any).otherData.chainEpoch, ZANO_CHAIN_EPOCH)
   })
 
   it('keeps the epoch through a user resync', async () => {
-    const { disklet } = makeFakeIo()
+    const storage = await makeStorage()
+    const { disklet } = storage
     await seedPreEpochWallet(disklet)
 
-    const first = await launch(disklet)
+    const first = await launch(storage)
     await first.start()
     await first.save()
 
@@ -221,15 +245,16 @@ describe('ZanoEngine chain epoch', () => {
     assert.deepEqual(first.deleted, [STORAGE_PATH, STORAGE_PATH])
     await first.save()
 
-    const second = await launch(disklet, first.files)
+    const second = await launch(storage, first.files)
     await second.start()
     assert.deepEqual(second.deleted, [])
   })
 
   it('logs the native library version once', async () => {
-    const { disklet } = makeFakeIo()
+    const storage = await makeStorage()
+    const { disklet } = storage
     const lines: string[] = []
-    const first = await launch(disklet)
+    const first = await launch(storage)
     const raw = first.engine as any
     raw.log = Object.assign((message: string) => lines.push(message), {
       warn: () => {},
