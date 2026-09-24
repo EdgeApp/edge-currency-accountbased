@@ -1,7 +1,6 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
-import { DATA_STORE_FILE, TRANSACTION_STORE_FILE } from '../../src/common/types'
 import {
   db,
   makeStoreFixture,
@@ -116,9 +115,6 @@ describe('engine transaction store', function () {
   })
 
   it('imports a wallet that already has files on disk', async function () {
-    // Nothing marks the import as done. A wallet with transactions stored
-    // never reaches the files again, and one with none has nothing to import
-    // twice -- so the state itself is the marker.
     const fixture = await makeStoreFixture({
       legacyTxs: [
         makeTx({ tokenId: null, txid: '0xold' }),
@@ -126,8 +122,8 @@ describe('engine transaction store', function () {
       ]
     })
 
+    // Imported as the engine loaded, before any save:
     expect(fixture.engine.transactionList[''].length).equals(2)
-    await fixture.engine.save()
     expect((await db(fixture).getTxs()).length).equals(2)
 
     // And a restart reads the database, not the files:
@@ -166,29 +162,28 @@ describe('engine transaction store', function () {
   })
 
   it('forgets everything a resync clears', async function () {
-    const fixture = await makeStoreFixture()
+    const fixture = await makeStoreFixture({
+      legacyTxs: [makeTx({ tokenId: null, txid: '0xold' })],
+      legacyState: { blockHeight: 18000000 }
+    })
     fixture.engine.addTransaction(null, makeTx({ tokenId: null }))
     await fixture.engine.save()
-    expect((await db(fixture).getTxs()).length).equals(1)
+    expect((await db(fixture).getTxs()).length).equals(2)
 
     await fixture.engine.resync()
     expect((await db(fixture).getTxs()).length).equals(0)
+    expect(await db(fixture).findRows('txDetail', {})).deep.equals([])
 
-    // Including the files, which are what an empty database imports from --
-    // otherwise the next start reads back the history it was told to forget.
+    // Including the files, so they cannot be imported back:
+    expect(await fixture.disklet.list('txEngineFolder')).deep.equals({})
     const engine = await fixture.restart()
     expect(engine.transactionList['']?.length ?? 0).equals(0)
   })
 
-  it('still uses the files where there is no database', async function () {
-    const fixture = await makeStoreFixture({ txDatabase: undefined })
-    fixture.engine.addTransaction(null, makeTx({ tokenId: null }))
-    await fixture.engine.save()
-
-    const stored = JSON.parse(
-      await fixture.disklet.getText(TRANSACTION_STORE_FILE)
-    )
-    expect(stored[''].length).equals(1)
+  it('refuses to start without a database, naming it', async function () {
+    let error: unknown
+    await makeStoreFixture({ txDatabase: undefined }).catch(e => (error = e))
+    expect(String(error)).includes('transaction database')
   })
 })
 
@@ -234,15 +229,5 @@ describe('engine state', function () {
     expect(engine.walletLocalData.otherData).deep.equals({
       lastQueryCursor: 'abc'
     })
-  })
-
-  it('still uses the file where there is no database', async function () {
-    const fixture = await makeStoreFixture({ txDatabase: undefined })
-    fixture.engine.walletLocalData.blockHeight = 19000999
-    fixture.engine.walletLocalDataDirty = true
-    await fixture.engine.save()
-
-    const stored = JSON.parse(await fixture.disklet.getText(DATA_STORE_FILE))
-    expect(stored.blockHeight).equals(19000999)
   })
 })

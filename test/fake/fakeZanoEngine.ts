@@ -2,7 +2,8 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeTransactionEvent,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 
 import { PluginEnvironment } from '../../src/common/innerPlugin'
@@ -11,6 +12,7 @@ import { currencyInfo } from '../../src/zano/zanoInfo'
 import { ZanoTools } from '../../src/zano/ZanoTools'
 import { SafeZanoWalletInfo, ZanoNetworkInfo } from '../../src/zano/zanoTypes'
 import { fakeLog } from './fakeLog'
+import { makeReadOnlyDisklet } from './fakeStorage'
 
 export const FAKE_NATIVE_ASSET_ID =
   'd6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a'
@@ -59,7 +61,11 @@ export async function makeFakeZanoEngine(
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: fakeIo.disklet,
+    legacyDisklet: makeReadOnlyDisklet(fakeIo.disklet),
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: 'zano-wallet',
+      pluginId: 'zano'
+    }),
     walletLocalEncryptedDisklet: fakeIo.disklet,
     walletSettings: {}
   }

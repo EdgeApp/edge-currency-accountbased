@@ -10,6 +10,7 @@ import fetch from 'node-fetch'
 import { objectCheckOneWay } from '../../src/common/utils'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore } from '../fake/fakeStorage'
 
 const smartPayPublicAddress = 'TUmgPbM5J6om7Z2PJjzrbSEbXit84ZhVCj'
 
@@ -97,6 +98,7 @@ const opts: EdgeCorePluginOptions = {
   },
   log: fakeLog,
   nativeIo: {},
+  pluginDatabase: makeMemoryPluginStore(),
   pluginDisklet: fakeIo.disklet
 }
 

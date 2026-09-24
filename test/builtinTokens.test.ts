@@ -5,6 +5,7 @@ import { describe, it } from 'mocha'
 import { makeMetaTokens } from '../src/common/tokenHelpers'
 import plugins from '../src/index'
 import { fakeLog } from './fake/fakeLog'
+import { makeMemoryPluginStore } from './fake/fakeStorage'
 
 const fakeIo = makeFakeIo()
 const fakePluginOptions: EdgeCorePluginOptions = {
@@ -24,6 +25,7 @@ const fakePluginOptions: EdgeCorePluginOptions = {
     // created or excluded from device backups.
     zano: { documentDirectory: '/fake/documents' }
   },
+  pluginDatabase: makeMemoryPluginStore(),
   pluginDisklet: fakeIo.disklet
 }
 

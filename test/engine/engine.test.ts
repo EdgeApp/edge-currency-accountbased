@@ -8,7 +8,8 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeWalletInfo,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import { beforeEach, describe, it } from 'mocha'
@@ -23,6 +24,7 @@ import {
 import { asWalletLocalData, SafeCommonWalletInfo } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore, makeReadOnlyDisklet } from '../fake/fakeStorage'
 import { FakeTools } from '../fake/FakeTools'
 import { engineTestTxs } from './engine.txs'
 import fixtures from './fixtures'
@@ -35,6 +37,7 @@ describe('Engine', function () {
     io: { ...fakeIo, fetch, fetchCors: fetch },
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: fakeIo.disklet
   }
 
@@ -104,7 +107,7 @@ describe('Engine', function () {
       log: fakeLog,
       userSettings: {},
       walletSettings: {},
-      walletLocalDisklet,
+      legacyDisklet: makeReadOnlyDisklet(walletLocalDisklet),
       walletLocalEncryptedDisklet: walletLocalDisklet,
       customTokens: {},
       enabledTokenIds: []
@@ -116,6 +119,10 @@ describe('Engine', function () {
       // `makeCurrencyTools` dynamically imports the plugin's tools module, and
       // compiling it on demand can outrun mocha's 2s default.
       this.timeout(30000)
+      currencyEngineOptions.txDatabase = await makeMemoryTxDatabase({
+        walletId: Buffer.alloc(32, 0x11).toString('base64'),
+        pluginId: 'ethereum'
+      })
       tools = await plugin.makeCurrencyTools()
       const privateKeys = await tools.createPrivateKey(WALLET_TYPE)
       privateWalletInfo = {
@@ -298,7 +305,7 @@ describe('Engine', function () {
     log: fakeLog,
     userSettings: {},
     walletSettings: {},
-    walletLocalDisklet,
+    legacyDisklet: makeReadOnlyDisklet(walletLocalDisklet),
     walletLocalEncryptedDisklet: walletLocalDisklet,
     customTokens: {},
     enabledTokenIds: []
@@ -309,6 +316,7 @@ describe('Engine', function () {
     io: {} as any,
     log: {} as any,
     nativeIo: {} as any,
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: {} as any,
 
     builtinTokens: {},
