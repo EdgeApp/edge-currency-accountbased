@@ -2,7 +2,9 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeTransactionEvent,
-  makeFakeIo
+  EdgeTxDatabase,
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 
 import { PluginEnvironment } from '../../src/common/innerPlugin'
@@ -11,6 +13,7 @@ import { currencyInfo } from '../../src/zano/zanoInfo'
 import { ZanoTools } from '../../src/zano/ZanoTools'
 import { SafeZanoWalletInfo, ZanoNetworkInfo } from '../../src/zano/zanoTypes'
 import { fakeLog } from './fakeLog'
+import { makeReadOnlyDisklet } from './fakeStorage'
 
 export const FAKE_NATIVE_ASSET_ID =
   'd6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a'
@@ -24,8 +27,10 @@ export const FAKE_ZANO_ADDRESS = 'ZxTestAddress'
  */
 export async function makeFakeZanoEngine(
   opts: {
-    /** Wallet-local storage, shared to model the same wallet across launches. */
-    disklet?: EdgeCurrencyEngineOptions['walletLocalDisklet']
+    /** Legacy wallet files, shared to model the same wallet across launches. */
+    disklet?: EdgeCurrencyEngineOptions['legacyDisklet']
+    /** The wallet's database, shared to model the same wallet across launches. */
+    txDatabase?: EdgeTxDatabase
     /** Receives every balance the engine reports to the core. */
     onTokenBalanceChanged?: EdgeCurrencyEngineCallbacks['onTokenBalanceChanged']
     /** Receives every transaction event the engine hands to the core. */
@@ -36,6 +41,10 @@ export async function makeFakeZanoEngine(
   const fakeIo = makeFakeIo()
   const {
     disklet = fakeIo.disklet,
+    txDatabase = await makeMemoryTxDatabase({
+      walletId: 'zano-wallet',
+      pluginId: 'zano'
+    }),
     onTokenBalanceChanged = () => {},
     onTransactions = () => {},
     tools = {} as unknown as ZanoTools
@@ -70,7 +79,8 @@ export async function makeFakeZanoEngine(
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: disklet,
+    legacyDisklet: makeReadOnlyDisklet(disklet),
+    txDatabase,
     walletLocalEncryptedDisklet: disklet,
     walletSettings: {}
   }

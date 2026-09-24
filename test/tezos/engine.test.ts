@@ -7,7 +7,8 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyPlugin,
   EdgeWalletInfo,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import { before, describe, it } from 'mocha'
@@ -16,6 +17,7 @@ import fetch from 'node-fetch'
 import edgeCorePlugins from '../../src/index'
 import { TezosEngine } from '../../src/tezos/TezosEngine'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore, makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 describe(`Tezos engine`, function () {
   const fakeIo = makeFakeIo()
@@ -30,6 +32,7 @@ describe(`Tezos engine`, function () {
     },
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: fakeIo.disklet
   }
   const factory = edgeCorePlugins.tezos
@@ -85,7 +88,7 @@ describe(`Tezos engine`, function () {
     log: fakeLog,
     userSettings: {},
     walletSettings: {},
-    walletLocalDisklet,
+    legacyDisklet: makeReadOnlyDisklet(walletLocalDisklet),
     walletLocalEncryptedDisklet: walletLocalDisklet,
     customTokens: {},
     enabledTokenIds: []
@@ -105,6 +108,10 @@ describe(`Tezos engine`, function () {
   }
 
   before('Engine', async function () {
+    currencyEngineOptions.txDatabase = await makeMemoryTxDatabase({
+      walletId: info.id,
+      pluginId: 'tezos'
+    })
     return await plugin
       .makeCurrencyEngine(info, currencyEngineOptions)
       .then(result => {

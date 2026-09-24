@@ -4,7 +4,8 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeIo,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
@@ -14,6 +15,7 @@ import { currencyInfo } from '../../src/sui/suiInfo'
 import { SuiTools } from '../../src/sui/SuiTools'
 import type { SuiHistoryTx, SuiNetworkInfo } from '../../src/sui/suiTypes'
 import { fakeLog } from '../fake/fakeLog'
+import { makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 const RPC_URL = 'https://rpc.test'
 const GRAPHQL_URL = 'https://graphql.test'
@@ -206,7 +208,11 @@ async function makeFakeSui(opts: {
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: io.disklet,
+    legacyDisklet: makeReadOnlyDisklet(io.disklet),
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: 'wallet-1',
+      pluginId: 'sui'
+    }),
     walletLocalEncryptedDisklet: io.disklet,
     walletSettings: {}
   }
