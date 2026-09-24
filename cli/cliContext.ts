@@ -8,9 +8,13 @@ import {
   EdgeCurrencyTools,
   EdgeIo,
   EdgeLog,
+  EdgePluginStore,
+  EdgeTableSpec,
   EdgeTransaction,
+  EdgeTxDatabase,
   EdgeWalletInfo,
-  JsonObject
+  JsonObject,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { green } from 'nanocolors'
 import { base64 } from 'rfc4648'
@@ -37,6 +41,38 @@ export interface CurrencyContext extends BaseContext, EdgeIo {
 }
 
 /**
+ * The plugin's device-wide store, in memory.
+ *
+ * The CLI keeps no database on disk, so this lasts as long as the process.
+ * Plugin options are built synchronously and a memory database opens
+ * asynchronously, so every call waits for it.
+ */
+export function makeCliPluginStore(): EdgePluginStore {
+  const database: Promise<EdgeTxDatabase> = makeMemoryTxDatabase({
+    walletId: base64.stringify(new Uint8Array(32)),
+    pluginId: 'plugin'
+  })
+  const out: EdgePluginStore = {
+    async defineTables(spec: EdgeTableSpec) {
+      const db = await database
+      await db.defineTables(spec)
+      for (const table of Object.keys(spec.tables)) out[table] = db[table]
+    },
+    getRows: async requests => await (await database).getRows(requests),
+    putRows: async writes => await (await database).putRows(writes),
+    putRowsIfAbsent: async writes =>
+      await (await database).putRowsIfAbsent(writes),
+    removeRows: async removals => await (await database).removeRows(removals),
+    findRows: async (table, query) =>
+      await (await database).findRows(table, query),
+    batchWrite: async ops => await (await database).batchWrite(ops),
+    runSql: async (strings, ...values) =>
+      await (await database).runSql(strings, ...values)
+  }
+  return out
+}
+
+/**
  * Restores the context at boot.
  */
 export async function restoreContext(context: CurrencyContext): Promise<void> {
@@ -59,6 +95,7 @@ export async function restoreContext(context: CurrencyContext): Promise<void> {
     io: context,
     log,
     nativeIo: {},
+    pluginDatabase: makeCliPluginStore(),
     pluginDisklet: navigateDisklet(disklet, lastPluginId)
   })
   const tools = await plugin.makeCurrencyTools()
@@ -140,38 +177,42 @@ export async function makeCliEngine(
   const { disklet, log, settings } = context
   const { pluginId } = plugin.currencyInfo
 
-  const engine = await plugin.makeCurrencyEngine(
-    makeCliWalletInfo(plugin, publicKey),
-    {
-      callbacks: {
-        onAddressChanged: () => log('onAddressChanged'),
-        onAddressesChecked: () => log('onAddressesChecked'),
-        onBalanceChanged: () => log('onBalanceChanged'),
-        onBlockHeightChanged: () => log('onBlockHeightChanged'),
-        onNewTokens: () => log('onNewTokens'),
-        onSeenTxCheckpoint: () => log('onSeenTxCheckpoint'),
-        onStakingStatusChanged: () => log('onStakingStatusChanged'),
-        onSubscribeAddresses: () => log('onSubscribeAddresses'),
-        onSyncStatusChanged: () => log('onSyncStatusChanged'),
-        onTokenBalanceChanged: () => log('onTokenBalanceChanged'),
-        onTransactions: () => log('onTransactionsChanged'),
-        onTransactionsChanged: () => log('onTransactionsChanged'),
-        onTxidsChanged: () => log('onTxidsChanged'),
-        onUnactivatedTokenIdsChanged: () => log('onUnactivatedTokenIdsChanged'),
-        onWcNewContractCall: () => log('onWcNewContractCall')
-      },
-      customTokens: settings.customTokens[pluginId] ?? {},
-      enabledTokenIds: settings.enabledTokens[pluginId] ?? [],
-      log,
-      userSettings: {},
-      walletSettings: {},
-      walletLocalDisklet: navigateDisklet(disklet, pluginId),
-      walletLocalEncryptedDisklet: navigateDisklet(
-        disklet,
-        `${pluginId}-encrypted`
-      )
-    }
-  )
+  const walletInfo = makeCliWalletInfo(plugin, publicKey)
+  const engine = await plugin.makeCurrencyEngine(walletInfo, {
+    callbacks: {
+      onAddressChanged: () => log('onAddressChanged'),
+      onAddressesChecked: () => log('onAddressesChecked'),
+      onBalanceChanged: () => log('onBalanceChanged'),
+      onBlockHeightChanged: () => log('onBlockHeightChanged'),
+      onNewTokens: () => log('onNewTokens'),
+      onSeenTxCheckpoint: () => log('onSeenTxCheckpoint'),
+      onStakingStatusChanged: () => log('onStakingStatusChanged'),
+      onSubscribeAddresses: () => log('onSubscribeAddresses'),
+      onSyncStatusChanged: () => log('onSyncStatusChanged'),
+      onTokenBalanceChanged: () => log('onTokenBalanceChanged'),
+      onTransactions: () => log('onTransactionsChanged'),
+      onTransactionsChanged: () => log('onTransactionsChanged'),
+      onTxidsChanged: () => log('onTxidsChanged'),
+      onUnactivatedTokenIdsChanged: () => log('onUnactivatedTokenIdsChanged'),
+      onWcNewContractCall: () => log('onWcNewContractCall')
+    },
+    customTokens: settings.customTokens[pluginId] ?? {},
+    enabledTokenIds: settings.enabledTokens[pluginId] ?? [],
+    log,
+    userSettings: {},
+    walletSettings: {},
+    // Files an older CLI left behind, imported once into this process's
+    // memory database:
+    legacyDisklet: navigateDisklet(disklet, pluginId),
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: walletInfo.id,
+      pluginId
+    }),
+    walletLocalEncryptedDisklet: navigateDisklet(
+      disklet,
+      `${pluginId}-encrypted`
+    )
+  })
   await engine.startEngine()
   return engine
 }

@@ -6,7 +6,8 @@ import {
   EdgeTokenMap,
   EdgeTransaction,
   JsonObject,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
@@ -21,6 +22,7 @@ import {
 } from '../../src/tron/tronTypes'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore, makeReadOnlyDisklet } from '../fake/fakeStorage'
 import rangoTronSwaps from './rangoTronSwaps.json'
 
 // The wallet that made the Rango swaps below, in both address formats
@@ -88,7 +90,11 @@ async function makeEngine(opts: TestEngineOpts): Promise<TronEngine> {
     enabledTokenIds: [USDT_TOKEN_ID],
     log: fakeLog,
     userSettings: {},
-    walletLocalDisklet: fakeIo.disklet,
+    legacyDisklet: makeReadOnlyDisklet(fakeIo.disklet),
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: 'tron-wallet',
+      pluginId: 'tron'
+    }),
     walletLocalEncryptedDisklet: fakeIo.disklet,
     walletSettings: {}
   }
@@ -99,6 +105,7 @@ async function makeEngine(opts: TestEngineOpts): Promise<TronEngine> {
     io: fakeIo,
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: fakeIo.disklet
   })
 

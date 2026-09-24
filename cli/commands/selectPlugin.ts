@@ -2,7 +2,7 @@ import { Command, Option } from 'clipanion'
 import { navigateDisklet } from 'disklet'
 import { JsonObject } from 'edge-core-js'
 
-import { CurrencyContext } from '../cliContext'
+import { CurrencyContext, makeCliPluginStore } from '../cliContext'
 import { saveCliSettings } from '../cliSettings'
 
 export class SelectPlugin extends Command<CurrencyContext> {
@@ -40,6 +40,7 @@ export class SelectPlugin extends Command<CurrencyContext> {
       io: this.context,
       log,
       nativeIo: {},
+      pluginDatabase: makeCliPluginStore(),
       pluginDisklet: navigateDisklet(disklet, pluginId)
     })
     const tools = await plugin.makeCurrencyTools()

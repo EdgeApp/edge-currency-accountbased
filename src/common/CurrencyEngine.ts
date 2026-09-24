@@ -30,6 +30,7 @@ import {
   SpendToSelfError
 } from 'edge-core-js/types'
 
+import { deleteLegacyFiles, importFromDisklet } from './importFromDisklet'
 import { PluginEnvironment } from './innerPlugin'
 import { makePeriodicTask, PeriodicTask } from './periodicTask'
 import type { SyncEngine, SyncTracker } from './SyncTracker'
@@ -38,19 +39,14 @@ import {
   joinTransaction,
   splitTransaction,
   TxDetail,
-  txStoreTables,
   WALLET_META_KEY,
   WalletMetaRow
 } from './txStore'
 import {
   asMaybeOtherParamsLastSeenTime,
   asWalletLocalData,
-  DATA_STORE_FILE,
   EdgeTransactionHelperAmounts,
   SafeCommonWalletInfo,
-  TRANSACTION_STORE_FILE,
-  TXID_LIST_FILE,
-  TXID_MAP_FILE,
   WalletLocalData
 } from './types'
 import {
@@ -88,7 +84,13 @@ export class CurrencyEngine<
   tools: Tools
   walletInfo: SafeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
-  walletLocalDisklet: Disklet
+
+  /**
+   * The JSON files this engine kept before the database, read-only.
+   *
+   * Read once, by the import, and deleted by a resync. Nothing writes them.
+   */
+  legacyDisklet: Disklet
   engineOn: boolean
   syncComplete: boolean
   syncTracker: SyncTrackerT
@@ -112,10 +114,10 @@ export class CurrencyEngine<
   txIdList: TxidList // Map of array of txids in chronological order
 
   /**
-   * This wallet's own storage, where the platform has one.
+   * This wallet's own storage.
    *
-   * Undefined on a platform with no database, or while the feature is off, so
-   * every use of it is guarded and the disklet path below still works.
+   * Required: `loadEngine` refuses to start without one. The type allows
+   * undefined only because the core's option does; read it through `db`.
    */
   txDatabase: EdgeTxDatabase | undefined
 
@@ -165,13 +167,8 @@ export class CurrencyEngine<
     makeSyncTracker: (engine: SyncEngine) => SyncTrackerT
   ) {
     const { builtinTokens, currencyInfo } = env
-    const {
-      callbacks,
-      customTokens,
-      enabledTokenIds,
-      log,
-      walletLocalDisklet
-    } = opts
+    const { callbacks, customTokens, enabledTokenIds, legacyDisklet, log } =
+      opts
 
     this.tools = tools
     this.log = log
@@ -212,7 +209,7 @@ export class CurrencyEngine<
     }
 
     this.currencyEngineCallbacks = callbacks
-    this.walletLocalDisklet = walletLocalDisklet
+    this.legacyDisklet = legacyDisklet
 
     if (typeof this.walletInfo.keys.publicKey !== 'string') {
       this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
@@ -341,48 +338,26 @@ export class CurrencyEngine<
   protected setOtherData(raw: any): void {}
 
   /**
-   * Migrates transaction data from currency code keys to tokenId keys, if necessary.
-   * Old format: keyed by currency codes (e.g., "ETH", "USDC")
-   * New format: keyed by tokenIds (e.g., "", "a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+   * The token id an old file's currency code stands for, as this engine
+   * spells it in JSON: `''` for the chain's own asset, and nothing for a code
+   * with no token here.
    */
-  private migrateCurrencyCodeToTokenId<T>(
-    data: Record<string, T> | undefined
-  ): Record<string, T> | undefined {
-    if (data == null) {
-      return data
+  protected tokenKeyFor(currencyCode: string): string | undefined {
+    if (currencyCode === this.currencyInfo.currencyCode) return ''
+    return Object.keys(this.allTokensMap).find(
+      tokenId => this.allTokensMap[tokenId]?.currencyCode === currencyCode
+    )
+  }
+
+  /** The wallet's database, which this engine cannot run without. */
+  protected get db(): EdgeTxDatabase {
+    const { txDatabase } = this
+    if (txDatabase == null) {
+      throw new Error(
+        'This wallet needs a transaction database, and the core gave it none.'
+      )
     }
-
-    // Check if migration is needed - if data already has empty string key, it's already migrated
-    if (data[''] != null) {
-      return data
-    }
-
-    const migrated: Record<string, T> = {}
-
-    for (const [currencyCode, value] of Object.entries(data)) {
-      let newKey: string
-
-      // Native currency maps to empty string
-      if (currencyCode === this.currencyInfo.currencyCode) {
-        newKey = ''
-      } else {
-        // Find tokenId in allTokensMap that matches this currency code
-        const tokenId = Object.keys(this.allTokensMap).find(
-          tid => this.allTokensMap[tid]?.currencyCode === currencyCode
-        )
-
-        if (tokenId != null) {
-          newKey = tokenId
-        } else {
-          // No matching token found
-          continue
-        }
-      }
-
-      migrated[newKey] = value
-    }
-
-    return migrated
+    return txDatabase
   }
 
   protected async loadTransactions(): Promise<void> {
@@ -391,42 +366,13 @@ export class CurrencyEngine<
       return
     }
     this.transactionsLoaded = true
-
-    const { txDatabase } = this
-    if (txDatabase != null) {
-      await txDatabase.defineTables(txStoreTables)
-      if (await this.loadTransactionsFromDatabase(txDatabase)) return
-
-      /*
-       * Nothing stored yet, so fall through to the files and write what they
-       * hold back through the database on the next save. There is no marker
-       * saying the import happened: a wallet with transactions in the
-       * database never takes this branch again, and one with none has
-       * nothing to import twice.
-       */
-      this.log('No stored transactions. Importing from disk...')
-    }
-
-    await this.loadTransactionsFromDisklet()
-
-    if (txDatabase != null) {
-      for (const safeTokenId of Object.keys(this.txIdList)) {
-        for (const txid of this.txIdList[safeTokenId]) {
-          this.dirtyTxids.add(txid)
-        }
-      }
-      if (this.dirtyTxids.size > 0) this.transactionListDirty = true
-    }
+    await this.loadTransactionsFromDatabase(this.db)
   }
 
-  /**
-   * Reads this wallet's transactions back out of the database.
-   *
-   * False when it holds none, which is what sends the caller to the files.
-   */
+  /** Reads this wallet's transactions back out of the database. */
   protected async loadTransactionsFromDatabase(
     txDatabase: EdgeTxDatabase
-  ): Promise<boolean> {
+  ): Promise<void> {
     let loaded = 0
     let after: string | undefined
 
@@ -481,7 +427,7 @@ export class CurrencyEngine<
       if (after == null) break
     }
 
-    if (loaded === 0) return false
+    if (loaded === 0) return
 
     // The page arrived newest first, which is the order the list keeps, but
     // this is what builds `txIdList` and `txIdMap` from it:
@@ -491,7 +437,6 @@ export class CurrencyEngine<
         this.transactionList[safeTokenId].length
     }
     this.log(`Loaded ${loaded} transactions from the database`)
-    return true
   }
 
   /** The currency code an asset goes by, or nothing if it is unknown here. */
@@ -500,147 +445,16 @@ export class CurrencyEngine<
     return this.allTokensMap[tokenId]?.currencyCode
   }
 
-  protected async loadTransactionsFromDisklet(): Promise<void> {
-    const disklet = this.walletLocalDisklet
-
-    let txIdList: TxidList | undefined
-    try {
-      const result = await disklet.getText(TXID_LIST_FILE)
-      txIdList = JSON.parse(result)
-    } catch (e: any) {
-      this.log('Could not load txidList file. Failure is ok on new device')
-      await disklet.setText(TXID_LIST_FILE, JSON.stringify(this.txIdList))
-    }
-
-    let txIdMap: TxidMap | undefined
-    try {
-      const result = await disklet.getText(TXID_MAP_FILE)
-      txIdMap = JSON.parse(result)
-    } catch (e: any) {
-      this.log('Could not load txidMap file. Failure is ok on new device')
-      await disklet.setText(TXID_MAP_FILE, JSON.stringify(this.txIdMap))
-    }
-
-    let transactionList: TransactionList | undefined
-    try {
-      const result = await disklet.getText(TRANSACTION_STORE_FILE)
-      transactionList = JSON.parse(result)
-    } catch (e: any) {
-      if (e.code === 'ENOENT' || e.message?.includes('No such file') === true) {
-        this.log(
-          'Could not load transactionList file. Failure is ok on new device'
-        )
-        await disklet.setText(
-          TRANSACTION_STORE_FILE,
-          JSON.stringify(this.transactionList)
-        )
-      } else {
-        this.log.crash(e, { currencyPluginId: this.currencyInfo.pluginId })
-      }
-    }
-
-    // Migrate old data from currency codes to tokenIds if needed
-    const needsMigration =
-      (txIdList != null &&
-        Object.keys(txIdList).length > 0 &&
-        txIdList[''] == null) ||
-      (txIdMap != null &&
-        Object.keys(txIdMap).length > 0 &&
-        txIdMap[''] == null) ||
-      (transactionList != null &&
-        Object.keys(transactionList).length > 0 &&
-        transactionList[''] == null)
-
-    if (needsMigration) {
-      this.log.warn(
-        'Migrating transaction data from currency codes to tokenIds'
-      )
-      txIdList = this.migrateCurrencyCodeToTokenId(txIdList) ?? this.txIdList
-      txIdMap = this.migrateCurrencyCodeToTokenId(txIdMap) ?? this.txIdMap
-      transactionList =
-        this.migrateCurrencyCodeToTokenId(transactionList) ??
-        this.transactionList
-      this.transactionListDirty = true
-      this.log.warn('Migration complete')
-    }
-
-    let isEmptyTransactions = true
-    for (const tid of Object.keys(this.transactionList)) {
-      if (
-        this.transactionList[tid] != null &&
-        this.transactionList[tid].length > 0
-      ) {
-        isEmptyTransactions = false
-        break
-      }
-    }
-
-    if (isEmptyTransactions) {
-      // Easy, just copy everything over
-      this.transactionList = transactionList ?? this.transactionList
-      this.txIdList = txIdList ?? this.txIdList
-      this.txIdMap = txIdMap ?? this.txIdMap
-
-      // But we do need to update our checkpoints:
-      for (const tid of Object.keys(this.transactionList)) {
-        for (const tx of this.transactionList[tid]) {
-          this.highestSeenCheckpoint = this.selectSeenTxCheckpoint(
-            this.highestSeenCheckpoint,
-            this.getTxCheckpoint(tx)
-          )
-        }
-      }
-    } else if (transactionList != null) {
-      // Manually add transactions via addTransaction()
-      for (const tokenId of Object.keys(transactionList)) {
-        for (const edgeTransaction of transactionList[tokenId]) {
-          this.addTransaction(tokenId, edgeTransaction)
-        }
-      }
-    }
-    for (const tokenId of Object.keys(this.transactionList)) {
-      this.walletLocalData.numTransactions[tokenId] =
-        this.transactionList[tokenId].length
-    }
-  }
-
-  /**
-   * The engine's own counters and per-chain cursors.
-   *
-   * A row where the platform has a database, and the JSON file otherwise. A
-   * wallet with a file and no row imports from the file once: a row exists
-   * from the first save onwards, so it is never read twice.
-   */
+  /** The engine's own counters and per-chain cursors, from their row. */
   protected async loadWalletLocalData(): Promise<void> {
-    const { txDatabase } = this
-    if (txDatabase != null) {
-      await txDatabase.defineTables(txStoreTables)
-      const [result] = await txDatabase.getRows([
-        { table: 'meta', keys: [WALLET_META_KEY] }
-      ])
-      const row = result.rows[0] as WalletMetaRow | undefined
-      if (row != null) {
-        this.walletLocalData = asWalletLocalData(row.wallet)
-        this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
-        return
-      }
-      this.log('No stored walletLocalData. Importing from disk...')
-    }
-
-    const disklet = this.walletLocalDisklet
-    try {
-      const result = await disklet.getText(DATA_STORE_FILE)
-      this.walletLocalData = asWalletLocalData(JSON.parse(result))
-      this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
-      // Nothing has written the row yet, so the next save has to:
-      if (txDatabase != null) this.walletLocalDataDirty = true
-      return
-    } catch (err) {
-      this.log('No walletLocalData setup yet: Failure is ok')
-    }
-
-    this.walletLocalData = asWalletLocalData({})
+    const [result] = await this.db.getRows([
+      { table: 'meta', keys: [WALLET_META_KEY] }
+    ])
+    const row = result.rows[0] as WalletMetaRow | undefined
+    this.walletLocalData = asWalletLocalData(row?.wallet ?? {})
     this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
+    if (row != null) return
+
     try {
       await this.saveWalletLocalData()
     } catch (e: any) {
@@ -649,25 +463,15 @@ export class CurrencyEngine<
     }
   }
 
-  /** Writes the state, wherever this platform keeps it. */
+  /** Writes the state to its row. */
   protected async saveWalletLocalData(): Promise<void> {
     this.walletLocalData.otherData = this.otherData
-
-    const { txDatabase } = this
-    if (txDatabase != null) {
-      await txDatabase.putRows([
-        {
-          table: 'meta',
-          rows: [{ id: WALLET_META_KEY, wallet: this.walletLocalData }]
-        }
-      ])
-      return
-    }
-
-    await this.walletLocalDisklet.setText(
-      DATA_STORE_FILE,
-      JSON.stringify(this.walletLocalData)
-    )
+    await this.db.putRows([
+      {
+        table: 'meta',
+        rows: [{ id: WALLET_META_KEY, wallet: this.walletLocalData }]
+      }
+    ])
   }
 
   // Called by engine startup code
@@ -677,6 +481,17 @@ export class CurrencyEngine<
     if (this.walletInfo.keys.publicKey == null) {
       this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
     }
+
+    // First, and outside the checkpoint gate below: the state and the
+    // transactions have to be rows before anything reads them, and a wallet
+    // the core hands a checkpoint never loads its transactions here at all.
+    await importFromDisklet({
+      txDatabase: this.db,
+      legacyDisklet: this.legacyDisklet,
+      log: this.log,
+      pluginId: this.currencyInfo.pluginId,
+      tokenKeyFor: code => this.tokenKeyFor(code)
+    })
 
     await this.loadWalletLocalData()
     this.setOtherData(this.walletLocalData.otherData ?? {})
@@ -993,38 +808,12 @@ export class CurrencyEngine<
    * Save the wallet data store.
    */
   protected async saveWalletLoop(): Promise<void> {
-    const disklet = this.walletLocalDisklet
-    const promises = []
     if (this.transactionListDirty) {
       await this.loadTransactions()
       this.log('transactionListDirty. Saving...')
-      const { txDatabase } = this
-      if (txDatabase != null) {
-        this.transactionListDirty = !(await this.saveTransactionsToDatabase(
-          txDatabase
-        ))
-      } else {
-        let jsonString = JSON.stringify(this.transactionList)
-        promises.push(
-          disklet.setText(TRANSACTION_STORE_FILE, jsonString).catch(e => {
-            this.error('Error saving transactionList ', e)
-          })
-        )
-        jsonString = JSON.stringify(this.txIdList)
-        promises.push(
-          disklet.setText(TXID_LIST_FILE, jsonString).catch(e => {
-            this.error('Error saving txIdList ', e)
-          })
-        )
-        jsonString = JSON.stringify(this.txIdMap)
-        promises.push(
-          disklet.setText(TXID_MAP_FILE, jsonString).catch(e => {
-            this.error('Error saving txIdMap ', e)
-          })
-        )
-        await Promise.all(promises)
-        this.transactionListDirty = false
-      }
+      this.transactionListDirty = !(await this.saveTransactionsToDatabase(
+        this.db
+      ))
     }
     if (this.walletLocalDataDirty) {
       this.log('walletLocalDataDirty. Saving...')
@@ -1201,19 +990,7 @@ export class CurrencyEngine<
   }
 
   protected async clearBlockchainCache(): Promise<void> {
-    const { txDatabase } = this
-    // As the transactions spell them, which is how the rows are keyed --
-    // `txIdList` holds the engine's own normalized form.
-    const txids =
-      txDatabase == null
-        ? []
-        : [
-            ...new Set(
-              Object.values(this.transactionList)
-                .flat()
-                .map(tx => tx.txid)
-            )
-          ]
+    const { db } = this
 
     this.walletLocalData = asWalletLocalData({
       publicKey: this.walletLocalData.publicKey
@@ -1228,30 +1005,20 @@ export class CurrencyEngine<
     this.dirtyTxids.clear()
     this.setOtherData({})
 
-    if (txDatabase != null) {
-      /*
-       * A resync means the chain is the truth again, so the stored copy has
-       * to go. Leaving it would resurrect every transaction on the next
-       * start, since an empty database is what sends the load path to the
-       * files -- and a non-empty one never asks the chain to refill it.
-       *
-       * The view, not the table: it is the only door onto this wallet's own
-       * transactions, and the trigger behind it scopes the delete.
-       */
-      await txDatabase.runSql`DELETE FROM ${txDatabase.tx_chain}`
-      if (txids.length > 0) {
-        await txDatabase.removeRows([{ table: 'txDetail', keys: txids }])
-      }
+    /*
+     * A resync means the chain is the truth again, so the stored copy has
+     * to go, or the next start would load every transaction straight back.
+     *
+     * The view, not the table: it is the only door onto this wallet's own
+     * transactions, and the trigger behind it scopes the delete.
+     */
+    await db.runSql`DELETE FROM ${db.tx_chain}`
+    await db.runSql`DELETE FROM ${db.txDetail}`
 
-      // The files are what a wallet with nothing stored imports from, so a
-      // resync has to empty them too -- otherwise the next start reads the
-      // history it was just told to forget straight back in.
-      await Promise.all([
-        this.walletLocalDisklet.setText(TRANSACTION_STORE_FILE, '{}'),
-        this.walletLocalDisklet.setText(TXID_LIST_FILE, '{}'),
-        this.walletLocalDisklet.setText(TXID_MAP_FILE, '{}')
-      ])
-    }
+    // And the files the import read, so they cannot come back either --
+    // `walletLocalData.json` most of all, since its query cursors would claim
+    // progress over an empty store:
+    await deleteLegacyFiles(this.legacyDisklet)
 
     await this.saveWalletLoop()
   }

@@ -1,6 +1,8 @@
+import { Disklet } from 'disklet'
 import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
+  EdgeLog,
   EdgeToken,
   EdgeTokenId,
   EdgeTransaction,
@@ -24,6 +26,7 @@ import {
 } from '../../src/common/types'
 import { currencyInfo } from '../../src/ethereum/info/ethereumInfo'
 import { fakeLog } from '../fake/fakeLog'
+import { makeReadOnlyDisklet } from '../fake/fakeStorage'
 import { FakeTools } from '../fake/FakeTools'
 
 /**
@@ -96,9 +99,10 @@ export class TestEngine extends CurrencyEngine<
 
 export interface Fixture {
   engine: TestEngine
-  /** Absent only in the test that checks the disklet path still works. */
+  /** Absent only in the test that checks the engine refuses to start. */
   txDatabase: EdgeTxDatabase | undefined
-  disklet: EdgeCurrencyEngineOptions['walletLocalDisklet']
+  /** The wallet's legacy files, writable here so a test can lay them out. */
+  disklet: EdgeCurrencyEngineOptions['legacyDisklet']
   /** A second engine over the same storage, which is what a restart is. */
   restart: () => Promise<TestEngine>
 }
@@ -110,10 +114,16 @@ export async function makeStoreFixture(
     legacyTxs?: EdgeTransaction[]
     /** Engine state already on disk, likewise. */
     legacyState?: object
+    /** The log every engine this fixture makes writes to. */
+    log?: EdgeLog
+    /** The legacy files, shared with an earlier fixture to restart over them. */
+    disklet?: Disklet
+    /** Wraps the legacy disklet each engine gets, to watch or break it. */
+    wrapDisklet?: (disklet: Disklet) => Disklet
   } = {}
 ): Promise<Fixture> {
   const fakeIo = makeFakeIo()
-  const disklet = fakeIo.disklet
+  const disklet = opts.disklet ?? fakeIo.disklet
 
   if (opts.legacyState != null) {
     await disklet.setText(DATA_STORE_FILE, JSON.stringify(opts.legacyState))
@@ -158,11 +168,12 @@ export async function makeStoreFixture(
     callbacks: quietCallbacks,
     customTokens: { [TOKEN_ID]: usdc },
     enabledTokenIds: [TOKEN_ID],
-    log: fakeLog,
+    log: opts.log ?? fakeLog,
     txDatabase,
     userSettings: {},
-    walletLocalDisklet: disklet,
-    walletLocalEncryptedDisklet: disklet,
+    // Read-only, as the core hands it out: every path runs without writing.
+    legacyDisklet: (opts.wrapDisklet ?? (d => d))(makeReadOnlyDisklet(disklet)),
+    walletLocalEncryptedDisklet: makeReadOnlyDisklet(disklet),
     walletSettings: {}
   })
 

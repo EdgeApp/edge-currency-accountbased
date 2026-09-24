@@ -3,7 +3,8 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeTransaction,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 import type { TransactionInfo, TransactionsPage } from 'react-native-monero'
@@ -21,6 +22,7 @@ import {
   SafeMoneroWalletInfo
 } from '../../src/monero/moneroTypes'
 import { fakeLog } from '../fake/fakeLog'
+import { makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 const WALLET_ID = 'native-wallet-id'
 
@@ -140,7 +142,11 @@ async function makeEngine(chain: FakeChain): Promise<TestEngine> {
     // new-transaction notifications are armed:
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: fakeIo.disklet,
+    legacyDisklet: makeReadOnlyDisklet(fakeIo.disklet),
+    txDatabase: await makeMemoryTxDatabase({
+      walletId: 'wallet-1',
+      pluginId: 'monero'
+    }),
     walletLocalEncryptedDisklet: fakeIo.disklet,
     walletSettings: {}
   }

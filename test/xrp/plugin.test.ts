@@ -11,6 +11,7 @@ import fetch from 'node-fetch'
 import edgeCorePlugins from '../../src/index'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
+import { makeMemoryPluginStore } from '../fake/fakeStorage'
 import fixtures from './fixtures'
 
 for (const fixture of fixtures) {
@@ -27,6 +28,7 @@ for (const fixture of fixtures) {
     io: { ...fakeIo, fetch, fetchCors: fetch, random: size => fixture.key },
     log: fakeLog,
     nativeIo: {},
+    pluginDatabase: makeMemoryPluginStore(),
     pluginDisklet: fakeIo.disklet
   }
   // @ts-expect-error

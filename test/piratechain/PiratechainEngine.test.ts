@@ -4,7 +4,8 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeTransaction,
-  makeFakeIo
+  makeFakeIo,
+  makeMemoryTxDatabase
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 import type { TransactionInfo } from 'react-native-pirate-wallet'
@@ -18,6 +19,7 @@ import {
   SafePiratechainWalletInfo
 } from '../../src/piratechain/piratechainTypes'
 import { fakeLog } from '../fake/fakeLog'
+import { makeReadOnlyDisklet } from '../fake/fakeStorage'
 
 /** The shape of an extended viewing key, which is the wallet's publicKey: */
 const VIEWING_KEY = 'zxviews1qfakeextendedviewingkeyforthisunittestonly'
@@ -84,6 +86,10 @@ async function makeEngine(
   storedTxs?: EdgeTransaction[]
 ): Promise<{ engine: PiratechainEngine; readStore: () => Promise<string> }> {
   const fakeIo = makeFakeIo()
+  const txDatabase = await makeMemoryTxDatabase({
+    walletId: 'wallet-1',
+    pluginId: 'piratechain'
+  })
   if (storedTxs != null) {
     await fakeIo.disklet.setText(
       TRANSACTION_STORE_FILE,
@@ -98,7 +104,8 @@ async function makeEngine(
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: fakeIo.disklet,
+    legacyDisklet: makeReadOnlyDisklet(fakeIo.disklet),
+    txDatabase,
     walletLocalEncryptedDisklet: fakeIo.disklet,
     walletSettings: {}
   }
@@ -128,7 +135,8 @@ async function makeEngine(
 
   return {
     engine,
-    readStore: async () => await fakeIo.disklet.getText(TRANSACTION_STORE_FILE)
+    // The stored copy is the wallet's rows, which the files import into:
+    readStore: async () => JSON.stringify(await txDatabase.getTxs())
   }
 }
 
@@ -153,7 +161,7 @@ describe('PiratechainEngine receive addresses', function () {
     expect(tx.ourReceiveAddresses).deep.equals([])
 
     // Reprocessing the same confirmed transaction leaves the stored copy
-    // alone, so the scrub is what has to reach the disk:
+    // alone, so the scrub is what has to reach the rows:
     engine.processTransaction(makeIncomingTx(txid))
     expect(engine.transactionListDirty).equals(true)
     await (engine as any).saveWalletLoop()
