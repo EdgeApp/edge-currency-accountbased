@@ -214,7 +214,8 @@ export const asSafeFioWalletInfo = asWalletInfo(
 
 export type FioPrivateKeys = ReturnType<typeof asFioPrivateKeys>
 export const asFioPrivateKeys = asObject({
-  fioKey: asString
+  fioKey: asString,
+  mnemonic: asOptional(asString)
 })
 
 export const comparisonFioNameString = (res: FioNamesResponse): string => {

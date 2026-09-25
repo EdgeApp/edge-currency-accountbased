@@ -58,7 +58,13 @@ export class EthereumTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const keys = asEthereumPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.privateKey
+    // Wallets imported from a raw hex key have no mnemonic, so the private
+    // key is all there is to show:
+    if (keys.mnemonic == null) return keys.privateKey
+    // Show the hex key alongside the seed phrase. MetaMask-style imports ask
+    // for the hex form, and on chains that derive at a non-standard coin type
+    // the seed phrase alone does not reproduce this wallet's address there:
+    return `Seed Phrase:\n${keys.mnemonic}\n\nPrivate Key:\n${keys.privateKey}`
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {

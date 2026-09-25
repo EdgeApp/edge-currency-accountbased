@@ -93,7 +93,9 @@ export class FioTools implements EdgeCurrencyTools {
     privateWalletInfo: EdgeWalletInfo
   ): Promise<string> {
     const keys = asFioPrivateKeys(privateWalletInfo.keys)
-    return keys.fioKey
+    // Wallets imported from a raw private key have no mnemonic, so the FIO
+    // key remains the fallback:
+    return keys.mnemonic ?? keys.fioKey
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
