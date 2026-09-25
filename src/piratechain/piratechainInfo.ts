@@ -77,7 +77,9 @@ export const piratechain = makeOuterPlugin<
   networkInfo,
 
   async getInnerPlugin() {
-    /* webpackChunkName: "piratechain" */
-    return await import('./PiratechainTools')
+    return await import(
+      /* webpackChunkName: "piratechain" */
+      './PiratechainTools'
+    )
   }
 })

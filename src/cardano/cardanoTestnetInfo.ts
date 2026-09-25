@@ -53,6 +53,9 @@ export const cardanotestnet = makeOuterPlugin<
   },
 
   async getInnerPlugin() {
-    return await import('./CardanoTools')
+    return await import(
+      /* webpackChunkName: "cardano" */
+      './CardanoTools'
+    )
   }
 })

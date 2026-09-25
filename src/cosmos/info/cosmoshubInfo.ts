@@ -73,7 +73,7 @@ export const cosmoshub = makeOuterPlugin<
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "cosmoshub" */
+      /* webpackChunkName: "cosmos" */
       '../CosmosTools'
     )
   }

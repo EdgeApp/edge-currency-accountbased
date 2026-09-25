@@ -57,6 +57,9 @@ export const telos = makeOuterPlugin<EosNetworkInfo, EosTools, EosInfoPayload>({
   otherMethodNames: eosOtherMethodNames,
 
   async getInnerPlugin() {
-    return await import('../EosTools')
+    return await import(
+      /* webpackChunkName: "eos" */
+      '../EosTools'
+    )
   }
 })

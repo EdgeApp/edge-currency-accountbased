@@ -82,7 +82,7 @@ export const nym = makeOuterPlugin<
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "nym" */
+      /* webpackChunkName: "cosmos" */
       '../CosmosTools'
     )
   }

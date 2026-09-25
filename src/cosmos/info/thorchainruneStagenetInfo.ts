@@ -101,7 +101,7 @@ export const thorchainrunestagenet = makeOuterPlugin<
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "thorchainrunestagebet" */
+      /* webpackChunkName: "cosmos" */
       '../CosmosTools'
     )
   }
