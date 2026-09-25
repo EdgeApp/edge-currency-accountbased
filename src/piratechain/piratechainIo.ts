@@ -216,6 +216,80 @@ const asSignedTransaction = asObject({
   txid: asString
 })
 
+/**
+ * Pauses before each rebroadcast of a send whose broadcast outcome is unknown.
+ * The SDK's own retries span under two seconds, which one burst of dropped
+ * connections outlasts, so these wait longer.
+ */
+export const REBROADCAST_DELAYS_MS = [2000, 4000, 8000]
+
+/**
+ * gRPC statuses a broadcast can fail with after the node already has the
+ * transaction: the request goes out and the connection drops while the answer
+ * comes back ("h2 protocol error: error reading a body from connection").
+ */
+const AMBIGUOUS_BROADCAST_STATUS =
+  /\bstatus: (?:Internal|Unavailable|Unknown|DeadlineExceeded)\b/
+
+/**
+ * The node's answer to a transaction it already holds, matched exactly so a
+ * rejection like a duplicate nullifier, which another transaction can cause,
+ * never passes for one.
+ */
+const KNOWN_TRANSACTION_REASONS = [
+  'already in mempool',
+  'txn-already-in-mempool',
+  'transaction already in block chain'
+]
+const BROADCAST_REJECTION =
+  /Broadcast failed: (?:-?\d+: )?([^:]+?) \(code -?\d+\)\s*$/
+
+export function isAmbiguousBroadcastError(error: unknown): boolean {
+  return AMBIGUOUS_BROADCAST_STATUS.test(String(error))
+}
+
+export function isKnownTransactionError(error: unknown): boolean {
+  const reason = BROADCAST_REJECTION.exec(String(error))?.[1]
+  return (
+    reason != null &&
+    KNOWN_TRANSACTION_REASONS.includes(reason.trim().toLowerCase())
+  )
+}
+
+/**
+ * Broadcasts a signed transaction, rebroadcasting the same bytes while the
+ * outcome stays unknown. Identical bytes are one transaction, so a rebroadcast
+ * can never pay twice, and a node that already holds it says so, which counts
+ * as success. Once a broadcast's outcome is unknown no later answer can prove
+ * the send failed (a rejection can come from the send itself having landed),
+ * so a send that never confirms rethrows that first error rather than
+ * whatever the last attempt said.
+ */
+export async function broadcastUntilKnown(
+  broadcast: () => Promise<unknown>,
+  delaysMs: number[] = REBROADCAST_DELAYS_MS,
+  sleep: (ms: number) => Promise<void> = async ms =>
+    await new Promise(resolve => setTimeout(resolve, ms))
+): Promise<void> {
+  try {
+    await broadcast()
+  } catch (error: unknown) {
+    if (isKnownTransactionError(error)) return
+    if (!isAmbiguousBroadcastError(error)) throw error
+    for (const delayMs of delaysMs) {
+      await sleep(delayMs)
+      try {
+        await broadcast()
+        return
+      } catch (retryError: unknown) {
+        if (isKnownTransactionError(retryError)) return
+        if (!isAmbiguousBroadcastError(retryError)) break
+      }
+    }
+    throw error
+  }
+}
+
 export function makePiratechainIo(): PiratechainIo {
   // The SDK constructor throws when the native module isn't linked, so
   // create it lazily to keep `makePiratechainIo` safe on every platform:
@@ -577,7 +651,9 @@ export function makePiratechainIo(): PiratechainIo {
             return await walletSdk.signTransaction(walletId, pending)
           })
           const { txid } = asSignedTransaction(signed)
-          await walletSdk.broadcastTransaction(walletId, signed)
+          await broadcastUntilKnown(
+            async () => await walletSdk.broadcastTransaction(walletId, signed)
+          )
           return txid
         },
         start: async () => {
