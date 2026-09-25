@@ -21,6 +21,8 @@ import type {
 import { createPirateWalletSdk } from 'react-native-pirate-wallet'
 import { bridgifyObject, emit, onMethod, Subscriber } from 'yaob'
 
+import { makeSerialQueue } from '../common/promiseUtils'
+
 export interface PiratechainStatusEvent {
   name: SynchronizerStatus
 }
@@ -188,6 +190,106 @@ const asTransactionInfo = asObject<TransactionInfo>({
   confirmed: asBoolean
 })
 
+/**
+ * The SDK hands out one transaction under two byte orders. The transaction
+ * list reports a transaction in the internal order while it is unconfirmed,
+ * then switches to the reversed display order once it lands in a block. The
+ * display order is what the block explorer resolves. Left alone the poller
+ * opens a pending row under the internal order that no later update ever
+ * matches, and adds a second row when the confirmed copy arrives under the
+ * reversed hash, so a completed send shows twice with one copy pending
+ * forever. Reversing the unconfirmed rows gives the engine one hash per
+ * transaction. Anything that is not a 32-byte hash passes through untouched.
+ */
+export function toDisplayTxid(txid: string): string {
+  if (!/^[0-9a-f]{64}$/i.test(txid)) return txid
+  return (txid.match(/../g) ?? []).reverse().join('').toLowerCase()
+}
+
+/**
+ * The only field read off the SDK's signed payload, already in the display
+ * order (unlike the internal-order hash the broadcast resolves with). The
+ * payload itself goes back to the SDK untouched, since cleaning it would drop
+ * the fields broadcasting needs.
+ */
+const asSignedTransaction = asObject({
+  txid: asString
+})
+
+/**
+ * Pauses before each rebroadcast of a send whose broadcast outcome is unknown.
+ * The SDK's own retries span under two seconds, which one burst of dropped
+ * connections outlasts, so these wait longer.
+ */
+export const REBROADCAST_DELAYS_MS = [2000, 4000, 8000]
+
+/**
+ * gRPC statuses a broadcast can fail with after the node already has the
+ * transaction: the request goes out and the connection drops while the answer
+ * comes back ("h2 protocol error: error reading a body from connection").
+ */
+const AMBIGUOUS_BROADCAST_STATUS =
+  /\bstatus: (?:Internal|Unavailable|Unknown|DeadlineExceeded)\b/
+
+/**
+ * The node's answer to a transaction it already holds, matched exactly so a
+ * rejection like a duplicate nullifier, which another transaction can cause,
+ * never passes for one.
+ */
+const KNOWN_TRANSACTION_REASONS = [
+  'already in mempool',
+  'txn-already-in-mempool',
+  'transaction already in block chain'
+]
+const BROADCAST_REJECTION =
+  /Broadcast failed: (?:-?\d+: )?([^:]+?) \(code -?\d+\)\s*$/
+
+export function isAmbiguousBroadcastError(error: unknown): boolean {
+  return AMBIGUOUS_BROADCAST_STATUS.test(String(error))
+}
+
+export function isKnownTransactionError(error: unknown): boolean {
+  const reason = BROADCAST_REJECTION.exec(String(error))?.[1]
+  return (
+    reason != null &&
+    KNOWN_TRANSACTION_REASONS.includes(reason.trim().toLowerCase())
+  )
+}
+
+/**
+ * Broadcasts a signed transaction, rebroadcasting the same bytes while the
+ * outcome stays unknown. Identical bytes are one transaction, so a rebroadcast
+ * can never pay twice, and a node that already holds it says so, which counts
+ * as success. Once a broadcast's outcome is unknown no later answer can prove
+ * the send failed (a rejection can come from the send itself having landed),
+ * so a send that never confirms rethrows that first error rather than
+ * whatever the last attempt said.
+ */
+export async function broadcastUntilKnown(
+  broadcast: () => Promise<unknown>,
+  delaysMs: number[] = REBROADCAST_DELAYS_MS,
+  sleep: (ms: number) => Promise<void> = async ms =>
+    await new Promise(resolve => setTimeout(resolve, ms))
+): Promise<void> {
+  try {
+    await broadcast()
+  } catch (error: unknown) {
+    if (isKnownTransactionError(error)) return
+    if (!isAmbiguousBroadcastError(error)) throw error
+    for (const delayMs of delaysMs) {
+      await sleep(delayMs)
+      try {
+        await broadcast()
+        return
+      } catch (retryError: unknown) {
+        if (isKnownTransactionError(retryError)) return
+        if (!isAmbiguousBroadcastError(retryError)) break
+      }
+    }
+    throw error
+  }
+}
+
 export function makePiratechainIo(): PiratechainIo {
   // The SDK constructor throws when the native module isn't linked, so
   // create it lazily to keep `makePiratechainIo` safe on every platform:
@@ -251,11 +353,11 @@ export function makePiratechainIo(): PiratechainIo {
    * are serialized so two wallets starting at once cannot interleave. Syncing
    * itself is wallet-scoped and stays concurrent.
    */
-  let registryLock: Promise<unknown> = Promise.resolve()
+  const registryQueue = makeSerialQueue()
   const ensureWallet = async (
     config: PiratechainWalletConfig
-  ): Promise<string> => {
-    const task = registryLock.then(async () => {
+  ): Promise<string> =>
+    await registryQueue(async () => {
       const { birthdayHeight, mnemonic, name } = config
       const walletSdk = getSdk()
       await ensureDeviceStorage()
@@ -267,9 +369,6 @@ export function makePiratechainIo(): PiratechainIo {
       }
       return await walletSdk.restoreWallet({ name, mnemonic, birthdayHeight })
     })
-    registryLock = task.catch(() => undefined)
-    return await task
-  }
 
   return bridgifyObject<PiratechainIo>({
     async deriveViewingKey(config) {
@@ -282,7 +381,7 @@ export function makePiratechainIo(): PiratechainIo {
       // registry, and the native service panics (aborting the app) when the
       // registry changes underneath a running synchronizer, so it is gated on
       // the registry being genuinely empty.
-      const task = registryLock.then(async () => {
+      return await registryQueue(async () => {
         const walletSdk = getSdk()
         await ensureDeviceStorage()
 
@@ -336,8 +435,6 @@ export function makePiratechainIo(): PiratechainIo {
           await walletSdk.deleteWallet(probeWalletId).catch(() => undefined)
         }
       })
-      registryLock = task.catch(() => undefined)
-      return await task
     },
 
     async isValidAddress(address) {
@@ -397,11 +494,10 @@ export function makePiratechainIo(): PiratechainIo {
       // registry can still sync (viewing keys and the block cache stay
       // readable) but cannot sign. Protection is enabled the first time a
       // wallet is seen on this device, so its spending keys are wrapped from
-      // the first sync on, and the key is locked again at once: nothing
-      // before a send needs it, and `send` unlocks for its own span. Sync does
-      // not depend on any of this, so a failure here logs and a send then
-      // fails with the SDK's own ERR_SIGNING_SESSION_LOCKED rather than being
-      // refused up front:
+      // the first sync on, and the key is locked again at once. Sync does not
+      // depend on any of this, so a failure here logs and the call that
+      // needed the key fails with the SDK's own reason rather than the wallet
+      // being refused up front:
       const { signingCredential } = config
       const ensureSigningUnlocked = async (): Promise<void> => {
         let status = await walletSdk.getWalletSigningStatus(walletId)
@@ -438,6 +534,25 @@ export function makePiratechainIo(): PiratechainIo {
           `piratechain: wallet signing protection unavailable: ${String(error)}`
         )
       }
+
+      /**
+       * Runs `task` with the wallet's signing key unlocked, then locks it
+       * again. Spans are serialized: a send holds the key for as long as it
+       * takes to build and sign, and an address read landing in the
+       * middle of one must not lock the key out from under it.
+       */
+      const signingQueue = makeSerialQueue()
+      const withSigningUnlocked = async <T>(
+        task: () => Promise<T>
+      ): Promise<T> =>
+        await signingQueue(async () => {
+          await ensureSigningUnlocked()
+          try {
+            return await task()
+          } finally {
+            await lockSigning()
+          }
+        })
 
       const realSynchronizer = walletSdk.createSynchronizer(walletId, {
         transactionLimit: null
@@ -476,7 +591,17 @@ export function makePiratechainIo(): PiratechainIo {
           )
         },
         getCurrentAddress: async () => {
-          return await walletSdk.getCurrentReceiveAddress(walletId)
+          // Reading an address needs no spending key, but the SDK demands the
+          // account's primary key before it will return one, and a locked
+          // signing session hides that key behind the same envelope as the
+          // spending material. So the read fails with `Watch-only account key
+          // not found` unless the key is unlocked for its span, which also
+          // strands the receive scene and every scene that refreshes an
+          // address. Unlock around the read until the SDK guards that call the
+          // way it already guards `list_key_groups`:
+          return await withSigningUnlocked(
+            async () => await walletSdk.getCurrentReceiveAddress(walletId)
+          )
         },
         getEndpointDiagnostics: async () => {
           return await walletSdk.getLightdEndpointPoolDiagnostics(walletId)
@@ -494,7 +619,10 @@ export function makePiratechainIo(): PiratechainIo {
           const raw: unknown[] = realSynchronizer.transactions
           const transactions = raw.flatMap(entry => {
             const tx = asMaybe(asTransactionInfo)(entry)
-            return tx == null ? [] : [tx]
+            if (tx == null) return []
+            // Confirmed rows already carry the display order, so only the
+            // unconfirmed ones need reversing:
+            return [tx.confirmed ? tx : { ...tx, txid: toDisplayTxid(tx.txid) }]
           })
           if (transactions.length < raw.length) {
             console.warn(
@@ -509,19 +637,24 @@ export function makePiratechainIo(): PiratechainIo {
           await walletSdk.rescan(walletId, fromHeight ?? null)
         },
         send: async (outputs, fee) => {
-          // The signing key is in native memory only for the span of this
-          // call: unlock here (a failure surfaces with its real reason), and
-          // lock again whether or not the send went through, so the key
-          // never outlives the spend that needed it:
-          await ensureSigningUnlocked()
-          try {
-            // The SDK's send builds, signs, and broadcasts, keeping the opaque
-            // pending/signed payloads verbatim between steps and serializing
-            // amounts as strings so large sends keep full precision:
-            return await walletSdk.send(walletId, outputs, fee ?? null)
-          } finally {
-            await lockSigning()
-          }
+          // The signing key is in native memory only for building and
+          // signing, so it never outlives the spend that needed it;
+          // broadcasting needs no key. The SDK keeps the opaque pending and
+          // signed payloads verbatim between steps and serializes amounts as
+          // strings so large sends keep full precision:
+          const signed: unknown = await withSigningUnlocked(async () => {
+            const pending = await walletSdk.buildTransaction(
+              walletId,
+              outputs,
+              fee ?? null
+            )
+            return await walletSdk.signTransaction(walletId, pending)
+          })
+          const { txid } = asSignedTransaction(signed)
+          await broadcastUntilKnown(
+            async () => await walletSdk.broadcastTransaction(walletId, signed)
+          )
+          return txid
         },
         start: async () => {
           try {
