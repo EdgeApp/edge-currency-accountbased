@@ -3,6 +3,7 @@
 ## Unreleased
 
 - fixed: (ARRR) Wallets show their receive address again instead of failing with "Watch-only account key not found"
+- fixed: (ARRR) Sent transactions no longer appear twice, once permanently pending
 
 ## 4.95.0 (2026-09-21)
 

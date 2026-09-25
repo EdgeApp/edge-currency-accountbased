@@ -190,6 +190,32 @@ const asTransactionInfo = asObject<TransactionInfo>({
   confirmed: asBoolean
 })
 
+/**
+ * The SDK hands out one transaction under two byte orders. The transaction
+ * list reports a transaction in the internal order while it is unconfirmed,
+ * then switches to the reversed display order once it lands in a block. The
+ * display order is what the block explorer resolves. Left alone the poller
+ * opens a pending row under the internal order that no later update ever
+ * matches, and adds a second row when the confirmed copy arrives under the
+ * reversed hash, so a completed send shows twice with one copy pending
+ * forever. Reversing the unconfirmed rows gives the engine one hash per
+ * transaction. Anything that is not a 32-byte hash passes through untouched.
+ */
+export function toDisplayTxid(txid: string): string {
+  if (!/^[0-9a-f]{64}$/i.test(txid)) return txid
+  return (txid.match(/../g) ?? []).reverse().join('').toLowerCase()
+}
+
+/**
+ * The only field read off the SDK's signed payload, already in the display
+ * order (unlike the internal-order hash the broadcast resolves with). The
+ * payload itself goes back to the SDK untouched, since cleaning it would drop
+ * the fields broadcasting needs.
+ */
+const asSignedTransaction = asObject({
+  txid: asString
+})
+
 export function makePiratechainIo(): PiratechainIo {
   // The SDK constructor throws when the native module isn't linked, so
   // create it lazily to keep `makePiratechainIo` safe on every platform:
@@ -438,7 +464,7 @@ export function makePiratechainIo(): PiratechainIo {
       /**
        * Runs `task` with the wallet's signing key unlocked, then locks it
        * again. Spans are serialized: a send holds the key for as long as it
-       * takes to build and broadcast, and an address read landing in the
+       * takes to build and sign, and an address read landing in the
        * middle of one must not lock the key out from under it.
        */
       const signingQueue = makeSerialQueue()
@@ -519,7 +545,10 @@ export function makePiratechainIo(): PiratechainIo {
           const raw: unknown[] = realSynchronizer.transactions
           const transactions = raw.flatMap(entry => {
             const tx = asMaybe(asTransactionInfo)(entry)
-            return tx == null ? [] : [tx]
+            if (tx == null) return []
+            // Confirmed rows already carry the display order, so only the
+            // unconfirmed ones need reversing:
+            return [tx.confirmed ? tx : { ...tx, txid: toDisplayTxid(tx.txid) }]
           })
           if (transactions.length < raw.length) {
             console.warn(
@@ -534,14 +563,22 @@ export function makePiratechainIo(): PiratechainIo {
           await walletSdk.rescan(walletId, fromHeight ?? null)
         },
         send: async (outputs, fee) => {
-          // The signing key is in native memory only for the span of this
-          // call, so it never outlives the spend that needed it. The SDK's
-          // send builds, signs, and broadcasts, keeping the opaque
-          // pending/signed payloads verbatim between steps and serializing
-          // amounts as strings so large sends keep full precision:
-          return await withSigningUnlocked(
-            async () => await walletSdk.send(walletId, outputs, fee ?? null)
-          )
+          // The signing key is in native memory only for building and
+          // signing, so it never outlives the spend that needed it;
+          // broadcasting needs no key. The SDK keeps the opaque pending and
+          // signed payloads verbatim between steps and serializes amounts as
+          // strings so large sends keep full precision:
+          const signed: unknown = await withSigningUnlocked(async () => {
+            const pending = await walletSdk.buildTransaction(
+              walletId,
+              outputs,
+              fee ?? null
+            )
+            return await walletSdk.signTransaction(walletId, pending)
+          })
+          const { txid } = asSignedTransaction(signed)
+          await walletSdk.broadcastTransaction(walletId, signed)
+          return txid
         },
         start: async () => {
           try {
