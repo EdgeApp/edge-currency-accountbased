@@ -79,13 +79,17 @@ const networkInfo: EthereumNetworkInfo = {
       servers: ['https://arc-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}']
     },
     {
+      // The eth-balance-checker contract reads native and token balances in
+      // one call, so a build without an Alchemy key still loads balances and
+      // detects tokens.
       type: 'rpc',
       servers: [
         'https://rpc.mainnet.arc.io',
         'https://rpc.drpc.mainnet.arc.io',
         'https://rpc.quicknode.mainnet.arc.io',
         'https://arc-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}'
-      ]
+      ],
+      ethBalCheckerContract: '0x7b3e3716Bf1980b51F8d377358AB73aA0A6F355F'
     },
     {
       // History fallback, and the only source in a build without an Alchemy
