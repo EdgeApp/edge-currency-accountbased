@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: (Zano) Upgrade `react-native-zano` to 0.6.0 (Zano build 601) for the HF7 chain restart
+- fixed: (Zano) Wallets resync once so history from the abandoned chain disappears
+
 ## 4.95.1 (2026-09-25)
 
 - fixed: (ARRR) Wallets show their receive address again instead of failing with "Watch-only account key not found"

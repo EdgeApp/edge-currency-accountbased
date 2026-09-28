@@ -172,7 +172,7 @@
     "querystring": "^0.2.1",
     "react-native-monero": "0.5.0",
     "react-native-pirate-wallet": "0.3.4",
-    "react-native-zano": "^0.5.1",
+    "react-native-zano": "^0.6.0",
     "react-native-zcash": "0.13.1",
     "rimraf": "^3.0.2",
     "shell-quote": "^1.8.1",
@@ -190,7 +190,7 @@
   "peerDependencies": {
     "react-native-monero": "^0.5.0",
     "react-native-pirate-wallet": "^0.3.4",
-    "react-native-zano": "^0.5.1",
+    "react-native-zano": "^0.6.0",
     "react-native-zcash": "^0.13.1"
   },
   "overrides": {
