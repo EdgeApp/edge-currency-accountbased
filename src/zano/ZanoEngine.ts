@@ -120,6 +120,7 @@ export class ZanoEngine extends CurrencyEngine<
   private readonly nativeId: LifecycleManager<number>
   private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
   private needsNativeStorageClear: boolean = false
+  private loggedNativeVersion: boolean = false
   private lastStoreTime: number = 0
   private lastCheckpointTime: number = 0
   private lastCheckpointHeight: number = 0
@@ -225,6 +226,14 @@ export class ZanoEngine extends CurrencyEngine<
         ) {
           this.otherData.chainEpoch = ZANO_CHAIN_EPOCH
           this.walletLocalDataDirty = true
+        }
+
+        if (!this.loggedNativeVersion) {
+          this.loggedNativeVersion = true
+          const version = await this.tools.zano
+            .getVersion()
+            .catch((error: unknown) => `unknown (${String(error)})`)
+          this.log(`Zano native library ${version}`)
         }
 
         try {

@@ -44,6 +44,7 @@ async function launch(
         if (initialized && files.delete(path)) deleted.push(path)
         return { result: { return_code: 'OK' } }
       },
+      getVersion: async () => '2.2.3.601',
       init: async () => {
         initialized = true
         return {}
@@ -223,5 +224,24 @@ describe('ZanoEngine chain epoch', () => {
     const second = await launch(disklet, first.files)
     await second.start()
     assert.deepEqual(second.deleted, [])
+  })
+
+  it('logs the native library version once', async () => {
+    const { disklet } = makeFakeIo()
+    const lines: string[] = []
+    const first = await launch(disklet)
+    const raw = first.engine as any
+    raw.log = Object.assign((message: string) => lines.push(message), {
+      warn: () => {},
+      error: () => {}
+    })
+
+    await first.start()
+    raw.nativeId.stop()
+    await raw.nativeId.get()
+    assert.deepEqual(
+      lines.filter(line => line.startsWith('Zano native library')),
+      ['Zano native library 2.2.3.601']
+    )
   })
 })
