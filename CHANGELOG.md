@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Include the balance-checker and Arbitrum node-interface ABI files in the Node package
+
 ## 4.95.1 (2026-09-25)
 
 - fixed: (ARRR) Wallets show their receive address again instead of failing with "Watch-only account key not found"
