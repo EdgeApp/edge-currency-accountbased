@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.96.0 (2026-09-29)
+
 - changed: (Zano) Upgrade `react-native-zano` to 0.6.0 (Zano build 601) for the HF7 chain restart
 - fixed: (Zano) Wallets resync once so history from the abandoned chain disappears
 
