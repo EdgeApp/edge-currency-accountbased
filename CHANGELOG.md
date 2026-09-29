@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Solana) Swaps routed through a held token no longer add a zero-amount transaction for that token
+
 ## 4.96.0 (2026-09-29)
 
 - changed: (Zano) Upgrade `react-native-zano` to 0.6.0 (Zano build 601) for the HF7 chain restart

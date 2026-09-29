@@ -511,6 +511,9 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     tokenBalanceChangeMap.forEach((balanceChange, tokenId) => {
+      // Swap routes can pass through a token account we own and leave it
+      // unchanged, which is not a transaction for that token:
+      if (eq(balanceChange, '0')) return
       const isTokenSend = lt(balanceChange, '0')
       out.push({
         amount: balanceChange,
