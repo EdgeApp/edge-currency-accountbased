@@ -97,6 +97,17 @@ const asStoreResponse = asObject({ result: asObject({}) })
 export const daemonHeightToBlockHeight = (daemonHeight: number): number =>
   Math.max(0, daemonHeight - 1)
 
+/**
+ * Bumped whenever the Zano chain itself is rewritten underneath existing
+ * wallets, which forces every wallet through one full resync.
+ *
+ * Epoch 1 is the HF7 restart, which rolled the chain back to block
+ * 3,833,000. A wallet synced past that height holds transactions and
+ * balances the recovered chain does not have, and neither the native wallet
+ * file nor our cached transaction list can drop them without a rescan.
+ */
+export const ZANO_CHAIN_EPOCH = 1
+
 export class ZanoEngine extends CurrencyEngine<
   ZanoTools,
   SafeZanoWalletInfo,
@@ -109,6 +120,7 @@ export class ZanoEngine extends CurrencyEngine<
   private readonly nativeId: LifecycleManager<number>
   private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
   private needsNativeStorageClear: boolean = false
+  private loggedNativeVersion: boolean = false
   private lastStoreTime: number = 0
   private lastCheckpointTime: number = 0
   private lastCheckpointHeight: number = 0
@@ -179,12 +191,22 @@ export class ZanoEngine extends CurrencyEngine<
         // 2. The lifecycle manager serializes stop→start transitions,
         //    so this runs only after the previous wallet has fully closed,
         //    avoiding deletion of files while the native wallet is open.
-        // 3. Placing the delete at the top of onStart guarantees the
-        //    files are removed before the next startWallet call.
+        // 3. Placing the delete before startWallet guarantees the
+        //    files are removed before the wallet reopens.
+        //
+        // `init` must run first: it sets the SDK-wide folder that
+        // `deleteWallet` resolves the file name against, and on a cold
+        // launch nothing has set it yet. `init` is safe to repeat, since
+        // later calls report ALREADY_EXISTS without throwing.
+        await this.tools.zano.init(this.networkInfo.walletRpcAddress, -1)
         if (this.needsNativeStorageClear) {
-          this.needsNativeStorageClear = false
           try {
             await this.tools.zano.deleteWallet(keys.storagePath)
+            // The SDK reports OK whether or not it removed anything:
+            if (await this.tools.zano.isWalletExist(keys.storagePath)) {
+              throw new Error('the wallet file is still on disk')
+            }
+            this.needsNativeStorageClear = false
             this.log('Deleted native wallet storage for resync')
           } catch (error: unknown) {
             this.log.warn(
@@ -193,8 +215,28 @@ export class ZanoEngine extends CurrencyEngine<
           }
         }
 
+        // Every path to here has rebuilt the wallet for the current epoch:
+        // `loadEngine` queues the delete above for any older wallet, so the
+        // stamp lands only once that delete has succeeded. A failed delete
+        // or a kill before this point leaves the old epoch on disk and
+        // repeats the rebuild on the next start.
+        if (
+          !this.needsNativeStorageClear &&
+          this.otherData.chainEpoch < ZANO_CHAIN_EPOCH
+        ) {
+          this.otherData.chainEpoch = ZANO_CHAIN_EPOCH
+          this.walletLocalDataDirty = true
+        }
+
+        if (!this.loggedNativeVersion) {
+          this.loggedNativeVersion = true
+          const version = await this.tools.zano
+            .getVersion()
+            .catch((error: unknown) => `unknown (${String(error)})`)
+          this.log(`Zano native library ${version}`)
+        }
+
         try {
-          await this.tools.zano.init(this.networkInfo.walletRpcAddress, -1)
           const response = await this.tools.zano.startWallet(
             keys.mnemonic,
             keys.passphrase ?? '',
@@ -295,6 +337,28 @@ export class ZanoEngine extends CurrencyEngine<
 
   setOtherData(raw: any): void {
     this.otherData = asZanoWalletOtherData(raw)
+  }
+
+  async loadEngine(): Promise<void> {
+    await super.loadEngine()
+
+    // A wallet from before the current chain epoch holds history the chain
+    // no longer has, so rebuild it once the same way `resyncBlockchain`
+    // does. The epoch is stamped in `onStart`, after the native delete.
+    if (this.otherData.chainEpoch < ZANO_CHAIN_EPOCH) {
+      this.log.warn(
+        `Resyncing wallet from chain epoch ${this.otherData.chainEpoch} to ${ZANO_CHAIN_EPOCH}`
+      )
+      this.needsNativeStorageClear = true
+      // A wallet with a seen-tx checkpoint has not read its transaction
+      // files yet, and the save inside the clear would read them back in,
+      // so load them first for the clear to drop:
+      await this.loadTransactions()
+      await this.clearBlockchainCache()
+      // The base load already reported the cached balance, which belongs to
+      // the abandoned chain, so report the cleared one in its place:
+      this.doInitialBalanceCallback()
+    }
   }
 
   async queryBalance(): Promise<void> {

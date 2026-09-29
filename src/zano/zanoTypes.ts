@@ -27,6 +27,8 @@ export type SafeZanoWalletInfo = ReturnType<typeof asSafeZanoWalletInfo>
 export const asSafeZanoWalletInfo = asSafeCommonWalletInfo
 
 export const asZanoWalletOtherData = asObject({
+  /** The last `ZANO_CHAIN_EPOCH` this wallet was rebuilt for. */
+  chainEpoch: asOptional(asNumber, 0),
   transactionQueryOffset: asOptional(asNumber, 0)
 })
 export type ZanoWalletOtherData = ReturnType<typeof asZanoWalletOtherData>

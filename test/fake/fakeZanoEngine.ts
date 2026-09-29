@@ -24,13 +24,22 @@ export const FAKE_ZANO_ADDRESS = 'ZxTestAddress'
  */
 export async function makeFakeZanoEngine(
   opts: {
+    /** Wallet-local storage, shared to model the same wallet across launches. */
+    disklet?: EdgeCurrencyEngineOptions['walletLocalDisklet']
+    /** Receives every balance the engine reports to the core. */
+    onTokenBalanceChanged?: EdgeCurrencyEngineCallbacks['onTokenBalanceChanged']
     /** Receives every transaction event the engine hands to the core. */
     onTransactions?: (events: EdgeTransactionEvent[]) => void
     tools?: ZanoTools
   } = {}
 ): Promise<ZanoEngine> {
-  const { onTransactions = () => {}, tools = {} as unknown as ZanoTools } = opts
   const fakeIo = makeFakeIo()
+  const {
+    disklet = fakeIo.disklet,
+    onTokenBalanceChanged = () => {},
+    onTransactions = () => {},
+    tools = {} as unknown as ZanoTools
+  } = opts
 
   const callbacks: EdgeCurrencyEngineCallbacks = {
     onAddressChanged() {},
@@ -42,7 +51,9 @@ export async function makeFakeZanoEngine(
     onStakingStatusChanged() {},
     onSubscribeAddresses() {},
     onSyncStatusChanged() {},
-    onTokenBalanceChanged() {},
+    onTokenBalanceChanged(tokenId, balance) {
+      onTokenBalanceChanged(tokenId, balance)
+    },
     onTransactions(transactionEvents) {
       onTransactions(transactionEvents)
     },
@@ -59,8 +70,8 @@ export async function makeFakeZanoEngine(
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
-    walletLocalDisklet: fakeIo.disklet,
-    walletLocalEncryptedDisklet: fakeIo.disklet,
+    walletLocalDisklet: disklet,
+    walletLocalEncryptedDisklet: disklet,
     walletSettings: {}
   }
 
