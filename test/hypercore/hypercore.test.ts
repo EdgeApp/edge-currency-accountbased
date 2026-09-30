@@ -1,14 +1,19 @@
 import { assert } from 'chai'
+import { asObject, asString } from 'cleaners'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyPlugin,
   EdgeTransaction,
+  JsonObject,
   makeFakeIo
 } from 'edge-core-js'
 import { recoverTypedSignature_v4 } from 'eth-sig-util'
 import { before, describe, it } from 'mocha'
 
 import { CurrencyEngine } from '../../src/common/CurrencyEngine'
+import { EthereumTools } from '../../src/ethereum/EthereumTools'
+import { ethereum } from '../../src/ethereum/info/ethereumInfo'
+import { hyperevm } from '../../src/ethereum/info/hyperEvmInfo'
 import {
   decimalToNative,
   HyperCoreEngine,
@@ -41,6 +46,27 @@ const opts: EdgeCorePluginOptions = {
   pluginDisklet: fakeIo.disklet
 }
 const plugin: EdgeCurrencyPlugin = hypercore(opts)
+
+const asPublicKeys = asObject({ publicKey: asString })
+
+/**
+ * Mirrors the key renaming in edge-core-js `makeSplitWalletInfo`, which is
+ * not exported: `<network>Key` becomes the new network's key and every other
+ * key is copied as-is.
+ */
+function splitKeys(
+  keys: JsonObject,
+  fromType: string,
+  toType: string
+): JsonObject {
+  const fromName = fromType.replace(/wallet:/, '').replace('-', '')
+  const toName = toType.replace(/wallet:/, '').replace('-', '')
+  const out: JsonObject = {}
+  for (const key of Object.keys(keys)) {
+    out[key === fromName + 'Key' ? toName + 'Key' : key] = keys[key]
+  }
+  return out
+}
 
 describe('HyperCore tools', function () {
   let tools: HyperCoreTools
@@ -101,6 +127,55 @@ describe('HyperCore tools', function () {
       await tools.encodeUri({ publicAddress: OTHER_ADDRESS }),
       OTHER_ADDRESS
     )
+  })
+})
+
+describe('HyperCore wallet splitting', function () {
+  it('offers HyperEVM and HyperCore as splits of each other only', async function () {
+    const coreTools = (await plugin.makeCurrencyTools()) as HyperCoreTools
+    const evmTools = (await hyperevm(opts).makeCurrencyTools()) as EthereumTools
+    const ethTools = (await ethereum(opts).makeCurrencyTools()) as EthereumTools
+    const walletInfo = { id: 'id', type: 'wallet:hypercore', keys: {} }
+
+    assert.deepEqual(await coreTools.getSplittableTypes(walletInfo), [
+      'wallet:hyperevm'
+    ])
+    const evmTypes = await evmTools.getSplittableTypes(walletInfo)
+    assert.include(evmTypes, 'wallet:hypercore')
+    assert.include(evmTypes, 'wallet:ethereum')
+    const ethTypes = await ethTools.getSplittableTypes(walletInfo)
+    assert.notInclude(ethTypes, 'wallet:hypercore')
+  })
+
+  it('keeps the address when splitting either way', async function () {
+    const coreTools = (await plugin.makeCurrencyTools()) as HyperCoreTools
+    const evmTools = (await hyperevm(opts).makeCurrencyTools()) as EthereumTools
+
+    // HyperEVM to HyperCore, from a mnemonic wallet:
+    const evmKeys = await evmTools.importPrivateKey(MNEMONIC)
+    const toCore = await coreTools.derivePublicKey({
+      id: 'id',
+      type: 'wallet:hypercore',
+      keys: splitKeys(evmKeys, 'wallet:hyperevm', 'wallet:hypercore')
+    })
+    assert.equal(toCore.publicKey, MNEMONIC_ADDRESS)
+
+    // HyperCore to HyperEVM, from a mnemonic wallet and a raw key:
+    for (const input of [MNEMONIC, MNEMONIC_KEY]) {
+      const coreKeys = await coreTools.importPrivateKey(input)
+      const toEvm = asPublicKeys(
+        await evmTools.derivePublicKey({
+          id: 'id',
+          type: 'wallet:hyperevm',
+          keys: splitKeys(coreKeys, 'wallet:hypercore', 'wallet:hyperevm')
+        })
+      )
+      // EVM tools only checksum addresses derived from a mnemonic:
+      assert.equal(
+        toEvm.publicKey.toLowerCase(),
+        MNEMONIC_ADDRESS.toLowerCase()
+      )
+    }
   })
 })
 

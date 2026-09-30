@@ -325,6 +325,14 @@ export class HyperCoreTools implements EdgeCurrencyTools {
     return { publicKey: address }
   }
 
+  /**
+   * HyperCore and HyperEVM are one chain with one key per address, so a
+   * HyperEVM wallet split from this one controls the same account.
+   */
+  getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
+    return ['wallet:hyperevm']
+  }
+
   //
   // URIs
   //
