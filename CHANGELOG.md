@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: HyperCore support (`hypercore`), with spot token balances and transfers
+
 ## 4.96.1 (2026-09-29)
 
 - fixed: (Solana) Swaps routed through a held token no longer add a zero-amount transaction for that token
