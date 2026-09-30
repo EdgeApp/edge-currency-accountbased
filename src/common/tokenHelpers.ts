@@ -83,3 +83,24 @@ export const createTokenIdFromContractAddress = (token: EdgeToken): string => {
 export const createEvmTokenId = (token: EdgeToken): string => {
   return normalizeAddress(createTokenIdFromContractAddress(token))
 }
+
+export const createCosmosTokenId = (token: EdgeToken): string => {
+  validateToken(token)
+  const { contractAddress } =
+    asMaybeContractLocation(token.networkLocation) ?? {}
+
+  // Regexes inspired by a general regex in https://github.com/cosmos/cosmos-sdk
+  // Broken up to more tightly enforce the rules for each type of asset so the entered value matches what a node would expect
+  const ibcDenomRegex = /^ibc\/[0-9A-F]{64}$/
+  const nativeDenomRegex = /^(?!ibc)[a-z][a-z0-9/:._-]{2,127}$/
+
+  if (
+    contractAddress == null ||
+    (!ibcDenomRegex.test(contractAddress) &&
+      !nativeDenomRegex.test(contractAddress))
+  ) {
+    throw new Error('ErrorInvalidContractAddress')
+  }
+
+  return contractAddress.toLowerCase().replace(/\//g, '')
+}

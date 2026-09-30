@@ -1,6 +1,7 @@
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { createCosmosTokenId } from '../../common/tokenHelpers'
 import type { CosmosTools } from '../CosmosTools'
 import { asCosmosInfoPayload, CosmosInfoPayload } from '../cosmosTypes'
 import { MidgardNetworkInfo } from '../midgardTypes'
@@ -98,6 +99,7 @@ export const thorchainrune = makeOuterPlugin<
 >({
   currencyInfo,
   asInfoPayload: asCosmosInfoPayload,
+  createTokenId: createCosmosTokenId,
   networkInfo,
   builtinTokens,
 

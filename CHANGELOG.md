@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Thorchain) Support infoServerTokens
+
 ## 4.96.1 (2026-09-29)
 
 - fixed: (Solana) Swaps routed through a held token no longer add a zero-amount transaction for that token
