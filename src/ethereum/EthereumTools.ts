@@ -382,7 +382,11 @@ export class EthereumTools implements EdgeCurrencyTools {
   }
 
   getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
-    return Object.keys(ethereumPlugins).map(plugin => `wallet:${plugin}`)
+    const types = Object.keys(ethereumPlugins).map(plugin => `wallet:${plugin}`)
+    // HyperCore accounts share their keys and address with HyperEVM:
+    if (this.currencyInfo.pluginId === 'hyperevm')
+      types.push('wallet:hypercore')
+    return types
   }
 
   async getTokenDetails(
