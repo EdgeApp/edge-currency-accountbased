@@ -67,6 +67,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   // No memo support:
   memoOptions: [],
 
+  usesChangeServer: true,
+
   // Deprecated:
   displayName: 'Tezos'
 }
