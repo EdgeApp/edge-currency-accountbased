@@ -14,7 +14,7 @@ import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
 const builtinTokens: EdgeTokenMap = {
   '8c97f94b2cdbf7dc0098057334d9908c4dc0a885': {
     currencyCode: 'iFIL',
-    displayName: 'iFIL Inifinity Pool',
+    displayName: 'iFIL Infinity Pool',
     denominations: [{ name: 'iFIL', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x8c97F94b2cDbF7Dc0098057334d9908C4dC0a885'
