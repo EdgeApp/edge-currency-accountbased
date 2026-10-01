@@ -193,6 +193,20 @@
     "react-native-zano": "^0.6.0",
     "react-native-zcash": "^0.13.1"
   },
+  "peerDependenciesMeta": {
+    "react-native-monero": {
+      "optional": true
+    },
+    "react-native-pirate-wallet": {
+      "optional": true
+    },
+    "react-native-zano": {
+      "optional": true
+    },
+    "react-native-zcash": {
+      "optional": true
+    }
+  },
   "overrides": {
     "@greymass/eosio": "^0.6.8",
     "browserify-aes": "1.2.0",
