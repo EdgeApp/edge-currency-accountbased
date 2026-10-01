@@ -1221,10 +1221,6 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'blockchair',
       servers: ['https://api.blockchair.com']
-    },
-    {
-      type: 'blockcypher',
-      servers: ['https://api.blockcypher.com']
     }
   ],
 

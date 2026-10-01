@@ -27,7 +27,6 @@ export interface EthereumInitOptions {
   alchemyApiKey?: string
   amberdataApiKey?: string
   blockchairApiKey?: string
-  blockcypherApiKey?: string
   /**
    * For Blockscout's hosted API at `api.blockscout.com`, which bills per key
    * and answers 402 without one. Kept apart from `evmScanApiKey` because that
@@ -52,7 +51,6 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   alchemyApiKey: asOptional(asString),
   amberdataApiKey: asOptional(asString),
   blockchairApiKey: asOptional(asString),
-  blockcypherApiKey: asOptional(asString),
   blockscoutApiKey: asOptional(asEither(asString, asArray(asString))),
   drpcApiKey: asOptional(asString),
   etherscanApiKey: asOptional(asEither(asString, asArray(asString))),
@@ -136,7 +134,6 @@ const asNetworkAdaptorConfigType = asValue(
   'blockbook',
   'blockbook-ws',
   'blockchair',
-  'blockcypher',
   'blockscout',
   'evmscan',
   'filfox',
