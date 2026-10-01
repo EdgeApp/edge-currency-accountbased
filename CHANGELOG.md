@@ -2,7 +2,9 @@
 
 ## Unreleased
 
+- added: (EVM) Save the BIP-44 derivation path in wallet keys, so wallets created before a coin type correction keep deriving at the path their stored private key was built from.
 - fixed: (MAYAChain) A max send now leaves the wallet. mayanode collects the transaction's declared gas fee on top of the chain's flat network fee, but only the flat fee was reported, so a max send came out exactly one base unit over the balance. The chain accepted it at CheckTx and then reverted it as `insufficient funds`, which surfaced as a successful send in the app with nothing moving on-chain. The reported fee now covers both, and the fee recorded for a send that syncs back from Midgard matches it.
+- fixed: (Avalanche) Derive C-Chain addresses at coin type 60 so seeds imported from EVM wallets (Exodus, MetaMask, Trust) produce a matching receive address. Existing wallets are unaffected.
 
 ## 4.96.1 (2026-09-29)
 
