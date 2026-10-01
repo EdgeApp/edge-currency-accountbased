@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Mark the four React Native privacy-coin modules as optional peer dependencies. npm 7 and later install peer dependencies automatically unless they are marked optional, so every consumer was downloading `zcash-native`, `react-native-monero`, `react-native-zano` and `react-native-pirate-wallet` — about 1.3 GB of iOS simulator slices and Android libraries — whether or not it could load them. The Node entry point never reaches the modules that require them, so nothing that worked before changes: a React Native app declares these itself and still gets them, with the peer version range still enforced.
+
 ## 4.104.0 (2026-11-05)
 
 - changed: (Base) Look back 600 blocks for new transactions and read 1024 blocks of fee history, sized for the 200ms blocks of the Denim upgrade on 2026-11-05
