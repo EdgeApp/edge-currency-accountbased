@@ -7,6 +7,8 @@
 - fixed: (MAYAChain) A max send now leaves the wallet. mayanode collects the transaction's declared gas fee on top of the chain's flat network fee, but only the flat fee was reported, so a max send came out exactly one base unit over the balance. The chain accepted it at CheckTx and then reverted it as `insufficient funds`, which surfaced as a successful send in the app with nothing moving on-chain. The reported fee now covers both, and the fee recorded for a send that syncs back from Midgard matches it.
 - fixed: (Avalanche) Derive C-Chain addresses at coin type 60 so seeds imported from EVM wallets (Exodus, MetaMask, Trust) produce a matching receive address. Existing wallets are unaffected.
 - fixed: (EVM) A rate-limited block explorer no longer stops the wallet's sync until restart
+- fixed: (EVM) Show the seed phrase alongside the hex private key
+- fixed: (FIO) Show the seed phrase rather than the FIO private key
 
 ## 4.96.1 (2026-09-29)
 
