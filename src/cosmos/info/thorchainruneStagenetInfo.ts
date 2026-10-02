@@ -32,6 +32,7 @@ const networkInfo: MidgardNetworkInfo = {
     chainType: 'cosmos',
     chainId: 'thorchain-stagenet-2',
     networkType: 'testnet',
+    status: 'live',
     fees: {
       feeTokens: [
         {
