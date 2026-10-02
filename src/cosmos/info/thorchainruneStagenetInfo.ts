@@ -5,6 +5,7 @@ import type { CosmosTools } from '../CosmosTools'
 import { asCosmosInfoPayload, CosmosInfoPayload } from '../cosmosTypes'
 import { MidgardNetworkInfo } from '../midgardTypes'
 import { makeCosmosDefaultSettings } from './cosmosCommonInfo'
+import { makeThorchainCreateTokenId } from './thorchainCommonInfo'
 // import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
@@ -92,6 +93,11 @@ export const thorchainrunestagenet = makeOuterPlugin<
   asInfoPayload: asCosmosInfoPayload,
   networkInfo,
   builtinTokens,
+  createTokenId: makeThorchainCreateTokenId({
+    builtinTokens,
+    currencyCode: currencyInfo.currencyCode,
+    nativeDenom: networkInfo.nativeDenom
+  }),
 
   checkEnvironment() {
     if (global.BigInt == null) {

@@ -83,3 +83,29 @@ export const createTokenIdFromContractAddress = (token: EdgeToken): string => {
 export const createEvmTokenId = (token: EdgeToken): string => {
   return normalizeAddress(createTokenIdFromContractAddress(token))
 }
+
+/**
+ * Derives a token ID from a Cosmos bank denom.
+ * The raw denom stays in `networkLocation.contractAddress`,
+ * since that is what the chain uses for balances and sends.
+ */
+export const createCosmosTokenId = (token: EdgeToken): string => {
+  validateToken(token)
+  const { contractAddress } =
+    asMaybeContractLocation(token.networkLocation) ?? {}
+
+  // Denom rules from the cosmos-sdk (types/coin.go),
+  // split so an IBC denom must carry its full hash:
+  const ibcDenomRegex = /^ibc\/[0-9A-F]{64}$/
+  const nativeDenomRegex = /^(?!ibc)[a-zA-Z][a-zA-Z0-9/:._-]{2,127}$/
+
+  if (
+    contractAddress == null ||
+    (!ibcDenomRegex.test(contractAddress) &&
+      !nativeDenomRegex.test(contractAddress))
+  ) {
+    throw new Error('ErrorInvalidContractAddress')
+  }
+
+  return contractAddress.toLowerCase().replace(/\//g, '')
+}

@@ -21,7 +21,7 @@ import {
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
+import { createCosmosTokenId } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import { upgradeRegistryAndCreateMethods } from './cosmosRegistry'
@@ -239,24 +239,7 @@ export class CosmosTools implements EdgeCurrencyTools {
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
-    validateToken(token)
-    const { contractAddress } =
-      asMaybeContractLocation(token.networkLocation) ?? {}
-
-    // Regexes inspired by a general regex in https://github.com/cosmos/cosmos-sdk
-    // Broken up to more tightly enforce the rules for each type of asset so the entered value matches what a node would expect
-    const ibcDenomRegex = /^ibc\/[0-9A-F]{64}$/
-    const nativeDenomRegex = /^(?!ibc)[a-z][a-z0-9/]{2,127}/
-
-    if (
-      contractAddress == null ||
-      (!ibcDenomRegex.test(contractAddress) &&
-        !nativeDenomRegex.test(contractAddress))
-    ) {
-      throw new Error('ErrorInvalidContractAddress')
-    }
-
-    return contractAddress.toLowerCase().replace(/\//g, '')
+    return createCosmosTokenId(token)
   }
 }
 
