@@ -69,7 +69,7 @@ export interface UpgradedRegistry {
 
 export type CosmosChainData = Pick<
   Chain,
-  'chainName' | 'fees' | 'chainType' | 'chainId' | 'networkType'
+  'chainName' | 'fees' | 'chainType' | 'chainId' | 'networkType' | 'status'
 >
 
 export interface CosmosNetworkInfo {

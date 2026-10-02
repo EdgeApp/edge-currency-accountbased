@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update chain-registry
+
 ## 4.97.0 (2026-10-01)
 
 - added: (EVM) Save the BIP-44 derivation path in wallet keys, so wallets created before a coin type correction keep deriving at the path their stored private key was built from.
