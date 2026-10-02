@@ -188,6 +188,7 @@
     "webpack-dev-server": "^5.2.4"
   },
   "peerDependencies": {
+    "react-native-file-access": "^3.1.1",
     "react-native-monero": "^0.5.0",
     "react-native-pirate-wallet": "^0.3.9",
     "react-native-zano": "^0.6.0",
