@@ -453,7 +453,10 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // Transaction is signed and broadcast at the same time
+    // Transaction is signed and broadcast at the same time, but the prover
+    // download can fail, and failing here leaves the send retryable:
+    const synchronizer = await this.synchronizerPromise
+    await synchronizer.prepareSpend()
     return edgeTransaction
   }
 

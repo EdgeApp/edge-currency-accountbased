@@ -72,6 +72,7 @@ Notice the `/rn` suffix on the `import` statement. If you leave this off (which 
 These chains only work on React Native. To use them, first install the following packages using the instructions in their repos:
 
 - [react-native-piratechain](https://www.npmjs.com/package/react-native-piratechain)
+- [react-native-file-access](https://www.npmjs.com/package/react-native-file-access) (Piratechain on Android downloads its Sapling spend parameters with it)
 - [react-native-zano](https://www.npmjs.com/package/react-native-zano)
 - [react-native-zcash](https://www.npmjs.com/package/react-native-zcash)
 
