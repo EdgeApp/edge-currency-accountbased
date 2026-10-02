@@ -51,6 +51,18 @@ export function isFailedMidgardAction(action: MidgardActionResponse): boolean {
 }
 
 /**
+ * Turns a Midgard asset name into a bank denom.
+ *
+ * The asset might have a chain prefix like "MAYA.CACAO",
+ * or it might be a plain currency code like "TCY".
+ */
+export function midgardAssetToDenom(asset: string): string {
+  const assetParts = asset.split('.')
+  const assetCode = assetParts[1] ?? assetParts[0]
+  return assetCode.toLowerCase()
+}
+
+/**
  * Converts a single Midgard action into the coin_spent/coin_received events
  * used to compute our wallet's net balance change.
  *
@@ -66,11 +78,15 @@ export function isFailedMidgardAction(action: MidgardActionResponse): boolean {
  * A `type: 'failed'` deposit reports no networkFees in its metadata, so
  * callers pass the chain's standard fee as `fallbackNetworkFees` to keep the
  * burned fee on record.
+ *
+ * Midgard names assets its own way, so `assetToDenom` turns each name back
+ * into the bank denom the engine knows.
  */
 export function midgardActionToCoinEvents(
   action: MidgardActionResponse,
   ourAddress: string,
-  fallbackNetworkFees: Array<{ amount: string; asset: string }> = []
+  fallbackNetworkFees: Array<{ amount: string; asset: string }> = [],
+  assetToDenom: (asset: string) => string = midgardAssetToDenom
 ): Event[] {
   const events: Event[] = []
   const pushCoinEvent = (
@@ -79,15 +95,11 @@ export function midgardActionToCoinEvents(
     amount: string,
     type: 'coin_spent' | 'coin_received'
   ): void => {
-    // The coin might have a prefix like "RUNE.RUNE" or "MAYA.CACAO",
-    // or it might be a plain currency code like "TCY":
-    const assetParts = asset.split('.')
-    const assetCode = assetParts[1] ?? assetParts[0]
     const typeValue = type === 'coin_received' ? 'receiver' : 'spender'
     events.push({
       type,
       attributes: [
-        { key: 'amount', value: `${abs(amount)}${assetCode.toLowerCase()}` },
+        { key: 'amount', value: `${abs(amount)}${assetToDenom(asset)}` },
         { key: typeValue, value: address }
       ]
     })
@@ -225,7 +237,8 @@ export class MidgardEngine extends CosmosEngine {
           const events = midgardActionToCoinEvents(
             action,
             ourAddress,
-            fallbackNetworkFees
+            fallbackNetworkFees,
+            asset => this.midgardAssetToDenom(asset)
           )
 
           if (txidHex === mostRecentTxId) {
@@ -291,6 +304,14 @@ export class MidgardEngine extends CosmosEngine {
       gasLimit: MIDGARD_GAS_LIMIT,
       networkFee
     }
+  }
+
+  /**
+   * Turns a Midgard asset name into a bank denom.
+   * Subclasses can override this for chain-specific asset names.
+   */
+  protected midgardAssetToDenom(asset: string): string {
+    return midgardAssetToDenom(asset)
   }
 
   /**
