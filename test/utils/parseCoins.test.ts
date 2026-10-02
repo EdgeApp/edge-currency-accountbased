@@ -21,6 +21,14 @@ describe(`Cosmos parseCoins test`, function () {
         }
       ]
     )
+    assert.deepEqual(
+      extendedParseCoins('5thor.auto,6x/staking-x/ruji,7btc-btc'),
+      [
+        { amount: '5', denom: 'thor.auto' },
+        { amount: '6', denom: 'x/staking-x/ruji' },
+        { amount: '7', denom: 'btc-btc' }
+      ]
+    )
     assert.deepEqual(extendedParseCoins('1337uwat'), [
       {
         denom: 'uwat',

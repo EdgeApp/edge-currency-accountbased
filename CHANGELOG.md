@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added: (THORChain) Support tokens defined on the info server
+- fixed: (THORChain) Token transactions missing from history
+- fixed: (Cosmos) A chain's native denom can no longer be added as a custom token
+
 ## 4.100.0 (2026-10-07)
 
 - changed: (Piratechain) Download the Sapling spend parameters on Android instead of bundling them

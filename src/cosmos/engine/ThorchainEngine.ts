@@ -12,6 +12,27 @@ import { asThornodeNetwork } from '../thorchainTypes'
 import { MidgardEngine } from './MidgardEngine'
 
 /**
+ * Turns a THORChain asset name, as Midgard reports it, into a bank denom.
+ *
+ * This follows thornode's `Asset.Native()`: a few assets have their own
+ * denoms, and every other one uses its lowercased name. Midgard reports the
+ * same token under more than one name ("THOR.RUJI" in a swap, "X/RUJI" in a
+ * send), and both must land on the one denom the bank module uses.
+ */
+export function thorchainAssetToDenom(asset: string): string {
+  const assetName = asset.toUpperCase()
+  switch (assetName) {
+    case 'THOR.RUNE':
+      return 'rune'
+    case 'THOR.TCY':
+      return 'tcy'
+    case 'THOR.RUJI':
+      return 'x/ruji'
+  }
+  return assetName.toLowerCase()
+}
+
+/**
  * Thorchain-specific engine that uses the thornode API for fee calculation.
  */
 export class ThorchainEngine extends MidgardEngine {
@@ -44,6 +65,10 @@ export class ThorchainEngine extends MidgardEngine {
       payer: '',
       granter: ''
     }
+  }
+
+  protected midgardAssetToDenom(asset: string): string {
+    return thorchainAssetToDenom(asset)
   }
 
   async calculateFee(opts: { messages: EncodeObject[] }): Promise<CosmosFee> {
