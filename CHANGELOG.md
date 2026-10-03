@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Piratechain) Download the Sapling spend parameters on Android instead of bundling them
+
 ## 4.98.0 (2026-10-02)
 
 - changed: Update chain-registry
