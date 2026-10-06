@@ -20,6 +20,7 @@ const builtinTokens: EdgeTokenMap = {
 const networkInfo: SuiNetworkInfo = {
   network: 'mainnet',
   pluginMnemonicKeyName: 'suiMnemonic',
+  totalSupply: '10000000000000000000',
 
   // Mysten removed JSON-RPC from the public fullnodes, so `getFullnodeUrl` is
   // no longer usable. These are third-party nodes that still serve it.

@@ -1,4 +1,6 @@
 import type { SignatureWithBytes } from '@mysten/sui/cryptography'
+import { SUI_TYPE_ARG } from '@mysten/sui/utils'
+import { gt } from 'biggystring'
 import {
   asArray,
   asCodec,
@@ -22,6 +24,12 @@ import { MakeTxParams } from '../common/types'
 export interface SuiNetworkInfo {
   network: 'mainnet' | 'testnet'
   pluginMnemonicKeyName: string
+
+  /**
+   * The whole SUI supply, in mist. Genesis mints it once and then destroys the
+   * `Supply<SUI>`, so no address can ever hold more.
+   */
+  totalSupply: string
 
   /**
    * Nodes for balances, fees, and broadcasts. These may be pruned, since none
@@ -54,6 +62,38 @@ export const asSuiInfoPayload = asObject({
   maxRequestsPerSecond: asOptional(asNumber)
 })
 export type SuiInfoPayload = ReturnType<typeof asSuiInfoPayload>
+
+/**
+ * A native SUI total as a node reports it, checked against the network's
+ * `totalSupply`. A node whose owner index has gone negative reports the
+ * deficit wrapped around `u128`, which lands far above the supply.
+ */
+export const asSuiBalance =
+  (totalSupply: string): Cleaner<string> =>
+  raw => {
+    const balance = asString(raw)
+    if (!/^\d+$/.test(balance) || gt(balance, totalSupply)) {
+      throw new TypeError(`Invalid Sui balance: ${balance}`)
+    }
+    return balance
+  }
+
+/**
+ * Throws if a node's `getAllBalances` answer has an impossible SUI total.
+ * Other coin types pass unchecked, because they have no ceiling to check
+ * against: a module can mint through several `Supply<T>`, each a `u64`, so an
+ * address total can honestly exceed `u64`. Rejecting those would fail every
+ * node's answer for a wallet that anyone sent such a coin to.
+ */
+export const checkSuiBalances = (
+  balances: Array<{ coinType: string; totalBalance: string }>,
+  totalSupply: string
+): void => {
+  const asBalance = asSuiBalance(totalSupply)
+  for (const { coinType, totalBalance } of balances) {
+    if (coinType === SUI_TYPE_ARG) asBalance(totalBalance)
+  }
+}
 
 export const asSuiWalletOtherData = asObject({
   latestTxidFrom: asOptional(asString),

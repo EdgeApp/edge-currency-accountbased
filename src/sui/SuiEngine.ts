@@ -44,6 +44,7 @@ import {
   asSuiSignedTx,
   asSuiUnsignedTx,
   asSuiWalletOtherData,
+  checkSuiBalances,
   SuiNetworkInfo,
   SuiOtherMethods,
   SuiWalletOtherData
@@ -181,7 +182,15 @@ export class SuiEngine extends CurrencyEngine<
     try {
       const balances = await this.tools.raceRpc(
         this.tools.rpcNodes,
-        async client => await client.getAllBalances({ owner: this.suiAddress })
+        async client => {
+          const nodeBalances = await client.getAllBalances({
+            owner: this.suiAddress
+          })
+          // Validate inside the race, so a node with a corrupt SUI total
+          // loses to the next one instead of setting the balance:
+          checkSuiBalances(nodeBalances, this.networkInfo.totalSupply)
+          return nodeBalances
+        }
       )
 
       const detectedTokenIds: string[] = []
