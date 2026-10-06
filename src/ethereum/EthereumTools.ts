@@ -495,7 +495,17 @@ export class EthereumTools implements EdgeCurrencyTools {
     ) {
       throw new Error('ErrorInvalidContractAddress')
     }
-    return cleanLocation.contractAddress.toLowerCase().replace(/^0x/, '')
+    const contractAddress = cleanLocation.contractAddress.toLowerCase()
+
+    // The native ERC-20 interface is the native currency, not a token.
+    // Adding it as one would show the same balance twice:
+    const { nativeErc20Interface } = this.networkInfo
+    if (
+      contractAddress === nativeErc20Interface?.contractAddress.toLowerCase()
+    ) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    return contractAddress.replace(/^0x/, '')
   }
 
   // #region otherMethods

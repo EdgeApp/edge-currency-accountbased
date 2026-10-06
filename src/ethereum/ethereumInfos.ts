@@ -1,6 +1,7 @@
 import { abstract } from './info/abstractInfo'
 import { amoy } from './info/amoyInfo'
 import { arbitrum } from './info/arbitrumInfo'
+import { arc } from './info/arcInfo'
 import { avalanche } from './info/avalancheInfo'
 import { base } from './info/baseInfo'
 import { binancesmartchain } from './info/binancesmartchainInfo'
@@ -31,6 +32,7 @@ export const ethereumPlugins = {
   abstract,
   amoy,
   arbitrum,
+  arc,
   avalanche,
   base,
   binancesmartchain,
