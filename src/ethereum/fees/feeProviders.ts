@@ -272,14 +272,14 @@ export const fetchFeesFromEvmGasStation = async (
   networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
   const { evmGasStationUrl } = networkInfo
-  const gasStationApiKey = getGasStationApiKey(initOptions, currencyInfo, log)
-  if (evmGasStationUrl == null || gasStationApiKey == null) return
+  if (evmGasStationUrl == null) return
 
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  const apiKeyParams = gasStationApiKey
-    ? // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      `?api-key=${gasStationApiKey || ''}`
-    : ''
+  // The key is optional. A gas station that answers without one stays this
+  // chain's live fee source when the app supplies no key.
+  const gasStationApiKey =
+    getGasStationApiKey(initOptions, currencyInfo, log) ?? ''
+  const apiKeyParams =
+    gasStationApiKey !== '' ? `?api-key=${gasStationApiKey}` : ''
   const result = await fetch(`${evmGasStationUrl}${apiKeyParams}`)
   const jsonObj = await result.json()
 
