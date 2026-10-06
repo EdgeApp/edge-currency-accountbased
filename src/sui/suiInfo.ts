@@ -26,10 +26,9 @@ const networkInfo: SuiNetworkInfo = {
   // no longer usable. These are third-party nodes that still serve it.
   rpcNodes: [
     'https://sui-rpc.publicnode.com',
-    'https://rpc-mainnet.suiscan.xyz',
-    // Pruned to roughly the last 220 epochs, so it is fine for the tip but
-    // must stay out of `rpcNodesArchival`:
-    'https://mainnet.suiet.app'
+    'https://rpc-mainnet.suiscan.xyz'
+    // mainnet.suiet.app is left out: its owner index is missing coin objects,
+    // so it reports balances short of what the address really holds.
   ],
   rpcNodesArchival: [
     // Both verified to serve checkpoint 1:

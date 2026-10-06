@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Sui) Wallets intermittently showing a wrong balance, sometimes an enormous one
+
 ## 4.101.0 (2026-10-08)
 
 - added: (THORChain) Support tokens defined on the info server
