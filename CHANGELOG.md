@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.99.0 (2026-10-06)
+
 - added: Arc support (`arc`, EVM chain 5042)
 - added: (EVM) `nativeErc20Interface` network option, counting ERC-20 interface transfers as native history
 
