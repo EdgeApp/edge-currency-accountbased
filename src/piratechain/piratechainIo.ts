@@ -22,6 +22,12 @@ import { createPirateWalletSdk } from 'react-native-pirate-wallet'
 import { bridgifyObject, emit, onMethod, Subscriber } from 'yaob'
 
 import { makeSerialQueue } from '../common/promiseUtils'
+import {
+  ensureSaplingParams,
+  makeFileAccessDisk,
+  SAPLING_OUTPUT_PARAMS,
+  SAPLING_SPEND_PARAMS
+} from './saplingParams'
 
 export interface PiratechainStatusEvent {
   name: SynchronizerStatus
@@ -104,6 +110,11 @@ export interface PiratechainSynchronizer {
   getEndpointDiagnostics: () => Promise<EndpointPoolDiagnostics>
   getSpendability: () => Promise<PiratechainSpendability>
   getTransactions: () => Promise<TransactionInfo[]>
+  /**
+   * Readies the Sapling prover a spend needs, so a missing download fails
+   * before anything is broadcast rather than as an unknown send status.
+   */
+  prepareSpend: () => Promise<void>
   rescan: (fromHeight?: number) => Promise<void>
   send: (outputs: PiratechainSpendOutput[], fee?: string) => Promise<string>
   /**
@@ -145,6 +156,12 @@ export interface PiratechainIo {
  * wallets re-restore from their seeds.
  */
 const DEVICE_ACCOUNT_ID = 'edge-pirate-keychain'
+
+/**
+ * Where the Android build keeps the Sapling proving parameters, under the
+ * app's document directory.
+ */
+const SAPLING_PARAMS_DIR_NAME = 'piratechain-sapling-params'
 
 const asInvokeEnvelope = asObject({
   ok: asBoolean,
@@ -348,6 +365,37 @@ export function makePiratechainIo(): PiratechainIo {
   }
 
   /**
+   * The Android SDK binary leaves the Sapling proving parameters out, so a
+   * spend needs them downloaded and handed to the SDK first. The SDK verifies
+   * the files and caches the prover for the life of the process, so success is
+   * cached here too; a failure clears the cache so the next call tries again.
+   * iOS builds embed the parameters and skip this.
+   */
+  let saplingParamsPromise: Promise<void> | undefined
+  const ensureSaplingParamsConfigured = async (): Promise<void> => {
+    if (!isAndroid()) return
+    if (saplingParamsPromise == null) {
+      saplingParamsPromise = configureSaplingParams().catch(
+        (error: unknown) => {
+          saplingParamsPromise = undefined
+          throw error
+        }
+      )
+    }
+    await saplingParamsPromise
+  }
+
+  const configureSaplingParams = async (): Promise<void> => {
+    const { disk, documentDir } = makeFileAccessDisk()
+    const paramsDir = `${documentDir}/${SAPLING_PARAMS_DIR_NAME}`
+    await ensureSaplingParams(disk, paramsDir)
+    await getSdk().initializeSaplingParameters({
+      spendPath: `${paramsDir}/${SAPLING_SPEND_PARAMS}`,
+      outputPath: `${paramsDir}/${SAPLING_OUTPUT_PARAMS}`
+    })
+  }
+
+  /**
    * Finds the registry wallet matching the Edge wallet's alias name, restoring
    * it from the mnemonic if this device hasn't seen it yet. Registry mutations
    * are serialized so two wallets starting at once cannot interleave. Syncing
@@ -446,6 +494,14 @@ export function makePiratechainIo(): PiratechainIo {
     async makeSynchronizer(config) {
       const walletSdk = getSdk()
       const walletId = await ensureWallet(config)
+
+      // Fetch the spend parameters in the background while the wallet syncs,
+      // so the first send rarely waits on a 51 MB download:
+      ensureSaplingParamsConfigured().catch((error: unknown) => {
+        console.warn(
+          `piratechain: Sapling parameters not ready: ${String(error)}`
+        )
+      })
 
       // Point the wallet at Edge's own node. The SDK bakes in a default
       // lightwalletd and never reads the plugin's `networkInfo`, so a wallet
@@ -633,10 +689,25 @@ export function makePiratechainIo(): PiratechainIo {
           }
           return transactions
         },
+        prepareSpend: async () => {
+          try {
+            await ensureSaplingParamsConfigured()
+          } catch (error: unknown) {
+            const reason =
+              error instanceof Error ? error.message : String(error)
+            throw new Error(
+              `Cannot send until the Pirate Chain spend parameters download: ${reason}`
+            )
+          }
+        },
         rescan: async fromHeight => {
           await walletSdk.rescan(walletId, fromHeight ?? null)
         },
         send: async (outputs, fee) => {
+          // Building a spend needs the Sapling prover (Android only). The
+          // engine readies it in signTx, so this is normally already settled:
+          await ensureSaplingParamsConfigured()
+
           // The signing key is in native memory only for building and
           // signing, so it never outlives the spend that needed it;
           // broadcasting needs no key. The SDK keeps the opaque pending and
@@ -682,4 +753,10 @@ export function makePiratechainIo(): PiratechainIo {
       return out
     }
   })
+}
+
+function isAndroid(): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { Platform }: { Platform: { OS: string } } = require('react-native')
+  return Platform.OS === 'android'
 }

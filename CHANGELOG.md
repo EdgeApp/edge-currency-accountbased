@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Piratechain) Download the Sapling spend parameters on Android instead of bundling them
+
 ## 4.99.0 (2026-10-06)
 
 - added: Arc support (`arc`, EVM chain 5042)
