@@ -1,3 +1,4 @@
+import type { BalanceChange, GasCostSummary } from '@mysten/sui/client'
 import type { SignatureWithBytes } from '@mysten/sui/cryptography'
 import { SUI_TYPE_ARG } from '@mysten/sui/utils'
 import { gt } from 'biggystring'
@@ -38,11 +39,20 @@ export interface SuiNetworkInfo {
   rpcNodes: string[]
 
   /**
-   * Nodes verified to serve full history. Transaction queries must begin here:
-   * the engine walks history from the oldest transaction, and a pruned node
-   * rejects both that walk and any cursor older than its retention window.
+   * Nodes that index every transaction digest of an address back to its first.
+   * Transaction queries must begin here: the engine walks history from the
+   * oldest transaction, and a node without the full index rejects both that
+   * walk and any cursor older than its retention window. These nodes may still
+   * have pruned the transactions themselves, which `graphqlNodes` covers.
    */
   rpcNodesArchival: string[]
+
+  /**
+   * GraphQL RPC services holding every transaction in full. History sync
+   * loads transactions here by digest when a node in `rpcNodesArchival` lists
+   * them but has pruned their contents.
+   */
+  graphqlNodes: string[]
 
   /**
    * Per-node request ceiling, shared by every wallet in the app. A single
@@ -59,6 +69,7 @@ export interface SuiNetworkInfo {
 export const asSuiInfoPayload = asObject({
   rpcNodes: asOptional(asArray(asString)),
   rpcNodesArchival: asOptional(asArray(asString)),
+  graphqlNodes: asOptional(asArray(asString)),
   maxRequestsPerSecond: asOptional(asNumber)
 })
 export type SuiInfoPayload = ReturnType<typeof asSuiInfoPayload>
@@ -93,6 +104,20 @@ export const checkSuiBalances = (
   for (const { coinType, totalBalance } of balances) {
     if (coinType === SUI_TYPE_ARG) asBalance(totalBalance)
   }
+}
+
+/**
+ * The parts of a transaction that history sync reads. A JSON-RPC
+ * `SuiTransactionBlockResponse` already has this shape, and a transaction
+ * loaded from GraphQL is converted into it.
+ */
+export interface SuiHistoryTx {
+  digest: string
+  checkpoint?: string | null
+  timestampMs?: string | null
+  rawTransaction?: string
+  effects?: { gasUsed: GasCostSummary } | null
+  balanceChanges?: BalanceChange[] | null
 }
 
 export const asSuiWalletOtherData = asObject({

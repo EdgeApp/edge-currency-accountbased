@@ -34,6 +34,7 @@ const networkInfo: SuiNetworkInfo = {
     'https://sui-testnet-rpc.publicnode.com',
     'https://rpc-testnet.suiscan.xyz'
   ],
+  graphqlNodes: ['https://graphql.testnet.sui.io/graphql'],
   maxRequestsPerSecond: 10
 }
 

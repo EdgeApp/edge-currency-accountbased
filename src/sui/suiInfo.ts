@@ -31,17 +31,20 @@ const networkInfo: SuiNetworkInfo = {
     // so it reports balances short of what the address really holds.
   ],
   rpcNodesArchival: [
-    // Both verified to serve checkpoint 1:
+    // Both list an address's digests back to its first transaction, but keep
+    // the transactions themselves for only days:
     'https://sui-rpc.publicnode.com',
     'https://rpc-mainnet.suiscan.xyz'
-    // blockvision is archival too, but its public endpoint rate-limits below
-    // the 5 req/s its own docs advertise, and returns no Retry-After to pace
-    // against. Left out rather than have sweeps stall on it.
+    // blockvision's public endpoint rate-limits below the 5 req/s its own docs
+    // advertise, and returns no Retry-After to pace against. Left out rather
+    // than have sweeps stall on it.
   ],
+  // Mysten's own service, which holds every transaction in full:
+  graphqlNodes: ['https://graphql.mainnet.sui.io/graphql'],
   maxRequestsPerSecond: 10
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'SUI',
   assetDisplayName: 'Sui',
   chainDisplayName: 'Sui',
