@@ -1,54 +1,66 @@
 import AggregateError from 'es-aggregate-error'
 
-import { snooze } from './utils'
-
 type AsyncFunction = () => Promise<any>
 
+/**
+ * Runs the functions one after another until one succeeds, starting the next
+ * whenever the newest has run `timeoutMs` without settling or any running one
+ * fails. Every started function may still win. Resolves with the first
+ * success; rejects with the last error once all have failed.
+ *
+ * Every started promise has a handler, so a server that fails after the
+ * waterfall is decided never becomes an unhandled rejection (which ends a
+ * Node process).
+ */
 export async function asyncWaterfall(
   asyncFuncs: AsyncFunction[],
   timeoutMs: number = 5000
 ): Promise<any> {
-  let pending = asyncFuncs.length
-  const promises: Array<Promise<any>> = []
-  for (const func of asyncFuncs) {
-    const index = promises.length
-    promises.push(
-      func().catch(e => {
-        e.index = index
-        throw e
-      })
-    )
-    if (pending > 1) {
-      promises.push(
-        new Promise(resolve => {
-          snooze(timeoutMs).then(() => {
-            resolve('async_waterfall_timed_out')
-          })
-        })
+  if (asyncFuncs.length === 0) return undefined
+  return await new Promise((resolve, reject) => {
+    let started = 0
+    let failed = 0
+    let settled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const finish = (): void => {
+      settled = true
+      if (timer != null) clearTimeout(timer)
+    }
+
+    const startNext = (): void => {
+      if (settled || started >= asyncFuncs.length) return
+      if (timer != null) clearTimeout(timer)
+      const func = asyncFuncs[started++]
+      let promise: Promise<any>
+      try {
+        promise = func()
+      } catch (error: unknown) {
+        promise = Promise.reject(error)
+      }
+      promise.then(
+        value => {
+          if (settled) return
+          finish()
+          resolve(value)
+        },
+        (error: unknown) => {
+          if (settled) return
+          if (++failed === asyncFuncs.length) {
+            finish()
+            reject(error)
+          } else {
+            startNext()
+          }
+        }
       )
-    }
-    try {
-      const result = await Promise.race(promises)
-      if (result === 'async_waterfall_timed_out') {
-        const p = promises.pop()
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        p?.then().catch()
-        --pending
-      } else {
-        return result
-      }
-    } catch (e: any) {
-      const i = e.index
-      promises.splice(i, 1)
-      const p = promises.pop()
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      p?.then().catch()
-      --pending
-      if (pending === 0) {
-        throw e
+      if (started < asyncFuncs.length) {
+        timer = setTimeout(startNext, timeoutMs)
       }
     }
-  }
+
+    startNext()
+  })
 }
 
 /**
