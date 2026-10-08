@@ -2,7 +2,9 @@
 
 ## Unreleased
 
+- added: Report plugin chunk load failures to the crash reporter
 - fixed: (Polygon) Sends failing with a fee below the network minimum
+- fixed: A failed plugin load stayed cached
 
 ## 4.101.1 (2026-10-09)
 
