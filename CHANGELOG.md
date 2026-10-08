@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.101.0 (2026-10-08)
+
 - added: (THORChain) Support tokens defined on the info server
 - fixed: (THORChain) Token transactions missing from history
 - fixed: (Cosmos) A chain's native denom can no longer be added as a custom token
