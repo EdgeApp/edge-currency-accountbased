@@ -20,6 +20,7 @@ const builtinTokens: EdgeTokenMap = {
 const networkInfo: SuiNetworkInfo = {
   network: 'testnet',
   pluginMnemonicKeyName: 'suitestnetMnemonic',
+  totalSupply: '10000000000000000000',
 
   // Testnet lost JSON-RPC alongside mainnet. Retention depth is not verified
   // here the way it is on mainnet, but testnet is periodically wiped, so there
@@ -33,6 +34,7 @@ const networkInfo: SuiNetworkInfo = {
     'https://sui-testnet-rpc.publicnode.com',
     'https://rpc-testnet.suiscan.xyz'
   ],
+  graphqlNodes: ['https://graphql.testnet.sui.io/graphql'],
   maxRequestsPerSecond: 10
 }
 

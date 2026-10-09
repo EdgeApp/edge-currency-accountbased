@@ -20,28 +20,31 @@ const builtinTokens: EdgeTokenMap = {
 const networkInfo: SuiNetworkInfo = {
   network: 'mainnet',
   pluginMnemonicKeyName: 'suiMnemonic',
+  totalSupply: '10000000000000000000',
 
   // Mysten removed JSON-RPC from the public fullnodes, so `getFullnodeUrl` is
   // no longer usable. These are third-party nodes that still serve it.
   rpcNodes: [
     'https://sui-rpc.publicnode.com',
-    'https://rpc-mainnet.suiscan.xyz',
-    // Pruned to roughly the last 220 epochs, so it is fine for the tip but
-    // must stay out of `rpcNodesArchival`:
-    'https://mainnet.suiet.app'
+    'https://rpc-mainnet.suiscan.xyz'
+    // mainnet.suiet.app is left out: its owner index is missing coin objects,
+    // so it reports balances short of what the address really holds.
   ],
   rpcNodesArchival: [
-    // Both verified to serve checkpoint 1:
+    // Both list an address's digests back to its first transaction, but keep
+    // the transactions themselves for only days:
     'https://sui-rpc.publicnode.com',
     'https://rpc-mainnet.suiscan.xyz'
-    // blockvision is archival too, but its public endpoint rate-limits below
-    // the 5 req/s its own docs advertise, and returns no Retry-After to pace
-    // against. Left out rather than have sweeps stall on it.
+    // blockvision's public endpoint rate-limits below the 5 req/s its own docs
+    // advertise, and returns no Retry-After to pace against. Left out rather
+    // than have sweeps stall on it.
   ],
+  // Mysten's own service, which holds every transaction in full:
+  graphqlNodes: ['https://graphql.mainnet.sui.io/graphql'],
   maxRequestsPerSecond: 10
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'SUI',
   assetDisplayName: 'Sui',
   chainDisplayName: 'Sui',

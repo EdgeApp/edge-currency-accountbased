@@ -33,7 +33,20 @@ import {
   shuffleArray,
   snooze
 } from '../common/utils'
-import { asSuiPrivateKeys, SuiInfoPayload, SuiNetworkInfo } from './suiTypes'
+import {
+  BALANCE_CHANGES_QUERY,
+  cleanGraphqlBalanceChanges,
+  cleanGraphqlTransactions,
+  GRAPHQL_TRANSACTIONS_PER_REQUEST,
+  toSuiHistoryTx,
+  TRANSACTIONS_QUERY
+} from './suiGraphql'
+import {
+  asSuiPrivateKeys,
+  SuiHistoryTx,
+  SuiInfoPayload,
+  SuiNetworkInfo
+} from './suiTypes'
 
 /**
  * Ceiling on a single node's response. `asyncStaggeredRace` has no timeout of
@@ -82,6 +95,10 @@ export class SuiTools implements EdgeCurrencyTools {
 
   get rpcNodesArchival(): string[] {
     return this.networkInfo.rpcNodesArchival
+  }
+
+  get graphqlNodes(): string[] {
+    return this.networkInfo.graphqlNodes
   }
 
   getClient(url: string): SuiClient {
@@ -153,6 +170,93 @@ export class SuiTools implements EdgeCurrencyTools {
   ): Promise<T> {
     this.assertNodes(urls)
     return await promiseAny(urls.map(async url => await this.callRpc(url, fn)))
+  }
+
+  /** Send one GraphQL query to one node, throttled and time-boxed. */
+  private async callGraphql(
+    url: string,
+    query: string,
+    variables: JsonObject
+  ): Promise<unknown> {
+    await this.throttle(url)
+    const request = async (): Promise<unknown> => {
+      const response = await this.io.fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables })
+      })
+      if (!response.ok) {
+        throw new Error(`Sui GraphQL returned ${response.status}: ${url}`)
+      }
+      return await response.json()
+    }
+    return await timeout(
+      request(),
+      RPC_TIMEOUT_MS,
+      new Error(`Sui GraphQL timed out: ${url}`)
+    )
+  }
+
+  private async fetchGraphqlTransactionsFrom(
+    url: string,
+    digests: string[]
+  ): Promise<SuiHistoryTx[]> {
+    const out: SuiHistoryTx[] = []
+    for (let i = 0; i < digests.length; i += GRAPHQL_TRANSACTIONS_PER_REQUEST) {
+      const keys = digests.slice(i, i + GRAPHQL_TRANSACTIONS_PER_REQUEST)
+      const txs = cleanGraphqlTransactions(
+        await this.callGraphql(url, TRANSACTIONS_QUERY, { keys }),
+        keys
+      )
+
+      for (const tx of txs) {
+        const { nodes, pageInfo } = tx.effects.balanceChanges
+        const balanceChanges = [...nodes]
+        let { hasNextPage, endCursor: after } = pageInfo
+        while (hasNextPage) {
+          if (after == null) {
+            throw new Error(
+              `Sui GraphQL gave no cursor for the balance changes of ${tx.digest}`
+            )
+          }
+          const page = cleanGraphqlBalanceChanges(
+            await this.callGraphql(url, BALANCE_CHANGES_QUERY, {
+              digest: tx.digest,
+              after
+            }),
+            tx.digest
+          )
+          balanceChanges.push(...page.nodes)
+          hasNextPage = page.pageInfo.hasNextPage
+          after = page.pageInfo.endCursor
+        }
+        out.push(toSuiHistoryTx(tx, balanceChanges))
+      }
+    }
+    return out
+  }
+
+  /**
+   * Loads transactions in full by digest, in the order given. Either every
+   * digest comes back or this throws: history sync moves its cursor past
+   * whatever it is handed, so a partial answer would lose transactions.
+   */
+  async fetchGraphqlTransactions(digests: string[]): Promise<SuiHistoryTx[]> {
+    const urls = shuffleArray([...this.graphqlNodes])
+    let lastError: Error | undefined
+    for (const url of urls) {
+      try {
+        return await this.fetchGraphqlTransactionsFrom(url, digests)
+      } catch (error: unknown) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+      }
+    }
+    throw (
+      lastError ??
+      new Error(
+        `No Sui GraphQL nodes configured for ${this.currencyInfo.pluginId}`
+      )
+    )
   }
 
   /**

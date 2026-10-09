@@ -1,7 +1,7 @@
 import {
   CoinStruct,
   GasCostSummary,
-  SuiTransactionBlockResponse
+  TransactionFilter
 } from '@mysten/sui/client'
 import { SignatureWithBytes } from '@mysten/sui/cryptography'
 import { Ed25519Keypair, Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
@@ -44,6 +44,8 @@ import {
   asSuiSignedTx,
   asSuiUnsignedTx,
   asSuiWalletOtherData,
+  checkSuiBalances,
+  SuiHistoryTx,
   SuiNetworkInfo,
   SuiOtherMethods,
   SuiWalletOtherData
@@ -63,6 +65,14 @@ const isUnknownCursorError = (error: unknown): boolean => {
     String((error as Error | null)?.message ?? error)
   )
 }
+
+/**
+ * A node keeps an address's transaction digests longer than the transactions
+ * themselves. Asked for balance changes on a page that reaches a pruned one,
+ * it fails the whole page with this error instead of leaving the row bare.
+ */
+const isPrunedTransactionError = (error: unknown): boolean =>
+  /effect is empty/i.test(String((error as Error | null)?.message ?? error))
 
 export class SuiEngine extends CurrencyEngine<
   SuiTools,
@@ -181,7 +191,15 @@ export class SuiEngine extends CurrencyEngine<
     try {
       const balances = await this.tools.raceRpc(
         this.tools.rpcNodes,
-        async client => await client.getAllBalances({ owner: this.suiAddress })
+        async client => {
+          const nodeBalances = await client.getAllBalances({
+            owner: this.suiAddress
+          })
+          // Validate inside the race, so a node with a corrupt SUI total
+          // loses to the next one instead of setting the balance:
+          checkSuiBalances(nodeBalances, this.networkInfo.totalSupply)
+          return nodeBalances
+        }
       )
 
       const detectedTokenIds: string[] = []
@@ -317,19 +335,10 @@ export class SuiEngine extends CurrencyEngine<
     let queryMore = true
 
     while (queryMore) {
-      const { data, hasNextPage, nextCursor } = await this.tools.callRpc(
+      const { data, hasNextPage, nextCursor } = await this.queryTransactionPage(
         url,
-        async client =>
-          await client.queryTransactionBlocks({
-            cursor,
-            filter,
-            order: 'ascending',
-            options: {
-              showBalanceChanges: true,
-              showEffects: true,
-              showRawInput: true
-            }
-          })
+        filter,
+        cursor
       )
 
       data.forEach(tx => this.processTransaction(tx, direction))
@@ -348,6 +357,55 @@ export class SuiEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Loads one page of history. The node answers with full transactions while
+   * it still holds every one on the page. Once it has pruned any of them it
+   * can only list the page's digests, and the transactions come from GraphQL,
+   * which throws when it cannot supply them all so the cursor stays put.
+   */
+  private async queryTransactionPage(
+    url: string,
+    filter: TransactionFilter,
+    cursor: string | undefined
+  ): Promise<{
+    data: SuiHistoryTx[]
+    hasNextPage: boolean
+    nextCursor?: string | null
+  }> {
+    try {
+      return await this.tools.callRpc(
+        url,
+        async client =>
+          await client.queryTransactionBlocks({
+            cursor,
+            filter,
+            order: 'ascending',
+            options: {
+              showBalanceChanges: true,
+              showEffects: true,
+              showRawInput: true
+            }
+          })
+      )
+    } catch (error: unknown) {
+      if (!isPrunedTransactionError(error)) throw error
+    }
+
+    const page = await this.tools.callRpc(
+      url,
+      async client =>
+        await client.queryTransactionBlocks({
+          cursor,
+          filter,
+          order: 'ascending'
+        })
+    )
+    const data = await this.tools.fetchGraphqlTransactions(
+      page.data.map(tx => tx.digest)
+    )
+    return { ...page, data }
+  }
+
   private getCursor(direction: 'from' | 'to'): string | undefined {
     return direction === 'from'
       ? this.otherData.latestTxidFrom
@@ -364,10 +422,7 @@ export class SuiEngine extends CurrencyEngine<
     this.walletLocalDataDirty = true
   }
 
-  processTransaction(
-    tx: SuiTransactionBlockResponse,
-    direction: 'from' | 'to'
-  ): void {
+  processTransaction(tx: SuiHistoryTx, direction: 'from' | 'to'): void {
     if (tx.checkpoint == null) return
     if (tx.rawTransaction == null) return
 
