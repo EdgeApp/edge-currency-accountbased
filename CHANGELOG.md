@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.101.1 (2026-10-09)
+
 - fixed: (Sui) Wallets intermittently showing a wrong balance, sometimes an enormous one
 - fixed: (Sui) Transaction history not loading for wallets with older transactions
 
