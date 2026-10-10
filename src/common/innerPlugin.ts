@@ -1,4 +1,11 @@
-import { Cleaner } from 'cleaners'
+import {
+  asMaybe,
+  asObject,
+  asOptional,
+  asString,
+  asValue,
+  Cleaner
+} from 'cleaners'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
@@ -6,6 +13,7 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
+  EdgeLog,
   EdgeOtherMethods,
   EdgeToken,
   EdgeTokenMap,
@@ -81,6 +89,20 @@ export interface OuterPlugin<
 
 type EdgeCorePluginFactory = (env: EdgeCorePluginOptions) => EdgeCurrencyPlugin
 
+/**
+ * Webpack rejects `import()` with this error when a chunk's script tag
+ * errors out, times out, or loads without defining the chunk.
+ */
+const asChunkLoadError = asObject({
+  name: asValue('ChunkLoadError'),
+
+  /** The script URL webpack asked for. */
+  request: asOptional(asString, ''),
+
+  /** How the load ended: `error`, `timeout`, or `missing`. */
+  type: asOptional(asString, '')
+})
+
 export function makeOuterPlugin<
   NetworkInfo,
   Tools extends EdgeCurrencyTools,
@@ -119,7 +141,14 @@ export function makeOuterPlugin<
     }> {
       checkEnvironment()
       if (pluginPromise == null) {
-        pluginPromise = template.getInnerPlugin()
+        const startDate = Date.now()
+        const startPerf = performance.now()
+        // A failed load must not stay cached, so the next call tries again:
+        pluginPromise = template.getInnerPlugin().catch((error: unknown) => {
+          pluginPromise = undefined
+          reportChunkLoadFailure(env.log, error, startDate, startPerf)
+          throw error
+        })
       }
       const plugin = await pluginPromise
       if (toolsPromise == null) {
@@ -194,6 +223,52 @@ export function makeOuterPlugin<
       updateInfoPayload
     }
   }
+}
+
+/**
+ * Sends a chunk load failure to the crash reporter,
+ * along with what the WebView knows about the request.
+ *
+ * `performance.now()` stops while the device sleeps and `Date.now()` does not,
+ * so a gap between the two elapsed times means the device slept mid-load.
+ * Resource Timing gains an entry when a fetch finishes, so `responseEndMs`
+ * tells a script that arrived but never ran from a request that never
+ * completed. `responseEndMs` is on the page clock, so subtract `startPerfMs`
+ * to get how far into the load the response finished. The buffer holds a
+ * limited number of entries, and a full one also yields no entry, which
+ * `resourceEntries` tells apart.
+ *
+ * A `null` `responseEndMs` is only meaningful on Android. iOS serves chunks
+ * from the `edgebundle://` scheme, which may get no Resource Timing entries
+ * at all, so `null` there does not mean the request hung.
+ */
+function reportChunkLoadFailure(
+  log: EdgeLog,
+  error: unknown,
+  startDate: number,
+  startPerf: number
+): void {
+  const chunkLoadError = asMaybe(asChunkLoadError)(error)
+  if (chunkLoadError == null) return
+  const { request, type } = chunkLoadError
+
+  // The last entry is the current attempt, since other methods can start a
+  // second load of the same chunk in one session:
+  const entries = performance.getEntriesByName(request)
+  const entry = entries[entries.length - 1] as
+    | PerformanceResourceTiming
+    | undefined
+  log.crash(error, {
+    type,
+    request,
+    elapsedDateMs: Date.now() - startDate,
+    elapsedPerfMs: performance.now() - startPerf,
+    startPerfMs: startPerf,
+    visibilityState:
+      typeof document === 'undefined' ? 'none' : document.visibilityState,
+    resourceEntries: performance.getEntriesByType('resource').length,
+    responseEndMs: entry?.responseEnd ?? null
+  })
 }
 
 /**
