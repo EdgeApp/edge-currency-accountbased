@@ -657,7 +657,7 @@ export class CosmosEngine extends CurrencyEngine<
       })
 
       if (detectedTokenIds.length > 0) {
-        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+        this.reportDetectedTokens(detectedTokenIds)
       }
 
       if (this.stakingSupported) {
@@ -676,7 +676,7 @@ export class CosmosEngine extends CurrencyEngine<
                 }
               ]
             }
-            this.currencyEngineCallbacks.onStakingStatusChanged(stakingStatus)
+            this.reportStakingStatus(stakingStatus)
             this.stakedBalanceCache = stakedBalance.amount
           }
         } catch (e) {
