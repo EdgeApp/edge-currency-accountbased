@@ -81,11 +81,12 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 // How long broadcastTx waits on one node before counting it as failed. Sends
 // and status lookups are single requests.
 const NODE_REQUEST_TIMEOUT_MS = 10000
-// Confirming outlasts the blockhash, which expires about a minute after
-// signing, so a slow but healthy node still gets the whole window.
-const NODE_CONFIRM_TIMEOUT_MS = 90000
+// Confirming outlasts the blockhash, so a slow but healthy node still gets the
+// whole window. A blockhash expires 150 blocks after its own: about 30 s with
+// 200ms slots, and 60 s if blocks slow to the old 400ms pace.
+const NODE_CONFIRM_TIMEOUT_MS = 60000
 // Much tighter than the other two, because the resubmit loop asks every node
-// for the height every 400ms: a node that cannot answer within a blocktime is
+// for the height every 400ms: a node that cannot answer within a second is
 // left out of that pass rather than holding up the next resubmission.
 const NODE_HEIGHT_TIMEOUT_MS = 1000
 // How often broadcastTx asks each node for the transaction's status while it
@@ -147,7 +148,9 @@ export class SolanaEngine extends CurrencyEngine<
       await env.io.fetch(uri, { ...opts, corsBypass: 'always' })
     this.feePerSignature = '5000'
     this.getPriorityFee = cache(this.queryFee.bind(this), 30000)
-    this.getRecentBlockhash = cache(this.queryBlockhash.bind(this), 30000) // must be < ~2min old to send tx
+    // Only seeds unsigned transactions. signTx fetches a fresh blockhash,
+    // since one expires about 30 s after its block:
+    this.getRecentBlockhash = cache(this.queryBlockhash.bind(this), 30000)
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
     this.addressCache = new Map()
@@ -1197,7 +1200,7 @@ export class SolanaEngine extends CurrencyEngine<
     let loggedResubmitFailure = false
     const retryTxSubmission = async (): Promise<void> => {
       while (!retryTxController.signal.aborted) {
-        await snooze(400) // pause for roughly a blocktime
+        await snooze(400) // pause for about two 200ms blocks
         if (retryTxController.signal.aborted) return
         const height = await checkBlockheight()
         if (height != null && height > lastValidBlockHeight) return
