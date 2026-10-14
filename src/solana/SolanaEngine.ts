@@ -209,7 +209,7 @@ export class SolanaEngine extends CurrencyEngine<
           params: [
             this.base58PublicKey,
             { programId: this.networkInfo.tokenPublicKey },
-            { encoding: 'jsonParsed' }
+            { commitment: this.networkInfo.commitment, encoding: 'jsonParsed' }
           ]
         },
         {
@@ -217,7 +217,7 @@ export class SolanaEngine extends CurrencyEngine<
           params: [
             this.base58PublicKey,
             { programId: this.networkInfo.token2022PublicKey },
-            { encoding: 'jsonParsed' }
+            { commitment: this.networkInfo.commitment, encoding: 'jsonParsed' }
           ]
         }
       ]
@@ -1133,6 +1133,7 @@ export class SolanaEngine extends CurrencyEngine<
     const { blockhash, lastValidBlockHeight } = asSolanaTxOtherParams(
       getOtherParams(edgeTransaction)
     )
+    const { commitment } = this.networkInfo
     const rpcConnections = this.tools.connections
     // promiseAny never settles over an empty list:
     if (rpcConnections.length === 0) {
@@ -1174,7 +1175,7 @@ export class SolanaEngine extends CurrencyEngine<
         rpcConnections.map(
           async connection =>
             await timeout(
-              connection.getBlockHeight('confirmed'),
+              connection.getBlockHeight(commitment),
               NODE_HEIGHT_TIMEOUT_MS
             )
         )
@@ -1226,7 +1227,7 @@ export class SolanaEngine extends CurrencyEngine<
             lastValidBlockHeight,
             abortSignal: confirmationController.signal
           },
-          'confirmed'
+          commitment
         ),
         NODE_CONFIRM_TIMEOUT_MS
       )
@@ -1235,7 +1236,9 @@ export class SolanaEngine extends CurrencyEngine<
 
     // Every node failing to confirm does not mean the transaction missed, so
     // look it up before reporting a failure. Resolves with the first confirmed
-    // status any node holds.
+    // status any node holds. Confirmed is enough here even when the commitment
+    // is finalized: the send landed, and reporting it as failed invites the
+    // user to pay twice.
     const checkSignatureStatus = async (
       txid: string
     ): Promise<SignatureStatus> => {
