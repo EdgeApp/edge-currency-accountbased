@@ -77,7 +77,7 @@ const makeNode = (options: FakeNodeOptions = {}): FakeNode => {
 
 const broadcast = async (nodes: FakeNode[]): Promise<EdgeTransaction> => {
   const engine = {
-    networkInfo: { stakedConnectionRpcNodes: [] },
+    networkInfo: { commitment: 'finalized', stakedConnectionRpcNodes: [] },
     tools: { connections: nodes, makeConnections: () => [] },
     warn: () => undefined
   }
@@ -146,6 +146,32 @@ describe('Solana broadcastTx', function () {
 
     const tx = await broadcast([silent, healthy])
     assert.equal(tx.txid, TXID)
+  })
+
+  it('confirms from the polled status when the websocket stays silent', async function () {
+    const pollOnly = makeNode({ status: async () => CONFIRMED_STATUS })
+
+    const tx = await broadcast([pollOnly])
+    assert.equal(tx.txid, TXID)
+  })
+
+  it('waits for the commitment before trusting a polled status', async function () {
+    this.timeout(5000)
+    const optimistic = makeNode({
+      confirm: async () => {
+        await snooze(1500)
+        return null
+      },
+      status: async () => ({
+        ...CONFIRMED_STATUS,
+        confirmationStatus: 'confirmed'
+      })
+    })
+
+    const start = Date.now()
+    await broadcast([optimistic])
+    // The poll only ever saw confirmed, so the subscription settled the send:
+    assert.isAtLeast(Date.now() - start, 1400)
   })
 
   it('succeeds when every confirmation fails but a node holds the transaction', async function () {
