@@ -49,7 +49,6 @@ export class SolanaTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   log: EdgeLog
-  networkInfo: SolanaNetworkInfo
   initOptions: SolanaInitOptions
   connections: Connection[]
   archiveConnections: Connection[]
@@ -57,13 +56,15 @@ export class SolanaTools implements EdgeCurrencyTools {
   tokenProgramPublicKey: PublicKey
   token2022ProgramPublicKey: PublicKey
 
+  private readonly env: PluginEnvironment<SolanaNetworkInfo>
+
   constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, log, networkInfo } = env
+    this.env = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
     this.io = io
     this.log = log
-    this.networkInfo = networkInfo
     this.initOptions = asSolanaInitOptions(env.initOptions)
     this.connections = []
     this.archiveConnections = []
@@ -72,6 +73,15 @@ export class SolanaTools implements EdgeCurrencyTools {
     this.token2022ProgramPublicKey = new PublicKey(
       networkInfo.token2022PublicKey
     )
+  }
+
+  /**
+   * Read through `env` instead of copying in the constructor. The plugin
+   * builds its tools before `updateInfoPayload` runs, so a copy taken there
+   * would keep the built-in nodes and ignore the info server.
+   */
+  get networkInfo(): SolanaNetworkInfo {
+    return this.env.networkInfo
   }
 
   async getDisplayPrivateKey(

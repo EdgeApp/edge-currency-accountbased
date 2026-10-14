@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- changed: (Solana) Use the finalized commitment, which Alpenglow makes as fast as confirmed
+- changed: (Solana) Confirm sends by polling their status as well as over websockets
+- fixed: (Solana) Info server RPC node overrides not applying to sends and transaction history
+
 ## 4.102.1 (2026-10-16)
 
 - fixed: (Polkadot) A throttled Subscan request is no longer retried every second without end, holding up history sync for every Polkadot wallet
