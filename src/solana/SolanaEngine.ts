@@ -88,6 +88,10 @@ const NODE_CONFIRM_TIMEOUT_MS = 90000
 // for the height every 400ms: a node that cannot answer within a blocktime is
 // left out of that pass rather than holding up the next resubmission.
 const NODE_HEIGHT_TIMEOUT_MS = 1000
+// How often broadcastTx asks each node for the transaction's status while it
+// waits to confirm. Since Alpenglow a status turns final within a second of
+// landing, so a send usually settles within two polls.
+const STATUS_POLL_MS = 500
 
 const asRpcErrorCode = asMaybe(asObject({ code: asNumber }))
 
@@ -1212,14 +1216,29 @@ export class SolanaEngine extends CurrencyEngine<
       }
     }
 
+    // A status at the commitment or beyond means the node holds the
+    // transaction for good:
+    const isCommitted = (
+      status: SignatureStatus | null
+    ): status is SignatureStatus =>
+      status != null &&
+      (status.confirmationStatus === commitment ||
+        status.confirmationStatus === 'finalized')
+
     // Resolves with the on-chain error, or null, once this node sees the
     // transaction confirm. Rejects if the node sees the blockhash expire,
     // cannot answer, or takes too long.
+    //
+    // confirmTransaction waits on a websocket subscription, and not every
+    // node's websocket delivers, so the status is polled over HTTP as well.
+    // The subscription's expiry and timeout still decide when to give up.
     const confirmOn = async (
       connection: Connection,
       txid: string
     ): Promise<TransactionError | null> => {
-      const { value } = await timeout(
+      let settled = false
+
+      const subscribed = timeout(
         connection.confirmTransaction(
           {
             signature: txid,
@@ -1230,8 +1249,31 @@ export class SolanaEngine extends CurrencyEngine<
           commitment
         ),
         NODE_CONFIRM_TIMEOUT_MS
-      )
-      return value.err
+      ).then(({ value }) => value.err)
+
+      const polled = (async (): Promise<TransactionError | null> => {
+        while (true) {
+          await snooze(STATUS_POLL_MS)
+          if (settled || confirmationController.signal.aborted) {
+            throw new Error('Stopped polling the transaction status')
+          }
+          // A poll that fails is simply asked again on the next pass:
+          const status = await timeout(
+            connection.getSignatureStatuses([txid]),
+            NODE_REQUEST_TIMEOUT_MS
+          ).then(
+            ({ value }) => value[0],
+            () => null
+          )
+          if (isCommitted(status)) return status.err
+        }
+      })()
+
+      try {
+        return await Promise.race([subscribed, polled])
+      } finally {
+        settled = true
+      }
     }
 
     // Every node failing to confirm does not mean the transaction missed, so
