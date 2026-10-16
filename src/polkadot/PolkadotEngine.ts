@@ -78,6 +78,7 @@ export class PolkadotEngine extends CurrencyEngine<
   otherData!: PolkadotWalletOtherData
   api!: ApiPromise
   keypair!: Keyring
+  lightMode: boolean
   nonce: number
   private readonly queryTxMutex = makeMutex()
 
@@ -91,6 +92,7 @@ export class PolkadotEngine extends CurrencyEngine<
     this.engineFetch = makeEngineFetch(env.io)
     this.initOptions = asPolkadotInitOptions(env.initOptions)
     this.networkInfo = env.networkInfo
+    this.lightMode = opts.lightMode ?? false
     this.nonce = 0
   }
 
@@ -590,13 +592,16 @@ export class PolkadotEngine extends CurrencyEngine<
       this.api.consts.balances.existentialDeposit.toString()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
-    if (this.networkInfo.liberlandScanUrl != null) {
+    // A light-mode wallet, such as the one a sweep creates, only needs a
+    // balance and the ability to spend it, so it skips history:
+    if (!this.lightMode && this.networkInfo.liberlandScanUrl != null) {
       this.addToLoop(
         'queryLiberlandTransactions',
         TRANSACTION_POLL_MILLISECONDS
       )
     }
     if (
+      !this.lightMode &&
       this.networkInfo.subscanBaseUrls.length > 0 &&
       this.initOptions.subscanApiKey !== ''
     ) {

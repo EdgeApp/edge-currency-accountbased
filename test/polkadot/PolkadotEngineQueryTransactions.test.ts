@@ -1,3 +1,4 @@
+import type { ApiPromise } from '@polkadot/api'
 import { assert } from 'chai'
 import {
   EdgeCurrencyEngineCallbacks,
@@ -9,6 +10,7 @@ import {
 import { describe, it } from 'mocha'
 
 import { PluginEnvironment } from '../../src/common/innerPlugin'
+import { snooze } from '../../src/common/utils'
 import { polkadot } from '../../src/polkadot/info/polkadotInfo'
 import { PolkadotEngine } from '../../src/polkadot/PolkadotEngine'
 import { PolkadotTools } from '../../src/polkadot/PolkadotTools'
@@ -34,6 +36,29 @@ const EMPTY = {
   body: { code: 0, message: 'Success', data: { count: 0, transfers: null } }
 }
 
+/** Answers the node queries `startEngine` makes, for an empty account. */
+const fakeApi = {
+  consts: {
+    balances: { existentialDeposit: { toString: () => '10000000000' } }
+  },
+  query: {
+    system: {
+      account: async () => ({
+        nonce: { toNumber: () => 0 },
+        data: { free: { toString: () => '0' } }
+      })
+    }
+  },
+  rpc: {
+    chain: {
+      getBlock: async () => ({
+        block: { header: { number: { toNumber: () => 1 } } }
+      })
+    }
+  },
+  disconnect: async () => {}
+} as unknown as ApiPromise
+
 interface SubscanReply {
   status: number
   body: unknown
@@ -50,12 +75,14 @@ interface FakePolkadot {
 }
 
 /**
- * Builds a loaded `PolkadotEngine` over a fake `fetch`, without connecting to
- * a node, so the history pass runs through the real Subscan client.
+ * Builds a loaded `PolkadotEngine` over a fake `fetch` and a fake node API,
+ * so the history pass runs through the real Subscan client.
  */
 async function makeFakePolkadot(
-  reply: (uri: string) => SubscanReply | Promise<SubscanReply>
+  reply: (uri: string) => SubscanReply | Promise<SubscanReply>,
+  opts: { lightMode?: boolean } = {}
 ): Promise<FakePolkadot> {
+  const { lightMode } = opts
   const requests: string[] = []
   const syncStatuses: EdgeSyncStatus[] = []
 
@@ -123,6 +150,7 @@ async function makeFakePolkadot(
     callbacks,
     customTokens: {},
     enabledTokenIds: [],
+    lightMode,
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
@@ -131,9 +159,15 @@ async function makeFakePolkadot(
     walletSettings: {}
   }
 
+  const tools = new PolkadotTools(env)
+  tools.connectApi = async () => {
+    tools.polkadotApi = fakeApi
+    return fakeApi
+  }
+
   const engine = new PolkadotEngine(
     env,
-    new PolkadotTools(env),
+    tools,
     { id: 'wallet-1', type: 'wallet:polkadot', keys: { publicKey: ADDRESS } },
     engineOptions
   )
@@ -232,5 +266,42 @@ describe('PolkadotEngine history sync', function () {
 
     answerStuck(EMPTY)
     await stuckPass
+  })
+})
+
+describe('PolkadotEngine light mode', function () {
+  /** Resolves once the engine reports a full sync, or fails after a second. */
+  const fullSync = async (syncStatuses: EdgeSyncStatus[]): Promise<void> => {
+    for (let i = 0; i < 100; ++i) {
+      if (syncStatuses.some(status => status.totalRatio === 1)) return
+      await snooze(10)
+    }
+    throw new Error('The engine never fully synced')
+  }
+
+  it('fully syncs without asking Subscan, as a sweep needs', async function () {
+    const { engine, requests, syncStatuses } = await makeFakePolkadot(
+      () => THROTTLED,
+      { lightMode: true }
+    )
+
+    await engine.startEngine()
+    await fullSync(syncStatuses)
+    assert.deepEqual(requests, [])
+    await engine.killEngine()
+  })
+
+  it('still syncs history outside light mode', async function () {
+    const { engine, requests, syncStatuses } = await makeFakePolkadot(
+      () => EMPTY
+    )
+
+    await engine.startEngine()
+    await fullSync(syncStatuses)
+    assert.deepEqual(requests, [
+      transfersUrl(RELAY_URL),
+      transfersUrl(ASSET_HUB_URL)
+    ])
+    await engine.killEngine()
   })
 })
