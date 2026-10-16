@@ -58,6 +58,16 @@ const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
+/**
+ * Every Polkadot wallet in every copy of the app shares one Subscan API key,
+ * so throttle replies are routine. Retrying forever never finished the
+ * history pass, so the wallet never reported a full sync, and the mutex held
+ * the history of every other wallet behind it. Give up after a few tries and
+ * let the next poll ask again.
+ */
+const SUBSCAN_RETRY_LIMIT = 3
+const SUBSCAN_RETRY_MILLISECONDS = 1000
+
 const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<
@@ -512,6 +522,7 @@ export class PolkadotEngine extends CurrencyEngine<
         this.networkInfo.subscanQueryLimit
     )
 
+    let retries = 0
     while (true) {
       const payload = {
         row: this.networkInfo.subscanQueryLimit,
@@ -532,10 +543,12 @@ export class PolkadotEngine extends CurrencyEngine<
         transfers = cleanResponse.transfers
       } catch (e: any) {
         this.log.warn('Subscan error:', String(e.message))
-        // Retry after all errors
-        await snooze(1000)
+        if (retries >= SUBSCAN_RETRY_LIMIT) throw e
+        ++retries
+        await snooze(SUBSCAN_RETRY_MILLISECONDS)
         continue
       }
+      retries = 0
 
       // count is the total number of transactions ever for an account
       // If we've already seen all the transfers we don't need to bother processing or page through older ones
