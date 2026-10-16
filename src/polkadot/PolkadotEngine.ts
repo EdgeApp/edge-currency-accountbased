@@ -58,7 +58,14 @@ const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
-const queryTxMutex = makeMutex()
+/**
+ * Every Polkadot wallet in every copy of the app shares one Subscan API key,
+ * so throttle replies are routine. Retrying forever never finished the
+ * history pass, so the wallet never reported a full sync. Give up after a few
+ * tries and let the next poll ask again.
+ */
+const SUBSCAN_RETRY_LIMIT = 3
+const SUBSCAN_RETRY_MILLISECONDS = 1000
 
 export class PolkadotEngine extends CurrencyEngine<
   PolkadotTools,
@@ -71,7 +78,9 @@ export class PolkadotEngine extends CurrencyEngine<
   otherData!: PolkadotWalletOtherData
   api!: ApiPromise
   keypair!: Keyring
+  lightMode: boolean
   nonce: number
+  private readonly queryTxMutex = makeMutex()
 
   constructor(
     env: PluginEnvironment<PolkadotNetworkInfo>,
@@ -83,6 +92,7 @@ export class PolkadotEngine extends CurrencyEngine<
     this.engineFetch = makeEngineFetch(env.io)
     this.initOptions = asPolkadotInitOptions(env.initOptions)
     this.networkInfo = env.networkInfo
+    this.lightMode = opts.lightMode ?? false
     this.nonce = 0
   }
 
@@ -462,7 +472,7 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    return await queryTxMutex(async () => {
+    return await this.queryTxMutex(async () => {
       // The last subscan url in the array will be the active one where the transactions can be appropriately compared to the network blockheight.
       // Legacy chains have different heights and their transactions will be marked confirmed
 
@@ -512,6 +522,7 @@ export class PolkadotEngine extends CurrencyEngine<
         this.networkInfo.subscanQueryLimit
     )
 
+    let retries = 0
     while (true) {
       const payload = {
         row: this.networkInfo.subscanQueryLimit,
@@ -532,10 +543,12 @@ export class PolkadotEngine extends CurrencyEngine<
         transfers = cleanResponse.transfers
       } catch (e: any) {
         this.log.warn('Subscan error:', String(e.message))
-        // Retry after all errors
-        await snooze(1000)
+        if (retries >= SUBSCAN_RETRY_LIMIT) throw e
+        ++retries
+        await snooze(SUBSCAN_RETRY_MILLISECONDS)
         continue
       }
+      retries = 0
 
       // count is the total number of transactions ever for an account
       // If we've already seen all the transfers we don't need to bother processing or page through older ones
@@ -579,13 +592,16 @@ export class PolkadotEngine extends CurrencyEngine<
       this.api.consts.balances.existentialDeposit.toString()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
-    if (this.networkInfo.liberlandScanUrl != null) {
+    // A light-mode wallet, such as the one a sweep creates, only needs a
+    // balance and the ability to spend it, so it skips history:
+    if (!this.lightMode && this.networkInfo.liberlandScanUrl != null) {
       this.addToLoop(
         'queryLiberlandTransactions',
         TRANSACTION_POLL_MILLISECONDS
       )
     }
     if (
+      !this.lightMode &&
       this.networkInfo.subscanBaseUrls.length > 0 &&
       this.initOptions.subscanApiKey !== ''
     ) {

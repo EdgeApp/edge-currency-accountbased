@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (Polkadot) A throttled Subscan request is no longer retried every second without end, holding up history sync for every Polkadot wallet
+- fixed: (Polkadot) Private key sweeps waiting on transaction history, which they do not need
+
 ## 4.102.0 (2026-10-10)
 
 - added: Report plugin chunk load failures to the crash reporter
