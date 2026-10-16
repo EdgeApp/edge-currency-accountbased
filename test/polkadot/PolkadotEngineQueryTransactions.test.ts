@@ -54,14 +54,14 @@ interface FakePolkadot {
  * a node, so the history pass runs through the real Subscan client.
  */
 async function makeFakePolkadot(
-  reply: (uri: string) => SubscanReply
+  reply: (uri: string) => SubscanReply | Promise<SubscanReply>
 ): Promise<FakePolkadot> {
   const requests: string[] = []
   const syncStatuses: EdgeSyncStatus[] = []
 
   const fetch = async (uri: string): Promise<unknown> => {
     requests.push(uri)
-    const { status, body } = reply(uri)
+    const { status, body } = await reply(uri)
     return {
       ok: status >= 200 && status < 300,
       status,
@@ -213,5 +213,24 @@ describe('PolkadotEngine history sync', function () {
       transfersUrl(ASSET_HUB_URL)
     ])
     assert.deepEqual(syncStatuses[syncStatuses.length - 1], { totalRatio: 0.5 })
+  })
+
+  it("does not wait on another wallet's history pass", async function () {
+    let answerStuck: (reply: SubscanReply) => void = () => {}
+    const stuckReply = new Promise<SubscanReply>(resolve => {
+      answerStuck = resolve
+    })
+    const stuck = await makeFakePolkadot(async () => await stuckReply)
+    const fresh = await makeFakePolkadot(() => EMPTY)
+
+    // A sweep's temporary wallet syncs while the user's wallets are mid-pass:
+    const stuckPass = stuck.engine.queryTransactions()
+    await fresh.engine.queryTransactions()
+    assert.deepEqual(fresh.syncStatuses[fresh.syncStatuses.length - 1], {
+      totalRatio: 0.5
+    })
+
+    answerStuck(EMPTY)
+    await stuckPass
   })
 })

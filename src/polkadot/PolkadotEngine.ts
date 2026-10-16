@@ -61,14 +61,11 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 /**
  * Every Polkadot wallet in every copy of the app shares one Subscan API key,
  * so throttle replies are routine. Retrying forever never finished the
- * history pass, so the wallet never reported a full sync, and the mutex held
- * the history of every other wallet behind it. Give up after a few tries and
- * let the next poll ask again.
+ * history pass, so the wallet never reported a full sync. Give up after a few
+ * tries and let the next poll ask again.
  */
 const SUBSCAN_RETRY_LIMIT = 3
 const SUBSCAN_RETRY_MILLISECONDS = 1000
-
-const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<
   PolkadotTools,
@@ -82,6 +79,7 @@ export class PolkadotEngine extends CurrencyEngine<
   api!: ApiPromise
   keypair!: Keyring
   nonce: number
+  private readonly queryTxMutex = makeMutex()
 
   constructor(
     env: PluginEnvironment<PolkadotNetworkInfo>,
@@ -472,7 +470,7 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    return await queryTxMutex(async () => {
+    return await this.queryTxMutex(async () => {
       // The last subscan url in the array will be the active one where the transactions can be appropriately compared to the network blockheight.
       // Legacy chains have different heights and their transactions will be marked confirmed
 
