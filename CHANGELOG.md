@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.102.1 (2026-10-16)
+
 - fixed: (Polkadot) A throttled Subscan request is no longer retried every second without end, holding up history sync for every Polkadot wallet
 - fixed: (Polkadot) Private key sweeps waiting on transaction history, which they do not need
 
