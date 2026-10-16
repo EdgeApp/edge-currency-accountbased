@@ -81,13 +81,18 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 // How long broadcastTx waits on one node before counting it as failed. Sends
 // and status lookups are single requests.
 const NODE_REQUEST_TIMEOUT_MS = 10000
-// Confirming outlasts the blockhash, which expires about a minute after
-// signing, so a slow but healthy node still gets the whole window.
-const NODE_CONFIRM_TIMEOUT_MS = 90000
+// Confirming outlasts the blockhash, so a slow but healthy node still gets the
+// whole window. A blockhash expires 150 blocks after its own: about 30 s with
+// 200ms slots, and 60 s if blocks slow to the old 400ms pace.
+const NODE_CONFIRM_TIMEOUT_MS = 60000
 // Much tighter than the other two, because the resubmit loop asks every node
-// for the height every 400ms: a node that cannot answer within a blocktime is
+// for the height every 400ms: a node that cannot answer within a second is
 // left out of that pass rather than holding up the next resubmission.
 const NODE_HEIGHT_TIMEOUT_MS = 1000
+// How often broadcastTx asks each node for the transaction's status while it
+// waits to confirm. Since Alpenglow a status turns final within a second of
+// landing, so a send usually settles within two polls.
+const STATUS_POLL_MS = 500
 
 const asRpcErrorCode = asMaybe(asObject({ code: asNumber }))
 
@@ -143,7 +148,9 @@ export class SolanaEngine extends CurrencyEngine<
       await env.io.fetch(uri, { ...opts, corsBypass: 'always' })
     this.feePerSignature = '5000'
     this.getPriorityFee = cache(this.queryFee.bind(this), 30000)
-    this.getRecentBlockhash = cache(this.queryBlockhash.bind(this), 30000) // must be < ~2min old to send tx
+    // Only seeds unsigned transactions. signTx fetches a fresh blockhash,
+    // since one expires about 30 s after its block:
+    this.getRecentBlockhash = cache(this.queryBlockhash.bind(this), 30000)
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
     this.addressCache = new Map()
@@ -209,7 +216,7 @@ export class SolanaEngine extends CurrencyEngine<
           params: [
             this.base58PublicKey,
             { programId: this.networkInfo.tokenPublicKey },
-            { encoding: 'jsonParsed' }
+            { commitment: this.networkInfo.commitment, encoding: 'jsonParsed' }
           ]
         },
         {
@@ -217,7 +224,7 @@ export class SolanaEngine extends CurrencyEngine<
           params: [
             this.base58PublicKey,
             { programId: this.networkInfo.token2022PublicKey },
-            { encoding: 'jsonParsed' }
+            { commitment: this.networkInfo.commitment, encoding: 'jsonParsed' }
           ]
         }
       ]
@@ -1133,6 +1140,7 @@ export class SolanaEngine extends CurrencyEngine<
     const { blockhash, lastValidBlockHeight } = asSolanaTxOtherParams(
       getOtherParams(edgeTransaction)
     )
+    const { commitment } = this.networkInfo
     const rpcConnections = this.tools.connections
     // promiseAny never settles over an empty list:
     if (rpcConnections.length === 0) {
@@ -1174,7 +1182,7 @@ export class SolanaEngine extends CurrencyEngine<
         rpcConnections.map(
           async connection =>
             await timeout(
-              connection.getBlockHeight('confirmed'),
+              connection.getBlockHeight(commitment),
               NODE_HEIGHT_TIMEOUT_MS
             )
         )
@@ -1192,7 +1200,7 @@ export class SolanaEngine extends CurrencyEngine<
     let loggedResubmitFailure = false
     const retryTxSubmission = async (): Promise<void> => {
       while (!retryTxController.signal.aborted) {
-        await snooze(400) // pause for roughly a blocktime
+        await snooze(400) // pause for about two 200ms blocks
         if (retryTxController.signal.aborted) return
         const height = await checkBlockheight()
         if (height != null && height > lastValidBlockHeight) return
@@ -1211,14 +1219,29 @@ export class SolanaEngine extends CurrencyEngine<
       }
     }
 
+    // A status at the commitment or beyond means the node holds the
+    // transaction for good:
+    const isCommitted = (
+      status: SignatureStatus | null
+    ): status is SignatureStatus =>
+      status != null &&
+      (status.confirmationStatus === commitment ||
+        status.confirmationStatus === 'finalized')
+
     // Resolves with the on-chain error, or null, once this node sees the
     // transaction confirm. Rejects if the node sees the blockhash expire,
     // cannot answer, or takes too long.
+    //
+    // confirmTransaction waits on a websocket subscription, and not every
+    // node's websocket delivers, so the status is polled over HTTP as well.
+    // The subscription's expiry and timeout still decide when to give up.
     const confirmOn = async (
       connection: Connection,
       txid: string
     ): Promise<TransactionError | null> => {
-      const { value } = await timeout(
+      let settled = false
+
+      const subscribed = timeout(
         connection.confirmTransaction(
           {
             signature: txid,
@@ -1226,16 +1249,41 @@ export class SolanaEngine extends CurrencyEngine<
             lastValidBlockHeight,
             abortSignal: confirmationController.signal
           },
-          'confirmed'
+          commitment
         ),
         NODE_CONFIRM_TIMEOUT_MS
-      )
-      return value.err
+      ).then(({ value }) => value.err)
+
+      const polled = (async (): Promise<TransactionError | null> => {
+        while (true) {
+          await snooze(STATUS_POLL_MS)
+          if (settled || confirmationController.signal.aborted) {
+            throw new Error('Stopped polling the transaction status')
+          }
+          // A poll that fails is simply asked again on the next pass:
+          const status = await timeout(
+            connection.getSignatureStatuses([txid]),
+            NODE_REQUEST_TIMEOUT_MS
+          ).then(
+            ({ value }) => value[0],
+            () => null
+          )
+          if (isCommitted(status)) return status.err
+        }
+      })()
+
+      try {
+        return await Promise.race([subscribed, polled])
+      } finally {
+        settled = true
+      }
     }
 
     // Every node failing to confirm does not mean the transaction missed, so
     // look it up before reporting a failure. Resolves with the first confirmed
-    // status any node holds.
+    // status any node holds. Confirmed is enough here even when the commitment
+    // is finalized: the send landed, and reporting it as failed invites the
+    // user to pay twice.
     const checkSignatureStatus = async (
       txid: string
     ): Promise<SignatureStatus> => {
