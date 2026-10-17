@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: (Solana) Swap network fees include rent for token accounts the swap opens
+- fixed: (Solana) Sends and swaps that open a token account failing at broadcast when the wallet cannot cover the rent
+
 ## 4.102.1 (2026-10-16)
 
 - fixed: (Polkadot) A throttled Subscan request is no longer retried every second without end, holding up history sync for every Polkadot wallet
