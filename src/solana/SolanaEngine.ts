@@ -15,6 +15,7 @@ import {
   PublicKey,
   RecentPrioritizationFees,
   SignatureStatus,
+  SimulatedTransactionResponse,
   SolanaJSONRPCErrorCode,
   SystemProgram,
   TokenAmount,
@@ -110,6 +111,50 @@ interface TransactionChunk {
 
 /** A node's answer that the transaction's version is newer than we declare. */
 const UNSUPPORTED_VERSION = 'unsupportedVersion'
+
+/**
+ * What a transaction does to the wallet's SOL when run against the current
+ * chain state. `spent` is every lamport leaving the wallet, fees and rent for
+ * new accounts included, and `remaining` is the wallet balance afterwards.
+ * `shortfall` means the wallet cannot cover the SOL the transaction needs,
+ * with `accountsOpened` token accounts it opened or tried to open, and
+ * `unknown` means the simulation failed for some other reason or no node
+ * answered.
+ */
+export type SolSpendSimulation =
+  | { type: 'spent'; spent: string; remaining: string }
+  | { type: 'shortfall'; accountsOpened: number }
+  | { type: 'unknown' }
+
+const asRentShortfall = asObject({ InsufficientFundsForRent: asObject({}) })
+
+/**
+ * True when a simulated transaction failed because the wallet lacks SOL: for
+ * the fee, for its own rent floor, or for rent on an account the transaction
+ * opens, which the system program reports as a failed lamport transfer.
+ */
+export const isSolShortfall = (
+  err: TransactionError | string,
+  logs: string[] | null
+): boolean =>
+  err === 'InsufficientFundsForFee' ||
+  err === 'AccountNotFound' ||
+  asMaybe(asRentShortfall)(err) != null ||
+  (logs ?? []).some(log => log.includes('insufficient lamports'))
+
+/**
+ * How many token accounts a simulated transaction opened, or stopped while
+ * opening, read from the associated token account program's logs. An
+ * idempotent create of an account that already exists logs no initialize.
+ */
+export const countOpenedAccounts = (logs: string[] | null): number => {
+  const lines = logs ?? []
+  const opened = lines.filter(log =>
+    log.includes('Initialize the associated token account')
+  ).length
+  const failedOpen = lines.some(log => log.includes('insufficient lamports'))
+  return failedOpen ? opened + 1 : opened
+}
 
 export class SolanaEngine extends CurrencyEngine<
   SolanaTools,
@@ -333,6 +378,57 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     return { associatedTokenAddress, tokenAddressExists }
+  }
+
+  async simulateSolSpend(unsignedTx: Uint8Array): Promise<SolSpendSimulation> {
+    const transaction = VersionedTransaction.deserialize(unsignedTx)
+    const payer = new PublicKey(this.base58PublicKey)
+    const { commitment } = this.networkInfo
+
+    const funcs = this.tools.connections.map(connection => async () => {
+      const [balance, simulation] = await Promise.all([
+        connection.getBalance(payer, commitment),
+        connection.simulateTransaction(transaction, {
+          accounts: { encoding: 'base64', addresses: [this.base58PublicKey] },
+          commitment,
+          replaceRecentBlockhash: true,
+          sigVerify: false
+        })
+      ])
+      return { balance, simulation: simulation.value }
+    })
+
+    let result: {
+      balance: number
+      simulation: SimulatedTransactionResponse
+    }
+    try {
+      result = await asyncWaterfall(funcs)
+    } catch (error: unknown) {
+      this.warn(`simulateSolSpend: no node answered: ${String(error)}`)
+      return { type: 'unknown' }
+    }
+
+    const { balance, simulation } = result
+    if (simulation.err != null) {
+      if (isSolShortfall(simulation.err, simulation.logs)) {
+        return {
+          type: 'shortfall',
+          accountsOpened: countOpenedAccounts(simulation.logs)
+        }
+      }
+      this.warn(
+        `simulateSolSpend: ${JSON.stringify(simulation.err)}\n${(
+          simulation.logs ?? []
+        ).join('\n')}`
+      )
+      return { type: 'unknown' }
+    }
+    if (simulation.accounts == null) return { type: 'unknown' }
+
+    // A wallet the transaction empties no longer exists afterwards
+    const remaining = String(simulation.accounts[0]?.lamports ?? 0)
+    return { type: 'spent', spent: sub(String(balance), remaining), remaining }
   }
 
   async queryFee(): Promise<string> {
@@ -855,9 +951,10 @@ export class SolanaEngine extends CurrencyEngine<
         tokenId: null
       })
       const solNetworkFee = edgeTx.parentNetworkFee ?? edgeTx.networkFee
-      if (gt(add(solNetworkFee, minimumAddressBalance), solBalance)) {
+      const solRequired = add(solNetworkFee, minimumAddressBalance)
+      if (gt(solRequired, solBalance)) {
         throw new InsufficientFundsError({
-          networkFee: solNetworkFee,
+          networkFee: solRequired,
           tokenId: null
         })
       }
@@ -889,6 +986,8 @@ export class SolanaEngine extends CurrencyEngine<
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     const isTokenTx = tokenId != null
+    const { unsignedTx: prebuiltTx } =
+      asSolanaSpendInfoOtherParams(spendInfoOtherParams)
 
     let totalTxAmount = '0'
     let nativeNetworkFee = this.feePerSignature
@@ -952,24 +1051,28 @@ export class SolanaEngine extends CurrencyEngine<
         associatedTokenProgramId
       )
 
-      const { tokenAddressExists } = await this.getRecipientTokenAccountInfo(
-        publicAddress,
-        tokenId
-      )
+      // A prebuilt transaction opens its own accounts, and its spend target
+      // is only a placeholder, so there is no recipient account to fund
+      if (prebuiltTx == null) {
+        const { tokenAddressExists } = await this.getRecipientTokenAccountInfo(
+          publicAddress,
+          tokenId
+        )
 
-      // Add token account creation instruction and fund its rent
-      if (!tokenAddressExists) {
-        const tokenCreationInstruction =
-          createAssociatedTokenAccountInstruction(
-            payer,
-            associatedDestinationTokenAddrPayee,
-            payee,
-            tokenPubkey,
-            tokenOwnerPubkey,
-            associatedTokenProgramId
-          )
-        instructions.push(tokenCreationInstruction)
-        recipientAtaRent = await this.getTokenAccountRent()
+        // Add token account creation instruction and fund its rent
+        if (!tokenAddressExists) {
+          const tokenCreationInstruction =
+            createAssociatedTokenAccountInstruction(
+              payer,
+              associatedDestinationTokenAddrPayee,
+              payee,
+              tokenPubkey,
+              tokenOwnerPubkey,
+              associatedTokenProgramId
+            )
+          instructions.push(tokenCreationInstruction)
+          recipientAtaRent = await this.getTokenAccountRent()
+        }
       }
 
       parentNetworkFee = nativeNetworkFee
@@ -978,20 +1081,6 @@ export class SolanaEngine extends CurrencyEngine<
       if (gt(nativeAmount, balance)) {
         throw new InsufficientFundsError({ tokenId })
       }
-
-      const balanceSol = this.getBalance({ tokenId: null })
-      const totalSolRequired = add(
-        add(parentNetworkFee, recipientAtaRent),
-        minimumAddressBalance
-      )
-      if (gt(totalSolRequired, balanceSol)) {
-        throw new InsufficientFundsError({
-          networkFee: add(parentNetworkFee, recipientAtaRent),
-          tokenId: null
-        })
-      }
-
-      parentNetworkFee = add(parentNetworkFee, recipientAtaRent)
 
       // derive our address
       const associatedDestinationTokenAddrPayer = getAssociatedTokenAddressSync(
@@ -1020,12 +1109,6 @@ export class SolanaEngine extends CurrencyEngine<
         lamports: parseInt(nativeAmount)
       })
       instructions.push(transferInstruction)
-
-      if (eq(totalTxAmount, balance)) {
-        // This is a max token send so we don't need to consider the minimumAddressBalance
-      } else if (gt(add(totalTxAmount, minimumAddressBalance), balance)) {
-        throw new InsufficientFundsError({ tokenId })
-      }
     }
 
     if (memos[0]?.type === 'text') {
@@ -1051,9 +1134,78 @@ export class SolanaEngine extends CurrencyEngine<
     })
     const versionedTx = new VersionedTransaction(versionedMessage)
 
-    const unsignedTx =
-      asSolanaSpendInfoOtherParams(spendInfoOtherParams)?.unsignedTx ??
-      versionedTx.serialize()
+    const unsignedTx = prebuiltTx ?? versionedTx.serialize()
+
+    // Transactions that open accounts cost rent on top of the fee, which only
+    // running them shows exactly: a prebuilt swap may open token accounts the
+    // wallet does not hold yet, and a token send may open the recipient's.
+    // Every other transaction costs the fee alone.
+    const simulation: SolSpendSimulation =
+      prebuiltTx != null || gt(recipientAtaRent, '0')
+        ? await this.simulateSolSpend(unsignedTx)
+        : { type: 'unknown' }
+
+    // A token spend that runs short tells the user how much SOL to hold, so
+    // its error carries the wallet's own rent floor on top of the spend
+    const solRequired = (solSpent: string): string =>
+      isTokenTx ? add(solSpent, minimumAddressBalance) : solSpent
+
+    if (simulation.type === 'shortfall') {
+      // A prebuilt swap names no recipient, so the accounts it opens come
+      // from the simulation instead
+      const openingRent =
+        prebuiltTx != null
+          ? mul(
+              String(simulation.accountsOpened),
+              await this.getTokenAccountRent()
+            )
+          : recipientAtaRent
+      throw new InsufficientFundsError({
+        networkFee: solRequired(
+          add(parentNetworkFee ?? nativeNetworkFee, openingRent)
+        ),
+        tokenId: null
+      })
+    }
+
+    if (simulation.type === 'spent') {
+      const { spent, remaining } = simulation
+
+      // A swap paying SOL back into this wallet nets out against the cost,
+      // and no transaction costs less than one signature, so a smaller net
+      // spend means the estimate is the better fee to show
+      const solFee = isTokenTx ? spent : sub(spent, nativeAmount)
+      if (gte(solFee, this.feePerSignature)) {
+        if (isTokenTx) parentNetworkFee = solFee
+        else {
+          nativeNetworkFee = solFee
+          totalTxAmount = add(nativeAmount, nativeNetworkFee)
+        }
+      }
+
+      // Only a SOL spend may empty the wallet; otherwise the wallet keeps its
+      // own rent floor
+      const emptiesWallet = !isTokenTx && eq(remaining, '0')
+      if (!emptiesWallet && lt(remaining, minimumAddressBalance)) {
+        throw new InsufficientFundsError({
+          networkFee: solRequired(parentNetworkFee ?? nativeNetworkFee),
+          tokenId: null
+        })
+      }
+    } else if (isTokenTx) {
+      parentNetworkFee = add(parentNetworkFee ?? '0', recipientAtaRent)
+      const balanceSol = this.getBalance({ tokenId: null })
+      if (gt(add(parentNetworkFee, minimumAddressBalance), balanceSol)) {
+        throw new InsufficientFundsError({
+          networkFee: solRequired(parentNetworkFee),
+          tokenId: null
+        })
+      }
+    } else if (eq(totalTxAmount, balance)) {
+      // This is a max send so we don't need to consider the minimumAddressBalance
+    } else if (gt(add(totalTxAmount, minimumAddressBalance), balance)) {
+      throw new InsufficientFundsError({ tokenId })
+    }
 
     const otherParams = wasSolanaTxOtherParams({
       unsignedTx,
