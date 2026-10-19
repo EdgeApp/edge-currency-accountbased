@@ -10,7 +10,6 @@
 - fixed: (Polkadot) A throttled Subscan request is no longer retried every second without end, holding up history sync for every Polkadot wallet
 - fixed: (Polkadot) Private key sweeps waiting on transaction history, which they do not need
 
-||||||| parent of 79c09b21 (Make the React Native peers optional)
 ## 4.102.0 (2026-10-10)
 
 - added: Report plugin chunk load failures to the crash reporter
@@ -41,7 +40,6 @@
 
 - changed: Update chain-registry
 
-||||||| parent of aeacba0b (Make the React Native peers optional)
 ## 4.97.0 (2026-10-01)
 
 - added: (EVM) Save the BIP-44 derivation path in wallet keys, so wallets created before a coin type correction keep deriving at the path their stored private key was built from.
