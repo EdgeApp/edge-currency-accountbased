@@ -33,6 +33,14 @@ import {
   MoneroNetworkInfo
 } from './moneroTypes'
 
+/**
+ * New wallets record their birthday this many blocks before the current block
+ * count. LWS never scans the block at an account's start height, so with the
+ * block count itself a deposit mined in the first block after creation was
+ * missed. The margin also covers a short reorg moving a deposit earlier.
+ */
+const BIRTHDAY_MARGIN_BLOCKS = 20
+
 interface NymCppBridge {
   setNymEnabled: (enabled: boolean, baseUrl: string) => Promise<void>
   resolveFetch: (
@@ -279,7 +287,8 @@ export class MoneroTools implements EdgeCurrencyTools {
 
     const generatedWallet = await this.cppBridge.generateWallet(networkType)
 
-    const birthdayHeight = await this.getBlockCount(EDGE_MONERO_SERVER)
+    const blockCount = await this.getBlockCount(EDGE_MONERO_SERVER)
+    const birthdayHeight = Math.max(1, blockCount - BIRTHDAY_MARGIN_BLOCKS)
 
     return await this.importPrivateKey(generatedWallet.mnemonic, {
       birthdayHeight
