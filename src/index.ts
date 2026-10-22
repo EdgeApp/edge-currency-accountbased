@@ -28,6 +28,7 @@ import { ton } from './ton/tonInfo'
 import { tron } from './tron/tronInfo'
 import { zano } from './zano/zanoInfo'
 import { zcash } from './zcash/zcashInfo'
+import { zcashtestnet } from './zcash/zcashtestnetInfo'
 
 const plugins = {
   ...eosPlugins,
@@ -55,7 +56,8 @@ const plugins = {
   ton,
   tron,
   zano,
-  zcash
+  zcash,
+  zcashtestnet
 }
 
 declare global {
