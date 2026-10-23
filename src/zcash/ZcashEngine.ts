@@ -384,6 +384,12 @@ export class ZcashEngine extends CurrencyEngine<
     if (this.synchronizer == null) {
       const { rpcNode } = this.networkInfo
 
+      // The base engine loads saved transactions lazily and merges each one
+      // in through addTransaction, overwriting whatever the synchronizer
+      // already reported. The SDK flags an expired send only once per launch,
+      // so a stale saved copy would revert it from failed to pending for good.
+      await this.loadTransactions()
+
       // Replace this.synchronizerPromise with a fresh promise. The old promise might have already been resolved
       this.synchronizerPromise = this.makeSynchronizer({
         mnemonicSeed: zcashPrivateKeys.mnemonic,
