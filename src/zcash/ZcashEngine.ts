@@ -21,7 +21,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { cleanTxLogs, getOtherParams } from '../common/utils'
+import { cleanTxLogs, getOtherParams, normalizeAddress } from '../common/utils'
 import type { ZcashIo, ZcashSynchronizer } from './zcashIo'
 import { isIronwoodMigrationSpend, mapMigrationStatus } from './zcashMigration'
 import { makeZcashSyncTracker, ZcashSyncTracker } from './ZcashSyncTracker'
@@ -317,10 +317,16 @@ export class ZcashEngine extends CurrencyEngine<
     // The only pending transactions emitted from the sdk are the ones we create and it's possible
     // to see them through the 'transactionsChanged' listener before the synchronizer's sendToAddress
     // or shieldFunds resolves. In this case, we'll add the current time as the transaction date.
-    const date =
-      minedHeight === 0
-        ? Math.max(blockTimeInSeconds, Date.now() / 1000)
-        : blockTimeInSeconds
+    // The sdk replays unmined transactions on every launch, so one we already
+    // have keeps its first date.
+    let date = blockTimeInSeconds
+    if (minedHeight === 0) {
+      const idx = this.findTransaction(null, normalizeAddress(rawTransactionId))
+      date =
+        idx === -1
+          ? Math.max(blockTimeInSeconds, Date.now() / 1000)
+          : this.transactionList[''][idx].date
+    }
 
     // For outgoing transactions, carry the recipient address onto
     // `spendTargets` so the GUI can drive reverse address lookups (e.g. ZNS).
@@ -383,6 +389,12 @@ export class ZcashEngine extends CurrencyEngine<
 
     if (this.synchronizer == null) {
       const { rpcNode } = this.networkInfo
+
+      // The base engine loads saved transactions lazily and merges each one
+      // in through addTransaction, overwriting whatever the synchronizer
+      // already reported. The SDK flags an expired send only once per launch,
+      // so a stale saved copy would revert it from failed to pending for good.
+      await this.loadTransactions()
 
       // Replace this.synchronizerPromise with a fresh promise. The old promise might have already been resolved
       this.synchronizerPromise = this.makeSynchronizer({

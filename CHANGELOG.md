@@ -3,6 +3,8 @@
 ## Unreleased
 
 - added: Zcash Testnet (TAZ)
+- fixed: (Zcash) An expired send stays marked failed after an app restart instead of reverting to pending
+- fixed: (Zcash) An unmined send keeps its original date across app restarts
 
 ## 4.102.1 (2026-10-16)
 
