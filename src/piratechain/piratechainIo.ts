@@ -307,6 +307,53 @@ export async function broadcastUntilKnown(
   }
 }
 
+export interface SigningGate {
+  /**
+   * Runs `task` with the signing key unlocked, then locks it again. Spans
+   * are serialized: a send holds the key for as long as it takes to build
+   * and sign, and an address read landing in the middle of one must not lock
+   * the key out from under it.
+   */
+  withUnlocked: <T>(task: () => Promise<T>) => Promise<T>
+
+  /**
+   * Locks the key at once, even under a span in flight, and refuses every
+   * span that has not unlocked yet, including those already queued.
+   */
+  close: () => Promise<void>
+}
+
+export function makeSigningGate(
+  unlock: () => Promise<void>,
+  lock: () => Promise<void>
+): SigningGate {
+  const queue = makeSerialQueue()
+  let closed = false
+  const checkOpen = (): void => {
+    if (closed) throw new Error('The Pirate Chain wallet is stopped')
+  }
+
+  return {
+    withUnlocked: async <T>(task: () => Promise<T>): Promise<T> =>
+      await queue(async () => {
+        checkOpen()
+        try {
+          await unlock()
+          // `close` may have locked while the unlock was in flight, which
+          // would leave the key open after it:
+          checkOpen()
+          return await task()
+        } finally {
+          await lock()
+        }
+      }),
+    close: async () => {
+      closed = true
+      await lock()
+    }
+  }
+}
+
 export function makePiratechainIo(): PiratechainIo {
   // The SDK constructor throws when the native module isn't linked, so
   // create it lazily to keep `makePiratechainIo` safe on every platform:
@@ -591,24 +638,7 @@ export function makePiratechainIo(): PiratechainIo {
         )
       }
 
-      /**
-       * Runs `task` with the wallet's signing key unlocked, then locks it
-       * again. Spans are serialized: a send holds the key for as long as it
-       * takes to build and sign, and an address read landing in the
-       * middle of one must not lock the key out from under it.
-       */
-      const signingQueue = makeSerialQueue()
-      const withSigningUnlocked = async <T>(
-        task: () => Promise<T>
-      ): Promise<T> =>
-        await signingQueue(async () => {
-          await ensureSigningUnlocked()
-          try {
-            return await task()
-          } finally {
-            await lockSigning()
-          }
-        })
+      const signingGate = makeSigningGate(ensureSigningUnlocked, lockSigning)
 
       const realSynchronizer = walletSdk.createSynchronizer(walletId, {
         transactionLimit: null
@@ -655,7 +685,7 @@ export function makePiratechainIo(): PiratechainIo {
           // strands the receive scene and every scene that refreshes an
           // address. Unlock around the read until the SDK guards that call the
           // way it already guards `list_key_groups`:
-          return await withSigningUnlocked(
+          return await signingGate.withUnlocked(
             async () => await walletSdk.getCurrentReceiveAddress(walletId)
           )
         },
@@ -713,7 +743,7 @@ export function makePiratechainIo(): PiratechainIo {
           // broadcasting needs no key. The SDK keeps the opaque pending and
           // signed payloads verbatim between steps and serializes amounts as
           // strings so large sends keep full precision:
-          const signed: unknown = await withSigningUnlocked(async () => {
+          const signed: unknown = await signingGate.withUnlocked(async () => {
             const pending = await walletSdk.buildTransaction(
               walletId,
               outputs,
@@ -739,14 +769,12 @@ export function makePiratechainIo(): PiratechainIo {
           }
         },
         stop: async () => {
-          try {
-            await realSynchronizer.close()
-          } finally {
-            // Only `send` holds the key unlocked, but the engine is killed on
-            // account lock or logout, which can land mid-send, so lock here
-            // too, whether or not the poller closed cleanly:
-            await lockSigning()
-          }
+          // The engine is killed on account lock or logout, which can land
+          // mid-send or with a send or address read queued behind one, so
+          // lock the key before anything else and keep it locked. Syncing
+          // needs no key, so the poller closes the same either way:
+          await signingGate.close()
+          await realSynchronizer.close()
         }
       })
 

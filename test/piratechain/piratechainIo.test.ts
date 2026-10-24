@@ -5,6 +5,7 @@ import {
   broadcastUntilKnown,
   isAmbiguousBroadcastError,
   isKnownTransactionError,
+  makeSigningGate,
   toDisplayTxid
 } from '../../src/piratechain/piratechainIo'
 
@@ -215,6 +216,134 @@ describe('broadcastUntilKnown', function () {
     expect(run.attempts()).equals(2)
   })
 })
+
+describe('makeSigningGate', function () {
+  /** Records the gate's unlocks, locks and task runs, in order. */
+  function makeKey(unlock: () => Promise<void> = async () => {}): {
+    events: string[]
+    unlock: () => Promise<void>
+    lock: () => Promise<void>
+  } {
+    const events: string[] = []
+    return {
+      events,
+      unlock: async () => {
+        events.push('unlock')
+        await unlock()
+      },
+      lock: async () => {
+        events.push('lock')
+      }
+    }
+  }
+
+  it('unlocks for the span of a task', async function () {
+    const key = makeKey()
+    const gate = makeSigningGate(key.unlock, key.lock)
+    const result = await gate.withUnlocked(async () => {
+      key.events.push('task')
+      return 'signed'
+    })
+    expect(result).equals('signed')
+    expect(key.events).deep.equals(['unlock', 'task', 'lock'])
+  })
+
+  it('locks after a task that fails', async function () {
+    const key = makeKey()
+    const gate = makeSigningGate(key.unlock, key.lock)
+    const error = new Error('build failed')
+    await expectRejection(
+      gate.withUnlocked(async () => {
+        throw error
+      }),
+      error
+    )
+    expect(key.events).deep.equals(['unlock', 'lock'])
+  })
+
+  it('locks after an unlock that fails', async function () {
+    const error = new Error('unlock failed')
+    const key = makeKey(async () => {
+      throw error
+    })
+    const gate = makeSigningGate(key.unlock, key.lock)
+    await expectRejection(
+      gate.withUnlocked(async () => 'signed'),
+      error
+    )
+    expect(key.events).deep.equals(['unlock', 'lock'])
+  })
+
+  it('never unlocks for a span queued behind one in flight once closed', async function () {
+    const key = makeKey()
+    const gate = makeSigningGate(key.unlock, key.lock)
+    const send = makeDeferred()
+    const first = gate.withUnlocked(async () => {
+      key.events.push('send')
+      await send.promise
+    })
+    const queued = gate
+      .withUnlocked(async () => {
+        key.events.push('address')
+      })
+      .then(
+        () => undefined,
+        (error: unknown) => error
+      )
+    await flush()
+    await gate.close()
+    send.resolve()
+    await first
+    expect(await queued).instanceOf(Error)
+    expect(key.events).deep.equals(['unlock', 'send', 'lock', 'lock'])
+  })
+
+  it('never unlocks once closed', async function () {
+    const key = makeKey()
+    const gate = makeSigningGate(key.unlock, key.lock)
+    await gate.close()
+    const error = await gate
+      .withUnlocked(async () => 'signed')
+      .then(
+        () => undefined,
+        (error: unknown) => error
+      )
+    expect(error).instanceOf(Error)
+    expect(key.events).deep.equals(['lock'])
+  })
+
+  it('locks again when closed while an unlock is in flight', async function () {
+    const unlocking = makeDeferred()
+    const key = makeKey(async () => await unlocking.promise)
+    const gate = makeSigningGate(key.unlock, key.lock)
+    const span = gate
+      .withUnlocked(async () => {
+        key.events.push('task')
+      })
+      .then(
+        () => undefined,
+        (error: unknown) => error
+      )
+    await flush()
+    await gate.close()
+    unlocking.resolve()
+    expect(await span).instanceOf(Error)
+    expect(key.events).deep.equals(['unlock', 'lock', 'lock'])
+  })
+})
+
+function makeDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let settle: () => void = () => {}
+  const promise = new Promise<void>(resolve => {
+    settle = resolve
+  })
+  return { promise, resolve: () => settle() }
+}
+
+/** Lets every queued span get as far as it can. */
+async function flush(): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, 0))
+}
 
 async function expectRejection(
   promise: Promise<unknown>,
