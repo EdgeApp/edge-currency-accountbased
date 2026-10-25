@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (opBNB) Transaction history stuck loading after Etherscan dropped opBNB support
+
 ## 4.107.0 (2026-11-13)
 
 - added: (Robinhood Chain) Etherscan as a transaction history source

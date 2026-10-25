@@ -67,9 +67,12 @@ const networkInfo: EthereumNetworkInfo = {
       ethBalCheckerContract: '0x726391B6cA41761c4c332aa556Cf804A50279b52'
     },
     {
-      type: 'evmscan',
-      gastrackerSupport: true,
-      servers: ['https://api.etherscan.io'] // MUST use etherscan v2 API instead of opbnbscan for opBNB
+      // Etherscan dropped opBNB, so NodeReal's public endpoints serve history:
+      type: 'nodereal',
+      servers: [
+        'https://opbnb-mainnet.nodereal.io/v1/64a9df0874fb4a93b9d0a3849de012d3',
+        'https://opbnb-mainnet.nodereal.io/v1/e9a36765eb8a40b9bd12e680a1fd2bc5'
+      ]
     }
   ],
   uriNetworks: ['opbnb'],
