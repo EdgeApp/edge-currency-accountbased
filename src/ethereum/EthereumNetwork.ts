@@ -430,25 +430,33 @@ export class EthereumNetwork {
 
     // The engine supports token balances batch queries if an adapter provides
     // the functionality.
-    const isFetchTokenBalancesSupported =
+    let hasBatchBalances =
       this.networkAdapters.find(
         adapter => adapter.fetchTokenBalances != null
       ) != null
 
-    if (
-      // If this engine supports the batch token balance query, no need to check
-      // each token individually.
-      isFetchTokenBalancesSupported
-    ) {
-      updateFuncs.push(async () => await this.acquireTokenBalances())
+    if (hasBatchBalances) {
+      try {
+        await this.acquireTokenBalances()
+      } catch (error: unknown) {
+        // A batch source that cannot answer (such as a balance-checker
+        // contract with no code on this chain) must not freeze balances, so
+        // this pass checks each token individually instead.
+        this.ethEngine.warn(
+          `fetchTokenBalances failed, checking each token individually: ${String(
+            error
+          )}`
+        )
+        hasBatchBalances = false
+      }
     }
 
     const tokenIds: EdgeTokenId[] = [null, ...this.ethEngine.enabledTokenIds]
     for (const tokenId of tokenIds) {
       if (
-        // Only check each code individually if this engine does not support
-        // batch token balance queries.
-        !isFetchTokenBalancesSupported
+        // Only check each code individually if the batch token balance query
+        // is unsupported or just failed.
+        !hasBatchBalances
       ) {
         updateFuncs.push(async () => await this.acquireTokenBalance(tokenId))
       }
