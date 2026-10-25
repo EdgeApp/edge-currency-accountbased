@@ -313,6 +313,65 @@ describe('AlchemyAdapter transfer processing', function () {
     assert.equal(failedToken.parentNetworkFee, spendFee)
   })
 
+  it('adds a rollup L1 data fee to the spend fee', function () {
+    const hash =
+      '0x5555555555555555555555555555555555555555555555555555555555555555'
+    const l1Details = { ...spendDetails, l1Fee: '1000' }
+    const [tx] = processAlchemyTransfers(
+      nativeContext,
+      [
+        makeTransfer({
+          hash,
+          from: ourAddress.toLowerCase(),
+          to: otherAddress,
+          rawContract: { value: '0x2386f26fc10000', address: null }
+        })
+      ],
+      new Map([[hash, l1Details]])
+    )
+    assert.equal(tx.networkFee, '210000001000')
+    assert.equal(tx.nativeAmount, '-10000210000001000')
+    const [tokenTx] = processAlchemyTransfers(
+      usdcContext,
+      [
+        makeTransfer({
+          hash,
+          uniqueId: `${hash}:log:2`,
+          from: ourAddress.toLowerCase(),
+          to: otherAddress,
+          rawContract: {
+            value: '0x2faf080',
+            address: usdcAddress.toLowerCase()
+          }
+        })
+      ],
+      new Map([[hash, l1Details]])
+    )
+    assert.equal(tokenTx.parentNetworkFee, '210000001000')
+  })
+
+  it('reports a mined revert as a failed fee-only spend', function () {
+    const hash =
+      '0x6666666666666666666666666666666666666666666666666666666666666666'
+    const [tx] = processAlchemyTransfers(
+      nativeContext,
+      [
+        makeTransfer({
+          hash,
+          from: ourAddress.toLowerCase(),
+          to: otherAddress,
+          rawContract: { value: '0x2386f26fc10000', address: null }
+        })
+      ],
+      new Map([[hash, { ...spendDetails, succeeded: false, nonce: undefined }]])
+    )
+    assert.equal(tx.confirmations, 'failed')
+    assert.equal(tx.nativeAmount, `-${spendFee}`)
+    assert.equal(tx.networkFee, spendFee)
+    assert.equal(tx.isSend, true)
+    assert.isUndefined(tx.otherParams?.nonceUsed)
+  })
+
   it('sums several transfers of one transaction', function () {
     const hash =
       '0x2222222222222222222222222222222222222222222222222222222222222222'

@@ -516,14 +516,21 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
 export interface AlchemyTxDetails {
   from: string
   to: string | null
-  nonce: string
+  /** Absent when the source does not report it */
+  nonce?: string
   gas: string
   gasPrice: string
   gasUsed: string
+  /** The L1 data fee a rollup charges on top of the L2 gas */
+  l1Fee?: string
   blockHeight: number
   /** From the receipt status; undefined on a pre-Byzantium receipt */
   succeeded: boolean | undefined
 }
+
+/** Everything the sender paid: L2 gas plus any rollup L1 data fee */
+const getDetailsFee = (details: AlchemyTxDetails): string =>
+  add(mul(details.gasPrice, details.gasUsed), details.l1Fee ?? '0')
 
 /**
  * The row for a wallet send whose receipt shows a revert: the value stayed
@@ -533,7 +540,7 @@ export function makeFailedSend(
   pending: EdgeTransaction,
   details: AlchemyTxDetails
 ): EdgeTransaction {
-  const fee = mul(details.gasPrice, details.gasUsed)
+  const fee = getDetailsFee(details)
   const tokenTx = pending.tokenId != null
   return {
     ...pending,
@@ -561,7 +568,8 @@ export function makeFailedSend(
  * Transfers are deduplicated by uniqueId, since a transfer between two of the
  * wallet's own addresses appears in both the fromAddress and toAddress
  * queries. `txDetails` is keyed by lowercase txid and only needs entries for
- * transactions the wallet sent.
+ * transactions the wallet sent. A transaction whose details show a revert
+ * moved no value, so it reports the fee alone, marked failed.
  */
 export function processAlchemyTransfers(
   context: TransactionProcessingContext,
@@ -592,11 +600,15 @@ export function processAlchemyTransfers(
 
   const edgeTransactions: EdgeTransaction[] = []
   for (const [txid, group] of transfersByTxid) {
+    const details = txDetails.get(txid)
+    const reverted = details?.succeeded === false
     let received = '0'
     let sent = '0'
     let fromUs = false
     for (const transfer of group) {
-      const value = hexToDecimal(transfer.rawContract.value ?? '0x0')
+      const value = reverted
+        ? '0'
+        : hexToDecimal(transfer.rawContract.value ?? '0x0')
       if (transfer.from.toLowerCase() === ourAddress) {
         fromUs = true
         sent = add(sent, value)
@@ -609,10 +621,9 @@ export function processAlchemyTransfers(
     // The wallet only paid the fee if it signed the transaction. A token
     // transfer "from" the wallet can also be a third party pulling an
     // approved allowance, and that party paid.
-    const details = txDetails.get(txid)
     const paidFee =
       fromUs && details != null && details.from.toLowerCase() === ourAddress
-    const fee = paidFee ? mul(details.gasPrice, details.gasUsed) : '0'
+    const fee = paidFee ? getDetailsFee(details) : '0'
 
     const netAmount = sub(received, sent)
     let nativeAmount: string
@@ -639,7 +650,7 @@ export function processAlchemyTransfers(
       nonceUsed: details?.nonce
     }
 
-    edgeTransactions.push({
+    const edgeTransaction: EdgeTransaction = {
       blockHeight: parseInt(first.blockNum, 16),
       currencyCode,
       date: Math.floor(Date.parse(first.metadata.blockTimestamp) / 1000),
@@ -659,7 +670,9 @@ export function processAlchemyTransfers(
       tokenId: context.forWhichTokenId,
       txid: first.hash,
       walletId: context.forWhichWalletId
-    })
+    }
+    if (reverted) edgeTransaction.confirmations = 'failed'
+    edgeTransactions.push(edgeTransaction)
   }
 
   return edgeTransactions
