@@ -263,6 +263,45 @@ describe('AlchemyAdapter transfer processing', function () {
     assert.equal(tx.isSend, true)
   })
 
+  it('ignores transfers from a lookalike token contract', function () {
+    // An address-poisoning token emits Transfer events naming the wallet,
+    // and a server that skips the contract filter returns them:
+    const fakeContract = '0xc6203d86f5efbed7f9512755f3e6132ee50d03d1'
+    const spoofHash =
+      '0xfe95a21d971640e0cd77ec468148c257f57f936de3189b1f25389edfe42fda3d'
+    const realHash =
+      '0x69ac9c55f7af454eb6ab54991b29a0ed8f1349279ba00acea5d649cf3ed6df5e'
+    const txs = processAlchemyTransfers(
+      usdcContext,
+      [
+        makeTransfer({
+          hash: spoofHash,
+          uniqueId: `${spoofHash}:log:12`,
+          from: ourAddress.toLowerCase(),
+          to: otherAddress,
+          rawContract: { value: '0x71afd498d0000', address: fakeContract }
+        }),
+        makeTransfer({
+          hash: realHash,
+          uniqueId: `${realHash}:log:40`,
+          rawContract: { value: '0x5f5e100', address: fakeContract }
+        }),
+        makeTransfer({
+          hash: realHash,
+          uniqueId: `${realHash}:log:41`,
+          rawContract: {
+            value: '0x5f5e100',
+            address: usdcAddress.toLowerCase()
+          }
+        })
+      ],
+      new Map()
+    )
+    assert.equal(txs.length, 1)
+    assert.equal(txs[0].txid, realHash)
+    assert.equal(txs[0].nativeAmount, '100000000')
+  })
+
   it('answers empty for a token the engine does not know', function () {
     const hash =
       '0x3333333333333333333333333333333333333333333333333333333333333333'

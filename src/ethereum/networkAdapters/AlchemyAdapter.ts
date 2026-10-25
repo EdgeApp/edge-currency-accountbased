@@ -569,7 +569,8 @@ export function makeFailedSend(
  * wallet's own addresses appears in both the fromAddress and toAddress
  * queries. `txDetails` is keyed by lowercase txid and only needs entries for
  * transactions the wallet sent. A transaction whose details show a revert
- * moved no value, so it reports the fee alone, marked failed.
+ * moved no value, so it reports the fee alone, marked failed. A token sync
+ * keeps only the transfers of that token's own contract.
  */
 export function processAlchemyTransfers(
   context: TransactionProcessingContext,
@@ -579,17 +580,28 @@ export function processAlchemyTransfers(
   const ourAddress = context.forWhichAddress.toLowerCase()
   const tokenTx = context.forWhichTokenId != null
   let currencyCode: string = context.currencyInfo.currencyCode
+  let tokenContract: string | undefined
   if (tokenTx) {
     const knownToken = context.allTokensMap[context.forWhichTokenId ?? '']
+    const location = asMaybeContractLocation(knownToken?.networkLocation)
     // The engine only asks for tokens it knows, so this is unreachable in
     // practice; an empty result keeps one stray tokenId from failing the sync.
-    if (knownToken == null) return []
+    if (knownToken == null || location == null) return []
     currencyCode = knownToken.currencyCode
+    tokenContract = location.contractAddress.toLowerCase()
   }
 
   const seenUniqueIds = new Set<string>()
   const transfersByTxid = new Map<string, AlchemyAssetTransfer[]>()
   for (const transfer of transfers) {
+    // A server can ignore the contract filter, and a lookalike token's
+    // Transfer events then pose as the wallet's own token transfers:
+    if (
+      tokenContract != null &&
+      transfer.rawContract.address?.toLowerCase() !== tokenContract
+    ) {
+      continue
+    }
     if (seenUniqueIds.has(transfer.uniqueId)) continue
     seenUniqueIds.add(transfer.uniqueId)
     const txid = transfer.hash.toLowerCase()
