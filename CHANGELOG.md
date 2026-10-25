@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (opBNB) Transaction history stuck loading after Etherscan dropped opBNB support
+
 ## 4.102.1 (2026-10-16)
 
 - fixed: (Polkadot) A throttled Subscan request is no longer retried every second without end, holding up history sync for every Polkadot wallet

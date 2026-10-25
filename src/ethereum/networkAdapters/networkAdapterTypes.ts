@@ -23,6 +23,7 @@ import { BlockchairAdapterConfig } from './BlockchairAdapter'
 import { BlockscoutAdapterConfig } from './BlockscoutAdapter'
 import { EvmScanAdapterConfig } from './EvmScanAdapter'
 import { FilfoxAdapterConfig } from './FilfoxAdapter'
+import { NodeRealAdapterConfig } from './NodeRealAdapter'
 import { PulsechainScanAdapterConfig } from './PulsechainScanAdapter'
 import { RpcAdapterConfig } from './RpcAdapter'
 
@@ -41,6 +42,7 @@ export type NetworkAdapterConfig =
   | BlockscoutAdapterConfig
   | EvmScanAdapterConfig
   | FilfoxAdapterConfig
+  | NodeRealAdapterConfig
   | PulsechainScanAdapterConfig
   | RpcAdapterConfig
 

@@ -30,6 +30,7 @@ import {
   NetworkAdapterConfig,
   NetworkAdapterUpdateMethod
 } from './networkAdapters/networkAdapterTypes'
+import { NodeRealAdapter } from './networkAdapters/NodeRealAdapter'
 import { PulsechainScanAdapter } from './networkAdapters/PulsechainScanAdapter'
 import { RpcAdapter } from './networkAdapters/RpcAdapter'
 
@@ -798,6 +799,8 @@ const makeNetworkAdapter = (
       return new EvmScanAdapter(ethEngine, config)
     case 'filfox':
       return new FilfoxAdapter(ethEngine, config)
+    case 'nodereal':
+      return new NodeRealAdapter(ethEngine, config)
     case 'pulsechain-scan':
       return new PulsechainScanAdapter(ethEngine, config)
     case 'rpc':
