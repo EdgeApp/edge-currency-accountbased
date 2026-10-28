@@ -26,3 +26,20 @@ export function resolveServerApiKey(
   }
   throw new Error('Incorrect apikey type for RPC')
 }
+
+/**
+ * Fills the API key placeholders in a list of server URLs, dropping any
+ * server whose key the plugin was not given.
+ */
+export function resolveServerApiKeys(
+  urls: string[],
+  plugin: Pick<EthereumEngine, 'currencyInfo' | 'initOptions'>
+): string[] {
+  const out: string[] = []
+  for (const url of urls) {
+    try {
+      out.push(resolveServerApiKey(url, plugin))
+    } catch (error: unknown) {}
+  }
+  return out
+}

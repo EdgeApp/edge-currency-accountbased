@@ -36,6 +36,7 @@ import {
   EthereumInitOptions,
   EthereumNetworkInfo
 } from './ethereumTypes'
+import { resolveServerApiKeys } from './networkAdapters/apiKeyTemplate'
 import { RpcAdapterConfig } from './networkAdapters/RpcAdapter'
 
 /**
@@ -555,7 +556,9 @@ export class EthereumTools implements EdgeCurrencyTools {
     if (networkAdapterConfig == null)
       throw new Error(`${methodName}: No RpcAdapterConfig`)
 
-    return networkAdapterConfig.servers.map(
+    // Servers left as `{{apiKey}}` templates fail every call, so fill them in
+    // or drop them before they cost a slot in the provider waterfall:
+    return resolveServerApiKeys(networkAdapterConfig.servers, this).map(
       // ENS lives on Ethereum mainnet, hence chainId of 1
       rpcServer => new ethers.providers.JsonRpcProvider(rpcServer, 1)
     )
