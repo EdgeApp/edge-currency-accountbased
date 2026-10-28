@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Pirate Chain) Receive showing a Sapling address for the rest of the session after Ironwood activation
+
 ## 4.102.1 (2026-10-16)
 
 - fixed: (Polkadot) A throttled Subscan request is no longer retried every second without end, holding up history sync for every Polkadot wallet

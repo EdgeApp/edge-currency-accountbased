@@ -172,16 +172,25 @@ describe('PiratechainEngine receive addresses', function () {
 })
 
 describe('PiratechainEngine getFreshAddress', function () {
-  const CACHED = 'zs1cachedaddressfromanearlierengine'
-  const CURRENT = 'zs1currentaddressfromthesynchronizer'
+  const CACHED = 'pirate1cachedaddressfromanearlierengine'
+  const CURRENT = 'pirate1currentaddressfromthesynchronizer'
+  const SAPLING = 'zs1saplingaddressbeforeironwoodactivation'
 
-  /** Resolves the engine's synchronizer with one that counts address reads. */
-  function countReads(engine: PiratechainEngine): () => number {
+  /**
+   * Resolves the engine's synchronizer with one that counts address reads
+   * and answers each read with the next address in the list, repeating the
+   * last one.
+   */
+  function countReads(
+    engine: PiratechainEngine,
+    addresses: string[] = [CURRENT]
+  ): () => number {
     let reads = 0
     ;(engine as any).synchronizerResolver({
       getCurrentAddress: async () => {
+        const address = addresses[Math.min(reads, addresses.length - 1)]
         reads++
-        return CURRENT
+        return address
       }
     })
     return () => reads
@@ -212,5 +221,33 @@ describe('PiratechainEngine getFreshAddress', function () {
     expect((await engine.getFreshAddress()).publicAddress).equals(CURRENT)
     expect((await engine.getFreshAddress()).publicAddress).equals(CURRENT)
     expect(reads()).equals(1)
+  })
+
+  it('re-reads a cached Sapling address until Ironwood arrives', async function () {
+    const { engine } = await makeEngine()
+    engine.otherData.cachedAddress = SAPLING
+    const reads = countReads(engine, [SAPLING, SAPLING, CURRENT])
+
+    expect((await engine.getFreshAddress()).publicAddress).equals(SAPLING)
+    expect((await engine.getFreshAddress()).publicAddress).equals(SAPLING)
+    expect((await engine.getFreshAddress()).publicAddress).equals(CURRENT)
+    expect(reads()).equals(3)
+
+    expect((await engine.getFreshAddress()).publicAddress).equals(CURRENT)
+    expect(engine.otherData.cachedAddress).equals(CURRENT)
+    expect(reads()).equals(3)
+  })
+
+  it('serves a cached Sapling address when the re-read fails', async function () {
+    const { engine } = await makeEngine()
+    engine.otherData.cachedAddress = SAPLING
+    ;(engine as any).synchronizerResolver({
+      getCurrentAddress: async () => {
+        throw new Error('signing locked')
+      }
+    })
+
+    expect((await engine.getFreshAddress()).publicAddress).equals(SAPLING)
+    expect(engine.otherData.cachedAddress).equals(SAPLING)
   })
 })
