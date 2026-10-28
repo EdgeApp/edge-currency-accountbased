@@ -161,7 +161,7 @@ const asNetworkAdaptorConfig = asObject({
 /**
  * Other Methods from EthereumTools
  */
-export const ethOtherMethodNames = ['resolveEnsName'] as const
+export const ethOtherMethodNames = ['resolveEnsName', 'lookupEnsName'] as const
 
 export const asEthereumFeesGasLimit = asObject({
   minGasLimit: asOptional(asString),
