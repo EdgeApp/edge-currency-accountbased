@@ -10,12 +10,17 @@ import { ethers } from 'ethers'
 export const ENS_UNIVERSAL_RESOLVER =
   '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe'
 
+/** SLIP-44 coin type for Ethereum mainnet addresses */
+const ETH_COIN_TYPE = 60
+
 const universalResolverInterface = new ethers.utils.Interface([
   'function resolve(bytes name, bytes data) view returns (bytes result, address resolver)',
+  'function reverse(bytes lookupAddress, uint256 coinType) view returns (string primary, address resolver, address reverseResolver)',
   'error ResolverNotFound(bytes name)',
   'error ResolverNotContract(bytes name, address resolver)',
   'error UnsupportedResolverProfile(bytes4 selector)',
   'error ResolverError(bytes errorData)',
+  'error ReverseAddressMismatch(string primary, bytes primaryAddress)',
   'error HttpError(uint16 status, string message)'
 ])
 
@@ -24,13 +29,14 @@ const addrResolverInterface = new ethers.utils.Interface([
 ])
 
 /**
- * Universal Resolver errors that mean the name has no answer,
+ * Universal Resolver errors that mean the name or address has no answer,
  * as opposed to a failure worth retrying on another server.
  */
 const noAnswerErrors = new Set([
   'ResolverNotFound',
   'ResolverNotContract',
-  'UnsupportedResolverProfile'
+  'UnsupportedResolverProfile',
+  'ReverseAddressMismatch'
 ])
 
 const asContractError = asObject({ errorName: asString })
@@ -63,12 +69,33 @@ export async function resolveEnsAddress(
 }
 
 /**
+ * Finds the primary ENS name for an Ethereum address. The Universal
+ * Resolver checks that the name resolves back to the same address.
+ * Returns null when the address has no verified primary name.
+ * Throws on network or gateway failures.
+ */
+export async function lookupEnsName(
+  provider: ethers.providers.Provider,
+  address: string
+): Promise<string | null> {
+  const data = universalResolverInterface.encodeFunctionData('reverse', [
+    ethers.utils.getAddress(address),
+    ETH_COIN_TYPE
+  ])
+  const result = await callUniversalResolver(provider, 'reverse', data)
+  if (result == null) return null
+
+  const [primaryName] = result
+  return primaryName === '' ? null : primaryName
+}
+
+/**
  * Calls the Universal Resolver with CCIP-read enabled and decodes the
  * result. Returns null for errors that mean there is no answer.
  */
 async function callUniversalResolver(
   provider: ethers.providers.Provider,
-  functionName: 'resolve',
+  functionName: 'resolve' | 'reverse',
   data: string
 ): Promise<ethers.utils.Result | null> {
   const raw = await provider.call({

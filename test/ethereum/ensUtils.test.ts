@@ -4,13 +4,16 @@ import { describe, it } from 'mocha'
 
 import {
   ENS_UNIVERSAL_RESOLVER,
+  lookupEnsName,
   resolveEnsAddress
 } from '../../src/ethereum/ensUtils'
 
 const universalResolver = new ethers.utils.Interface([
   'function resolve(bytes name, bytes data) view returns (bytes result, address resolver)',
+  'function reverse(bytes lookupAddress, uint256 coinType) view returns (string primary, address resolver, address reverseResolver)',
   'error ResolverNotFound(bytes name)',
-  'error ResolverError(bytes errorData)'
+  'error ResolverError(bytes errorData)',
+  'error ReverseAddressMismatch(string primary, bytes primaryAddress)'
 ])
 const addrResolver = new ethers.utils.Interface([
   'function addr(bytes32 node) view returns (address)'
@@ -105,5 +108,49 @@ describe('resolveEnsAddress', () => {
       error = e
     })
     expect(error).to.be.instanceOf(Error)
+  })
+})
+
+describe('lookupEnsName', () => {
+  it('calls reverse for the Ethereum coin type', async () => {
+    const { provider, requests } = makeFakeProvider(
+      universalResolver.encodeFunctionResult('reverse', [
+        'nick.eth',
+        resolverAddress,
+        resolverAddress
+      ])
+    )
+    expect(await lookupEnsName(provider, nickAddress)).to.equal('nick.eth')
+
+    const [request] = requests
+    expect(request.to).to.equal(ENS_UNIVERSAL_RESOLVER)
+    expect(request.ccipReadEnabled).to.equal(true)
+    const [lookupAddress, coinType] = universalResolver.decodeFunctionData(
+      'reverse',
+      request.data ?? '0x'
+    )
+    expect(lookupAddress).to.equal(nickAddress.toLowerCase())
+    expect(coinType.toNumber()).to.equal(60)
+  })
+
+  it('returns null when the address has no primary name', async () => {
+    const { provider } = makeFakeProvider(
+      universalResolver.encodeFunctionResult('reverse', [
+        '',
+        ethers.constants.AddressZero,
+        resolverAddress
+      ])
+    )
+    expect(await lookupEnsName(provider, nickAddress)).to.equal(null)
+  })
+
+  it('returns null when the primary name points elsewhere', async () => {
+    const { provider } = makeFakeProvider(
+      universalResolver.encodeErrorResult('ReverseAddressMismatch', [
+        'nick.eth',
+        ethers.constants.AddressZero
+      ])
+    )
+    expect(await lookupEnsName(provider, nickAddress)).to.equal(null)
   })
 })

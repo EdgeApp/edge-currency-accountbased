@@ -27,7 +27,7 @@ import {
   mergeDeeply,
   multicastEthProviders
 } from '../common/utils'
-import { resolveEnsAddress } from './ensUtils'
+import { lookupEnsName, resolveEnsAddress } from './ensUtils'
 import { ethereumPlugins } from './ethereumInfos'
 import {
   asEthereumPrivateKeys,
@@ -522,6 +522,21 @@ export class EthereumTools implements EdgeCurrencyTools {
       func: async (ethProvider: ethers.providers.JsonRpcProvider) =>
         await resolveEnsAddress(ethProvider, ensName),
       providers: this.makeEnsProviders('resolveEnsName')
+    })
+  }
+
+  /**
+   * Find the primary ENS name for an Ethereum address
+   */
+  async lookupEnsName(address: string): Promise<string | null> {
+    if (!ethers.utils.isAddress(address)) return null
+    return await multicastEthProviders<
+      string | null,
+      ethers.providers.JsonRpcProvider
+    >({
+      func: async (ethProvider: ethers.providers.JsonRpcProvider) =>
+        await lookupEnsName(ethProvider, address),
+      providers: this.makeEnsProviders('lookupEnsName')
     })
   }
 
