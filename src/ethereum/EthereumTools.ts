@@ -27,6 +27,7 @@ import {
   mergeDeeply,
   multicastEthProviders
 } from '../common/utils'
+import { resolveEnsAddress } from './ensUtils'
 import { ethereumPlugins } from './ethereumInfos'
 import {
   asEthereumPrivateKeys,
@@ -514,6 +515,21 @@ export class EthereumTools implements EdgeCurrencyTools {
    * Resolve an ENS name, for example: "bob.eth"
    */
   async resolveEnsName(ensName: string): Promise<string | null> {
+    return await multicastEthProviders<
+      string | null,
+      ethers.providers.JsonRpcProvider
+    >({
+      func: async (ethProvider: ethers.providers.JsonRpcProvider) =>
+        await resolveEnsAddress(ethProvider, ensName),
+      providers: this.makeEnsProviders('resolveEnsName')
+    })
+  }
+
+  // #endregion otherMethods
+
+  private makeEnsProviders(
+    methodName: string
+  ): ethers.providers.JsonRpcProvider[] {
     const { networkAdapterConfigs } = this.networkInfo
 
     const networkAdapterConfig = networkAdapterConfigs.find(
@@ -522,26 +538,13 @@ export class EthereumTools implements EdgeCurrencyTools {
     )
 
     if (networkAdapterConfig == null)
-      throw new Error('resolveEnsName: No RpcAdapterConfig')
+      throw new Error(`${methodName}: No RpcAdapterConfig`)
 
-    const rpcServers = networkAdapterConfig.servers
-
-    const ethProviders: ethers.providers.JsonRpcProvider[] = rpcServers.map(
-      // This call only works on Ethereum networks, hence chainId of 1
+    return networkAdapterConfig.servers.map(
+      // ENS lives on Ethereum mainnet, hence chainId of 1
       rpcServer => new ethers.providers.JsonRpcProvider(rpcServer, 1)
     )
-
-    return await multicastEthProviders<
-      string | null,
-      ethers.providers.JsonRpcProvider
-    >({
-      func: async (ethProvider: ethers.providers.JsonRpcProvider) =>
-        await ethProvider.resolveName(ensName),
-      providers: ethProviders
-    })
   }
-
-  // #endregion otherMethods
 }
 
 export async function makeCurrencyTools(
