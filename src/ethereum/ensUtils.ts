@@ -13,6 +13,9 @@ export const ENS_UNIVERSAL_RESOLVER =
 /** SLIP-44 coin type for Ethereum mainnet addresses */
 const ETH_COIN_TYPE = 60
 
+/** ENSIP-19 coin type for an address that applies to every EVM chain */
+const DEFAULT_EVM_COIN_TYPE = 0x80000000
+
 const universalResolverInterface = new ethers.utils.Interface([
   'function resolve(bytes name, bytes data) view returns (bytes result, address resolver)',
   'function reverse(bytes lookupAddress, uint256 coinType) view returns (string primary, address resolver, address reverseResolver)',
@@ -25,7 +28,8 @@ const universalResolverInterface = new ethers.utils.Interface([
 ])
 
 const addrResolverInterface = new ethers.utils.Interface([
-  'function addr(bytes32 node) view returns (address)'
+  'function addr(bytes32 node) view returns (address)',
+  'function addr(bytes32 node, uint256 coinType) view returns (bytes)'
 ])
 
 /**
@@ -42,30 +46,89 @@ const noAnswerErrors = new Set([
 const asContractError = asObject({ errorName: asString })
 
 /**
- * Resolves an ENS name, such as "nick.eth", to its Ethereum address.
- * Returns null when the name has no resolver or no address record.
+ * ENSIP-11 coin type for an EVM chain's addresses.
+ */
+function evmCoinType(chainId: number): number {
+  return chainId === 1 ? ETH_COIN_TYPE : (DEFAULT_EVM_COIN_TYPE | chainId) >>> 0
+}
+
+/**
+ * Resolves an ENS name, such as "nick.eth", to its address on an EVM chain.
+ * Off mainnet, it tries the chain's own address record, then the ENSIP-19
+ * default EVM record, then the mainnet record, since most names only set
+ * the mainnet one. Returns null when none of these records is set.
  * Throws on network or gateway failures.
  */
 export async function resolveEnsAddress(
   provider: ethers.providers.Provider,
-  ensName: string
+  ensName: string,
+  chainId: number = 1
 ): Promise<string | null> {
+  const coinTypes =
+    chainId === 1
+      ? [ETH_COIN_TYPE]
+      : [evmCoinType(chainId), DEFAULT_EVM_COIN_TYPE, ETH_COIN_TYPE]
+
+  for (const coinType of coinTypes) {
+    const address = await resolveEnsCoinAddress(provider, ensName, coinType)
+    if (address != null) return address
+  }
+  return null
+}
+
+/**
+ * Reads one coin type's address record for an ENS name.
+ * Returns null when the record is empty or not an EVM address.
+ */
+async function resolveEnsCoinAddress(
+  provider: ethers.providers.Provider,
+  ensName: string,
+  coinType: number
+): Promise<string | null> {
+  const node = ethers.utils.namehash(ensName)
+  const addrCall =
+    coinType === ETH_COIN_TYPE
+      ? addrResolverInterface.encodeFunctionData('addr(bytes32)', [node])
+      : addrResolverInterface.encodeFunctionData('addr(bytes32,uint256)', [
+          node,
+          coinType
+        ])
   const data = universalResolverInterface.encodeFunctionData('resolve', [
     ethers.utils.dnsEncode(ensName),
-    addrResolverInterface.encodeFunctionData('addr', [
-      ethers.utils.namehash(ensName)
-    ])
+    addrCall
   ])
   const result = await callUniversalResolver(provider, 'resolve', data)
   if (result == null) return null
 
   const [addrResult] = result
   if (addrResult === '0x') return null
+
+  const address =
+    coinType === ETH_COIN_TYPE
+      ? decodeEthAddress(addrResult)
+      : decodeEvmAddressBytes(addrResult)
+  return address === ethers.constants.AddressZero ? null : address
+}
+
+function decodeEthAddress(addrResult: string): string {
   const [address] = addrResolverInterface.decodeFunctionResult(
-    'addr',
+    'addr(bytes32)',
     addrResult
   )
-  return address === ethers.constants.AddressZero ? null : address
+  return address
+}
+
+/**
+ * Decodes a multi-coin address record, which holds raw address bytes.
+ * Returns null when the bytes are not a 20-byte EVM address.
+ */
+function decodeEvmAddressBytes(addrResult: string): string | null {
+  const [addressBytes] = addrResolverInterface.decodeFunctionResult(
+    'addr(bytes32,uint256)',
+    addrResult
+  )
+  if (ethers.utils.hexDataLength(addressBytes) !== 20) return null
+  return ethers.utils.getAddress(addressBytes)
 }
 
 /**

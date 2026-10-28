@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- added: (Ethereum) `lookupEnsName` other method to find an address's primary ENS name
+- added: (Ethereum) `resolveEnsName` takes an optional chain ID and returns the name's address on that EVM chain
+- fixed: (Ethereum) Slow ENS lookups from RPC servers missing their API keys
+- fixed: (Ethereum) ENS names moved to ENSv2 not resolving, or resolving to a stale address
+
 ## 4.102.1 (2026-10-16)
 
 - fixed: (Polkadot) A throttled Subscan request is no longer retried every second without end, holding up history sync for every Polkadot wallet

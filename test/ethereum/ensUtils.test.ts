@@ -16,7 +16,8 @@ const universalResolver = new ethers.utils.Interface([
   'error ReverseAddressMismatch(string primary, bytes primaryAddress)'
 ])
 const addrResolver = new ethers.utils.Interface([
-  'function addr(bytes32 node) view returns (address)'
+  'function addr(bytes32 node) view returns (address)',
+  'function addr(bytes32 node, uint256 coinType) view returns (bytes)'
 ])
 
 const nickAddress = '0xb8c2C29ee19D8307cb7255e1Cd9CbDE883A267d5'
@@ -50,10 +51,60 @@ function makeFakeProvider(response: string): {
 
 function encodeResolveResult(address: string): string {
   return universalResolver.encodeFunctionResult('resolve', [
-    addrResolver.encodeFunctionResult('addr', [address]),
+    addrResolver.encodeFunctionResult('addr(bytes32)', [address]),
     resolverAddress
   ])
 }
+
+/**
+ * A provider that answers `resolve` calls from a table of address records,
+ * keyed by coin type, and records which coin types it was asked for.
+ */
+function makeCoinTypeProvider(records: Map<number, string>): {
+  provider: ethers.providers.Provider
+  coinTypes: number[]
+} {
+  const coinTypes: number[] = []
+  const fake = {
+    call: async (request: CallRequest): Promise<string> => {
+      const [, addrCall] = universalResolver.decodeFunctionData(
+        'resolve',
+        request.data ?? '0x'
+      )
+      const isMultiCoin =
+        ethers.utils.hexDataSlice(addrCall, 0, 4) ===
+        addrResolver.getSighash('addr(bytes32,uint256)')
+      const coinType = isMultiCoin
+        ? addrResolver
+            .decodeFunctionData('addr(bytes32,uint256)', addrCall)[1]
+            .toNumber()
+        : 60
+      coinTypes.push(coinType)
+
+      const record = records.get(coinType)
+      const addrResult = isMultiCoin
+        ? addrResolver.encodeFunctionResult('addr(bytes32,uint256)', [
+            record ?? '0x'
+          ])
+        : addrResolver.encodeFunctionResult('addr(bytes32)', [
+            record ?? ethers.constants.AddressZero
+          ])
+      return universalResolver.encodeFunctionResult('resolve', [
+        addrResult,
+        resolverAddress
+      ])
+    }
+  }
+  return {
+    provider: fake as unknown as ethers.providers.Provider,
+    coinTypes
+  }
+}
+
+const polygonChainId = 137
+const polygonCoinType = 0x80000089
+const defaultEvmCoinType = 0x80000000
+const otherAddress = '0x2222222222222222222222222222222222222222'
 
 describe('resolveEnsAddress', () => {
   it('calls the Universal Resolver with CCIP-read enabled', async () => {
@@ -72,7 +123,7 @@ describe('resolveEnsAddress', () => {
     )
     expect(name).to.equal(ethers.utils.dnsEncode('nick.eth'))
     expect(data).to.equal(
-      addrResolver.encodeFunctionData('addr', [
+      addrResolver.encodeFunctionData('addr(bytes32)', [
         ethers.utils.namehash('nick.eth')
       ])
     )
@@ -108,6 +159,72 @@ describe('resolveEnsAddress', () => {
       error = e
     })
     expect(error).to.be.instanceOf(Error)
+  })
+})
+
+describe('resolveEnsAddress on other EVM chains', () => {
+  it("returns the chain's own address record first", async () => {
+    const { provider, coinTypes } = makeCoinTypeProvider(
+      new Map([
+        [polygonCoinType, otherAddress],
+        [60, nickAddress]
+      ])
+    )
+    expect(
+      await resolveEnsAddress(provider, 'nick.eth', polygonChainId)
+    ).to.equal(otherAddress)
+    expect(coinTypes).to.deep.equal([polygonCoinType])
+  })
+
+  it('falls back to the default EVM address record', async () => {
+    const { provider, coinTypes } = makeCoinTypeProvider(
+      new Map([
+        [defaultEvmCoinType, otherAddress],
+        [60, nickAddress]
+      ])
+    )
+    expect(
+      await resolveEnsAddress(provider, 'nick.eth', polygonChainId)
+    ).to.equal(otherAddress)
+    expect(coinTypes).to.deep.equal([polygonCoinType, defaultEvmCoinType])
+  })
+
+  it('falls back to the Ethereum address record', async () => {
+    const { provider, coinTypes } = makeCoinTypeProvider(
+      new Map([[60, nickAddress]])
+    )
+    expect(
+      await resolveEnsAddress(provider, 'nick.eth', polygonChainId)
+    ).to.equal(nickAddress)
+    expect(coinTypes).to.deep.equal([polygonCoinType, defaultEvmCoinType, 60])
+  })
+
+  it('skips zero and malformed address records', async () => {
+    const { provider } = makeCoinTypeProvider(
+      new Map([
+        [polygonCoinType, ethers.constants.AddressZero],
+        [defaultEvmCoinType, '0x1234'],
+        [60, nickAddress]
+      ])
+    )
+    expect(
+      await resolveEnsAddress(provider, 'nick.eth', polygonChainId)
+    ).to.equal(nickAddress)
+  })
+
+  it('returns null when no record is set', async () => {
+    const { provider } = makeCoinTypeProvider(new Map())
+    expect(
+      await resolveEnsAddress(provider, 'nick.eth', polygonChainId)
+    ).to.equal(null)
+  })
+
+  it('only reads the Ethereum record on mainnet', async () => {
+    const { provider, coinTypes } = makeCoinTypeProvider(
+      new Map([[defaultEvmCoinType, otherAddress]])
+    )
+    expect(await resolveEnsAddress(provider, 'nick.eth', 1)).to.equal(null)
+    expect(coinTypes).to.deep.equal([60])
   })
 })
 

@@ -513,15 +513,19 @@ export class EthereumTools implements EdgeCurrencyTools {
   // #region otherMethods
 
   /**
-   * Resolve an ENS name, for example: "bob.eth"
+   * Resolve an ENS name, for example: "bob.eth".
+   * Pass a chainId to get the name's address on another EVM chain.
    */
-  async resolveEnsName(ensName: string): Promise<string | null> {
+  async resolveEnsName(
+    ensName: string,
+    chainId: number = 1
+  ): Promise<string | null> {
     return await multicastEthProviders<
       string | null,
       ethers.providers.JsonRpcProvider
     >({
       func: async (ethProvider: ethers.providers.JsonRpcProvider) =>
-        await resolveEnsAddress(ethProvider, ensName),
+        await resolveEnsAddress(ethProvider, ensName, chainId),
       providers: this.makeEnsProviders('resolveEnsName')
     })
   }
