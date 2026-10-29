@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Zcash) Sends rejected for insufficient funds after the app restarts
+
 ## 4.103.0 (2026-10-28)
 
 - changed: Update chain-registry
