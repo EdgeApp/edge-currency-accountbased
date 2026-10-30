@@ -8,7 +8,7 @@ import {
   ZcashNetworkInfo
 } from './zcashTypes'
 
-const networkInfo: ZcashNetworkInfo = {
+export const networkInfo: ZcashNetworkInfo = {
   rpcNode: {
     networkName: 'mainnet',
     defaultHost: 'zec.rocks',
@@ -17,7 +17,7 @@ const networkInfo: ZcashNetworkInfo = {
   defaultNetworkFee: '10000' // hardcoded default ZEC fee
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ZEC',
   assetDisplayName: 'Zcash',
   chainDisplayName: 'Zcash',
