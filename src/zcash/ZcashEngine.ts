@@ -400,6 +400,7 @@ export class ZcashEngine extends CurrencyEngine<
       this.synchronizerResolver(this.synchronizer)
       this.initData()
       this.initSubscriptions()
+      await this.synchronizer.subscribe()
     }
 
     if (this.synchronizer != null && this.autoshielding.createAutoshieldTx) {
