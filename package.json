@@ -51,7 +51,7 @@
     "make-checkpoints": "node -r sucrase/register scripts/makeCheckpoints.ts",
     "make-cosmos-protos": "node -r sucrase/register ./scripts/cosmos-ts-protos/generate-ts-protos.ts",
     "make-cosmos-chain-json": "node -r sucrase/register ./scripts/cosmos-ts-protos/generate-chain-json.ts",
-    "node": "sucrase -d ./lib -q -t imports,typescript ./src",
+    "node": "sucrase -d ./lib -q -t imports,typescript ./src && node -e \"require('fs').cpSync('src/ethereum/abi', 'lib/ethereum/abi', { recursive: true })\"",
     "precommit": "lint-staged && npm-run-all types test",
     "prepare": "husky install && patch-package && npm-run-all clean node types webpack",
     "start": "webpack serve",
@@ -193,6 +193,20 @@
     "react-native-pirate-wallet": "^0.3.9",
     "react-native-zano": "^0.6.0",
     "react-native-zcash": "^0.13.1"
+  },
+  "peerDependenciesMeta": {
+    "react-native-monero": {
+      "optional": true
+    },
+    "react-native-pirate-wallet": {
+      "optional": true
+    },
+    "react-native-zano": {
+      "optional": true
+    },
+    "react-native-zcash": {
+      "optional": true
+    }
   },
   "overrides": {
     "@greymass/eosio": "^0.6.8",
