@@ -80,7 +80,10 @@ export class ZcashTools implements EdgeCurrencyTools {
   }
 
   async isValidAddress(address: string): Promise<boolean> {
-    return await this.nativeTools.isValidAddress(address)
+    return await this.nativeTools.isValidAddress(
+      address,
+      this.networkInfo.rpcNode.networkName
+    )
   }
 
   // will actually use MNEMONIC version of private key
