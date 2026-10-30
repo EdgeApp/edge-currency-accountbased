@@ -37,6 +37,10 @@ export interface ZcashSynchronizer {
   proposeFulfillingPaymentURI: (paymentUri: string) => Promise<ProposalSuccess>
   rescan: () => Promise<void>
   shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<string>
+  // Begins delivering events. The synchronizer sends each balance, status and
+  // transaction list once, when it changes, so anything sent before the
+  // engine attaches its listeners is never sent again.
+  start: () => Promise<void>
   stop: () => Promise<string>
 
   // Orchard -> Ironwood migration (NU6.3). The sweep is one ordinary proposal
@@ -88,24 +92,6 @@ export function wrapZcashNative(rnzcash: {
       const realSynchronizer: NativeZcashSynchronizer =
         await rnzcash.makeSynchronizer(config)
 
-      realSynchronizer.subscribe({
-        onBalanceChanged(event): void {
-          emit(out, 'balanceChanged', event)
-        },
-        onStatusChanged(status): void {
-          emit(out, 'statusChanged', status)
-        },
-        onTransactionsChanged(event): void {
-          emit(out, 'transactionsChanged', event)
-        },
-        onUpdate(event): void {
-          emit(out, 'update', event)
-        },
-        onError(event): void {
-          emit(out, 'error', event)
-        }
-      })
-
       const out: ZcashSynchronizer = bridgifyObject({
         on: onMethod,
         deriveUnifiedAddress: async () => {
@@ -128,6 +114,25 @@ export function wrapZcashNative(rnzcash: {
         },
         shieldFunds: async shieldFundsInfo => {
           return await realSynchronizer.shieldFunds(shieldFundsInfo)
+        },
+        start: async () => {
+          realSynchronizer.subscribe({
+            onBalanceChanged(event): void {
+              emit(out, 'balanceChanged', event)
+            },
+            onStatusChanged(status): void {
+              emit(out, 'statusChanged', status)
+            },
+            onTransactionsChanged(event): void {
+              emit(out, 'transactionsChanged', event)
+            },
+            onUpdate(event): void {
+              emit(out, 'update', event)
+            },
+            onError(event): void {
+              emit(out, 'error', event)
+            }
+          })
         },
         stop: async () => {
           return await realSynchronizer.stop()
