@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- changed: (Zcash) Replace react-native-zcash with zcash-native
+- fixed: (Zcash) Sends rejected for insufficient funds after the app restarts
+- fixed: (Zcash) Testnet addresses rejected as invalid
+
 ## 4.103.0 (2026-10-28)
 
 - changed: Update chain-registry
