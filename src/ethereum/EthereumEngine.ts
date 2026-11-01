@@ -96,7 +96,8 @@ import {
   calcArbitrumRollupFees,
   calcMiningFees,
   calcOptimismRollupFees,
-  getFeeParamsByTransactionType
+  getFeeParamsByTransactionType,
+  refreshArbitrumL1Gas
 } from './fees/ethMiningFees'
 import {
   FeeProviderFunction,
@@ -1458,6 +1459,7 @@ export class EthereumEngine extends CurrencyEngine<
         txData: data ?? '0x'
       })
       otherParams.gas = add(otherParams.gas, arbitrumFees.l1Gas)
+      otherParams.arbitrumL1Gas = arbitrumFees.l1Gas
     }
 
     //
@@ -1633,6 +1635,18 @@ export class EthereumEngine extends CurrencyEngine<
       this.currencyInfo.pluginId
     )(privateKeys)
     const otherParams: EthereumTxOtherParams = getOtherParams(edgeTransaction)
+
+    const { arbitrumRollupParams } = this.networkInfo
+    if (arbitrumRollupParams != null) {
+      await refreshArbitrumL1Gas({
+        nodeInterfaceAddress: arbitrumRollupParams.nodeInterfaceAddress,
+        otherParams,
+        rpcServers: this.getRpcServers()
+      }).catch((error: unknown) => {
+        // The gas limit from makeSpend may still be enough:
+        this.warn(`signTx could not refresh L1 gas: ${String(error)}`)
+      })
+    }
 
     // Do signing
     const gasLimitHex = toHex(otherParams.gas)

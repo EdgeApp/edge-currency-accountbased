@@ -4,7 +4,11 @@ import { createServer, Server } from 'http'
 import { after, afterEach, before, describe, it } from 'mocha'
 import { AddressInfo } from 'net'
 
-import { calcArbitrumRollupFees } from '../../../src/ethereum/fees/ethMiningFees'
+import { EthereumTxOtherParams } from '../../../src/ethereum/ethereumTypes'
+import {
+  calcArbitrumRollupFees,
+  refreshArbitrumL1Gas
+} from '../../../src/ethereum/fees/ethMiningFees'
 
 const NODE_INTERFACE = '0x00000000000000000000000000000000000000C8'
 const CACHE_MS = 30000
@@ -19,6 +23,7 @@ describe('Arbitrum L1 gas', function () {
   let rpcServers: string[]
   let l1Gas = '10'
   let reads = 0
+  let rpcIsDown = false
 
   const realNow = Date.now
   const advanceClock = (ms: number): void => {
@@ -32,6 +37,11 @@ describe('Arbitrum L1 gas', function () {
         body += String(chunk)
       })
       request.on('end', () => {
+        if (rpcIsDown) {
+          response.writeHead(500)
+          response.end()
+          return
+        }
         const { id, method } = JSON.parse(body)
         let result = '0x1'
         if (method === 'eth_call') {
@@ -60,6 +70,7 @@ describe('Arbitrum L1 gas', function () {
     Date.now = realNow
     l1Gas = '10'
     reads = 0
+    rpcIsDown = false
   })
 
   const read = async (
@@ -104,6 +115,74 @@ describe('Arbitrum L1 gas', function () {
       // The same server under another URL stands in for another chain:
       const otherChain = [rpcServers[0].replace('127.0.0.1', 'localhost')]
       assert.strictEqual(await read(destination(4), '0x', otherChain), '123')
+    })
+  })
+
+  describe('refreshArbitrumL1Gas', function () {
+    const makeOtherParams = (
+      overrides: Partial<EthereumTxOtherParams>
+    ): EthereumTxOtherParams => ({
+      arbitrumL1Gas: '10',
+      from: [destination(100)],
+      gas: '21010',
+      gasPrice: '0x1',
+      gasUsed: '0',
+      isFromMakeSpend: true,
+      to: [destination(101)],
+      ...overrides
+    })
+
+    const refresh = async (
+      otherParams: EthereumTxOtherParams
+    ): Promise<void> => {
+      await refreshArbitrumL1Gas({
+        nodeInterfaceAddress: NODE_INTERFACE,
+        otherParams,
+        rpcServers
+      })
+    }
+
+    it('raises a limit the chain has outgrown', async function () {
+      const otherParams = makeOtherParams({})
+      l1Gas = '123'
+      await refresh(otherParams)
+      assert.strictEqual(otherParams.gas, '21123')
+      assert.strictEqual(otherParams.arbitrumL1Gas, '123')
+    })
+
+    it('reads past a live cache entry', async function () {
+      const destinationAddress = destination(5)
+      assert.strictEqual(await read(destinationAddress), '10')
+      const otherParams = makeOtherParams({ to: [destinationAddress] })
+      l1Gas = '123'
+      await refresh(otherParams)
+      assert.strictEqual(otherParams.gas, '21123')
+    })
+
+    it('keeps the limit when the chain wants less', async function () {
+      const otherParams = makeOtherParams({ arbitrumL1Gas: '63', gas: '21063' })
+      l1Gas = '10'
+      await refresh(otherParams)
+      assert.strictEqual(otherParams.gas, '21063')
+      assert.strictEqual(otherParams.arbitrumL1Gas, '63')
+    })
+
+    it('leaves transactions without an L1 figure alone', async function () {
+      const otherParams = makeOtherParams({ arbitrumL1Gas: undefined })
+      await refresh(otherParams)
+      assert.strictEqual(otherParams.gas, '21010')
+      assert.strictEqual(reads, 0)
+    })
+
+    it('rejects when no server answers', async function () {
+      const otherParams = makeOtherParams({ to: [destination(6)] })
+      rpcIsDown = true
+      let failed = false
+      await refresh(otherParams).catch(() => {
+        failed = true
+      })
+      assert.isTrue(failed)
+      assert.strictEqual(otherParams.gas, '21010')
     })
   })
 })

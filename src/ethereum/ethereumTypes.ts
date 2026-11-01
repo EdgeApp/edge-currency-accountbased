@@ -287,6 +287,8 @@ export interface EthereumTxOtherParams {
   replacedTxid?: string
   data?: string | null
   isFromMakeSpend: boolean
+  /** The L1 gas already inside `gas`, on Arbitrum-style chains. */
+  arbitrumL1Gas?: string
 }
 export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
   from: asArray(asString),
@@ -299,7 +301,8 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
   nonceUsed: asString,
   replacedTxid: asOptional(asString),
   data: asOptional(asEither(asString, asNull)),
-  isFromMakeSpend: asOptional(asBoolean, false)
+  isFromMakeSpend: asOptional(asBoolean, false),
+  arbitrumL1Gas: asOptional(asString)
 })
 
 const asDecoyAddress = asObject({

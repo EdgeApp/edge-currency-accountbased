@@ -1,6 +1,6 @@
 import { Common } from '@ethereumjs/common'
 import { TransactionFactory } from '@ethereumjs/tx'
-import { add, div, gte, lt, lte, min, mul, sub } from 'biggystring'
+import { add, div, gt, gte, lt, lte, min, mul, sub } from 'biggystring'
 import { EdgeSpendInfo, EdgeToken } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
@@ -13,7 +13,8 @@ import {
   CalcOptimismRollupFeeParams,
   EthereumFee,
   EthereumMiningFees,
-  EthereumNetworkInfo
+  EthereumNetworkInfo,
+  EthereumTxOtherParams
 } from '../ethereumTypes'
 
 export const ES_FEE_LOW = 'low'
@@ -361,17 +362,25 @@ export const calcArbitrumRollupFees = async (params: {
   nodeInterfaceAddress: string
   destinationAddress: string
   txData: string
+  /** Read the chain even when the cache holds a live entry. */
+  skipCache?: boolean
 }): Promise<{
   l1Gas: string
   l1GasPrice: string
 }> => {
-  const { rpcServers, nodeInterfaceAddress, destinationAddress, txData } =
-    params
+  const {
+    rpcServers,
+    nodeInterfaceAddress,
+    destinationAddress,
+    txData,
+    skipCache = false
+  } = params
 
   // The node interface has the same address on every Arbitrum-style chain, so
   // only the RPC servers tell the chains apart.
   const cacheKey = JSON.stringify([rpcServers, destinationAddress, txData])
   if (
+    !skipCache &&
     arbitrumL1GasCache != null &&
     arbitrumL1GasCache.key === cacheKey &&
     Date.now() < arbitrumL1GasCache.expiresAt
@@ -423,4 +432,32 @@ export const calcArbitrumRollupFees = async (params: {
   }
 
   return out
+}
+
+/**
+ * A spend keeps the gas limit it was built with, however long it waits to be
+ * signed, so the L1 gas in that limit can fall behind the chain. Raises the
+ * limit to the figure the chain wants right now. A lower figure changes nothing
+ * because the chain refunds gas the transaction does not use.
+ */
+export const refreshArbitrumL1Gas = async (params: {
+  rpcServers: string[]
+  nodeInterfaceAddress: string
+  otherParams: EthereumTxOtherParams
+}): Promise<void> => {
+  const { rpcServers, nodeInterfaceAddress, otherParams } = params
+  const { arbitrumL1Gas, data, gas, to, tokenRecipientAddress } = otherParams
+  if (arbitrumL1Gas == null) return
+
+  const { l1Gas } = await calcArbitrumRollupFees({
+    rpcServers,
+    nodeInterfaceAddress,
+    destinationAddress: tokenRecipientAddress ?? to[0],
+    txData: data ?? '0x',
+    skipCache: true
+  })
+  if (gt(l1Gas, arbitrumL1Gas)) {
+    otherParams.gas = add(sub(gas, arbitrumL1Gas), l1Gas)
+    otherParams.arbitrumL1Gas = l1Gas
+  }
 }
