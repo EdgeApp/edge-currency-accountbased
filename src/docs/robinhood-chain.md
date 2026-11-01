@@ -5,15 +5,15 @@
 | Status | Implemented |
 | Author | Jon Tzeng |
 | Reviewer | - |
-| Last updated | 2026-09-09 |
+| Last updated | 2026-10-31 |
 | Repos | [edge-currency-accountbased](https://github.com/EdgeApp/edge-currency-accountbased), [edge-react-gui](https://github.com/EdgeApp/edge-react-gui), [edge-exchange-plugins](https://github.com/EdgeApp/edge-exchange-plugins), [edge-rates-server](https://github.com/EdgeApp/edge-rates-server) |
 | Implementation | see the repo table in [4. Design overview](#4-design-overview) |
 | Supersedes | - |
 | Related | [Asana 1217382370104887](https://app.asana.com/1/9976422036640/project/1213843652804305/task/1217382370104887) |
 
-<!-- tdd-code-fingerprint: 8b64794e51099c389e3b42536aa835d2e69fe1f1 -->
+<!-- tdd-code-fingerprint: 01a98d27eb72dbe6a5cbf6ceb975901fcbfc3f95 -->
 
-File and branch references point at the `jon/robinhood-chain` branch in all four repos. The task description carried a single link, `https://docs.robinhood.com/chain/`, so every chain parameter below was read from Robinhood's published documentation and then confirmed against the live network.
+File and branch references point at the `jon/robinhood-chain` branch in all four repos. The task description carried a single link, `https://docs.robinhood.com/chain/`. Every chain parameter below was read from Robinhood's published documentation and then confirmed against the live network.
 
 ## Contents
 
@@ -36,13 +36,13 @@ File and branch references point at the `jon/robinhood-chain` branch in all four
 
 Edge has no wallet for Robinhood Chain, an [EVM](#evm) Layer 2 that Robinhood runs on the [Arbitrum Nitro](#arbitrum-nitro) stack with ETH as its gas token. A user holding ETH or bridged stablecoins there cannot hold, receive, or spend them from Edge.
 
-The chain differs from Edge's existing EVM plugins in two ways that decide the design. Its chain ID, 4663, is not one of the 64 chains Etherscan's V2 API serves, so the usual transaction-history source is unavailable. And its blocks arrive roughly every 96ms, which is 10 to 100 times faster than the chains whose block-count constants Edge copies between plugins.
+The chain differs from Edge's existing EVM plugins in two ways that decide the design. Etherscan's V2 API serves its chain ID, 4663, only on a paid plan, and it rejects the free keys most of Edge's chains carry. And its blocks arrive roughly every 96ms, which is 10 to 100 times faster than the chains whose block-count constants Edge copies between plugins.
 
 ## 2. Prior art
 
 Two existing plugins are close relatives, and each is wrong in one respect.
 
-`arbitrumInfo.ts` is the same rollup family. Its fee path is the one this chain needs: an Arbitrum chain charges an L1 data component that a plain `eth_estimateGas` does not see, and the plugin recovers it by calling `gasEstimateL1Component` on the [NodeInterface](#nodeinterface) precompile. Its transaction history, though, comes from Etherscan and Arbiscan, neither of which covers chain 4663.
+`arbitrumInfo.ts` is the same rollup family. Its fee path is the one this chain needs: an Arbitrum chain charges an L1 data component that a plain `eth_estimateGas` does not see, and the plugin recovers it by calling `gasEstimateL1Component` on the [NodeInterface](#nodeinterface) precompile. Its transaction history, though, comes from Etherscan and Arbiscan on free keys, which do not reach chain 4663.
 
 `opbnbInfo.ts` is the most recent chain added and is the better template for the file's shape, but it sets `optimismRollup: true`, which routes fees through the [OP Stack](#op-stack) `GasPriceOracle` contract. That contract does not exist on an Arbitrum chain.
 
@@ -55,7 +55,7 @@ Goals:
 - A `robinhood` currency plugin whose wallets derive addresses, report balances, list transactions, and estimate fees correctly on chain 4663.
 - Registration in `edge-react-gui` so the wallet is creatable and importable from the app.
 - Built-in tokens for the assets a user is most likely to hold, with contract addresses that cannot be confused with imitations.
-- A swap route that can fund a Robinhood Chain wallet from another chain, so a user arriving with no ETH on 4663 can acquire gas without leaving the app, and so a send can be exercised at all.
+- A swap route that can fund a Robinhood Chain wallet from another chain. A user arriving with no ETH on 4663 can acquire gas without leaving the app, and a send can be exercised at all.
 
 Non-goals:
 
@@ -73,7 +73,7 @@ Non-goals:
 
 The plugin is a configuration file. Every behavior it needs already exists in the shared `EthereumEngine`, selected by the fields the config sets. The engine runs inside edge-core-js's plugin WebView, and the app reaches it through the plugin registration in [6. Detailed design: edge-react-gui](#6-detailed-design-edge-react-gui).
 
-Two network adapters back the plugin, and the order they are declared in is load-bearing. `EthereumNetwork.check()` runs an `asyncWaterfall` over the adapters that implement the method it wants, in declaration order. The RPC adapter is declared first because [Blockscout](#blockscout)'s API answers `Unknown module` to the `proxy` module that `EvmScanAdapter.fetchNonce` uses, so an evmscan-first order would fail every nonce lookup before falling through.
+Four network adapters back the plugin, and their declaration order decides who answers. `EthereumNetwork.check()` runs an `asyncWaterfall` over the adapters that implement the method it wants, in declaration order. Alchemy is first for history and token balances. The RPC adapter comes before the scan adapters because [Blockscout](#blockscout)'s API answers `Unknown module` to the `proxy` module that `EvmScanAdapter.fetchNonce` uses, and because Etherscan rejects every call from a build without the paid key. Etherscan comes before Blockscout: it is asked first for internal transactions, and Blockscout's request budget is spent only when Etherscan fails or takes more than 5 seconds.
 
 ```mermaid
 sequenceDiagram
@@ -82,22 +82,32 @@ sequenceDiagram
   end
   box edge-currency-accountbased
     participant Engine as EthereumEngine
+    participant AlchemyNode as AlchemyAdapter
     participant RpcNode as RpcAdapter
     participant ScanNode as EvmScanAdapter
+    participant ScoutNode as BlockscoutAdapter
   end
   box External
     participant Chain as rpc.mainnet.chain.robinhood.com
-    participant Scout as robinhoodchain.blockscout.com
+    participant AlchemyApi as robinhood-mainnet.g.alchemy.com
+    participant Scan as api.etherscan.io
+    participant Scout as api.blockscout.com
   end
 
   App->>Engine: create wallet (wallet:robinhood)
   Engine->>RpcNode: fetchBlockheight, fetchNonce, fetchBalance
   RpcNode->>Chain: eth_blockNumber, eth_getTransactionCount, eth_getBalance
   Chain-->>RpcNode: results
-  Engine->>ScanNode: fetchTxs(startBlock)
-  ScanNode->>Scout: /api?module=account&action=txlist
-  Scout-->>ScanNode: rows, or HTTP 429
-  Note over ScanNode: 429 raises RateLimitError,<br/>which retries with exponential backoff
+  Engine->>AlchemyNode: fetchTxs(startBlock)
+  AlchemyNode->>AlchemyApi: alchemy_getAssetTransfers
+  AlchemyApi-->>AlchemyNode: rows without internal transfers
+  Engine->>ScanNode: fetchInternalTxs(startBlock)
+  ScanNode->>Scan: /v2/api?chainid=4663&action=txlistinternal
+  Scan-->>ScanNode: rows, or NOTOK without the paid key
+  Note over ScanNode,ScoutNode: On failure, or after 5 seconds,<br/>the waterfall starts Blockscout too
+  Engine->>ScoutNode: fetchInternalTxs(startBlock)
+  ScoutNode->>Scout: /v2/api?chain_id=4663&action=txlistinternal
+  Scout-->>ScoutNode: rows
   Engine->>RpcNode: gasEstimateL1Component on NodeInterface
   RpcNode->>Chain: eth_call to 0x…C8
   Chain-->>RpcNode: gasEstimateForL1, baseFee
@@ -108,7 +118,7 @@ sequenceDiagram
 
 The plugin is one new file plus a two-line registration.
 
-[`src/ethereum/info/robinhoodInfo.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/master/src/ethereum/info/robinhoodInfo.ts)
+[`src/ethereum/info/robinhoodInfo.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/a3ac4c4c4320326fd858f67943812121157cf1f1/src/ethereum/info/robinhoodInfo.ts)
 ```ts
 const networkInfo: EthereumNetworkInfo = {
   // Blocks arrive about every 96ms, so this is the usual ~2 minute overlap
@@ -116,8 +126,8 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       // Keyed history source. Alchemy does not serve the `internal` category
-      // on this network, so ETH paid out to the wallet from inside a contract
-      // call is only seen while the Blockscout fallback below is answering.
+      // on this network; the `evmscan` and `blockscout` adapters below supply
+      // those rows, merged into every native-asset sync.
       type: 'alchemy',
       servers: ['https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}']
     },
@@ -131,12 +141,32 @@ const networkInfo: EthereumNetworkInfo = {
       ethBalCheckerContract: '0x8950F12786CAE64F94a02733A260ca6FecDaeD7f'
     },
     {
-      // Etherscan V2 does not support chain 4663. The chain's public Blockscout
-      // instance (300 requests per minute per IP) supplies the internal
-      // transactions Alchemy lacks here, merged into every native-asset sync,
-      // and is the history fallback when Alchemy fails.
+      // Etherscan V2 serves chain 4663 on a paid plan only, so of the app's
+      // keys just `etherscanApiKey` works here; anything else answers NOTOK at
+      // once and the waterfall moves on to Blockscout. It is listed first for
+      // the internal transactions Alchemy lacks.
+      //
+      // `gastrackerSupport` stays off: the oracle answers 0.02 gwei for every
+      // tier here, and `fetchFeesFromEvmScan` separates tied tiers by a whole
+      // gwei, which would raise fees about 50 times.
+      type: 'evmscan',
+      servers: ['https://api.etherscan.io'],
+      internalTxsSupport: true
+    },
+    {
+      // The fallback for internal transactions and history.
+      //
+      // Blockscout's hosted API is the one that answers: it needs the
+      // `blockscoutApiKey` init option and drops out of the list without it.
+      // The chain's own instance is listed as a keyless fallback, but its
+      // budget is 10 requests per window, so it answers 429 to most of a
+      // wallet's sync. `serialServers` shuffles this list, so neither is
+      // tried first; the first to answer wins the call.
       type: 'blockscout',
-      servers: ['https://robinhoodchain.blockscout.com']
+      servers: [
+        'https://api.blockscout.com',
+        'https://robinhoodchain.blockscout.com'
+      ]
     }
   ],
   uriNetworks: ['robinhood'],
@@ -162,27 +192,31 @@ const networkInfo: EthereumNetworkInfo = {
 }
 ```
 
-`arbitrumRollupParams` is what selects the L1-component fee path in `EthereumEngine`. `hdPathCoinType: 60` puts wallets on the standard Ethereum derivation path, so one seed produces the same address here as on mainnet, which is what a bridged user expects.
+`arbitrumRollupParams` is what selects the L1-component fee path in `EthereumEngine`. `hdPathCoinType: 60` puts wallets on the standard Ethereum derivation path. One seed produces the same address here as on mainnet, which is what a bridged user expects. `addressExplorer` and `transactionExplorer` point at `https://robin.etherscan.io`, the explorer Etherscan's chain list names for 4663.
 
 ### History source
 
-`EthereumNetwork.check` runs the adapters that implement a method through `asyncWaterfall`: the first adapter starts alone, the next one starts when the current one fails or has not resolved within 5 seconds, and from then on the outstanding adapters race, with the first successful result winning the call and the loser's result discarded while its request runs to completion. `fetchInternalTxs` goes through the same `check`, so `mergeInternalTxs` has the same behavior. With `alchemy` listed first, transaction history and token balances come from Alchemy's `alchemy_getAssetTransfers` and `alchemy_getTokenBalances`, keyed by the plugin's `alchemyApiKey` init option, and the public [Blockscout](#blockscout) instance only wins those calls while Alchemy is failing or slower than the 5-second start delay. Internal transactions are the exception: `fetchInternalTxs` is its own adapter method, the `blockscout` adapter is the only one here that implements it, and `EthereumNetwork.acquireTxs` asks for it on every native-asset sync whose `fetchTxs` rows did not already carry internal transfers (the tuple's `includesInternal` flag), merging the rows with `mergeEdgeTransactions` before the engine sees them. The merge has to happen inside one pass because `addTransaction` replaces a known transaction whose amount changed, so the external and internal halves of one transaction must arrive as a single row. When `fetchInternalTxs` fails, the engine marks the pass `partial`: it applies only the rows it has never seen or still holds as unconfirmed, so an external-only row cannot overwrite a known transaction that already carries an internal half; it leaves `lastTransactionQueryHeight` where it was, so the same range is re-covered on the next pass; and it withholds the asset from the synced ids, so the wallet's history ratio does not move. That last part is why an outage of this chain's only internal-transaction source freezes every wallet's sync ratio rather than degrading quietly, and it is the intended reading: the history really is incomplete until the source answers. `test/ethereum/network/partialTxSync.test.ts` pins that contract. The Alchemy key reaches the plugin through `ROBINHOOD_INIT.alchemyApiKey` in the app's `env.json`; the `AlchemyAdapter` constructor drops a server whose placeholder has no init option, so a build without the key simply falls back to Blockscout.
+`EthereumNetwork.check` runs the adapters that implement a method through `asyncWaterfall`: the first adapter starts alone, the next one starts when the current one fails or has not resolved within 5 seconds, and from then on the outstanding adapters race, with the first successful result winning the call and the loser's result discarded while its request runs to completion. `fetchInternalTxs` goes through the same `check`. `mergeInternalTxs` has the same behavior. With `alchemy` listed first, transaction history and token balances come from Alchemy's `alchemy_getAssetTransfers` and `alchemy_getTokenBalances`, keyed by the plugin's `alchemyApiKey` init option, and the scan adapters only win those calls while Alchemy is failing or slower than the 5-second start delay. Internal transactions are the exception: `fetchInternalTxs` is its own adapter method, the `evmscan` and [`blockscout`](#blockscout) adapters implement it here with Etherscan asked first, and `EthereumNetwork.acquireTxs` asks for it on every native-asset sync whose `fetchTxs` rows did not already carry internal transfers (the tuple's `includesInternal` flag), merging the rows with `mergeEdgeTransactions` before the engine sees them. The merge has to happen inside one pass because `addTransaction` replaces a known transaction whose amount changed. The external and internal halves of one transaction must arrive as a single row. When `fetchInternalTxs` fails, the engine marks the pass `partial`: it applies only the rows it has never seen or still holds as unconfirmed, which keeps an external-only row from overwriting a known transaction that already carries an internal half; it leaves `lastTransactionQueryHeight` where it was, which re-covers the same range on the next pass; and it withholds the asset from the synced ids, which holds the wallet's history ratio still. That last part is why an outage of both internal-transaction sources freezes every wallet's sync ratio rather than degrading quietly, and it is the intended reading: the history really is incomplete until a source answers. `test/ethereum/network/partialTxSync.test.ts` pins that contract. The Alchemy key reaches the plugin through `ROBINHOOD_INIT.alchemyApiKey` in the app's `env.json`; the `AlchemyAdapter` constructor drops a server whose placeholder has no init option. A build without the key simply falls back to the scan adapters.
 
-`AlchemyAdapter` lives in `src/ethereum/networkAdapters/AlchemyAdapter.ts` and is written for any network Alchemy serves. Asset transfers are value movements rather than transactions and carry no gas data, so the adapter completes the wallet's own spends with `eth_getTransactionByHash` and `eth_getTransactionReceipt` from the same endpoint, then folds the rows per transaction hash with the amount and fee conventions of `processEvmScanTransaction`. Native-asset queries ask for `external` and `internal` together; Alchemy rejects the `internal` category on this network (`-32602 The 'internal' category is not supported for this network`), so the adapter remembers the rejection per endpoint, re-queries with `external` alone, and leaves internal transfers to `fetchInternalTxs`. On a network where Alchemy does serve the category the same code returns them and marks the tuple `includesInternal`, and no Blockscout adapter is needed. A failed transaction moves no value, so a reverted send only shows up through Blockscout's `txlist` while Blockscout is winning the `fetchTxs` call.
+`AlchemyAdapter` lives in `src/ethereum/networkAdapters/AlchemyAdapter.ts` and is written for any network Alchemy serves. Asset transfers are value movements rather than transactions and carry no gas data. The adapter completes the wallet's own spends with `eth_getTransactionByHash` and `eth_getTransactionReceipt` from the same endpoint, then folds the rows per transaction hash with the amount and fee conventions of `processEvmScanTransaction`. Native-asset queries ask for `external` and `internal` together; Alchemy rejects the `internal` category on this network (`-32602 The 'internal' category is not supported for this network`). The adapter remembers the rejection per endpoint, re-queries with `external` alone, and leaves internal transfers to `fetchInternalTxs`. On a network where Alchemy does serve the category the same code returns them and marks the tuple `includesInternal`, and no scan adapter is needed for them. A failed transaction moves no value: a reverted send only shows up through a scan adapter's `txlist` while that adapter is winning the `fetchTxs` call.
 
-`BlockscoutAdapter` (`type: 'blockscout'`) extends `EvmScanAdapter` for the places Blockscout differs from Etherscan: block height from `module=block&action=eth_block_number`, no gastracker module, internal transactions through `fetchInternalTxs` (`txlistinternal`) instead of folded into `fetchTxs`, and a `status: "2"` reply, "Some internal transactions within this block range have not yet been processed", accepted as a success carrying the rows indexed so far (the 1250-block lookback re-covers the rest on the next sync). The chain's `blockscout` adapter carries two servers: Blockscout's hosted API at `https://api.blockscout.com`, and `https://robinhoodchain.blockscout.com`, the instance the chain runs itself. `serialServers` shuffles the list before the waterfall, so neither is tried first and the first to answer wins the call.
+`EvmScanAdapter` (`type: 'evmscan'`) reaches Etherscan V2 at `https://api.etherscan.io/v2/api?chainid=4663`. `getEvmScanApiKey` picks `etherscanApiKey` for that host, and `ROBINHOOD_INIT.etherscanApiKey` in the app's `env.json` holds the one paid key among the app's Etherscan keys. A free key gets `status: "0"`, `NOTOK`, "Free API access is not supported for this chain". That reply is not a rate limit: the call fails after one request with no backoff. A build with no key throws before sending anything. The server stays in the list either way, unlike Blockscout's hosted API, which its constructor drops without a key.
 
-The hosted API is the one that answers. It indexes many chains behind one origin, so it takes the chain in the query string and its route is `/v2/api?chain_id=<chainId>` rather than the `/api` a single-chain instance serves; `makeEvmScanUrl` (`src/ethereum/networkAdapters/evmScanUrl.ts`) is the pure function that picks among that shape, Etherscan v2's `chainid` spelling, and the plain `/api`, and `test/ethereum/networkAdapters/evmScanUrl.test.ts` covers all three. It also bills per key and answers HTTP 402 to a keyless request, which `throwError` classifies as a rate limit, so `serialServers` would spend its whole 1s/2s/4s backoff rediscovering that on every call; the `BlockscoutAdapter` constructor therefore warns and drops that server when the `blockscoutApiKey` init option is absent, the same shape `AlchemyAdapter` uses for a missing `alchemyApiKey`. When that empties the list, the constructor also nulls `fetchBlockheight`, `fetchTxs` and `fetchInternalTxs` so the adapter leaves the waterfall, again as `AlchemyAdapter` does. What that buys is a false claim removed and a throw avoided, not a history that stops looking complete: kept in, `getAllTxsEthscan` answers an empty server list with zero rows, which `fetchInternalTxs` would mark `includesInternal`, and `fetchBlockheight` would throw on the `undefined` an empty waterfall resolves to. Dropped, the wallet still reports 100%, because `mergeInternalTxs` returns at its zero-adapter guard before the `partial` flag that withholds the asset is set: the pass counts as complete since nothing is configured to withhold for. This chain never reaches that state, as only the hosted server carries a key requirement and `robinhoodchain.blockscout.com` always survives the filter. Deleting that instance from `robinhoodInfo` is the cleanup its zero successful merges over the 43-minute run below invite, and it would leave the chain hosted-only, and a keyless build would then sync complete-looking with no internal source at all. The drop does not cover that case; withholding would have to come from the engine side. `test/ethereum/networkAdapters/blockscoutAdapter.test.ts` covers the drop. The key is its own init option rather than a value inside `evmScanApiKey`, because that option holds a chain's Etherscan keys and `fetchGetEtherscan` picks one at random per request, so a hosted-Blockscout key mixed in there would be skipped on most calls. On the free plan the hosted API allows 5 requests per second and roughly 5,000 calls per day (about 20 credits per call, reported in `x-credits-remaining`); a throttled call costs no credits.
+The adapter folds internal transactions into its own `fetchTxs` and leaves `fetchInternalTxs` null, because a chain whose history comes from this adapter gets them in that one call. `internalTxsSupport: true` turns the method on for a chain whose `fetchTxs` usually comes from another adapter. Only Robinhood Chain sets it, which leaves every other chain's traffic as it was. `test/ethereum/networkAdapters/evmScanInternalTxs.test.ts` covers the flag and the rejection. `gastrackerSupport` stays off, as on `arcInfo.ts`: `fetchFeesFromEvmScan` separates tied tiers by a whole gwei, and this chain's oracle answers 0.02 gwei for every tier. Turning it on would raise fees about 50 times.
 
-The chain's own instance remains as a keyless fallback, but its budget is now 10 requests per window, reported as `x-ratelimit-limit: 10` and resetting roughly every 16 minutes (measured 2026-09-09), rather than the 300 per minute it allowed through phase 8. One wallet's sync exhausts that in a single pass, so it answers `{"message":"Too many requests. Increase limits now at https://dev.blockscout.com","result":null,"status":"0"}` to nearly everything after; `isEvmScanRateLimitResponse` classifies that as a `RateLimitError` so `serialServers` backs off. Cloudflare in front of that instance also answers a managed challenge page (HTTP 403, `cf-mitigated: challenge`) to every request that does not look like it came from a browser, from any IP: measured on 2026-09-03 from the build host and from a phone on mobile data, the app's CFNetwork and OkHttp agents got the challenge and a Chrome agent string got the JSON, while `eth.blockscout.com` answered every agent. By 2026-09-09 the agent string alone was challenged too, and the request had to carry the `sec-ch-ua` client hint naming the same browser. The adapter sends both on its requests, the same workaround `BlockbookAdapter` applies to Trezor's Blockbook servers. Passing the challenge is all that buys: the 10-per-window budget is what actually keeps this instance from serving a sync.
+`BlockscoutAdapter` (`type: 'blockscout'`) extends `EvmScanAdapter` for the places Blockscout differs from Etherscan: block height from `module=block&action=eth_block_number`, no gastracker module, `fetchInternalTxs` (`txlistinternal`) always on rather than behind the config flag and with a 60-second cooldown after a throttle reply, internal transactions kept out of `fetchTxs`, and a `status: "2"` reply, "Some internal transactions within this block range have not yet been processed", accepted as a success carrying the rows indexed so far (the 1250-block lookback re-covers the rest on the next sync). The chain's `blockscout` adapter carries two servers: Blockscout's hosted API at `https://api.blockscout.com`, and `https://robinhoodchain.blockscout.com`, the instance the chain runs itself. `serialServers` shuffles the list before the waterfall. Neither is tried first and the first to answer wins the call.
 
-`ethBalCheckerContract` points at an [eth-balance-checker](#eth-balance-checker) deployed to `0x8950F12786CAE64F94a02733A260ca6FecDaeD7f` in block 52107662 on 2026-09-01, byte-for-byte the runtime that Edge's other EVM plugins use at `0x7263…`. `RpcAdapter.fetchTokenBalances` is therefore defined and sits behind Alchemy's `alchemy_getTokenBalances` in the waterfall, so token balances stay batched even when Alchemy is unavailable.
+The hosted API is the one that answers. It indexes many chains behind one origin. It takes the chain in the query string and its route is `/v2/api?chain_id=<chainId>` rather than the `/api` a single-chain instance serves; `makeEvmScanUrl` (`src/ethereum/networkAdapters/evmScanUrl.ts`) is the pure function that picks among that shape, Etherscan v2's `chainid` spelling, and the plain `/api`, and `test/ethereum/networkAdapters/evmScanUrl.test.ts` covers all three. It also bills per key and answers HTTP 402 to a keyless request, which `throwError` classifies as a rate limit. `serialServers` would spend its whole 1s/2s/4s backoff rediscovering that on every call; the `BlockscoutAdapter` constructor therefore warns and drops that server when the `blockscoutApiKey` init option is absent, the same shape `AlchemyAdapter` uses for a missing `alchemyApiKey`. When that empties the list, the constructor also nulls `fetchBlockheight`, `fetchTxs` and `fetchInternalTxs` so that the adapter leaves the waterfall, again as `AlchemyAdapter` does. What that buys is a false claim removed and a throw avoided, not a history that stops looking complete: kept in, `getAllTxsEthscan` answers an empty server list with zero rows, which `fetchInternalTxs` would mark `includesInternal`, and `fetchBlockheight` would throw on the `undefined` an empty waterfall resolves to. Dropped, the wallet still reports 100%, because `mergeInternalTxs` returns at its zero-adapter guard before the `partial` flag that withholds the asset is set: the pass counts as complete since nothing is configured to withhold for. This chain never reaches that state, as only the hosted server carries a key requirement and `robinhoodchain.blockscout.com` always survives the filter. Deleting that instance from `robinhoodInfo` is the cleanup its zero successful merges over the 43-minute run below invite, and it would leave the chain hosted-only, and a keyless build would then sync complete-looking with no internal source at all. The drop does not cover that case; withholding would have to come from the engine side. `test/ethereum/networkAdapters/blockscoutAdapter.test.ts` covers the drop. The key is its own init option rather than a value inside `evmScanApiKey`, because that option holds a chain's Etherscan keys and `fetchGetEtherscan` picks one at random per request. A hosted-Blockscout key mixed in there would be skipped on most calls. On the free plan the hosted API allows 5 requests per second and roughly 5,000 calls per day (about 20 credits per call, reported in `x-credits-remaining`); a throttled call costs no credits.
+
+The chain's own instance remains as a keyless fallback, but its budget is now 10 requests per window, reported as `x-ratelimit-limit: 10` and resetting roughly every 16 minutes (measured 2026-09-09), rather than the 300 per minute it allowed through phase 8. One wallet's sync exhausts that in a single pass. It answers `{"message":"Too many requests. Increase limits now at https://dev.blockscout.com","result":null,"status":"0"}` to nearly everything after; `isEvmScanRateLimitResponse` classifies that as a `RateLimitError` so `serialServers` backs off. Cloudflare in front of that instance also answers a managed challenge page (HTTP 403, `cf-mitigated: challenge`) to every request that does not look like it came from a browser, from any IP: measured on 2026-09-03 from the build host and from a phone on mobile data, the app's CFNetwork and OkHttp agents got the challenge and a Chrome agent string got the JSON, while `eth.blockscout.com` answered every agent. By 2026-09-09 the agent string alone was challenged too, and the request had to carry the `sec-ch-ua` client hint naming the same browser. The adapter sends both on its requests, the same workaround `BlockbookAdapter` applies to Trezor's Blockbook servers. Passing the challenge is all that buys: the 10-per-window budget is what actually keeps this instance from serving a sync.
+
+`ethBalCheckerContract` points at an [eth-balance-checker](#eth-balance-checker) deployed to `0x8950F12786CAE64F94a02733A260ca6FecDaeD7f` in block 52107662 on 2026-09-01, with the same runtime bytecode that Edge's other [EVM](#evm) plugins use at `0x7263…`. `RpcAdapter.fetchTokenBalances` is therefore defined and sits behind Alchemy's `alchemy_getTokenBalances` in the waterfall. Token balances stay batched even when Alchemy is unavailable.
 
 ### Fees
 
-Fees follow the EIP-1559 formula the engine implements, `baseMultiplier * baseFee + minPriorityFee`. The chain's base fee sits near 0.053 gwei and `eth_maxPriorityFeePerGas` returns zero, so Arbitrum One's 0.1 gwei floor would be double the base fee by itself.
+Fees follow the EIP-1559 formula the engine implements, `baseMultiplier * baseFee + minPriorityFee`. The chain's base fee sits near 0.053 gwei and `eth_maxPriorityFeePerGas` returns zero. Arbitrum One's 0.1 gwei floor would be double the base fee by itself.
 
-[`src/ethereum/info/robinhoodInfo.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/b821eb39fd62922dbf2c5412a5cbaaa70a702300/src/ethereum/info/robinhoodInfo.ts)
+[`src/ethereum/info/robinhoodInfo.ts`](https://github.com/EdgeApp/edge-currency-accountbased/blob/a3ac4c4c4320326fd858f67943812121157cf1f1/src/ethereum/info/robinhoodInfo.ts)
 ```ts
     minPriorityFee: '10000000' // 0.01 Gwei
 ```
@@ -203,20 +237,20 @@ Fees follow the EIP-1559 formula the engine implements, `baseMultiplier * baseFe
 
 USDG has no bridged deployment; `calculateL2TokenAddress` returns an address with no code. The listed contract is issued on the chain directly, and it checks out as genuine: it is a verified [ERC-1967](#erc-1967-proxy) proxy whose implementation contract is named `USDG`, with 354,036,599 units outstanding across 60,946 holders.
 
-CASHCAT and PONS are chain-native too, and neither the gateway router nor the contract docs can vouch for them, so they are corroborated a different way. Each address is the one the swap providers themselves settle to, and more than one provider names it: CASHCAT appears at `0x020bfC65…` in ChangeNow, Swapuz, LetsExchange and Rango, and PONS at `0x39dBED3a…` in Swapuz and Rango. Each contract then confirms its own identity on chain, which is what rules out the same-symbol imitations the explorer is full of:
+CASHCAT and PONS are chain-native too, and neither the gateway router nor the contract docs can vouch for them. They are corroborated a different way. Each address is the one the swap providers themselves settle to, and more than one provider names it: CASHCAT appears at `0x020bfC65…` in ChangeNow, Swapuz, LetsExchange and Rango, and PONS at `0x39dBED3a…` in Swapuz and Rango. Each contract then confirms its own identity on chain, which is what rules out the same-symbol imitations the explorer is full of:
 
 | Token | `name()` | `symbol()` | `decimals()` | Deployed bytecode |
 |---|---|---|---|---|
 | CASHCAT | Cash Cat | CASHCAT | 18 | 4830 bytes |
 | PONS | Pons | PONS | 18 | 5274 bytes |
 
-A single provider catalogue is not enough on its own. A provider can list a wrong address as easily as an explorer can, so the rule that holds here is two independent catalogues agreeing plus the contract's own answer, never a name lookup.
+A single provider catalogue is not enough on its own. A provider can list a wrong address as easily as an explorer can. The rule that holds here is two independent catalogues agreeing plus the contract's own answer, never a name lookup.
 
 ## 6. Detailed design: edge-react-gui
 
 Five files, matching the shape of the `opbnb` and `monad` registrations.
 
-`src/util/corePlugins.ts` adds `robinhood: ENV.ROBINHOOD_INIT`, and `src/envConfig.ts` adds `ROBINHOOD_INIT: asCorePluginInit(asEvmApiKeys)`. `asCorePluginInit` returns `false` for a key that `env.json` does not carry, so the plugin stays off until an `ROBINHOOD_INIT` entry is provisioned, exactly like every other [EVM](#evm) chain.
+`src/util/corePlugins.ts` adds `robinhood: ENV.ROBINHOOD_INIT`, and `src/envConfig.ts` adds `ROBINHOOD_INIT: asCorePluginInit(asEvmApiKeys)`. `asCorePluginInit` returns `false` for a key that `env.json` does not carry. The plugin stays off until an `ROBINHOOD_INIT` entry is provisioned, exactly like every other [EVM](#evm) chain.
 
 `src/constants/WalletAndCurrencyConstants.ts` appends `'wallet:robinhood'` to `WALLET_TYPE_ORDER` and adds the special-currency entry:
 
@@ -239,13 +273,13 @@ Five files, matching the shape of the `opbnb` and `monad` registrations.
 
 The wallet name string is `'My Robinhood Chain'` rather than `'My Robinhood'`, since the shorter form reads as a brokerage account.
 
-One search behavior is worth knowing: `filterWalletCreateItemListBySearchText` splits the query on whitespace and requires every term to match a field by prefix, so typing the full name "Robinhood Chain" returns nothing. "Robinhood" matches on `displayName`.
+One search behavior is worth knowing: `filterWalletCreateItemListBySearchText` splits the query on whitespace and requires every term to match a field by prefix. Typing the full name "Robinhood Chain" returns nothing. "Robinhood" matches on `displayName`.
 
 ## 7. Detailed design: edge-exchange-plugins
 
-Every swap plugin resolves a wallet to its provider-side chain code through one shared map, `MAINNET_CODE_TRANSCRIPTION`, keyed by Edge pluginId. `lifi.ts` and `rango.ts` gate entirely on a non-null lookup for both the source and destination wallet, so a chain the map does not know is invisible to the provider regardless of what the provider's API supports. Adding a chain is therefore a mapping change, not a code change.
+Every swap plugin resolves a wallet to its provider-side chain code through one shared map, `MAINNET_CODE_TRANSCRIPTION`, keyed by Edge pluginId. `lifi.ts` and `rango.ts` gate entirely on a non-null lookup for both the source and destination wallet. A chain the map does not know is invisible to the provider regardless of what the provider's API supports. Adding a chain is therefore a mapping change, not a code change.
 
-The maps are generated. `scripts/mappings/<provider>Mappings.ts` holds the authored direction, provider chain code to Edge pluginId; `npm run mapctl update-mappings` inverts each one into `src/mappings/<provider>.ts`, which is what the plugins import. Every pluginId must exist in `src/util/edgeCurrencyPluginIds.ts` first, so `robinhood` is added there by `mapctl add-plugin`.
+The maps are generated. `scripts/mappings/<provider>Mappings.ts` holds the authored direction, provider chain code to Edge pluginId; `npm run mapctl update-mappings` inverts each one into `src/mappings/<provider>.ts`, which is what the plugins import. Every pluginId must exist in `src/util/edgeCurrencyPluginIds.ts` first. `robinhood` is added there by `mapctl add-plugin`.
 
 A full audit probed every provider in the repo against its own live discovery endpoint. Six carry the chain and are mapped; the rest carry nothing on it:
 
@@ -261,7 +295,7 @@ A full audit probed every provider in the repo against its own live discovery en
 | SwapKit | `HOOD` | Chain code appeared in an earlier sweep, but it is absent from the keyed provider list. Left unmapped |
 | Changelly, Xgram | unknown | Not probed: Changelly's API is request-signed and the available Xgram key returns 401 |
 
-Two providers are mapped without a fillable native-ETH pair at the time of mapping, on the same reasoning: the map is chain-level while fill availability is per-pair and dynamic. `changenow.ts` rebuilds `chainCodeTickerMap` hourly from `exchange/currencies?active=true`, filtered to the chain codes the map knows, so an unmapped chain can never appear even after a pair activates. ChangeNow proved the point: its native-ETH pair was inactive when the chain was first mapped and fills today, with no further change. LetsExchange is the same bet on tokens rather than gas, and costs a declined quote in the meantime, since `checkWhitelistedMainnetCodes` raises a plain `SwapCurrencyError` for a pair the provider cannot serve.
+Two providers are mapped without a fillable native-ETH pair at the time of mapping, on the same reasoning: the map is chain-level while fill availability is per-pair and dynamic. `changenow.ts` rebuilds `chainCodeTickerMap` hourly from `exchange/currencies?active=true`, filtered to the chain codes the map knows. An unmapped chain can never appear even after a pair activates. ChangeNow proved the point: its native-ETH pair was inactive when the chain was first mapped and filled by phase 5, with no further change. LetsExchange is the same bet on tokens rather than gas, and costs a declined quote in the meantime, since `checkWhitelistedMainnetCodes` raises a plain `SwapCurrencyError` for a pair the provider cannot serve.
 
 LI.FI's key deserves a note. Every other chain in `lifiMappings.ts` uses a mnemonic three-letter key (`arb`, `bas`, `opt`); LI.FI assigned Robinhood Chain `out`, which reads like a placeholder and is easy to mistake for a bug. It is what `https://li.quest/v1/chains` returns for chain ID 4663.
 
@@ -269,9 +303,9 @@ One asymmetry is worth recording: `https://li.quest/v1/connections?toChain=4663`
 
 ## 8. Detailed design: edge-rates-server
 
-A chain can hold a real balance, receive a swap and send a transaction and still be unusable, because every fiat figure attached to it renders `$0`: wallet list, wallet scene, send confirm and swap quote. On the exchange scene the zero destination value additionally trips a "High Price Impact" warning, so a correct quote reads to the user as broken or predatory.
+A chain can hold a real balance, receive a swap and send a transaction and still be unusable, because every fiat figure attached to it renders `$0`: wallet list, wallet scene, send confirm and swap quote. On the exchange scene the zero destination value also trips a "High Price Impact" warning. A correct quote reads to the user as broken or predatory.
 
-The reason is that the rates server's v3 API keys on `{pluginId, tokenId}`, not on currency code. Robinhood Chain's native asset is ETH and its `currencyInfo.currencyCode` is `'ETH'`, but that string never reaches the rate lookup. `toCryptoKey` turns the asset into the bare pluginId `robinhood`, and no provider map contained it, so the response came back with the asset echoed and the `rate` field simply absent.
+The reason is that the rates server's v3 API keys on `{pluginId, tokenId}`, not on currency code. Robinhood Chain's native asset is ETH and its `currencyInfo.currencyCode` is `'ETH'`, but that string never reaches the rate lookup. `toCryptoKey` turns the asset into the bare pluginId `robinhood`, and no provider map contained it. The response came back with the asset echoed and the `rate` field simply absent.
 
 Registration spans four maps plus one bridge:
 
@@ -281,21 +315,21 @@ Registration spans four maps plus one bridge:
 | `coingeckoPlatformIdMapping` | `robinhood` | This chain's tokens map automatically |
 | `coinmarketcapMainnetCurrencyMapping` | `1027` | ETH, the same id arbitrum, base, optimism and zksync use |
 | `coinmarketcapPlatformIdMapping` | `null` | CoinMarketCap has no platform id for the chain yet |
-| `defaultTokenTypes` | `evm` | Contract addresses become tokenIds |
-| `defaultPlatformPriority` | `630` | Ranks last, so a bridged asset resolves to its canonical chain |
+| `defaultTokenTypes` | [`evm`](#evm) | Contract addresses become tokenIds |
+| `defaultPlatformPriority` | `630` | Ranks last. A bridged asset resolves to its canonical chain |
 | `defaultCrossChainMapping` | 3 entries | USDC, USDT and WBTC price off their Ethereum counterparts |
 
-CoinGecko already carries the chain as asset platform `robinhood`, with `chain_identifier: 4663` and `native_coin_id: ethereum`, and lists 534 coins on it, mostly the tokenized equities the chain exists to host. It does not, however, carry a Robinhood Chain address on the canonical `usd-coin`, `tether` or `wrapped-bitcoin` coins, so the automated sweep can never reach those three. They get explicit cross-chain entries pointing at the Ethereum contracts. WETH and USDG need no entry: CoinGecko does list both here, so the sweep maps WETH to `robinhood-wrapped-eth-robinhood-chain` and bridges USDG through `global-dollar` on its own.
+CoinGecko already carries the chain as asset platform `robinhood`, with chain identifier 4663 and native coin `ethereum`, and lists 534 coins on it, mostly the tokenized equities the chain exists to host. It does not, however, carry a Robinhood Chain address on the canonical `usd-coin`, `tether` or `wrapped-bitcoin` coins. The automated sweep can never reach those three. They get explicit cross-chain entries pointing at the Ethereum contracts. WETH and USDG need no entry: CoinGecko does list both here. The sweep maps WETH to `robinhood-wrapped-eth-robinhood-chain` and bridges USDG through `global-dollar` on its own.
 
 ### Why half of this deploys itself and half does not
 
 The two halves behave differently, and the difference decides what an operator has to do.
 
-`templates` in a `DatabaseSetup` are written only when the document does not already exist. On a running deployment every one of these documents exists, so editing a template is inert there.
+`templates` in a `DatabaseSetup` are written only when the document does not already exist. On a running deployment every one of these documents exists. Editing a template is inert there.
 
 The mainnet maps escape that, because the daily `tokenMapping` engine does not read them from CouchDB at all. It rebuilds `uidMapping` from the code constant on every run and writes `{...existingDoc, ...uidMapping}`, spreading the code constant last. Deploying the branch therefore fixes the native ETH rate on the next engine run with no manual step.
 
-The platform, token-type, priority and cross-chain documents have no such engine. They are read only from CouchDB, so they need a one-time write to the production `rates_settings` database using exactly the values in the table above.
+The platform, token-type, priority and cross-chain documents have no such engine. They are read only from CouchDB. They need a one-time write to the production `rates_settings` database using exactly the values in the table above.
 
 That asymmetry is itself worth fixing: a chain added to `coingeckoPlatformIdMapping` in code never reaches production on its own, which is a trap for the next chain as much as this one. Having the sweep merge the code defaults underneath the database documents, `{...codeDefault, ...dbDoc}`, would remove the manual step permanently and would preserve deliberate overrides, since disabling a platform is expressed as an explicit `null` rather than a deleted key. It was left out of this work because it changes shared merge semantics for every chain and every provider, which does not belong in a change that registers one chain.
 
@@ -312,12 +346,13 @@ That asymmetry is itself worth fixing: a chain added to `coingeckoPlatformIdMapp
 9. **In-app, funded swap.** With the modified `edge-exchange-plugins` served into the app, an exchange of 529.16 S from My Sonic to My Robinhood Chain quoted at 0.006243 ETH "Powered by LI.FI" and executed to the Congratulations scene. `eth_getBalance` for the receiving address then returned `0x1632fcdd394831`, 6248511112300593 wei, and the wallet scene rendered `0.006248511112300593 ETH`. This is the first spendable balance any Edge account has held on the chain.
 10. **In-app, send.** Sending 0.001 ETH from that wallet reached the "Transaction Success" modal. On chain, transaction `0x70e4950b5991c9419eff70ea2478c7ae55c5c58adcc3da237d5889394f8fdf62` is `success` in block 35308086, value 1000000000000000 wei, fee 1427144040000 wei, and the sender's balance fell by exactly the sum. Send and fee estimation on the chain are now exercised rather than deferred.
 11. **Rates, production reproduction.** `POST /v3/rates` for `{pluginId: 'robinhood', tokenId: null}` against `rates1` through `rates4` returned the asset with no `rate` field, while `ethereum`, `arbitrum` and `base` all returned about 1875.9 in the same response. `rates3` and `rates4` are the hosts the app actually calls, per `RATES_SERVERS` in edge-react-gui `src/util/network.ts`.
-12. **Rates, local instance of the branch.** Against local CouchDB and Redis, with the real provider code path and nothing stubbed: seeding the databases wrote `robinhood` into all eight documents, confirming the fresh-deploy path. Stripping `robinhood` back out of all eight, so the local database matched an existing deployment, left the patched server still returning no rate, which is what proves the stored document wins over the code default at runtime. Running the `tokenMapping` engine once then added `robinhood: {id: 'ethereum'}` to `coingecko:automated` while `coingecko:platforms`, `tokenTypes` and `platformPriority` stayed empty, exactly as the template semantics predict, and the native rate resolved at 1878.73 against `ethereum` at 1878.73.
+12. **Rates, local instance of the branch.** Against local CouchDB and Redis, with the real provider code path and nothing stubbed: seeding the databases wrote `robinhood` into all eight documents, confirming the fresh-deploy path. Stripping `robinhood` back out of all eight, to match an existing deployment, left the patched server still returning no rate, which is what proves the stored document wins over the code default at runtime. Running the `tokenMapping` engine once then added `robinhood: {id: 'ethereum'}` to `coingecko:automated` while `coingecko:platforms`, `tokenTypes` and `platformPriority` stayed empty, exactly as the template semantics predict, and the native rate resolved at 1878.73 against `ethereum` at 1878.73.
 13. **Rates, cross-chain remap in isolation.** Sentinel rates were seeded in `constantrates` on the Ethereum token keys only, USDC 111.111, USDT 222.222 and WBTC 333.333. Querying the Robinhood Chain token ids returned each sentinel, a value reachable only through the remap, and an unmapped Robinhood Chain address returned no rate, which rules out a blanket fallthrough.
 14. **Rates, in-app.** With the app pointed at that local instance, the wallet list rendered ETH on Robinhood Chain at `$1,877` per unit and `-0.14%`, and My Robinhood Chain's `0.005247 ETH` as `$9.85`. The same rows had rendered `$0` throughout phases 1 and 2.
 15. **Unit, history source.** `test/ethereum/network/alchemyTxProcessing.test.ts` folds captured `alchemy_getAssetTransfers` rows into EdgeTransactions for a receive, a spend, a self-send seen from both query directions, a zero-value contract call, a token receive, a token spend, and a token pull the wallet did not sign, and checks the amounts, fees and `parentNetworkFee` against the evmscan conventions. `test/ethereum/network/evmScanRateLimit.test.ts` feeds the captured Blockscout throttle reply and the Etherscan variants to `isEvmScanRateLimitResponse`.
 16. **In-app, history from Alchemy.** With the plugin linked into the app on the iOS simulator and three Robinhood Chain wallets of one account syncing at once, the engine log reports `processEthereumNetworkUpdate tokenTxs robinhood-mainnet.g.alchemy.com won` and the same for `tokenBal` on every sync, with no Blockscout request and no throttle reply in the log. The wallet's transaction list rendered the earlier sends and receives, and a real send of 0.0005389 ETH to `0xeC892dfb84B3c0567Cc2A7118A0885aC6D109Cf3` reached the "Transaction Success" scene; transaction `0xe2be5265fa03f9704960c31d7aa8bbe5fb839a82d7d9c280690be49fc0d21419` is in block 52101999.
 17. **Balance checker, on chain.** After deployment, `eth_getCode` at the new address returns the 2234-byte runtime that the Sonic and Celo checkers hold, and `balances([0x9488ee…], [USDC, 0x0])` answers `[0, <wallet balance in wei>]` through the same `ETH_BAL_CHECKER_ABI` call `RpcAdapter.fetchTokenBalances` makes.
+18. **Etherscan, live.** The real `EvmScanAdapter`, configured as `robinhoodInfo` configures it and given `ROBINHOOD_INIT.etherscanApiKey`, ran against chain 4663 on 2026-10-31. `fetchInternalTxs` returned a real internal row for a recent recipient with `nativeAmount` `623700000000000000`, equal to the raw row, and `fetchTxs`, `fetchBlockheight`, `fetchNonce` and `fetchTokenBalance` answered. The same call with a free key failed after one request in 75ms, and with no key it threw before sending. Of the 22 distinct Etherscan keys in `env.json`, only that one reaches the chain.
 
 ## 10. Phase history
 
@@ -328,14 +363,14 @@ Shipped as designed, with three changes made during verification:
 | Sketched | Shipped | Why |
 |---|---|---|
 | No `CURRENCY_SETTINGS_KEYS` entry | Added between `ravencoin` and `rsk` | Bugbot caught it on #6150. Without it `WalletSettingsModal` hides the Asset Settings row and `AssetSettingsScene` omits the chain |
-| One RPC server | Two | `chainid.network` lists additional public endpoints for 4663. The fallback is `robinhood-rpc.publicnode.com`, which answers every method the plugin uses, including the Arbitrum `NodeInterface` precompile |
+| One RPC server | Two | `chainid.network` lists additional public endpoints for 4663. The fallback is `robinhood-rpc.publicnode.com`, which answers every method the plugin uses, including the Arbitrum [`NodeInterface`](#nodeinterface) precompile |
 | `addressQueryLookbackBlocks: 480`, copied from `arbitrumInfo` | `1250` | 480 blocks is ~46 seconds here, not the ~2 minutes the constant means elsewhere. Measured 626 blocks in 60.2s |
-| `minPriorityFee: '100000000'` (Arbitrum's 0.1 gwei) | `'10000000'` | The chain's base fee is ~0.053 gwei, so Arbitrum's floor would dominate the fee |
+| `minPriorityFee: '100000000'` (Arbitrum's 0.1 gwei) | `'10000000'` | The chain's base fee is ~0.053 gwei. Arbitrum's floor would dominate the fee |
 
 Deferred:
 
-- A funded send. No swap provider quotes chain 4663 and no roster account holds a spendable balance there, so acquiring gas would need an L1 bridge deposit through the Delayed Inbox contract, which Edge cannot drive from the app.
-- Currency icons at `content.edge.app/currencyIconsV3/robinhood/`. The app requests `robinhood.png` and `chain_robinhood.png` and gets neither, so the wallet renders a text placeholder.
+- A funded send. No swap provider quotes chain 4663 and no roster account holds a spendable balance there. Acquiring gas would need an L1 bridge deposit through the Delayed Inbox contract, which Edge cannot drive from the app.
+- Currency icons at `content.edge.app/currencyIconsV3/robinhood/`. The app requests `robinhood.png` and `chain_robinhood.png` and gets neither. The wallet renders a text placeholder.
 - A `robinhood` entry in edge-change-server's plugin registry. `usesChangeServer: true` is set to match `opbnb` and `monad`, which are also absent from that registry; an unknown plugin ID returns `-1` from the hub and the engine polls instead.
 
 ### Phase 2: swap routing, and the send it unblocked
@@ -353,8 +388,8 @@ Scope added in this phase: `edge-exchange-plugins` [#483](https://github.com/Edg
 Deferred, still:
 
 - Currency icons, unchanged from phase 1.
-- An exchange rate for ETH on `robinhood`. Edge's rates server has no entry for the pluginId, so every fiat figure on the chain renders `$0`. On the exchange scene that also trips the "High Price Impact" banner, since the destination value compares as zero against a priced source. Cosmetic, but it looks like a routing fault to a user and should be fixed where rates are configured, not here.
-- A Blockscout API key, unchanged from phase 1 and now the one remaining functional gap: transaction history still rate-limits, so the send above is confirmed against the chain rather than in the app's own list.
+- An exchange rate for ETH on `robinhood`. Edge's rates server has no entry for the pluginId. Every fiat figure on the chain renders `$0`. On the exchange scene that also trips the "High Price Impact" banner, since the destination value compares as zero against a priced source. Cosmetic, but it looks like a routing fault to a user and should be fixed where rates are configured, not here.
+- A [Blockscout](#blockscout) API key, unchanged from phase 1 and now the one remaining functional gap: transaction history still rate-limits. The send above is confirmed against the chain rather than in the app's own list.
 
 ### Phase 3: exchange rates
 
@@ -363,7 +398,7 @@ Phase 2 ended with a chain that could be funded, spent from, and swapped into, y
 | Phase 2 expectation | What phase 3 found |
 |---|---|
 | A rates entry for the pluginId is all that is missing | True, but it is seven map entries across four documents, not one |
-| Cosmetic | The zero destination value also trips the exchange scene's "High Price Impact" warning, so a correct quote reads as predatory |
+| Cosmetic | The zero destination value also trips the exchange scene's "High Price Impact" warning. A correct quote reads as predatory |
 | Fixing it needs production credentials | Only for the token half. The native ETH rate, the reported bug, self-propagates on deploy |
 
 The split between the two halves is the finding worth carrying forward, and is described in [8. Detailed design: edge-rates-server](#8-detailed-design-edge-rates-server). It was not predictable from reading the maps: it falls out of `templates` being create-only while the daily sweep rebuilds its own document from the code constant.
@@ -383,14 +418,14 @@ A deep review of all four PRs, run before any of them landed. Two findings survi
 
 | Assumption carried since phase 1 | What the review found |
 |---|---|
-| Two RPC endpoints give the plugin redundancy | The fallback had gone dark. `rpc.arrowrpc.com` returns HTTP 530 (Cloudflare error 1033) and had been answering when phase 1 tested it, so the plugin was one outage away from being unable to fetch balance, nonce or block height |
-| The mapping sweep updates every generated file | Two files were missing exactly the `robinhood` key. `changelly.ts` has a mapping source but no synchronizer, and `mapctl update-mappings` iterates synchronizers, so the generator can never write it; `nexchange.ts` is hand-maintained with no source file at all |
+| Two RPC endpoints give the plugin redundancy | The fallback had gone dark. `rpc.arrowrpc.com` returns HTTP 530 (Cloudflare error 1033) and had been answering when phase 1 tested it. The plugin was one outage away from being unable to fetch balance, nonce or block height |
+| The mapping sweep updates every generated file | Two files were missing exactly the `robinhood` key. `changelly.ts` has a mapping source but no synchronizer, and `mapctl update-mappings` iterates synchronizers. The generator can never write it; `nexchange.ts` is hand-maintained with no source file at all |
 
 The RPC finding is the one worth generalizing. A third-party endpoint verified at integration time is not verified at merge time, and nothing in CI re-checks a hard-coded server list. The gap between the two phases was two weeks.
 
 Scope added in this phase: no new PRs. `edge-currency-accountbased` [#1087](https://github.com/EdgeApp/edge-currency-accountbased/pull/1087) swaps the dead endpoint for `robinhood-rpc.publicnode.com`; `edge-exchange-plugins` [#483](https://github.com/EdgeApp/edge-exchange-plugins/pull/483) gets the two missing null entries.
 
-Deferred, still: everything listed under phase 3, plus making `mapctl update-mappings` iterate the authored mapping files rather than the synchronizer list, so a provider without a synchronizer cannot drift silently.
+Deferred, still: everything listed under phase 3, plus making `mapctl update-mappings` iterate the authored mapping files rather than the synchronizer list. A provider without a synchronizer cannot drift silently.
 
 ### Phase 5: the full provider audit
 
@@ -404,7 +439,7 @@ Phase 2 mapped four providers and recorded two exclusions. Both records turned o
 
 The exclusion reasoning is the part worth keeping. "This provider cannot deliver gas" was treated as "this provider does not support the chain", and those differ: a provider that lists only tokens is still a route for those tokens, and `checkWhitelistedMainnetCodes` declines the pairs it cannot serve on its own.
 
-CASHCAT is the asset that motivated the audit. It verifies on chain at `0x020bfc650a365f8bb26819deaabf3e21291018b4` with `name()` "Cash Cat", `symbol()` CASHCAT and `decimals()` 18, and ChangeNow and LetsExchange independently report the same address. It is NOT shipped as a built-in token here: the chain's built-in set is deliberately blue-chip and bridged assets, so adding a memecoin is an asset-listing call rather than a mapping one.
+CASHCAT is the asset that motivated the audit. It verifies on chain at `0x020bfc650a365f8bb26819deaabf3e21291018b4` with `name()` "Cash Cat", `symbol()` CASHCAT and `decimals()` 18, and ChangeNow and LetsExchange independently report the same address. It is NOT shipped as a built-in token here: the chain's built-in set is deliberately blue-chip and bridged assets. Adding a memecoin is an asset-listing call rather than a mapping one.
 
 Scope added in this phase: no new PRs. `edge-exchange-plugins` [#483](https://github.com/EdgeApp/edge-exchange-plugins/pull/483) gains Swapuz and LetsExchange.
 
@@ -412,9 +447,9 @@ Deferred, still: everything under phase 4, plus the decision on whether CASHCAT 
 
 ### Phase 6: chain-native tokens
 
-Phase 5 ended by asking whether the chain-native assets the swap providers carry should ship as built-in tokens, and deliberately left the call to the operator. The answer was CASHCAT, PONS and USDG. USDG already shipped in phase 1, so the work is the other two, plus checking whether the exchanges need anything to reach them.
+Phase 5 ended by asking whether the chain-native assets the swap providers carry should ship as built-in tokens, and deliberately left the call to the operator. The answer was CASHCAT, PONS and USDG. USDG already shipped in phase 1. The work is the other two, plus checking whether the exchanges need anything to reach them.
 
-They did not. The exchange half was already satisfied by phase 5's chain mappings, for a reason worth writing down: `createEdgeIdToSwapIdMap` matches a wallet's tokens to a provider's live ticker set BY CONTRACT ADDRESS, building a throwaway token from the provider's address and asking `getTokenId` for the answer. Ticker strings never enter it, so a provider calling something `cashcat` and Edge calling it `CASHCAT` cannot desynchronise. LI.FI and Rango are contract-address native for the same reason. Swapuz is the one exception, since it uses `getCodesWithTranscription` and passes Edge's `currencyCode` through unchanged, and there Edge's codes already equal Swapuz's tickers exactly.
+They did not. The exchange half was already satisfied by phase 5's chain mappings, for a reason worth writing down: `createEdgeIdToSwapIdMap` matches a wallet's tokens to a provider's live ticker set BY CONTRACT ADDRESS, building a throwaway token from the provider's address and asking `getTokenId` for the answer. Ticker strings never enter it. A provider calling something `cashcat` and Edge calling it `CASHCAT` cannot desynchronise. LI.FI and Rango are contract-address native for the same reason. Swapuz is the one exception, since it uses `getCodesWithTranscription` and passes Edge's `currencyCode` through unchanged, and there Edge's codes already equal Swapuz's tickers exactly.
 
 | Token | Listed by | Quotes today |
 |---|---|---|
@@ -422,17 +457,17 @@ They did not. The exchange half was already satisfied by phase 5's chain mapping
 | PONS | Swapuz, Rango | No: Swapuz answers "coin direction not available for market" |
 | USDG | ChangeNow, Swapuz, Rango | No: Swapuz answers "withdraw not available"; ChangeNow lists it buyable but its quote endpoint needs a key |
 
-That table is the phase's real lesson. A built-in token earns its place by letting a user hold, receive, send and price the asset, and swap availability is a separate, per-pair, provider-side fact that moves on its own. ChangeNow's native-ETH pair already demonstrated the movement, going from inactive in phase 2 to filling in phase 5 with no change on our side. Shipping PONS while no provider currently fills it is the same bet, and it costs a declined quote in the meantime.
+That table is the phase's real lesson. A built-in token earns its place by letting a user hold, receive, send and price the asset, and swap availability is a separate, per-pair, provider-side fact that moves on its own. ChangeNow's native-ETH pair already demonstrated the movement, going from inactive in phase 2 to filling in phase 5 with no change on our side. Shipping PONS while no provider fills it is the same bet, and it costs a declined quote in the meantime.
 
 Scope added in this phase: no new PRs. `edge-currency-accountbased` [#1087](https://github.com/EdgeApp/edge-currency-accountbased/pull/1087) gains CASHCAT and PONS.
 
-Deferred, still: everything under phase 5, minus the token question this phase answered. PIPEDOG, ARROW and the tokenized equities (NVDA, SPY, AAPL) were surfaced in the phase 5 audit and were not blessed, so they stay out.
+Deferred, still: everything under phase 5, minus the token question this phase answered. PIPEDOG, ARROW and the tokenized equities (NVDA, SPY, AAPL) were surfaced in the phase 5 audit and were not blessed. They stay out.
 
 ### Phase 7: token parity check
 
 A parity pass over the two sides, the app's built-in tokens and what the rates server prices. It shipped no code, because they were already aligned.
 
-The rates PR carries explicit cross-chain entries for USDC, USDT and WBTC, the three CoinGecko does not list on this chain. Everything else it reaches through the platform mapping, and that turns out to include phase 6's additions: CoinGecko lists CASHCAT as `cash-cat` and PONS as `pons` on the `robinhood` platform, and for both it is their only platform, so the daily sweep gives each its own uid mapping rather than a cross-chain entry.
+The rates PR carries explicit cross-chain entries for USDC, USDT and WBTC, the three CoinGecko does not list on this chain. Everything else it reaches through the platform mapping, and that turns out to include phase 6's additions: CoinGecko lists CASHCAT as `cash-cat` and PONS as `pons` on the `robinhood` platform, and for both it is their only platform. The daily sweep gives each its own uid mapping rather than a cross-chain entry.
 
 Confirmed on a local instance of the rates PR rather than reasoned: every built-in token prices, along with native ETH.
 
@@ -441,27 +476,43 @@ ETH 2423.84   USDC 1   USDT 1   USDG 1   WBTC 77312
 WETH 2424.22  CASHCAT 0.184152   PONS 0.132356
 ```
 
-So neither direction owed anything: every token the rates PR tracks is already a built-in, and every built-in already prices.
+Neither direction owed anything: every token the rates PR tracks is already a built-in, and every built-in already prices.
 
 Scope added in this phase: none.
 
 ### Phase 8: keyed transaction history
 
-The cheese re-test of phase 7 ran two simulators on one IP and lost wallet history: Blockscout's public API allows 300 requests per minute per client IP, and past that it answered every history call with `{"message":"Too many requests…","result":null,"status":"0"}`. The engine did not recognize that reply as throttling, so it never backed off, the transaction list stayed empty, one send sat at unconfirmed, and the send slider stayed blocked with "Pending Transaction" until a wallet resync. Balances were unaffected because they come from RPC.
+The cheese re-test of phase 7 ran two simulators on one IP and lost wallet history: Blockscout's public API allows 300 requests per minute per client IP, and past that it answered every history call with `{"message":"Too many requests…","result":null,"status":"0"}`. The engine did not recognize that reply as throttling. It never backed off, the transaction list stayed empty, one send sat at unconfirmed, and the send slider stayed blocked with "Pending Transaction" until a wallet resync. Balances were unaffected because they come from RPC.
 
-No other Edge-held key covers chain 4663 (Etherscan V2's chain list lacks it; Blockchair, NowNodes, Amberdata and Routescan do not serve it; dRPC, QuickNode and Pocket serve RPC only), and a Blockscout Pro key is shared by every app install, so the chain was enabled on the Alchemy app the user base already runs on for every other EVM chain. This phase added the `alchemy` network adapter and put it first, taught `EvmScanAdapter` to classify Blockscout's throttle reply as a rate limit, deployed the eth-balance-checker to the chain, and corrected the retrospective's claim that a Blockscout key would have removed the limit without a code change. Review of the first PR round caught that "Blockscout stays the source of internal transactions" was false under waterfall dispatch (Blockscout is never asked while Alchemy answers), so the phase grew a `fetchInternalTxs` adapter method, a `blockscout` adapter that implements it, and the engine-side merge that folds those rows into each native-asset sync; the Alchemy adapter now asks for `internal` too and remembers when a network rejects the category.
+No other Edge-held key covers chain 4663 (Etherscan V2's chain list lacks it; Blockchair, NowNodes, Amberdata and Routescan do not serve it; dRPC, QuickNode and Pocket serve RPC only), and a Blockscout Pro key is shared by every app install. The chain was enabled on the Alchemy app the user base already runs on for every other [EVM](#evm) chain. This phase added the `alchemy` network adapter and put it first, taught `EvmScanAdapter` to classify Blockscout's throttle reply as a rate limit, deployed the [eth-balance-checker](#eth-balance-checker) to the chain, and corrected the retrospective's claim that a Blockscout key would have removed the limit without a code change. Review of the first PR round caught that "Blockscout stays the source of internal transactions" was false under waterfall dispatch (Blockscout is never asked while Alchemy answers). The phase grew a `fetchInternalTxs` adapter method, a `blockscout` adapter that implements it, and the engine-side merge that folds those rows into each native-asset sync; the Alchemy adapter now asks for `internal` too and remembers when a network rejects the category.
 
 Scope added in this phase: `AlchemyAdapter`, reusable on any Alchemy-served chain; `BlockscoutAdapter` and the `fetchInternalTxs` adapter method; the `apiKeyTemplate` helper shared with `RpcAdapter`; the balance checker at `0x8950F12786CAE64F94a02733A260ca6FecDaeD7f`.
 
 ### Phase 9: the sync that never finished
 
-QA reported every Robinhood Chain wallet stuck at exactly 50% on both platforms, on develop and staging. The number is `makeTokenSyncTracker` arithmetic: a wallet with no enabled tokens splits its ratio evenly between balance and history, balance completed, history never did. History never completed because every native-asset pass was `partial`, and a partial pass withholds the synced flag. Every pass was partial because Alchemy rejects the `internal` category on this network, so each one asked Blockscout for internal transactions, and the chain's Blockscout instance had begun challenging the browser user agent the adapter sends. Two single points of failure in series, neither with a fallback, so the freeze was permanent rather than intermittent.
+QA reported every Robinhood Chain wallet stuck at exactly 50% on both platforms, on develop and staging. The number is `makeTokenSyncTracker` arithmetic: a wallet with no enabled tokens splits its ratio evenly between balance and history, balance completed, history never did. History never completed because every native-asset pass was `partial`, and a partial pass withholds the synced flag. Every pass was partial because Alchemy rejects the `internal` category on this network. Each one asked Blockscout for internal transactions, and the chain's Blockscout instance had begun challenging the browser user agent the adapter sends. Two single points of failure in series, neither with a fallback. The freeze was permanent rather than intermittent.
 
 The frozen ratio is not the defect. It is the engine reporting, accurately, that this chain's history is incomplete: internal transfers are how ETH arrives through a contract call here, and a wallet that silently claimed 100% would be hiding missing money movements rather than a missing progress bar. The first attempt at this phase counted a partial pass as synced and was rejected for exactly that reason; every other evmscan-backed chain withholds the pass on the same failure, and `test/ethereum/network/partialTxSync.test.ts` now pins the contract so the symptom cannot be answered that way again.
 
-The repair is a source that answers. Restoring access to the chain's own instance was not enough: the `sec-ch-ua` client hint gets past Cloudflare, but the instance's budget had dropped to 10 requests per window, so a 43-minute device run with the header fix logged zero successful internal merges against 84 direct 429s. Nothing else covers chain 4663 either, as phase 8 established, and Alchemy's `debug_traceTransaction` returns the same rows but is not an adapter method the engine asks for. So this phase added Blockscout's hosted API as a second server on the same adapter, keyed by a new `blockscoutApiKey` init option, with its `/v2/api?chain_id=` route extracted into `makeEvmScanUrl` and unit-tested, and its server dropped from the list on a build that has no key.
+The repair is a source that answers. Restoring access to the chain's own instance was not enough: the `sec-ch-ua` client hint gets past Cloudflare, but the instance's budget had dropped to 10 requests per window. A 43-minute device run with the header fix logged zero successful internal merges against 84 direct 429s. Nothing else covers chain 4663 either, as phase 8 established, and Alchemy's `debug_traceTransaction` returns the same rows but is not an adapter method the engine asks for. This phase added Blockscout's hosted API as a second server on the same adapter, keyed by a new `blockscoutApiKey` init option, with its `/v2/api?chain_id=` route extracted into `makeEvmScanUrl` and unit-tested, and its server dropped from the list on a build that has no key.
 
 Scope added in this phase: the `sec-ch-ua` request header; `makeEvmScanUrl` and its test; the `blockscoutApiKey` init option and its branch in `getEvmScanApiKey`; the keyless server drop in the `BlockscoutAdapter` constructor and its test; `test/ethereum/network/partialTxSync.test.ts`. `edge-react-gui` carries the key in `ROBINHOOD_INIT.blockscoutApiKey`.
+
+### Phase 10: Etherscan
+
+Etherscan added chain 4663 on a paid plan, one of the triggers that reopens [Decision 2](#decision-2-history-comes-from-alchemy-internal-transactions-from-etherscan-then-blockscout).
+
+| Item | Expected | Shipped |
+|---|---|---|
+| Internal transactions | An `evmscan` entry would pick them up | `fetchInternalTxs` lived only on `BlockscoutAdapter`, and an `evmscan` entry alone would never be asked for them. The method moved up to `EvmScanAdapter` behind the opt-in `internalTxsSupport` flag. |
+| Gas oracle | Etherscan would bring gas-oracle support | The oracle answers, and the engine's separation of tied tiers would raise fees about 50 times. `gastrackerSupport` stays off. |
+| History | Open | Alchemy stays first, with Etherscan ahead of Blockscout. |
+| Explorer links | `robin.etherscan.io` | `robin.etherscan.io` |
+| Broadcast | An `evmscan` entry would add a broadcast route | The route ran in parallel with the RPC routes and lost every race: the sequencer includes a transaction within about 200ms, so Etherscan answered "already known" or "nonce too low" and logged a failure for a send that succeeded. The opt-out `broadcastDisabled` flag keeps sends on the RPC routes for this chain. |
+| L1 gas on a send | The fee update's L1 component stays valid until the send | QA's first send failed with "intrinsic gas too low": the L1 component moves in steps, and the cached value had fallen behind. The cache now expires after 30 seconds, and `signTx` raises the gas limit if a fresh read is higher. |
+| Etherscan errors | The log shows the node's reason | The proxy cleaner had no `error` field, so every rejection logged "Invalid return value". The cleaner now keeps the node's error. |
+
+Scope added in this phase: `internalTxsSupport` and `broadcastDisabled` on `EvmScanAdapterConfig` and their tests; the `evmscan` entry in `robinhoodInfo`; the explorer links; the L1 gas cache expiry and the refresh in `signTx`, with `getRpcServers` extracted for it; the JSON-RPC error fields on the Etherscan response cleaner. `edge-react-gui` needs nothing: `ROBINHOOD_INIT.etherscanApiKey` already held the paid key, and the links come from `currencyInfo`.
 
 ## 11. Decisions
 
@@ -471,15 +522,15 @@ Chosen because Edge names chain plugins after the chain: `arbitrum`, `base`, `mo
 
 Rejected: `robinhoodchain`, on the theory that `bobevm`, `hyperevm` and `filecoinfevm` set a precedent for suffixing. They do not. Each of those disambiguates two chains from one project (Hyperliquid's HyperCore and HyperEVM, Filecoin's native chain and its FEVM), not a brand collision.
 
-Rejected: `hood`, from the task title. HOOD is Robinhood's stock ticker and this chain's gas token is ETH, so the ticker names nothing in the plugin.
+Rejected: `hood`, from the task title. HOOD is Robinhood's stock ticker and this chain's gas token is ETH. The ticker names nothing in the plugin.
 
 Reopens if: Edge adds a Robinhood brokerage ramp or swap plugin. `corePlugins.ts` merges `currencyPlugins` and `swapPlugins` into one ID space, so that plugin would have to pick a different name.
 
-### Decision 2: history comes from Alchemy, internal transactions from Blockscout
+### Decision 2: history comes from Alchemy, internal transactions from Etherscan, then Blockscout
 
-Chosen because Alchemy is the one keyed provider that serves the chain on a plan the user base already runs on, and its per-key quota is not shared with every other client behind an IP. Verified on `robinhood-mainnet.g.alchemy.com`: `eth_chainId` `0x1237`, `alchemy_getAssetTransfers` for `external` and `erc20` with `pageKey` pagination and `withMetadata` timestamps, `alchemy_getTokenBalances` and `alchemy_getTokenMetadata`. Phase 1 chose Blockscout as the only Etherscan-compatible API that answers for this chain; it now serves internal transactions through the `blockscout` adapter's `fetchInternalTxs` on every native sync (one `txlistinternal` call per wallet per sync instead of the nine calls of a full Blockscout sync) and stays second in the waterfall for everything else.
+Chosen because Alchemy is the one keyed provider that serves the chain on a plan the user base already runs on, and its per-key quota is not shared with every other client behind an IP. Verified on `robinhood-mainnet.g.alchemy.com`: `eth_chainId` `0x1237`, `alchemy_getAssetTransfers` for `external` and `erc20` with `pageKey` pagination and `withMetadata` timestamps, `alchemy_getTokenBalances` and `alchemy_getTokenMetadata`. Etherscan V2 answers for this chain on the app's paid key, and its `txlistinternal` is asked first on every native sync (one call per wallet per sync instead of the nine of a full sync). [Blockscout](#blockscout) is the fallback for those calls and for history.
 
-Rejected: Etherscan V2. `GET /v2/api?chainid=4663` returns `Missing or unsupported chainid parameter`, and 4663 is absent from the 64 chains its `/v2/chainlist` lists.
+Rejected: making Etherscan the first history source ahead of Alchemy. The paid key is shared with 13 other chains in `env.json`, and moving every Robinhood Chain sync onto it costs more of that quota than asking for internal transactions alone.
 
 Rejected: Routescan. `api.routescan.io/v2/network/mainnet/evm/4663` returns `chain not supported`.
 
@@ -489,13 +540,13 @@ Rejected: a Blockscout API key. Per-instance keys are retired; a Blockscout Pro 
 
 Rejected: Alchemy's Data API `transactions/history/by-address`, which does not support this network.
 
-Reopens if: Alchemy adds the `internal` category for this network, which the adapter would pick up on its own and which would make the `blockscout` entry a pure fallback; or Etherscan adds chain 4663, which would also bring gas-oracle support.
+Reopens if: Alchemy adds the `internal` category for this network, which the adapter would pick up on its own and which would make both scan entries pure fallbacks; or the shared Etherscan key starts hitting its rate limit.
 
 ### Decision 3: `ethBalCheckerContract` is a fresh deployment
 
-Chosen in phase 8, reopening phase 1's "nothing is deployed to check against": `eth_getCode` returned empty for all twelve balance-checker addresses in use across Edge's [EVM](#evm) plugins, so the checker was deployed. The runtime bytecode is the one the Sonic and Celo checkers hold at `0x7263…`, copied with `eth_getCode` and wrapped in a twelve-byte `CODECOPY`/`RETURN` init stub (the contract has no constructor and no immutables), and sent from a key generated for the purpose and funded by the phase's in-app test send. The address differs from `0x7263…` because that address came from a deployer key this work did not hold.
+Chosen in phase 8, reopening phase 1's "nothing is deployed to check against": `eth_getCode` returned empty for all twelve balance-checker addresses in use across Edge's [EVM](#evm) plugins. The checker was deployed. The runtime bytecode is the one the Sonic and Celo checkers hold at `0x7263…`, copied with `eth_getCode` and wrapped in a twelve-byte `CODECOPY`/`RETURN` init stub (the contract has no constructor and no immutables), and sent from a key generated for the purpose and funded by the phase's in-app test send. The address differs from `0x7263…` because that address came from a deployer key this work did not hold.
 
-Rejected: Multicall3 at `0xcA11bde05977b3631167028862bE2a173976CA11`, which is deployed here (7,618 bytes). `RpcAdapter.fetchTokenBalances` calls `balances(address[],address[])` from the [eth-balance-checker](#eth-balance-checker) [ABI](#abi), which Multicall3 does not implement, so pointing at it would fail every call.
+Rejected: Multicall3 at `0xcA11bde05977b3631167028862bE2a173976CA11`, which is deployed here (7,618 bytes). `RpcAdapter.fetchTokenBalances` calls `balances(address[],address[])` from the [eth-balance-checker](#eth-balance-checker) [ABI](#abi), which Multicall3 does not implement. Pointing at it would fail every call.
 
 Rejected: leaving the checker out now that Alchemy batches token balances. Alchemy is first in the waterfall, but the checker keeps balances batched when it is unavailable, and the twelve-checker convention is what every other EVM plugin follows.
 
@@ -513,7 +564,7 @@ Reopens if: Robinhood publishes a canonical token list, which would also settle 
 
 ### Decision 5: map only the providers that fill, and only ChangeNow on faith
 
-Chosen because a mapped chain code is a promise the plugin will quote. LetsExchange and SwapKit advertise the chain but cannot deliver native ETH, so mapping them would produce failed quotes with no path to a filled one. ChangeNow is the exception: it lists three assets on the chain and its plugin re-reads fill availability hourly, so the inactive pair is a temporary state the mapping does not have to encode.
+Chosen because a mapped chain code is a promise the plugin will quote. LetsExchange and SwapKit advertise the chain but cannot deliver native ETH. Mapping them would produce failed quotes with no path to a filled one. ChangeNow is the exception: it lists three assets on the chain and its plugin re-reads fill availability hourly. The inactive pair is a temporary state the mapping does not have to encode.
 
 Rejected: mapping all six advertised codes. It reads as broader support but converts a provider's marketing into a user-visible error.
 
@@ -523,7 +574,7 @@ Reopens if: Tether or another issuer bridges native liquidity that changes which
 
 ### Decision 6: the funding swap ran through LI.FI rather than SideShift
 
-Chosen because SideShift is geographically blocked from this host's egress: quotes and the confirm slider render, but shift creation is denied at any amount. LI.FI and Rango are on-chain aggregators with no such gate, so competitors were disabled locally to pin the route and LI.FI won it.
+Chosen because SideShift is geographically blocked from this host's egress: quotes and the confirm slider render, but shift creation is denied at any amount. LI.FI and Rango are on-chain aggregators with no such gate. Competitors were disabled locally to pin the route and LI.FI won it.
 
 Rejected: routing the test through SideShift to exercise the map's first entry. Its mapping is verified by its live pair endpoint quoting both directions; executing through it needs non-US egress the environment does not have.
 
@@ -551,7 +602,7 @@ Application Binary Interface: the JSON description of a contract's functions and
 
 ### Blockscout
 
-An open-source blockchain explorer that exposes an Etherscan-compatible REST API at `/api`. Here it is the sole transaction-history source, configured as the plugin's `evmscan` adapter. Its `proxy` and `gastracker` modules are absent on this deployment. See [Blockscout API documentation](https://docs.blockscout.com/devs/apis/rpc).
+An open-source blockchain explorer that exposes an Etherscan-compatible REST API at `/api`. Here it is the fallback for internal transactions and history behind Etherscan, configured as the plugin's `blockscout` adapter. Its `proxy` and `gastracker` modules are absent on this deployment. See [Blockscout API documentation](https://docs.blockscout.com/devs/apis/rpc).
 
 ### ERC-1967 proxy
 
@@ -567,7 +618,7 @@ A helper contract that returns many token balances for many addresses in a singl
 
 ### NodeInterface
 
-A virtual Arbitrum precompile at `0x00000000000000000000000000000000000000C8`. It is not a deployed contract, so `eth_getCode` returns empty for it, but `eth_call` against it works and `gasEstimateL1Component` reports the L1 data-posting component of a transaction's cost. See [Arbitrum gas estimation](https://docs.arbitrum.io/build-decentralized-apps/how-to-estimate-gas).
+A virtual Arbitrum precompile at `0x00000000000000000000000000000000000000C8`. It is not a deployed contract. `eth_getCode` returns empty for it, but `eth_call` against it works and `gasEstimateL1Component` reports the L1 data-posting component of a transaction's cost. See [Arbitrum gas estimation](https://docs.arbitrum.io/build-decentralized-apps/how-to-estimate-gas).
 
 ### JSON-RPC
 
@@ -599,10 +650,10 @@ Optimism's rollup framework, used by Base, opBNB and others. Its fee model diffe
 
 ### Where this document was wrong or silent
 
-1. [5. Detailed design](#5-detailed-design-edge-currency-accountbased) originally carried Arbitrum One's `addressQueryLookbackBlocks: 480` with a "~2 minutes" comment copied from that plugin. On a 96ms block time that is 46 seconds. The constant is a re-scan overlap, so too small a value narrows the window that absorbs indexer lag. Corrected to 1250 before the first PR.
+1. [5. Detailed design](#5-detailed-design-edge-currency-accountbased) originally carried Arbitrum One's `addressQueryLookbackBlocks: 480` with a "~2 minutes" comment copied from that plugin. On a 96ms block time that is 46 seconds. The constant is a re-scan overlap. Too small a value narrows the window that absorbs indexer lag. Corrected to 1250 before the first PR.
 2. Nothing anticipated the token-imitation problem. The first pass would have read addresses off [Blockscout](#blockscout)'s token list, which ranks a fake USDC above the real one by holder count.
 3. The largest error was the non-goal itself. "No Edge swap provider quotes chain 4663" was inferred from the chain being absent in Edge's own provider maps and never checked against a provider API, and a deferred send was justified with an L1-bridge argument that a four-minute in-app swap made moot. The absence of a chain in a mapping file says nothing about the provider; only the provider's endpoint does. Any future chain integration should query the provider discovery endpoints before writing down what swap support exists.
-4. The document assumed a working balance implies a working fiat display. It does not: the rates server keys on pluginId, so a new chain reads `$0` everywhere until it is registered there, and the exchange scene turns that zero into a "High Price Impact" warning that looks like a routing fault.
+4. The document assumed a working balance implies a working fiat display. It does not: the rates server keys on pluginId. A new chain reads `$0` everywhere until it is registered there, and the exchange scene turns that zero into a "High Price Impact" warning that looks like a routing fault.
 5. Having identified the rates gap, phase 2 then described it as one entry to add and called it cosmetic. Both were wrong. It is seven entries across four documents, and only some of them reach a running server, because `templates` are create-only while the daily sweep rebuilds its own document from the code constant. Editing a default in a server repo is not the same as changing that server's behavior, and which of the two you get depends on whether an engine rewrites the document.
 6. Nothing re-checks the hard-coded RPC server list after integration. Phase 1 verified both endpoints answering, and by phase 4 one of them was dead. A server list is external state that decays, not configuration that stays true, and only a review that actually called the endpoints would have caught it.
 7. The provider survey was scoped to the providers with synchronizers, and the document then wrote its result down as a fact about all providers. Swapuz has served this chain, native ETH included, the whole time and was simply never asked. A survey's coverage is part of its finding, and "six providers advertise the chain" should have read "six of the thirteen we probed".
@@ -616,9 +667,9 @@ The plugin needed no engine changes in phases 1 through 7. `arbitrumRollupParams
 - Block rate measured on the live chain: 626 blocks in 60.2 seconds, 96ms per block.
 - The rates fix was verified by first reproducing the bug locally rather than only observing it fixed. Stripping `robinhood` out of a freshly seeded database and watching the patched server still return nothing is what established that the stored document beats the code default, and therefore that a deploy alone would not have been enough. Confirming a fix without first reproducing the failure in the same harness would have credited the deploy with a change the daily sweep actually makes.
 - The cross-chain remap was proven with sentinels rather than market data, because market data cannot distinguish a working remap from a coincidence: Robinhood Chain USDC reading `$1.00` looks identical whether it resolved through Ethereum's USDC or through some unrelated stablecoin match. Seeding 111.111, 222.222 and 333.333 on the Ethereum keys only, then reading them back off the Robinhood Chain token ids, leaves no other path they could have come from. The unmapped-address control rules out a fallthrough.
-- The in-app frame proves the fix but no same-session "before" frame is possible. The app caches rates, so pointing it back at production and relaunching still rendered the local server's `$1,877`. The before state is established by the production API returning no `rate` field, which is reproducible by anyone, not by a screenshot.
+- The in-app frame proves the fix but no same-session "before" frame is possible. The app caches rates. Pointing it back at production and relaunching still rendered the local server's `$1,877`. The before state is established by the production API returning no `rate` field, which is reproducible by anyone, not by a screenshot.
 - In-app balance `0.000000019866 ETH` matches `eth_getBalance` returning `0x4a01b1a80` for the imported address.
 - The funding swap delivered 6248511112300593 wei against a quoted 0.006243 ETH, slightly above quote, and the app rendered the figure to the wei once the engine's next balance poll landed. The poll is the lag to expect after any receive: the balance arrived on chain before the wallet scene showed it, and no resync was needed.
-- The send's destination was the `abandon abandon … about` test vector, whose private key is public. It was credited by the transaction above and drained to zero shortly after, so a destination-balance delta is not a usable check there. The transaction receipt is.
-- The public Blockscout instance returns HTTP 429 after a small number of requests from one egress address and recovers after about three minutes. During this run the simulator's own polling and the verification probes competed for that budget, so the transaction list was verified by forcing the response instead: `fetchGetEtherscan` was temporarily stubbed to return the address's two real rows, leaving the cleaner, `processEvmScanTransaction` and the list component untouched. The stub was reverted afterwards.
-- Its v2 API (`/api/v2/addresses/<addr>/transactions`) has a SEPARATE quota from the Etherscan-compatible `/api` and answered while the latter was still returning 429. That is where the real row data above came from. No Edge-held provider key covered chain 4663 at the time: Etherscan V2 does not serve it, the dRPC key is deactivated account-wide, nowNodes and quiknode have no endpoint for it, and Alchemy supported the network but answered `ROBINHOOD_MAINNET is not enabled for this app`. This retrospective originally concluded that enabling the Alchemy app, or a Blockscout API key, would remove the limit without a code change. Neither was true: per-instance Blockscout keys are retired and a Pro key is shared across every install, and Alchemy's history API is `alchemy_getAssetTransfers`, not an Etherscan-compatible `txlist`, so using it needed the adapter phase 8 added.
+- The send's destination was the `abandon abandon … about` test vector, whose private key is public. It was credited by the transaction above and drained to zero shortly after. A destination-balance delta is not a usable check there. The transaction receipt is.
+- The public Blockscout instance returns HTTP 429 after a small number of requests from one egress address and recovers after about three minutes. During this run the simulator's own polling and the verification probes competed for that budget. The transaction list was verified by forcing the response instead: `fetchGetEtherscan` was temporarily stubbed to return the address's two real rows, leaving the cleaner, `processEvmScanTransaction` and the list component untouched. The stub was reverted afterwards.
+- Its v2 API (`/api/v2/addresses/<addr>/transactions`) has a SEPARATE quota from the Etherscan-compatible `/api` and answered while the latter was still returning 429. That is where the real row data above came from. No Edge-held provider key covered chain 4663 at the time: Etherscan V2 did not serve it yet, the dRPC key is deactivated account-wide, nowNodes and quiknode have no endpoint for it, and Alchemy supported the network but answered `ROBINHOOD_MAINNET is not enabled for this app`. This retrospective originally concluded that enabling the Alchemy app, or a Blockscout API key, would remove the limit without a code change. Neither was true: per-instance Blockscout keys are retired and a Pro key is shared across every install, and Alchemy's history API is `alchemy_getAssetTransfers`, not an Etherscan-compatible `txlist`. Using it needed the adapter phase 8 added.

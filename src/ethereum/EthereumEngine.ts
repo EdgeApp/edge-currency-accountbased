@@ -96,7 +96,8 @@ import {
   calcArbitrumRollupFees,
   calcMiningFees,
   calcOptimismRollupFees,
-  getFeeParamsByTransactionType
+  getFeeParamsByTransactionType,
+  refreshArbitrumL1Gas
 } from './fees/ethMiningFees'
 import {
   FeeProviderFunction,
@@ -1121,17 +1122,11 @@ export class EthereumEngine extends CurrencyEngine<
         }
         rollupFee = calcOptimismRollupFees(txData)
       } else if (this.networkInfo.arbitrumRollupParams != null) {
-        const rpcServers = this.ethNetwork.networkAdapters
-          .filter(
-            (adapter): adapter is RpcAdapter => adapter.config.type === 'rpc'
-          )
-          .map(adapter => adapter.config.servers)
-          .flat()
         const arbitrumFee = await calcArbitrumRollupFees({
           destinationAddress: publicAddress,
           nodeInterfaceAddress:
             this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
-          rpcServers,
+          rpcServers: this.getRpcServers(),
           txData: data ?? '0x'
         })
         rollupFee = mul(miningFees.gasPrice, arbitrumFee.l1Gas)
@@ -1456,20 +1451,15 @@ export class EthereumEngine extends CurrencyEngine<
         l1Fee = calcOptimismRollupFees(txData)
       }
     } else if (this.networkInfo.arbitrumRollupParams != null) {
-      const rpcServers = this.ethNetwork.networkAdapters
-        .filter(
-          (adapter): adapter is RpcAdapter => adapter.config.type === 'rpc'
-        )
-        .map(adapter => adapter.config.servers)
-        .flat()
       const arbitrumFees = await calcArbitrumRollupFees({
         destinationAddress: publicAddress,
         nodeInterfaceAddress:
           this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
-        rpcServers,
+        rpcServers: this.getRpcServers(),
         txData: data ?? '0x'
       })
       otherParams.gas = add(otherParams.gas, arbitrumFees.l1Gas)
+      otherParams.arbitrumL1Gas = arbitrumFees.l1Gas
     }
 
     //
@@ -1579,6 +1569,13 @@ export class EthereumEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
+  private getRpcServers(): string[] {
+    return this.ethNetwork.networkAdapters
+      .filter((adapter): adapter is RpcAdapter => adapter.config.type === 'rpc')
+      .map(adapter => adapter.config.servers)
+      .flat()
+  }
+
   async signMessage(
     message: string,
     privateKeys: JsonObject,
@@ -1638,6 +1635,18 @@ export class EthereumEngine extends CurrencyEngine<
       this.currencyInfo.pluginId
     )(privateKeys)
     const otherParams: EthereumTxOtherParams = getOtherParams(edgeTransaction)
+
+    const { arbitrumRollupParams } = this.networkInfo
+    if (arbitrumRollupParams != null) {
+      await refreshArbitrumL1Gas({
+        nodeInterfaceAddress: arbitrumRollupParams.nodeInterfaceAddress,
+        otherParams,
+        rpcServers: this.getRpcServers()
+      }).catch((error: unknown) => {
+        // The gas limit from makeSpend may still be enough:
+        this.warn(`signTx could not refresh L1 gas: ${String(error)}`)
+      })
+    }
 
     // Do signing
     const gasLimitHex = toHex(otherParams.gas)

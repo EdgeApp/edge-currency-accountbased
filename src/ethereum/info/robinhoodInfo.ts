@@ -117,8 +117,8 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       // Keyed history source. Alchemy does not serve the `internal` category
-      // on this network; the `blockscout` adapter below supplies those rows,
-      // merged into every native-asset sync.
+      // on this network; the `evmscan` and `blockscout` adapters below supply
+      // those rows, merged into every native-asset sync.
       type: 'alchemy',
       servers: ['https://robinhood-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}']
     },
@@ -132,10 +132,25 @@ const networkInfo: EthereumNetworkInfo = {
       ethBalCheckerContract: '0x8950F12786CAE64F94a02733A260ca6FecDaeD7f'
     },
     {
-      // Etherscan V2 does not support chain 4663 and Alchemy does not serve
-      // the `internal` category here, so Blockscout is this chain's only
-      // source for the internal transactions the engine merges into every
-      // native-asset sync, and its history fallback when Alchemy fails.
+      // Etherscan V2 serves chain 4663 on a paid plan only, so of the app's
+      // keys just `etherscanApiKey` works here; anything else answers NOTOK at
+      // once and the waterfall moves on to Blockscout. It is listed first for
+      // the internal transactions Alchemy lacks.
+      //
+      // `gastrackerSupport` stays off: the oracle answers 0.02 gwei for every
+      // tier here, and `fetchFeesFromEvmScan` separates tied tiers by a whole
+      // gwei, which would raise fees about 50 times.
+      //
+      // `broadcastDisabled` keeps sends on the RPC routes. The sequencer
+      // includes a transaction within about 200ms, so Etherscan's copy always
+      // arrives second and answers "already known" or "nonce too low".
+      type: 'evmscan',
+      servers: ['https://api.etherscan.io'],
+      broadcastDisabled: true,
+      internalTxsSupport: true
+    },
+    {
+      // The fallback for internal transactions and history.
       //
       // Blockscout's hosted API is the one that answers: it needs the
       // `blockscoutApiKey` init option and drops out of the list without it.
@@ -185,8 +200,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:robinhood',
 
   // Explorers:
-  addressExplorer: 'https://robinhoodchain.blockscout.com/address/%s',
-  transactionExplorer: 'https://robinhoodchain.blockscout.com/tx/%s',
+  addressExplorer: 'https://robin.etherscan.io/address/%s',
+  transactionExplorer: 'https://robin.etherscan.io/tx/%s',
 
   denominations: [
     {
