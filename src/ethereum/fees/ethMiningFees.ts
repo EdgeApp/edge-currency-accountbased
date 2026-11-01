@@ -338,11 +338,22 @@ export async function getFeeParamsByTransactionType(
   }
 }
 
-let baseFeeCache = {
-  destinationAddress: '',
-  l1Gas: '0',
-  l1GasPrice: '10000000000'
-}
+/**
+ * The L1 gas figure follows the L1 base fee, which can move several times over
+ * within one L1 block, so this only spares the repeat reads while a spend is
+ * being edited. A limit below the current figure fails with "intrinsic gas too
+ * low".
+ */
+const ARBITRUM_L1_GAS_CACHE_MS = 30000
+
+let arbitrumL1GasCache:
+  | {
+      key: string
+      expiresAt: number
+      l1Gas: string
+      l1GasPrice: string
+    }
+  | undefined
 
 // Copied from https://github.com/OffchainLabs/arbitrum-tutorials/blob/master/packages/gas-estimation/scripts/exec.ts
 export const calcArbitrumRollupFees = async (params: {
@@ -357,10 +368,17 @@ export const calcArbitrumRollupFees = async (params: {
   const { rpcServers, nodeInterfaceAddress, destinationAddress, txData } =
     params
 
-  if (destinationAddress === baseFeeCache.destinationAddress) {
+  // The node interface has the same address on every Arbitrum-style chain, so
+  // only the RPC servers tell the chains apart.
+  const cacheKey = JSON.stringify([rpcServers, destinationAddress, txData])
+  if (
+    arbitrumL1GasCache != null &&
+    arbitrumL1GasCache.key === cacheKey &&
+    Date.now() < arbitrumL1GasCache.expiresAt
+  ) {
     return {
-      l1Gas: baseFeeCache.l1Gas,
-      l1GasPrice: baseFeeCache.l1GasPrice
+      l1Gas: arbitrumL1GasCache.l1Gas,
+      l1GasPrice: arbitrumL1GasCache.l1GasPrice
     }
   }
 
@@ -397,8 +415,9 @@ export const calcArbitrumRollupFees = async (params: {
     rpcServers.map(rpcUrl => async () => await getFee(rpcUrl))
   )
 
-  baseFeeCache = {
-    destinationAddress,
+  arbitrumL1GasCache = {
+    key: cacheKey,
+    expiresAt: Date.now() + ARBITRUM_L1_GAS_CACHE_MS,
     l1Gas: out.l1Gas,
     l1GasPrice: out.l1GasPrice
   }
