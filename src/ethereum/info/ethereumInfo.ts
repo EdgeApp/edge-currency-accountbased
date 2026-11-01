@@ -396,6 +396,14 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xb1CD6e4153B2a390Cf00A6556b0fC1458C4A5533'
     }
   },
+  '8e9c32a536ab623a2e0e9961bce6f5fe7504e084': {
+    currencyCode: 'EURR',
+    displayName: 'Revolut Euro',
+    denominations: [{ name: 'EURR', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x8e9c32A536Ab623a2e0e9961BcE6F5fe7504e084'
+    }
+  },
   '4e15361fd6b4bb609fa63c81a2be19d873717870': {
     currencyCode: 'FTM',
     displayName: 'Fantom',

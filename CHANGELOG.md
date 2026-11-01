@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Ethereum/Polygon) Revolut Euro (EURR) as a default token
+
 ## 4.103.0 (2026-10-28)
 
 - changed: Update chain-registry
