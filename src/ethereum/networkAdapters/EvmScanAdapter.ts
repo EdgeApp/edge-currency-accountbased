@@ -850,6 +850,8 @@ interface EvmScanProxyResponse<T> {
   jsonrpc: '2.0'
   id: number
   result: T
+  /** The node's JSON-RPC rejection, which replaces `result` when present. */
+  error?: unknown
 }
 const asEvmScanProxyResponse =
   <T>(asT: Cleaner<T>): Cleaner<EvmScanProxyResponse<T>> =>
@@ -857,7 +859,8 @@ const asEvmScanProxyResponse =
     return asObject<EvmScanProxyResponse<T>>({
       jsonrpc: asValue('2.0'),
       id: asNumber,
-      result: asT
+      result: asT,
+      error: asOptional(asUnknown)
     })(raw)
   }
 
