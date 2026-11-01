@@ -335,6 +335,44 @@ export class EvmScanAdapter<
       }
     }
 
+  /** The wallet's internal transactions alone, as a complete native tuple */
+  protected async getInternalTxsUpdate(
+    params: GetTxsParams
+  ): Promise<EthereumNetworkUpdate> {
+    const { startBlock } = params
+    const { allTransactions, server } = await this.getAllTxsEthscan(
+      startBlock,
+      null,
+      asEvmScanInternalTransaction,
+      { searchRegularTxs: false }
+    )
+    return this.makeTxsUpdate(null, startBlock, allTransactions, server, {
+      includesInternal: true
+    })
+  }
+
+  protected makeTxsUpdate(
+    tokenId: EdgeTokenId,
+    startBlock: number,
+    edgeTransactions: EdgeTransactionsBlockHeightTuple['edgeTransactions'],
+    server: string | undefined,
+    options: { includesInternal: boolean }
+  ): EthereumNetworkUpdate {
+    const tuple: EdgeTransactionsBlockHeightTuple = {
+      blockHeight: startBlock,
+      edgeTransactions,
+      includesInternal: options.includesInternal
+    }
+    const maxBlockHeight = edgeTransactions.reduce((max, tx) => {
+      return Math.max(max, tx.blockHeight)
+    }, 0)
+    return {
+      tokenTxs: new Map([[tokenId, tuple]]),
+      blockHeight: maxBlockHeight,
+      server: server ?? ''
+    }
+  }
+
   // TODO: Clean return type
   protected async fetchGetEtherscan(
     server: string,
