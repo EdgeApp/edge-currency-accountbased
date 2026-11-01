@@ -93,10 +93,11 @@ import {
   TxRpcParams
 } from './ethereumTypes'
 import {
-  calcArbitrumRollupFees,
   calcMiningFees,
   calcOptimismRollupFees,
-  getFeeParamsByTransactionType
+  getFeeParamsByTransactionType,
+  makeArbitrumRollupFeeCache,
+  refreshArbitrumL1Gas
 } from './fees/ethMiningFees'
 import {
   FeeProviderFunction,
@@ -125,6 +126,9 @@ export class EthereumEngine extends CurrencyEngine<
     gasPrice: string
     gasLimit: string
   }
+
+  // L1 gas reads for Arbitrum-style chains, reused while a spend is edited
+  private readonly calcArbitrumRollupFees = makeArbitrumRollupFeeCache()
 
   lightMode: boolean
   initOptions: EthereumInitOptions
@@ -1121,7 +1125,7 @@ export class EthereumEngine extends CurrencyEngine<
         }
         rollupFee = calcOptimismRollupFees(txData)
       } else if (this.networkInfo.arbitrumRollupParams != null) {
-        const arbitrumFee = await calcArbitrumRollupFees({
+        const arbitrumFee = await this.calcArbitrumRollupFees({
           destinationAddress: publicAddress,
           nodeInterfaceAddress:
             this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
@@ -1450,7 +1454,7 @@ export class EthereumEngine extends CurrencyEngine<
         l1Fee = calcOptimismRollupFees(txData)
       }
     } else if (this.networkInfo.arbitrumRollupParams != null) {
-      const arbitrumFees = await calcArbitrumRollupFees({
+      const arbitrumFees = await this.calcArbitrumRollupFees({
         destinationAddress: publicAddress,
         nodeInterfaceAddress:
           this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
@@ -1458,6 +1462,7 @@ export class EthereumEngine extends CurrencyEngine<
         txData: data ?? '0x'
       })
       otherParams.gas = add(otherParams.gas, arbitrumFees.l1Gas)
+      otherParams.arbitrumL1Gas = arbitrumFees.l1Gas
     }
 
     //
@@ -1633,6 +1638,30 @@ export class EthereumEngine extends CurrencyEngine<
       this.currencyInfo.pluginId
     )(privateKeys)
     const otherParams: EthereumTxOtherParams = getOtherParams(edgeTransaction)
+
+    const { arbitrumRollupParams } = this.networkInfo
+    if (arbitrumRollupParams != null) {
+      // A native send moves its amount on top of the gas:
+      const value =
+        edgeTransaction.tokenId == null
+          ? max(
+              '0',
+              mul(
+                '-1',
+                add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
+              )
+            )
+          : '0'
+      await refreshArbitrumL1Gas({
+        gasBudget: sub(this.getBalance({ tokenId: null }), value),
+        nodeInterfaceAddress: arbitrumRollupParams.nodeInterfaceAddress,
+        otherParams,
+        rpcServers: this.getRpcServers()
+      }).catch((error: unknown) => {
+        // The gas limit from makeSpend may still be enough:
+        this.warn(`signTx could not refresh L1 gas: ${String(error)}`)
+      })
+    }
 
     // Do signing
     const gasLimitHex = toHex(otherParams.gas)

@@ -1,6 +1,6 @@
 import { Common } from '@ethereumjs/common'
 import { TransactionFactory } from '@ethereumjs/tx'
-import { add, div, gte, lt, lte, min, mul, sub } from 'biggystring'
+import { add, div, gt, gte, lt, lte, min, mul, sub } from 'biggystring'
 import { EdgeSpendInfo, EdgeToken } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
@@ -13,7 +13,8 @@ import {
   CalcOptimismRollupFeeParams,
   EthereumFee,
   EthereumMiningFees,
-  EthereumNetworkInfo
+  EthereumNetworkInfo,
+  EthereumTxOtherParams
 } from '../ethereumTypes'
 
 export const ES_FEE_LOW = 'low'
@@ -338,23 +339,6 @@ export async function getFeeParamsByTransactionType(
   }
 }
 
-/**
- * The L1 gas figure follows the L1 base fee, which can move several times over
- * within one L1 block, so this only spares the repeat reads while a spend is
- * being edited. A limit below the current figure fails with "intrinsic gas too
- * low".
- */
-const ARBITRUM_L1_GAS_CACHE_MS = 30000
-
-let arbitrumL1GasCache:
-  | {
-      key: string
-      expiresAt: number
-      l1Gas: string
-      l1GasPrice: string
-    }
-  | undefined
-
 // Copied from https://github.com/OffchainLabs/arbitrum-tutorials/blob/master/packages/gas-estimation/scripts/exec.ts
 export const calcArbitrumRollupFees = async (params: {
   rpcServers: string[]
@@ -367,20 +351,6 @@ export const calcArbitrumRollupFees = async (params: {
 }> => {
   const { rpcServers, nodeInterfaceAddress, destinationAddress, txData } =
     params
-
-  // The node interface has the same address on every Arbitrum-style chain, so
-  // only the RPC servers tell the chains apart.
-  const cacheKey = JSON.stringify([rpcServers, destinationAddress, txData])
-  if (
-    arbitrumL1GasCache != null &&
-    arbitrumL1GasCache.key === cacheKey &&
-    Date.now() < arbitrumL1GasCache.expiresAt
-  ) {
-    return {
-      l1Gas: arbitrumL1GasCache.l1Gas,
-      l1GasPrice: arbitrumL1GasCache.l1GasPrice
-    }
-  }
 
   const getFee = async (
     rpcUrl: string
@@ -415,12 +385,87 @@ export const calcArbitrumRollupFees = async (params: {
     rpcServers.map(rpcUrl => async () => await getFee(rpcUrl))
   )
 
-  arbitrumL1GasCache = {
-    key: cacheKey,
-    expiresAt: Date.now() + ARBITRUM_L1_GAS_CACHE_MS,
-    l1Gas: out.l1Gas,
-    l1GasPrice: out.l1GasPrice
-  }
-
   return out
+}
+
+/**
+ * The L1 gas figure follows the L1 base fee, which can move several times over
+ * within one L1 block, so a cached figure only spares the repeat reads while a
+ * spend is being edited. A limit below the current figure fails with
+ * "intrinsic gas too low".
+ */
+const ARBITRUM_L1_GAS_CACHE_MS = 30000
+
+/**
+ * Wraps `calcArbitrumRollupFees` to reuse the last figure for the same
+ * destination and data for 30 seconds. Each engine holds its own, so an entry
+ * never crosses wallets or chains.
+ */
+export const makeArbitrumRollupFeeCache = (): typeof calcArbitrumRollupFees => {
+  let cached:
+    | {
+        key: string
+        expiresAt: number
+        l1Gas: string
+        l1GasPrice: string
+      }
+    | undefined
+
+  return async params => {
+    const key = JSON.stringify([params.destinationAddress, params.txData])
+    if (cached != null && cached.key === key && Date.now() < cached.expiresAt) {
+      return { l1Gas: cached.l1Gas, l1GasPrice: cached.l1GasPrice }
+    }
+
+    const out = await calcArbitrumRollupFees(params)
+    cached = { key, expiresAt: Date.now() + ARBITRUM_L1_GAS_CACHE_MS, ...out }
+    return out
+  }
+}
+
+/**
+ * The live plain-transfer figure moves a few percent a minute, so twice the
+ * quoted figure covers any spend signed soon after its quote.
+ */
+const ARBITRUM_L1_GAS_RAISE_CAP = '2'
+
+/**
+ * A spend keeps the gas limit it was built with, however long it waits to be
+ * signed, so the L1 gas in that limit can fall behind the chain. Raises the
+ * limit to the figure the chain wants right now. A lower figure changes nothing
+ * because the chain refunds gas the transaction does not use.
+ *
+ * The raise stops at `ARBITRUM_L1_GAS_RAISE_CAP` times the figure the spend
+ * was built with, so a bad reading cannot run the fee far past the quote.
+ *
+ * A max send leaves no room for a higher limit: the node rejects a transaction
+ * whose gas and value cost more than the balance. The raise is skipped when the
+ * new limit at the transaction's gas price would cost more than `gasBudget`.
+ */
+export const refreshArbitrumL1Gas = async (params: {
+  rpcServers: string[]
+  nodeInterfaceAddress: string
+  otherParams: EthereumTxOtherParams
+  /** The native balance less the value the transaction moves. */
+  gasBudget: string
+}): Promise<void> => {
+  const { rpcServers, nodeInterfaceAddress, otherParams, gasBudget } = params
+  const { arbitrumL1Gas, data, gas, gasPrice, to, tokenRecipientAddress } =
+    otherParams
+  if (arbitrumL1Gas == null) return
+
+  const { l1Gas } = await calcArbitrumRollupFees({
+    rpcServers,
+    nodeInterfaceAddress,
+    destinationAddress: tokenRecipientAddress ?? to[0],
+    txData: data ?? '0x'
+  })
+  if (lte(l1Gas, arbitrumL1Gas)) return
+
+  const raisedL1Gas = min(l1Gas, mul(arbitrumL1Gas, ARBITRUM_L1_GAS_RAISE_CAP))
+  const raisedGas = add(sub(gas, arbitrumL1Gas), raisedL1Gas)
+  if (gt(mul(raisedGas, gasPrice), gasBudget)) return
+
+  otherParams.gas = raisedGas
+  otherParams.arbitrumL1Gas = raisedL1Gas
 }
