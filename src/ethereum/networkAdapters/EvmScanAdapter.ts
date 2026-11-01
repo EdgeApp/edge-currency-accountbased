@@ -69,6 +69,13 @@ export interface EvmScanAdapterConfig {
 
   /** Whether the API supports gastracker module */
   gastrackerSupport?: boolean
+
+  /**
+   * Serve `fetchInternalTxs`, for a chain whose primary history source cannot
+   * see internal transactions. `fetchTxs` folds them in by itself, so only set
+   * this when another adapter answers `fetchTxs` first.
+   */
+  internalTxsSupport?: boolean
 }
 
 export class EvmScanAdapter<
@@ -76,10 +83,13 @@ export class EvmScanAdapter<
     | EvmScanAdapterConfig
     | BlockscoutAdapterConfig = EvmScanAdapterConfig
 > extends NetworkAdapter<Config> {
-  /** Blockscout serves these separately; see `BlockscoutAdapter` */
+  /** Off unless the config opts in; `BlockscoutAdapter` always serves these */
   fetchInternalTxs:
     | ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>)
-    | null = null
+    | null =
+    this.config.type === 'evmscan' && this.config.internalTxsSupport === true
+      ? async params => await this.getInternalTxsUpdate(params)
+      : null
 
   /** Extra headers on every `/api` request; subclasses set them per provider */
   protected requestHeaders: Record<string, string> | undefined = undefined
