@@ -1121,17 +1121,11 @@ export class EthereumEngine extends CurrencyEngine<
         }
         rollupFee = calcOptimismRollupFees(txData)
       } else if (this.networkInfo.arbitrumRollupParams != null) {
-        const rpcServers = this.ethNetwork.networkAdapters
-          .filter(
-            (adapter): adapter is RpcAdapter => adapter.config.type === 'rpc'
-          )
-          .map(adapter => adapter.config.servers)
-          .flat()
         const arbitrumFee = await calcArbitrumRollupFees({
           destinationAddress: publicAddress,
           nodeInterfaceAddress:
             this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
-          rpcServers,
+          rpcServers: this.getRpcServers(),
           txData: data ?? '0x'
         })
         rollupFee = mul(miningFees.gasPrice, arbitrumFee.l1Gas)
@@ -1456,17 +1450,11 @@ export class EthereumEngine extends CurrencyEngine<
         l1Fee = calcOptimismRollupFees(txData)
       }
     } else if (this.networkInfo.arbitrumRollupParams != null) {
-      const rpcServers = this.ethNetwork.networkAdapters
-        .filter(
-          (adapter): adapter is RpcAdapter => adapter.config.type === 'rpc'
-        )
-        .map(adapter => adapter.config.servers)
-        .flat()
       const arbitrumFees = await calcArbitrumRollupFees({
         destinationAddress: publicAddress,
         nodeInterfaceAddress:
           this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
-        rpcServers,
+        rpcServers: this.getRpcServers(),
         txData: data ?? '0x'
       })
       otherParams.gas = add(otherParams.gas, arbitrumFees.l1Gas)
@@ -1577,6 +1565,13 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     return edgeTransaction
+  }
+
+  private getRpcServers(): string[] {
+    return this.ethNetwork.networkAdapters
+      .filter((adapter): adapter is RpcAdapter => adapter.config.type === 'rpc')
+      .map(adapter => adapter.config.servers)
+      .flat()
   }
 
   async signMessage(
