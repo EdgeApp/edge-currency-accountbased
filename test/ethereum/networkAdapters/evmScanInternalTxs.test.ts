@@ -32,6 +32,21 @@ const INTERNAL_ROW = {
   value: '5000'
 }
 
+describe('EvmScanAdapter broadcast', function () {
+  it('is on without the config flag', function () {
+    assert.isNotNull(makeAdapter(async () => fail()).broadcast)
+    assert.isNotNull(
+      makeAdapter(async () => fail(), { broadcastDisabled: false }).broadcast
+    )
+  })
+
+  it('is off when the config opts out', function () {
+    assert.isNull(
+      makeAdapter(async () => fail(), { broadcastDisabled: true }).broadcast
+    )
+  })
+})
+
 describe('EvmScanAdapter fetchInternalTxs', function () {
   it('is off without the config flag', function () {
     assert.isNull(makeAdapter(async () => fail()).fetchInternalTxs)

@@ -67,6 +67,13 @@ export interface EvmScanAdapterConfig {
   type: 'evmscan'
   servers: string[]
 
+  /**
+   * Leave `broadcast` off, for a chain whose RPC routes include a transaction
+   * before this API's copy arrives. The API then rejects the copy as a stale
+   * nonce or a duplicate, which logs a failure for a send that succeeded.
+   */
+  broadcastDisabled?: boolean
+
   /** Whether the API supports gastracker module */
   gastrackerSupport?: boolean
 
@@ -83,6 +90,14 @@ export class EvmScanAdapter<
     | EvmScanAdapterConfig
     | BlockscoutAdapterConfig = EvmScanAdapterConfig
 > extends NetworkAdapter<Config> {
+  /** On unless the config opts out */
+  broadcast:
+    | ((edgeTransaction: EdgeTransaction) => Promise<BroadcastResults>)
+    | null =
+    this.config.type === 'evmscan' && this.config.broadcastDisabled === true
+      ? null
+      : async edgeTransaction => await this.sendRawTransaction(edgeTransaction)
+
   /** Off unless the config opts in; `BlockscoutAdapter` always serves these */
   fetchInternalTxs:
     | ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>)
@@ -139,7 +154,7 @@ export class EvmScanAdapter<
       return { blockHeight: clean.result, server }
     }
 
-  broadcast = async (
+  private readonly sendRawTransaction = async (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> => {
     return await this.parallelServers(async baseUrl => {
