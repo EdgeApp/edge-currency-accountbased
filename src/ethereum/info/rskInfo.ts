@@ -49,7 +49,7 @@ const networkFees: EthereumFees = {
   }
 }
 
-const networkInfo: EthereumNetworkInfo = {
+export const networkInfo: EthereumNetworkInfo = {
   addressQueryLookbackBlocks: 4, // ~2 minutes
   networkAdapterConfigs: [
     {
@@ -61,9 +61,17 @@ const networkInfo: EthereumNetworkInfo = {
       ethBalCheckerContract: '0x726391B6cA41761c4c332aa556Cf804A50279b52'
     },
     {
-      type: 'evmscan',
-      gastrackerSupport: false,
-      servers: ['https://blockscout.com/rsk/mainnet']
+      // The only history source for this chain. Blockscout's hosted API is the
+      // one that answers: it needs the `blockscoutApiKey` init option and drops
+      // out of the list without it. The chain's own instance is listed as a
+      // keyless fallback, but its budget is 10 requests per window, so it
+      // answers 429 to most of a wallet's sync and the native history query
+      // never completes on it alone.
+      type: 'blockscout',
+      servers: [
+        'https://api.blockscout.com',
+        'https://rootstock.blockscout.com'
+      ]
     }
   ],
   uriNetworks: ['rsk', 'rbtc'],
@@ -84,7 +92,7 @@ const networkInfo: EthereumNetworkInfo = {
   }
 }
 
-const currencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'RBTC',
   evmChainId: 30,

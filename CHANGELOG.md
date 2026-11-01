@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Rootstock) Wallets stuck partway through sync
+
 ## 4.103.0 (2026-10-28)
 
 - changed: Update chain-registry
