@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Rootstock) Wallets stuck partway through sync
+
 ## 4.105.1 (2026-11-09)
 
 - fixed: (EVM) Balances not loading when the batch balance query fails
