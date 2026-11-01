@@ -152,6 +152,14 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39'
     }
+  },
+  '11b20f798b70df2201d8f550addcc3378b33dd4a': {
+    currencyCode: 'EURR',
+    displayName: 'Revolut Euro',
+    denominations: [{ name: 'EURR', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x11b20f798b70df2201D8F550ADDcc3378b33dd4A'
+    }
   }
 }
 
