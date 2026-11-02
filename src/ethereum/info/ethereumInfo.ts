@@ -856,8 +856,8 @@ export const builtinTokens: EdgeTokenMap = {
   },
   dc035d45d973e3ec169d2276ddab16f1e407384f: {
     currencyCode: 'USDS',
-    displayName: 'StableUSD',
-    denominations: [{ name: 'USDS', multiplier: '1000000' }],
+    displayName: 'USDS Stablecoin',
+    denominations: [{ name: 'USDS', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0xdC035D45d973E3EC169d2276DDab16f1e407384F'
     }

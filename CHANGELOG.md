@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Ethereum) USDS (0xdC035D45) amounts off by 12 decimal places
+
 ## 4.103.1 (2026-11-02)
 
 - fixed: (Pirate Chain) Receive showing a Sapling address for the rest of the session after Ironwood activation
