@@ -89,7 +89,7 @@ export function makeFakeEngine(): {
     currencyEngineCallbacks: { onNewTokens() {} },
     currencyInfo: { pluginId: 'test' },
     log: Object.assign(() => {}, { warn: () => {} }),
-    networkInfo: { networkAdapterConfigs: [] },
+    networkInfo: { addressQueryLookbackBlocks: 60, networkAdapterConfigs: [] },
     sendTransactionEvents() {},
     syncTracker: {
       setHistoryRatios(tokenIds: EdgeTokenId[]) {

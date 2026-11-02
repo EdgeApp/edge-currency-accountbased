@@ -325,12 +325,8 @@ export class EvmScanAdapter<
           edgeTransactions: allTransactions,
           includesInternal
         }
-      const maxBlockHeight = allTransactions.reduce((max, tx) => {
-        return Math.max(max, tx.blockHeight)
-      }, 0)
       return {
         tokenTxs: new Map([[tokenId, edgeTransactionsBlockHeightTuple]]),
-        blockHeight: maxBlockHeight,
         server
       }
     }

@@ -227,12 +227,8 @@ export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
       edgeTransactions,
       includesInternal: options.includesInternal
     }
-    const maxBlockHeight = edgeTransactions.reduce((max, tx) => {
-      return Math.max(max, tx.blockHeight)
-    }, 0)
     return {
       tokenTxs: new Map([[tokenId, tuple]]),
-      blockHeight: maxBlockHeight,
       server: server ?? ''
     }
   }

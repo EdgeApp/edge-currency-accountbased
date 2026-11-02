@@ -78,6 +78,12 @@ export interface EdgeTransactionsBlockHeightTuple {
 }
 
 export interface EthereumNetworkUpdate {
+  /**
+   * The chain's current height, from a block-height query. It replaces the
+   * wallet's height outright, so history results leave it out: their newest
+   * transaction can be days behind the chain. `processEthereumNetworkUpdate`
+   * raises the height from synced transactions instead.
+   */
   blockHeight?: number
   newNonce?: string
   tokenBal?: Map<EdgeTokenId, string>
@@ -401,10 +407,6 @@ export class EthereumNetwork {
       ...internalTuple.edgeTransactions
     ])
     tuple.includesInternal = true
-    update.blockHeight = Math.max(
-      update.blockHeight ?? 0,
-      internalUpdate.blockHeight ?? 0
-    )
     if (internalUpdate.server != null) {
       update.server = `${update.server ?? 'none'} + ${internalUpdate.server}`
     }
