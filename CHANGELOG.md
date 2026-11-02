@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Pirate Chain) Receive showing a Sapling address for the rest of the session after Ironwood activation
+
 ## 4.103.0 (2026-10-28)
 
 - changed: Update chain-registry

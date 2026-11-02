@@ -521,10 +521,25 @@ export class PiratechainEngine extends CurrencyEngine<
       return address
     }
 
-    // Each read unlocks and relocks signing, and the address only changes
-    // once, at Ironwood activation, so one refresh per engine start keeps the
-    // cache honest. Rethrowing here would reject with nobody waiting, which
-    // surfaces as an app-wide error alert over whatever scene the user is on:
+    // The SDK hands out Sapling until it sees this wallet past Ironwood
+    // activation: for a new wallet once its sync resolves the activation
+    // height, and for a wallet restored with an older birthday once its sync
+    // passes that height, long after the engine starts. Re-read while the
+    // cache holds Sapling, and fall back to it on failure, since the caller is
+    // waiting on this one:
+    if (this.otherData.cachedAddress.startsWith('zs')) {
+      this.addressRefreshed = true
+      const cachedAddress = this.otherData.cachedAddress
+      return await getSynchronizerAddresses().catch((error: unknown) => {
+        this.warn(`getFreshAddress refresh failed: ${String(error)}`)
+        return { publicAddress: cachedAddress }
+      })
+    }
+
+    // Each Ironwood read unlocks and relocks signing, and an Ironwood address
+    // does not change, so one refresh per engine start keeps the cache honest.
+    // Rethrowing here would reject with nobody waiting, which surfaces as an
+    // app-wide error alert over whatever scene the user is on:
     if (!this.addressRefreshed) {
       this.addressRefreshed = true
       getSynchronizerAddresses().catch((error: unknown) => {
