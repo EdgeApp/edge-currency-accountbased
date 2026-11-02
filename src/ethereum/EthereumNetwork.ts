@@ -539,6 +539,9 @@ export class EthereumNetwork {
       const syncedTokenIds: EdgeTokenId[] = []
       for (const [tokenId, tuple] of tokenTxs) {
         const safeTokenId = tokenId ?? ''
+        // Earlier passes covered the history below this pass's start block.
+        // A complete pass has also seen its own transactions (below), so a
+        // change-server sync can stop once it finds the notified activity:
         highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
         if (tuple.partial === true) {
           // External-only rows: a known confirmed transaction may already
@@ -561,6 +564,7 @@ export class EthereumNetwork {
         syncedTokenIds.push(tokenId)
         for (const tx of tuple.edgeTransactions) {
           this.ethEngine.addTransaction(tokenId, tx)
+          highestTxBlockHeight = Math.max(highestTxBlockHeight, tx.blockHeight)
         }
         this.ethEngine.walletLocalData.lastTransactionQueryHeight[safeTokenId] =
           preUpdateBlockHeight
