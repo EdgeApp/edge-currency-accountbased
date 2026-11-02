@@ -58,7 +58,7 @@ const networkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  addressQueryLookbackBlocks: 60, // 2 minutes
+  addressQueryLookbackBlocks: 600, // 2 minutes at 200ms blocks
   networkAdapterConfigs: [
     {
       type: 'rpc',
@@ -89,9 +89,11 @@ const networkInfo: EthereumNetworkInfo = {
   supportsEIP1559: true,
   feeAlgorithm: {
     type: 'eth_feeHistory',
-    // Match the 10-minute fee refresh interval so spikes between polls remain
-    // represented in the next estimate (300 blocks at Base's 2s block time).
-    blocksToAnalyze: 300
+    // Cover as much of the 10-minute fee refresh interval as possible so
+    // spikes between polls remain represented in the next estimate. At Base's
+    // 200ms block time that would be 3000 blocks, but nodes return at most
+    // 1024 per eth_feeHistory request.
+    blocksToAnalyze: 1024
   },
   hdPathCoinType: 60,
   pluginMnemonicKeyName: 'baseMnemonic',
