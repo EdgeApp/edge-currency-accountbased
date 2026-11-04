@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.103.2 (2026-11-04)
+
 - fixed: (Ethereum) USDS (0xdC035D45) amounts off by 12 decimal places
 
 ## 4.103.1 (2026-11-02)
