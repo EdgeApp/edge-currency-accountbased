@@ -3,7 +3,7 @@
 ## Unreleased
 
 - fixed: (EVM) Ship the JSON files the Node build imports, such as the two Ethereum ABI files, whose absence failed every EVM wallet under Node with "Cannot find module".
-- changed: Mark the four React Native privacy-coin modules as optional peer dependencies. npm 7 and later install peer dependencies automatically unless they are marked optional, so every consumer was downloading `zcash-native`, `react-native-monero`, `react-native-zano` and `react-native-pirate-wallet` — about 1.3 GB of iOS simulator slices and Android libraries — whether or not it could load them. The Node entry point never reaches the modules that require them, so nothing that worked before changes: a React Native app declares these itself and still gets them, with the peer version range still enforced.
+- changed: Mark `zcash-native`, `react-native-monero`, `react-native-zano` and `react-native-pirate-wallet` as optional peer dependencies, so a Node consumer no longer downloads them (about 1.3 GB). A React Native app that declares them still gets them, within the same version ranges.
 
 ## 4.104.0 (2026-11-05)
 
