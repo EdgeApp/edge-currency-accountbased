@@ -157,6 +157,23 @@ const asNetworkAdaptorConfig = asObject({
   servers: asArray(asString),
   ethBalCheckerContract: asOptional(asString)
 })
+type InfoAdapterConfig = ReturnType<typeof asNetworkAdaptorConfig>
+
+/**
+ * The info server's adapter list for a plugin. An entry this version can't
+ * read, such as an adapter type it has since removed, is skipped rather than
+ * failing the whole payload, which would also discard the plugin's network
+ * fees. A list with nothing readable left is ignored, so the plugin keeps its
+ * built-in adapters instead of running with none.
+ */
+const asInfoAdapterConfigs = (
+  raw: unknown
+): InfoAdapterConfig[] | undefined => {
+  const configs = asArray(asMaybe(asNetworkAdaptorConfig))(raw).filter(
+    (config): config is InfoAdapterConfig => config != null
+  )
+  return configs.length > 0 ? configs : undefined
+}
 
 /**
  * Other Methods from EthereumTools
@@ -549,7 +566,7 @@ export const asMaybeEvmOverrideGasLimitLocation = asMaybe(
 //
 
 export const asEthereumInfoPayload = asObject({
-  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig)),
+  networkAdapterConfigs: asOptional(asInfoAdapterConfigs),
   networkFees: asOptional(asEthereumFees)
 })
 export type EthereumInfoPayload = ReturnType<typeof asEthereumInfoPayload>

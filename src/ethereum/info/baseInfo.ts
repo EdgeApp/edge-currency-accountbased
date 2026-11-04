@@ -58,13 +58,14 @@ const networkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  addressQueryLookbackBlocks: 60, // 2 minutes
+  addressQueryLookbackBlocks: 600, // 2 minutes at 200ms blocks
   networkAdapterConfigs: [
     {
       type: 'rpc',
       servers: [
+        'https://base-rpc.publicnode.com',
+        'https://base-mainnet.infura.io/v3/{{infuraProjectId}}',
         'https://base-mainnet.public.blastapi.io',
-        'https://rpc.ankr.com/base',
         'https://lb.drpc.org/ogrpc?network=base&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0x3ba5A41eA17fd4950a641a057dC0bEb8E8ff1521'
@@ -72,11 +73,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'evmscan',
       gastrackerSupport: true,
-      servers: ['https://api.etherscan.io', 'https://api.basescan.org']
-    },
-    {
-      type: 'blockchair',
-      servers: ['https://api.blockchair.com']
+      servers: ['https://api.etherscan.io']
     }
   ],
   uriNetworks: ['base'],
@@ -89,9 +86,11 @@ const networkInfo: EthereumNetworkInfo = {
   supportsEIP1559: true,
   feeAlgorithm: {
     type: 'eth_feeHistory',
-    // Match the 10-minute fee refresh interval so spikes between polls remain
-    // represented in the next estimate (300 blocks at Base's 2s block time).
-    blocksToAnalyze: 300
+    // Cover as much of the 10-minute fee refresh interval as possible so
+    // spikes between polls remain represented in the next estimate. At Base's
+    // 200ms block time that would be 3000 blocks, but nodes return at most
+    // 1024 per eth_feeHistory request.
+    blocksToAnalyze: 1024
   },
   hdPathCoinType: 60,
   pluginMnemonicKeyName: 'baseMnemonic',
