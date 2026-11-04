@@ -78,6 +78,12 @@ export interface EdgeTransactionsBlockHeightTuple {
 }
 
 export interface EthereumNetworkUpdate {
+  /**
+   * The chain's current height, from a block-height query. It replaces the
+   * wallet's height outright, so history results leave it out: their newest
+   * transaction can be days behind the chain. `processEthereumNetworkUpdate`
+   * raises the height from synced transactions instead.
+   */
   blockHeight?: number
   newNonce?: string
   tokenBal?: Map<EdgeTokenId, string>
@@ -401,10 +407,6 @@ export class EthereumNetwork {
       ...internalTuple.edgeTransactions
     ])
     tuple.includesInternal = true
-    update.blockHeight = Math.max(
-      update.blockHeight ?? 0,
-      internalUpdate.blockHeight ?? 0
-    )
     if (internalUpdate.server != null) {
       update.server = `${update.server ?? 'none'} + ${internalUpdate.server}`
     }
@@ -539,6 +541,9 @@ export class EthereumNetwork {
       const syncedTokenIds: EdgeTokenId[] = []
       for (const [tokenId, tuple] of tokenTxs) {
         const safeTokenId = tokenId ?? ''
+        // Earlier passes covered the history below this pass's start block.
+        // A complete pass has also seen its own transactions (below), so a
+        // change-server sync can stop once it finds the notified activity:
         highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
         if (tuple.partial === true) {
           // External-only rows: a known confirmed transaction may already
@@ -561,6 +566,7 @@ export class EthereumNetwork {
         syncedTokenIds.push(tokenId)
         for (const tx of tuple.edgeTransactions) {
           this.ethEngine.addTransaction(tokenId, tx)
+          highestTxBlockHeight = Math.max(highestTxBlockHeight, tx.blockHeight)
         }
         this.ethEngine.walletLocalData.lastTransactionQueryHeight[safeTokenId] =
           preUpdateBlockHeight
