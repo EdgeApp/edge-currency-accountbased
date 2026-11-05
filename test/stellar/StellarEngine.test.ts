@@ -210,6 +210,64 @@ describe('StellarEngine', function () {
     )
   })
 
+  it('looks a recipient up again after a failed lookup', async function () {
+    const lookUp = lookUpAccounts([ADDRESS, RECIPIENT])
+    let lookupFails = true
+    const engine = await makeEngine(async (func, ...params) => {
+      if (func === 'loadAccount' && params[0] === RECIPIENT && lookupFails) {
+        lookupFails = false
+        throw new Error('Network request failed')
+      }
+      return await lookUp(func, ...params)
+    })
+    await engine.checkAccountInnerLoop()
+    const spendInfo = {
+      tokenId: null,
+      spendTargets: [{ publicAddress: RECIPIENT, nativeAmount: '20000000' }]
+    }
+
+    // The failure comes through as itself, not as an unactivated account:
+    await expectRejection(
+      engine.makeSpend(spendInfo),
+      'Error: Network request failed'
+    )
+
+    // So the next attempt finds the account, and pays it:
+    const tx = await engine.makeSpend(spendInfo)
+    const signed = await engine.signTx(tx, { stellarKey: SECRET })
+    const { operations } = new Transaction(signed.signedTx, Networks.PUBLIC)
+    assert.strictEqual(operations[0].type, 'payment')
+  })
+
+  it('looks a recipient up again until its account exists', async function () {
+    const accounts = [ADDRESS]
+    const engine = await makeEngine(lookUpAccounts(accounts))
+    await engine.checkAccountInnerLoop()
+
+    /** Builds and signs a 2 XLM send, returning its operation type. */
+    const send = async (publicAddress: string): Promise<string> => {
+      const tx = await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [{ publicAddress, nativeAmount: '20000000' }]
+      })
+      const signed = await engine.signTx(tx, { stellarKey: SECRET })
+      const { operations } = new Transaction(signed.signedTx, Networks.PUBLIC)
+      return operations[0].type
+    }
+
+    // Before the account exists, a send creates it, which an M address can't:
+    assert.strictEqual(await send(RECIPIENT), 'createAccount')
+    await expectRejection(
+      send(MUXED_RECIPIENT),
+      'Error: Recipient address not activated. A muxed (M) address can only receive funds after its account is activated'
+    )
+
+    // Once someone else activates it, both addresses pay it:
+    accounts.push(RECIPIENT)
+    assert.strictEqual(await send(RECIPIENT), 'payment')
+    assert.strictEqual(await send(MUXED_RECIPIENT), 'payment')
+  })
+
   it('records account creations in history', async function () {
     const engine = await makeEngine(horizon)
     const operation = {
