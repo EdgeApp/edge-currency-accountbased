@@ -1,3 +1,4 @@
+import { Transaction } from '@stellar/stellar-sdk'
 import { assert } from 'chai'
 import {
   EdgeCorePluginOptions,
@@ -112,7 +113,11 @@ async function makeEngine(
 
 describe('StellarEngine', function () {
   it('sends again before the next account poll', async function () {
-    const engine = await makeEngine(horizon)
+    const submitted: Transaction[] = []
+    const engine = await makeEngine(async (func, ...params) => {
+      if (func === 'submitTransaction') submitted.push(params[0])
+      return await horizon(func, ...params)
+    })
     await engine.checkAccountInnerLoop()
     assert.strictEqual(engine.otherData.accountSequence, SEQUENCE)
 
@@ -122,8 +127,15 @@ describe('StellarEngine', function () {
         tokenId: null,
         spendTargets: [{ publicAddress: RECIPIENT, nativeAmount: '10000000' }]
       })
-      await engine.broadcastTx(await engine.signTx(tx, { stellarKey: SECRET }))
+      const signed = await engine.signTx(tx, { stellarKey: SECRET })
+      await engine.broadcastTx(signed)
       assert.strictEqual(engine.otherData.accountSequence, expected)
+
+      // The signed transaction travels in signedTx, and that's what goes out:
+      const sent = submitted[submitted.length - 1]
+      assert.strictEqual(sent.toXdr(), signed.signedTx)
+      assert.strictEqual(sent.sequence, expected)
+      assert.lengthOf(sent.signatures, 1)
     }
   })
 
