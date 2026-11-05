@@ -1,3 +1,14 @@
+import {
+  Account,
+  Asset,
+  Keypair,
+  Memo,
+  Networks,
+  Operation,
+  TimeoutInfinite,
+  Transaction,
+  TransactionBuilder
+} from '@stellar/stellar-sdk'
 import { abs, add, div, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
@@ -12,17 +23,6 @@ import {
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
-import {
-  Account,
-  Asset,
-  Keypair,
-  Memo,
-  Networks,
-  Operation,
-  TimeoutInfinite,
-  Transaction,
-  TransactionBuilder
-} from 'stellar-sdk'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -124,7 +124,7 @@ export class StellarEngine extends CurrencyEngine<
     func: StellarServerFunction,
     ...params: any
   ): Promise<any> {
-    let out = { result: '', server: '' }
+    let out: { result: any; server: string } = { result: '', server: '' }
     let funcs
     switch (func) {
       // Functions that should waterfall from top to low priority servers
@@ -144,25 +144,20 @@ export class StellarEngine extends CurrencyEngine<
         funcs = this.tools.stellarApiServers.map(api => async () => {
           // @ts-expect-error
           const result = await api[func](...params)
-          return { server: api.serverName, result }
+          return { server: api.serverURL.toString(), result }
         })
         out = await asyncWaterfall(funcs)
         break
 
       case 'ledgers':
         funcs = this.tools.stellarApiServers.map(serverApi => async () => {
-          const result = await serverApi
-            // @ts-expect-error
-            .ledgers()
-            .order('desc')
-            .limit(1)
-            .call()
+          const result = await serverApi.ledgers().order('desc').limit(1).call()
           const blockHeight = result.records[0].sequence
           if (
             this.walletLocalData.blockHeight <= blockHeight &&
             this.tools.highestTxHeight <= blockHeight
           ) {
-            return { server: serverApi.serverName, result }
+            return { server: serverApi.serverURL.toString(), result }
           } else {
             throw new Error('Height out of date')
           }
@@ -173,13 +168,12 @@ export class StellarEngine extends CurrencyEngine<
       case 'payments':
         funcs = this.tools.stellarApiServers.map(serverApi => async () => {
           const result = await serverApi
-            // @ts-expect-error
             .payments()
             .limit(TX_QUERY_PAGING_LIMIT)
             .cursor(this.otherData.lastPagingToken)
-            .forAccount(...params)
+            .forAccount(params[0])
             .call()
-          return { server: serverApi.serverName, result }
+          return { server: serverApi.serverURL.toString(), result }
         })
         out = await asyncWaterfall(funcs)
         break
@@ -191,7 +185,7 @@ export class StellarEngine extends CurrencyEngine<
             this.tools.stellarApiServers.map(async serverApi => {
               // @ts-expect-error
               const result = await serverApi[func](...params)
-              return { server: serverApi.serverName, result }
+              return { server: serverApi.serverURL.toString(), result }
             })
           ),
           'Broadcast failed:'
@@ -549,9 +543,8 @@ export class StellarEngine extends CurrencyEngine<
         ? this.fees[edgeSpendInfo.networkFeeOption]
         : this.fees.standard
 
-    // stellar-sdk v13: the network passphrase moved from the removed global
-    // Network singleton into per-transaction options, and transactions must
-    // declare timebounds (TimeoutInfinite preserves the old no-bounds behavior).
+    // Transactions take the network passphrase and must declare timebounds;
+    // TimeoutInfinite means no bounds:
     let txBuilder = new TransactionBuilder(account, {
       fee: String(feeSetting),
       networkPassphrase: Networks.PUBLIC

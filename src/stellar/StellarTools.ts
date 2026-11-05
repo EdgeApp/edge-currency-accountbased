@@ -1,3 +1,4 @@
+import { Horizon, Keypair } from '@stellar/stellar-sdk'
 import { add, div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import * as ed25519 from 'ed25519-hd-key'
@@ -11,7 +12,6 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import { Horizon, Keypair } from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
@@ -50,9 +50,7 @@ export class StellarTools implements EdgeCurrencyTools {
     // TransactionBuilder options.
     this.stellarApiServers = []
     for (const server of this.networkInfo.stellarServers) {
-      const stellarServer = new Horizon.Server(server)
-      stellarServer.serverName = server
-      this.stellarApiServers.push(stellarServer)
+      this.stellarApiServers.push(new Horizon.Server(server))
     }
   }
 
@@ -97,9 +95,7 @@ export class StellarTools implements EdgeCurrencyTools {
         "m/44'/148'/0'",
         seed.toString('hex')
       ).key
-      const keypair = Keypair.fromRawEd25519Seed(
-        Uint8Array.from(derivedSeed) as unknown as number[]
-      )
+      const keypair = Keypair.fromRawEd25519Seed(Uint8Array.from(derivedSeed))
 
       return {
         stellarKey: keypair.secret(),
