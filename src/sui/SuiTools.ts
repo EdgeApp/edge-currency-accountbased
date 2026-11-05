@@ -36,17 +36,17 @@ import {
 import {
   ADDRESS_TRANSACTIONS_QUERY,
   BALANCE_CHANGES_QUERY,
+  BALANCES_QUERY,
   cleanGraphqlBalanceChanges,
+  cleanGraphqlBalances,
   cleanGraphqlTransactionPage,
-  cleanGraphqlTransactions,
-  GRAPHQL_TRANSACTIONS_PER_REQUEST,
   GraphqlCaller,
   SuiGraphqlTransaction,
-  toSuiHistoryTx,
-  TRANSACTIONS_QUERY
+  toSuiHistoryTx
 } from './suiGraphql'
 import {
   asSuiPrivateKeys,
+  checkSuiBalances,
   SuiHistoryTx,
   SuiInfoPayload,
   SuiNetworkInfo
@@ -241,68 +241,6 @@ export class SuiTools implements EdgeCurrencyTools {
     )
   }
 
-  private async fetchGraphqlTransactionsFrom(
-    url: string,
-    digests: string[]
-  ): Promise<SuiHistoryTx[]> {
-    const out: SuiHistoryTx[] = []
-    for (let i = 0; i < digests.length; i += GRAPHQL_TRANSACTIONS_PER_REQUEST) {
-      const keys = digests.slice(i, i + GRAPHQL_TRANSACTIONS_PER_REQUEST)
-      const txs = cleanGraphqlTransactions(
-        await this.callGraphql(url, TRANSACTIONS_QUERY, { keys }),
-        keys
-      )
-
-      for (const tx of txs) {
-        const { nodes, pageInfo } = tx.effects.balanceChanges
-        const balanceChanges = [...nodes]
-        let { hasNextPage, endCursor: after } = pageInfo
-        while (hasNextPage) {
-          if (after == null) {
-            throw new Error(
-              `Sui GraphQL gave no cursor for the balance changes of ${tx.digest}`
-            )
-          }
-          const page = cleanGraphqlBalanceChanges(
-            await this.callGraphql(url, BALANCE_CHANGES_QUERY, {
-              digest: tx.digest,
-              after
-            }),
-            tx.digest
-          )
-          balanceChanges.push(...page.nodes)
-          hasNextPage = page.pageInfo.hasNextPage
-          after = page.pageInfo.endCursor
-        }
-        out.push(toSuiHistoryTx(tx, balanceChanges))
-      }
-    }
-    return out
-  }
-
-  /**
-   * Loads transactions in full by digest, in the order given. Either every
-   * digest comes back or this throws: history sync moves its cursor past
-   * whatever it is handed, so a partial answer would lose transactions.
-   */
-  async fetchGraphqlTransactions(digests: string[]): Promise<SuiHistoryTx[]> {
-    const urls = shuffleArray([...this.graphqlNodes])
-    let lastError: Error | undefined
-    for (const url of urls) {
-      try {
-        return await this.fetchGraphqlTransactionsFrom(url, digests)
-      } catch (error: unknown) {
-        lastError = error instanceof Error ? error : new Error(String(error))
-      }
-    }
-    throw (
-      lastError ??
-      new Error(
-        `No Sui GraphQL nodes configured for ${this.currencyInfo.pluginId}`
-      )
-    )
-  }
-
   /**
    * Run `fn` against one GraphQL node at a time, in shuffled order, until one
    * succeeds. Every query `fn` sends goes to the same node, so cursors from
@@ -344,6 +282,36 @@ export class SuiTools implements EdgeCurrencyTools {
           )
       )
     )
+  }
+
+  /**
+   * Loads every coin balance of `owner`. A node whose SUI total is
+   * impossible fails over to the next one instead of setting the balance.
+   */
+  async fetchBalances(
+    owner: string
+  ): Promise<Array<{ coinType: string; totalBalance: string }>> {
+    return await this.withGraphqlNode(async call => {
+      const balances: Array<{ coinType: string; totalBalance: string }> = []
+      let after: string | null = null
+      while (true) {
+        const page = cleanGraphqlBalances(
+          await call(BALANCES_QUERY, { owner, after })
+        )
+        checkSuiBalances(page.balances, this.networkInfo.totalSupply)
+        balances.push(...page.balances)
+        if (!page.hasNextPage) return balances
+        if (page.endCursor == null) {
+          throw new Error(
+            `Sui GraphQL gave no cursor for the balances of ${owner}`
+          )
+        }
+        if (page.endCursor === after) {
+          throw new Error(`Sui GraphQL repeated the balances cursor ${after}`)
+        }
+        after = page.endCursor
+      }
+    })
   }
 
   /**
