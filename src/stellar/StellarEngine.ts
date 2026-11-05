@@ -540,17 +540,16 @@ export class StellarEngine extends CurrencyEngine<
     // Check if destination address is activated
     const accountId = getAccountId(publicAddress)
     let mustCreateAccount = false
-    const activated = this.activatedAccountsCache[accountId]
-    if (activated === undefined) {
+    if (!this.activatedAccountsCache[accountId]) {
       try {
         await this.multicastServers('loadAccount', accountId)
         this.activatedAccountsCache[accountId] = true
       } catch (e: any) {
-        this.activatedAccountsCache[accountId] = false
+        // Only a missing account is unactivated, and only for now.
+        // Remember nothing, so the next attempt looks again:
+        if (e?.response?.title !== 'Resource Missing') throw e
         mustCreateAccount = true
       }
-    } else if (!activated) {
-      mustCreateAccount = true
     }
 
     // Creating an account takes its G address, so a muxed address can't:
