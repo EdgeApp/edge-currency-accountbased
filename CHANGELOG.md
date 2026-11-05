@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- changed: (Sui) Sync and send through Mysten's GraphQL service instead of JSON-RPC nodes
+- fixed: (Sui) Balances, history and sends failing on every wallet
+- fixed: (Sui) Send amounts counting the network fee twice
+
 ## 4.104.0 (2026-11-05)
 
 - changed: (Base) Look back 600 blocks for new transactions and read 1024 blocks of fee history, sized for the 200ms blocks of the Denim upgrade on 2026-11-05
