@@ -46,7 +46,6 @@ export interface StellarCreateAccount {
   type: 'create_account'
   created_at: string
   transaction_hash: string
-  asset_type: string
   source_account: string
   account: string
   starting_balance: string
