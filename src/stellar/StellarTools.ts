@@ -1,4 +1,4 @@
-import { Horizon, Keypair } from '@stellar/stellar-sdk'
+import { Horizon, Keypair, StrKey } from '@stellar/stellar-sdk'
 import { add, div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import * as ed25519 from 'ed25519-hd-key'
@@ -71,14 +71,16 @@ export class StellarTools implements EdgeCurrencyTools {
     return keys.publicKey
   }
 
+  /**
+   * Accepts accounts (G addresses) and muxed accounts (M addresses),
+   * which add a routing ID to an account. Contract addresses (C and W)
+   * can only receive through a token contract call, which we don't build.
+   */
   checkAddress(address: string): boolean {
-    // TODO: check address
-    try {
-      Keypair.fromPublicKey(address)
-      return true
-    } catch (e: any) {
-      return false
-    }
+    return (
+      StrKey.isValidEd25519PublicKey(address) ||
+      StrKey.isValidMed25519PublicKey(address)
+    )
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {

@@ -1,4 +1,4 @@
-import { Transaction } from '@stellar/stellar-sdk'
+import { Networks, StrKey, Transaction } from '@stellar/stellar-sdk'
 import { assert } from 'chai'
 import {
   EdgeCorePluginOptions,
@@ -15,12 +15,16 @@ import {
   asStellarWalletOtherData,
   StellarPaymentRecord
 } from '../../src/stellar/stellarTypes'
+import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
 
 // A fixed test key (the raw seed is 32 bytes of 0x07), plus an address to pay:
 const SECRET = 'SADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP54X'
 const ADDRESS = 'GDVEU3DD4KOFECV66VIHWEZOYX4ZKR3WV27L464SIIPOU2IUI3JCZA57'
 const RECIPIENT = 'GAJZR5RMNUNEK7CRXJVEWXZ5XUXWT7FJGILCDDOITF7EC26RPWJ4UVOE'
+// The recipient's account with the routing ID 1234:
+const MUXED_RECIPIENT =
+  'MAJZR5RMNUNEK7CRXJVEWXZ5XUXWT7FJGILCDDOITF7EC26RPWJ4UAAAAAAAAAAE2IYHE'
 const FUNDER = 'GD6ROJBYLKQMOW3E7N4M2YBPUHMZD7PL65VRHRMO24BOVSBV5H3BQRSL'
 
 // Sequence numbers are int64 values, well past Number.MAX_SAFE_INTEGER:
@@ -52,6 +56,30 @@ const horizon: HorizonStub = async func => {
   }
   throw new Error(`Unexpected Horizon call ${func}`)
 }
+
+/** An error shaped like the SDK's for a Horizon error response. */
+const horizonError = (status: number, title: string): Error =>
+  Object.assign(new Error(title), { response: { status, title } })
+
+/**
+ * Looks accounts up like Horizon, by G address only,
+ * finding the given accounts and logging each lookup.
+ */
+const lookUpAccounts =
+  (accounts: string[], lookups: string[] = []): HorizonStub =>
+  async (func, ...params) => {
+    if (func === 'loadAccount') {
+      const [accountId] = params
+      lookups.push(accountId)
+      if (!StrKey.isValidEd25519PublicKey(accountId)) {
+        throw horizonError(400, 'Bad Request')
+      }
+      if (!accounts.includes(accountId)) {
+        throw horizonError(404, 'Resource Missing')
+      }
+    }
+    return await horizon(func, ...params)
+  }
 
 /**
  * Makes an engine whose Horizon calls go to the stub,
@@ -137,6 +165,49 @@ describe('StellarEngine', function () {
       assert.strictEqual(sent.sequence, expected)
       assert.lengthOf(sent.signatures, 1)
     }
+  })
+
+  it('sends to a muxed (M) address through its account', async function () {
+    const lookups: string[] = []
+    const engine = await makeEngine(
+      lookUpAccounts([ADDRESS, RECIPIENT], lookups)
+    )
+    await engine.checkAccountInnerLoop()
+
+    // 0.1 XLM is under the minimum balance, so signing checks the recipient:
+    const tx = await engine.makeSpend({
+      tokenId: null,
+      spendTargets: [
+        { publicAddress: MUXED_RECIPIENT, nativeAmount: '1000000' }
+      ]
+    })
+    const signed = await engine.signTx(tx, { stellarKey: SECRET })
+
+    // The payment carries the M address, and only the G account was looked up:
+    const { operations } = new Transaction(signed.signedTx, Networks.PUBLIC)
+    assert.lengthOf(operations, 1)
+    assert.deepInclude(operations[0], {
+      type: 'payment',
+      destination: MUXED_RECIPIENT,
+      amount: '0.1000000'
+    })
+    assert.deepEqual(lookups, [ADDRESS, RECIPIENT, RECIPIENT])
+  })
+
+  it('sends to a muxed (M) address only once its account exists', async function () {
+    const engine = await makeEngine(lookUpAccounts([ADDRESS]))
+    await engine.checkAccountInnerLoop()
+
+    // Creating an account takes its G address, so the M address can't:
+    await expectRejection(
+      engine.makeSpend({
+        tokenId: null,
+        spendTargets: [
+          { publicAddress: MUXED_RECIPIENT, nativeAmount: '20000000' }
+        ]
+      }),
+      'Error: Recipient address not activated. A muxed (M) address can only receive funds after its account is activated'
+    )
   })
 
   it('records account creations in history', async function () {
