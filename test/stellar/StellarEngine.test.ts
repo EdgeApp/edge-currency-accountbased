@@ -184,6 +184,88 @@ describe('StellarEngine', function () {
     ])
   })
 
+  it('records path payments by the XLM they move', async function () {
+    const engine = await makeEngine(horizon)
+    const pathPayment = (fields: object): StellarPaymentRecord =>
+      record({
+        created_at: '2026-11-04T00:00:00Z',
+        transaction: async () => ({
+          fee_charged: '100',
+          ledger_attr: 123,
+          memo_type: 'none'
+        }),
+        ...fields
+      })
+
+    // Someone pays us XLM, spending a token:
+    await engine.processTransaction(
+      pathPayment({
+        paging_token: '1',
+        type: 'path_payment_strict_receive',
+        transaction_hash: 'aa'.repeat(32),
+        from: FUNDER,
+        to: ADDRESS,
+        asset_type: 'native',
+        amount: '3.0000000',
+        source_asset_type: 'credit_alphanum4',
+        source_amount: '9.0000000'
+      })
+    )
+    // We spend XLM, delivering a token:
+    await engine.processTransaction(
+      pathPayment({
+        paging_token: '2',
+        type: 'path_payment_strict_send',
+        transaction_hash: 'bb'.repeat(32),
+        from: ADDRESS,
+        to: RECIPIENT,
+        asset_type: 'credit_alphanum4',
+        amount: '50.0000000',
+        source_asset_type: 'native',
+        source_amount: '2.0000000'
+      })
+    )
+    // We swap a token for XLM by paying ourselves:
+    await engine.processTransaction(
+      pathPayment({
+        paging_token: '3',
+        type: 'path_payment_strict_send',
+        transaction_hash: 'cc'.repeat(32),
+        from: ADDRESS,
+        to: ADDRESS,
+        asset_type: 'native',
+        amount: '4.0000000',
+        source_asset_type: 'credit_alphanum4',
+        source_amount: '12.0000000'
+      })
+    )
+    // Token-only path payments stay out of the XLM history:
+    await engine.processTransaction(
+      pathPayment({
+        paging_token: '4',
+        type: 'path_payment_strict_send',
+        transaction_hash: 'dd'.repeat(32),
+        from: FUNDER,
+        to: ADDRESS,
+        asset_type: 'credit_alphanum4',
+        amount: '1.0000000',
+        source_asset_type: 'credit_alphanum4',
+        source_amount: '1.0000000'
+      })
+    )
+
+    const txs = await engine.getTransactions({ tokenId: null })
+    txs.sort((a, b) => a.txid.localeCompare(b.txid))
+    assert.deepEqual(
+      txs.map(tx => [tx.txid, tx.nativeAmount, tx.isSend]),
+      [
+        ['aa'.repeat(32), '30000000', false],
+        ['bb'.repeat(32), '-20000100', true],
+        ['cc'.repeat(32), '39999900', false]
+      ]
+    )
+  })
+
   it('keeps the saved account sequence when it loads', function () {
     const otherData = asStellarWalletOtherData({
       lastPagingToken: '0',
