@@ -1,11 +1,4 @@
-import {
-  asArray,
-  asMaybe,
-  asNumber,
-  asObject,
-  asOptional,
-  asString
-} from 'cleaners'
+import { asArray, asMaybe, asObject, asOptional, asString } from 'cleaners'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -23,7 +16,7 @@ export interface StellarBalance {
 
 export interface StellarAccount {
   id: string
-  sequence: number
+  sequence: string
   balances: StellarBalance[]
 }
 
@@ -69,7 +62,7 @@ export interface StellarTransaction {
 }
 export const asStellarWalletOtherData = asObject({
   lastPagingToken: asMaybe(asString, '0'),
-  accountSequence: asMaybe(asNumber, 0)
+  accountSequence: asMaybe(asString, '0')
 })
 
 export type StellarWalletOtherData = ReturnType<typeof asStellarWalletOtherData>
