@@ -223,6 +223,10 @@ export class SuiEngine extends CurrencyEngine<
     if (!this.engineOn) return
 
     try {
+      // The walk replaces stored rows by txid, so stored rows must be in
+      // memory first; loaded later, they would overwrite what the walk
+      // corrected:
+      await this.loadTransactions()
       await this.sweepTransactions()
       // Only report progress that actually happened, so an outage presents
       // as a wallet visibly failing to sync rather than one claiming to be
@@ -309,17 +313,14 @@ export class SuiEngine extends CurrencyEngine<
       }
     }
 
-    for (const [coinType, bal] of coinTypeMap) {
+    // Each balance change is the net movement, so the sender's SUI change
+    // already includes the gas it paid:
+    for (const [coinType, nativeAmount] of coinTypeMap) {
       let tokenId = null
-      let nativeAmount = bal
       if (coinType !== SUI_TYPE_ARG) {
         tokenId = this.tools.edgeTokenIdFromCoinType(coinType)
         const edgeToken = this.allTokensMap[tokenId]
         if (edgeToken == null) continue
-      }
-
-      if (tokenId == null && isSend) {
-        nativeAmount = sub(nativeAmount, networkFee)
       }
 
       const currencyCode = this.getCurrencyCode(tokenId)

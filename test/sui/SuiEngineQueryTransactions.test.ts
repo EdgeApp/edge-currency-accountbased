@@ -78,11 +78,17 @@ const makeGraphqlBalanceChanges = (
 /** A transaction as GraphQL returns it, sent by `sender`. */
 const makeGraphqlTx = (
   digest: string,
-  opts: { sender?: string; balanceChanges?: unknown } = {}
+  opts: { sender?: string; balanceChanges?: unknown; gasSummary?: unknown } = {}
 ): unknown => {
   const {
     sender = OTHER,
-    balanceChanges = makeGraphqlBalanceChanges(['5'], false)
+    balanceChanges = makeGraphqlBalanceChanges(['5'], false),
+    gasSummary = {
+      computationCost: 1000,
+      storageCost: 2000,
+      storageRebate: 500,
+      nonRefundableStorageFee: 5
+    }
   } = opts
   return {
     digest,
@@ -92,14 +98,7 @@ const makeGraphqlTx = (
     effects: {
       timestamp: '2023-11-14T22:13:20.000Z',
       checkpoint: { sequenceNumber: 100 },
-      gasEffects: {
-        gasSummary: {
-          computationCost: 1000,
-          storageCost: 2000,
-          storageRebate: 500,
-          nonRefundableStorageFee: 5
-        }
-      },
+      gasEffects: { gasSummary },
       balanceChanges
     }
   }
@@ -153,6 +152,9 @@ async function makeFakeSui(opts: {
 
   /** Tokens the plugin knows, all of them enabled. */
   tokens?: EdgeTokenMap
+
+  /** Storage carried over from an earlier engine, as on a warm launch. */
+  disklet?: EdgeIo['disklet']
 }): Promise<FakeSui> {
   const { graphql, tokens = {} } = opts
   const requests: string[] = []
@@ -171,6 +173,7 @@ async function makeFakeSui(opts: {
   }
 
   const io: EdgeIo = { ...makeFakeIo(), fetch: fetch as EdgeIo['fetch'] }
+  if (opts.disklet != null) Object.assign(io, { disklet: opts.disklet })
 
   const networkInfo = {
     network: 'mainnet',
@@ -892,5 +895,119 @@ describe('SuiEngine history sweep', function () {
     // The running pass saved its cursor; the queued one never ran:
     assert.deepEqual(requests, ['history null'])
     assert.equal(engine.otherData.txCursor, 'c1')
+  })
+})
+
+describe('SuiEngine transaction amounts', function () {
+  const USDC =
+    '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC'
+
+  /** Syncs one transaction the wallet sent, and returns what the engine reported. */
+  const sendOne = async (
+    changes: Array<[coinType: string, amount: string]>,
+    gasSummary?: unknown
+  ): Promise<EdgeTransaction[]> => {
+    const balanceChanges = {
+      pageInfo: { hasNextPage: false, endCursor: null },
+      nodes: changes.map(([repr, amount]) => ({
+        amount,
+        coinType: { repr },
+        owner: { address: ADDRESS }
+      }))
+    }
+    const { engine, transactions } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: () =>
+          makePage(
+            [
+              makeGraphqlTx('a', {
+                sender: ADDRESS,
+                balanceChanges,
+                gasSummary
+              })
+            ],
+            false,
+            'c1'
+          )
+      }
+    })
+    await engine.queryTransactions()
+    return transactions
+  }
+
+  const SUI =
+    '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI'
+
+  it('takes a send amount as is, since it already includes gas', async function () {
+    // 100000 sent plus 2500 gas:
+    const [tx] = await sendOne([[SUI, '-102500']])
+    assert.equal(tx.nativeAmount, '-102500')
+    assert.equal(tx.networkFee, '2500')
+  })
+
+  it('charges a token send only its gas in SUI', async function () {
+    const [tx] = await sendOne([
+      [SUI, '-2500'],
+      [USDC, '-1000000']
+    ])
+    assert.equal(tx.tokenId, null)
+    assert.equal(tx.nativeAmount, '-2500')
+  })
+
+  it('credits a send whose storage rebate beats its gas', async function () {
+    const [tx] = await sendOne([[SUI, '4000']], {
+      computationCost: 1000,
+      storageCost: 0,
+      storageRebate: 5000,
+      nonRefundableStorageFee: 50
+    })
+    assert.equal(tx.networkFee, '-4000')
+    assert.equal(tx.nativeAmount, '4000')
+  })
+
+  it('keeps the corrected amount when stored rows load after a walk', async function () {
+    const disklet = makeFakeIo().disklet
+    /** A node whose only transaction moved `amount` SUI out of the wallet. */
+    const node = (amount: string) => () =>
+      makePage(
+        [
+          makeGraphqlTx('a', {
+            sender: ADDRESS,
+            balanceChanges: {
+              pageInfo: { hasNextPage: false, endCursor: null },
+              nodes: [
+                { amount, coinType: { repr: SUI }, owner: { address: ADDRESS } }
+              ]
+            }
+          })
+        ],
+        false,
+        'c1'
+      )
+    const save = async (engine: SuiEngine): Promise<void> => {
+      await (
+        engine as unknown as { saveWalletLoop: () => Promise<void> }
+      ).saveWalletLoop()
+    }
+
+    // An earlier build stored the send with its fee counted twice:
+    const first = await makeFakeSui({
+      graphql: { [GRAPHQL_URL]: node('-5000') },
+      disklet
+    })
+    await first.engine.queryTransactions()
+    await save(first.engine)
+
+    // The next launch walks the history again and finds the true amount:
+    const second = await makeFakeSui({
+      graphql: { [GRAPHQL_URL]: node('-2500') },
+      disklet
+    })
+    delete second.engine.otherData.txCursor
+    await second.engine.queryTransactions()
+    await save(second.engine)
+
+    const [tx] = await second.engine.getTransactions({ tokenId: null })
+    assert.equal(tx.nativeAmount, '-2500')
   })
 })
