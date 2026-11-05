@@ -294,17 +294,14 @@ export class SuiEngine extends CurrencyEngine<
       }
     }
 
-    for (const [coinType, bal] of coinTypeMap) {
+    // Each balance change is the net movement, so the sender's SUI change
+    // already includes the gas it paid:
+    for (const [coinType, nativeAmount] of coinTypeMap) {
       let tokenId = null
-      let nativeAmount = bal
       if (coinType !== SUI_TYPE_ARG) {
         tokenId = this.tools.edgeTokenIdFromCoinType(coinType)
         const edgeToken = this.allTokensMap[tokenId]
         if (edgeToken == null) continue
-      }
-
-      if (tokenId == null && isSend) {
-        nativeAmount = sub(nativeAmount, networkFee)
       }
 
       const currencyCode = this.getCurrencyCode(tokenId)
