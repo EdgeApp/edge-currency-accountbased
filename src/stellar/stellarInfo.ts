@@ -60,6 +60,12 @@ export const stellar = makeOuterPlugin<
   asInfoPayload: asStellarInfoPayload,
   networkInfo,
 
+  checkEnvironment() {
+    if (global.BigInt == null) {
+      throw new Error('Stellar requires BigInt support')
+    }
+  },
+
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "stellar" */
