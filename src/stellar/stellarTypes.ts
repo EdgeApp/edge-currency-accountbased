@@ -32,22 +32,8 @@ export const asStellarWalletOtherData = asObject({
 export type StellarWalletOtherData = ReturnType<typeof asStellarWalletOtherData>
 
 export const asFeeStats = asObject({
-  fee_charged: asObject({
-    // max: asString,
-    // min: asString,
-    // mode: asString,
-    // p10: asString,
-    // p20: asString,
-    // p30: asString,
-    // p40: asString,
-    p50: asString,
-    // p60: asString,
-    p70: asString,
-    // p80: asString,
-    // p90: asString,
-    p95: asString
-    // p99: asString
-  })
+  last_ledger_base_fee: asString,
+  ledger_capacity_usage: asString
 })
 
 export type SafeStellarWalletInfo = ReturnType<typeof asSafeStellarWalletInfo>
