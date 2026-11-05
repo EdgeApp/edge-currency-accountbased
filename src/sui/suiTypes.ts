@@ -107,9 +107,9 @@ export const checkSuiBalances = (
 }
 
 /**
- * The parts of a transaction that history sync reads. A JSON-RPC
- * `SuiTransactionBlockResponse` already has this shape, and a transaction
- * loaded from GraphQL is converted into it.
+ * The parts of a transaction that history sync reads, in the shape of a
+ * JSON-RPC `SuiTransactionBlockResponse`. Transactions loaded from GraphQL are
+ * converted into it.
  */
 export interface SuiHistoryTx {
   digest: string
@@ -122,8 +122,13 @@ export interface SuiHistoryTx {
 }
 
 export const asSuiWalletOtherData = asObject({
-  latestTxidFrom: asOptional(asString),
-  latestTxidTo: asOptional(asString)
+  /**
+   * The GraphQL cursor after the last transaction history sync has read.
+   * The JSON-RPC cursors saved before it (`latestTxidFrom`, `latestTxidTo`)
+   * mean nothing to GraphQL, so they are dropped and history is read again
+   * from the start once.
+   */
+  txCursor: asOptional(asString)
 })
 export type SuiWalletOtherData = ReturnType<typeof asSuiWalletOtherData>
 

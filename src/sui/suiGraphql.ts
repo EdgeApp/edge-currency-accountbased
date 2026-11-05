@@ -21,44 +21,12 @@ import { base64 } from 'rfc4648'
 
 import type { SuiHistoryTx } from './suiTypes'
 
-/**
- * Digests per `multiGetTransactions` request. The service takes 200 keys but
- * caps the request body at 5000 bytes, which 50 digests stay well inside. A
- * JSON-RPC page holds at most 50 transactions, so one page is one request.
- */
-export const GRAPHQL_TRANSACTIONS_PER_REQUEST = 50
-
 /** The most balance changes the service returns for one transaction at once. */
 const BALANCE_CHANGES_PER_PAGE = 50
 
 const BALANCE_CHANGES_FIELDS = `
   pageInfo { hasNextPage endCursor }
   nodes { amount coinType { repr } owner { address } }
-`
-
-export const TRANSACTIONS_QUERY = `
-  query ($keys: [String!]!) {
-    multiGetTransactions(keys: $keys) {
-      digest
-      transactionBcs
-      signatures { signatureBytes }
-      effects {
-        timestamp
-        checkpoint { sequenceNumber }
-        gasEffects {
-          gasSummary {
-            computationCost
-            storageCost
-            storageRebate
-            nonRefundableStorageFee
-          }
-        }
-        balanceChanges(first: ${BALANCE_CHANGES_PER_PAGE}) {
-          ${BALANCE_CHANGES_FIELDS}
-        }
-      }
-    }
-  }
 `
 
 /** One transaction, with everything history sync reads. */
@@ -140,7 +108,7 @@ export type SuiGraphqlBalanceChanges = ReturnType<
 >
 
 /**
- * A transaction as `TRANSACTIONS_QUERY` returns it. Everything history sync
+ * A transaction as `ADDRESS_TRANSACTIONS_QUERY` returns it. Everything history sync
  * reads is required, so a partial answer fails here instead of turning into a
  * transaction the wallet silently never shows.
  */
@@ -171,22 +139,6 @@ const asGraphqlErrors = asOptional(
   null
 )
 
-const asGraphqlTransactionsResponse = asObject({
-  errors: asGraphqlErrors,
-  data: asOptional(
-    asEither(
-      asObject({
-        // The service answers null for a digest it does not hold. The row
-        // cleaner runs later, per transaction, so one bad row is reported by
-        // its digest.
-        multiGetTransactions: asArray(raw => raw)
-      }),
-      asNull
-    ),
-    null
-  )
-})
-
 const asGraphqlBalanceChangesResponse = asObject({
   errors: asGraphqlErrors,
   data: asOptional(
@@ -212,40 +164,6 @@ const throwGraphqlErrors = (
   throw new Error(
     `Sui GraphQL error: ${errors.map(error => error.message).join('; ')}`
   )
-}
-
-/**
- * Reads a `TRANSACTIONS_QUERY` response for `digests`, in the order asked.
- * Throws when any of them is missing or incomplete: the caller advances its
- * history cursor past every transaction it is handed, so a gap has to stop
- * the sweep, not pass through it.
- */
-export const cleanGraphqlTransactions = (
-  raw: unknown,
-  digests: string[]
-): SuiGraphqlTransaction[] => {
-  const { data, errors } = asGraphqlTransactionsResponse(raw)
-  throwGraphqlErrors(errors)
-
-  const byDigest = new Map<string, unknown>()
-  for (const row of data?.multiGetTransactions ?? []) {
-    const clean = asMaybe(asObject({ digest: asString }))(row)
-    if (clean != null) byDigest.set(clean.digest, row)
-  }
-
-  return digests.map(digest => {
-    const row = byDigest.get(digest)
-    if (row == null) {
-      throw new Error(`Sui GraphQL has no transaction ${digest}`)
-    }
-    try {
-      return asGraphqlTransaction(row)
-    } catch (error: unknown) {
-      throw new Error(
-        `Sui GraphQL transaction ${digest} is incomplete: ${String(error)}`
-      )
-    }
-  })
 }
 
 /** Reads a `BALANCE_CHANGES_QUERY` response for one transaction. */
@@ -381,9 +299,9 @@ export interface SuiGraphqlTransactionPage {
 }
 
 /**
- * Reads an `ADDRESS_TRANSACTIONS_QUERY` response. Like
- * `cleanGraphqlTransactions`, one incomplete row fails the page, since the
- * caller advances its cursor past everything on it.
+ * Reads an `ADDRESS_TRANSACTIONS_QUERY` response. One incomplete row fails
+ * the page: the caller advances its history cursor past every transaction it
+ * is handed, so a gap has to stop the sweep, not pass through it.
  */
 export const cleanGraphqlTransactionPage = (
   raw: unknown

@@ -10,7 +10,6 @@ import {
   cleanGraphqlObjects,
   cleanGraphqlSimulation,
   cleanGraphqlTransactionPage,
-  cleanGraphqlTransactions,
   toRpcBalanceChanges,
   toSuiHistoryTx
 } from '../../src/sui/suiGraphql'
@@ -86,15 +85,21 @@ const jsonRpcTransaction: SuiHistoryTx = {
   ]
 }
 
-const makeResponse = (rows: unknown[]): unknown => ({
-  data: { multiGetTransactions: rows }
-})
+const cleanOne = (
+  row: unknown
+): ReturnType<typeof cleanGraphqlTransactionPage>['transactions'][number] =>
+  cleanGraphqlTransactionPage({
+    data: {
+      transactions: {
+        pageInfo: { hasNextPage: false, endCursor: null },
+        nodes: [row]
+      }
+    }
+  }).transactions[0]
 
 describe('toSuiHistoryTx', function () {
   it('rebuilds the transaction JSON-RPC returns', function () {
-    const [tx] = cleanGraphqlTransactions(makeResponse([graphqlTransaction]), [
-      DIGEST
-    ])
+    const tx = cleanOne(graphqlTransaction)
     assert.deepEqual(
       toSuiHistoryTx(tx, tx.effects.balanceChanges.nodes),
       jsonRpcTransaction
@@ -102,18 +107,13 @@ describe('toSuiHistoryTx', function () {
   })
 
   it('reads the sender', function () {
-    const [tx] = cleanGraphqlTransactions(
-      makeResponse([{ ...graphqlTransaction, sender: { address: OWNER } }]),
-      [DIGEST]
-    )
+    const tx = cleanOne({ ...graphqlTransaction, sender: { address: OWNER } })
     const out = toSuiHistoryTx(tx, tx.effects.balanceChanges.nodes)
     assert.equal(out.sender, OWNER)
   })
 
   it('uses the balance changes it is handed', function () {
-    const [tx] = cleanGraphqlTransactions(makeResponse([graphqlTransaction]), [
-      DIGEST
-    ])
+    const tx = cleanOne(graphqlTransaction)
     const { nodes } = tx.effects.balanceChanges
     const out = toSuiHistoryTx(tx, [...nodes, ...nodes])
     assert.equal(out.balanceChanges?.length, 2)
@@ -136,61 +136,6 @@ describe('toRpcBalanceChanges', function () {
       { amount: '5', coinType: { repr: usdc }, owner: null }
     ])
     assert.deepEqual(changes, [])
-  })
-})
-
-describe('cleanGraphqlTransactions', function () {
-  const other = { ...graphqlTransaction, digest: 'other' }
-
-  it('returns transactions in the order asked', function () {
-    const txs = cleanGraphqlTransactions(
-      makeResponse([graphqlTransaction, other]),
-      ['other', DIGEST]
-    )
-    assert.deepEqual(
-      txs.map(tx => tx.digest),
-      ['other', DIGEST]
-    )
-  })
-
-  it('throws when the service does not hold a digest', function () {
-    assert.throws(
-      () =>
-        cleanGraphqlTransactions(makeResponse([graphqlTransaction, null]), [
-          DIGEST,
-          'other'
-        ]),
-      /no transaction other/
-    )
-  })
-
-  it('throws when a transaction is missing what history sync reads', function () {
-    for (const effects of [
-      null,
-      { ...graphqlTransaction.effects, checkpoint: null },
-      { ...graphqlTransaction.effects, timestamp: null },
-      { ...graphqlTransaction.effects, gasEffects: null }
-    ]) {
-      assert.throws(
-        () =>
-          cleanGraphqlTransactions(
-            makeResponse([{ ...graphqlTransaction, effects }]),
-            [DIGEST]
-          ),
-        /is incomplete/
-      )
-    }
-  })
-
-  it('throws on a GraphQL error', function () {
-    assert.throws(
-      () =>
-        cleanGraphqlTransactions(
-          { data: null, errors: [{ message: 'Request timed out' }] },
-          [DIGEST]
-        ),
-      /Request timed out/
-    )
   })
 })
 
@@ -236,14 +181,21 @@ describe('cleanGraphqlTransactionPage', function () {
     assert.equal(page.endCursor, 'next')
   })
 
-  it('throws when a transaction is incomplete', function () {
-    assert.throws(
-      () =>
-        cleanGraphqlTransactionPage(
-          makePage([{ ...graphqlTransaction, effects: null }])
-        ),
-      new RegExp(`${DIGEST} is incomplete`)
-    )
+  it('throws when a transaction is missing what history sync reads', function () {
+    for (const effects of [
+      null,
+      { ...graphqlTransaction.effects, checkpoint: null },
+      { ...graphqlTransaction.effects, timestamp: null },
+      { ...graphqlTransaction.effects, gasEffects: null }
+    ]) {
+      assert.throws(
+        () =>
+          cleanGraphqlTransactionPage(
+            makePage([graphqlTransaction, { ...graphqlTransaction, effects }])
+          ),
+        new RegExp(`${DIGEST} is incomplete`)
+      )
+    }
   })
 
   it('throws on a GraphQL error, even with data', function () {
