@@ -15,7 +15,8 @@ const networkInfo: PolkadotNetworkInfo = {
     'https://polkadot.api.subscan.io/api',
     'https://assethub-polkadot.api.subscan.io/api'
   ],
-  subscanQueryLimit: 100,
+  // Subscan rejects pages over 25 rows with 403 row_limit_exceeded:
+  subscanQueryLimit: 25,
   partialFeeOffsetMultiplier: '1',
   lengthFeePerByte: '1000000',
   liberlandScanUrl: undefined
