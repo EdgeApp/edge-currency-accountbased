@@ -203,7 +203,9 @@ export class StellarEngine extends CurrencyEngine<
   }
 
   async processTransaction(tx: StellarOperation): Promise<string> {
-    if (tx.asset_type !== 'native') {
+    // Skip token payments. Account creations are always XLM,
+    // so Horizon gives them no asset_type:
+    if (tx.type !== 'create_account' && tx.asset_type !== 'native') {
       return tx.paging_token
     }
 

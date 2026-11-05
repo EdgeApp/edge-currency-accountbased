@@ -16,6 +16,7 @@ import { fakeLog } from '../fake/fakeLog'
 const SECRET = 'SADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP54X'
 const ADDRESS = 'GDVEU3DD4KOFECV66VIHWEZOYX4ZKR3WV27L464SIIPOU2IUI3JCZA57'
 const RECIPIENT = 'GAJZR5RMNUNEK7CRXJVEWXZ5XUXWT7FJGILCDDOITF7EC26RPWJ4UVOE'
+const FUNDER = 'GD6ROJBYLKQMOW3E7N4M2YBPUHMZD7PL65VRHRMO24BOVSBV5H3BQRSL'
 
 // Sequence numbers are int64 values, well past Number.MAX_SAFE_INTEGER:
 const SEQUENCE = '280502140848308224'
@@ -108,6 +109,66 @@ describe('StellarEngine', function () {
       await engine.broadcastTx(await engine.signTx(tx, { stellarKey: SECRET }))
       assert.strictEqual(engine.otherData.accountSequence, expected)
     }
+  })
+
+  it('records account creations in history', async function () {
+    const engine = await makeEngine(horizon)
+    const operation = {
+      created_at: '2026-11-04T00:00:00Z',
+      transaction: async () => ({
+        fee_charged: '100',
+        ledger_attr: 123,
+        memo_type: 'text',
+        memo: 'hi'
+      })
+    }
+
+    // Horizon's create_account records have no asset_type:
+    await engine.processTransaction({
+      ...operation,
+      id: '1',
+      paging_token: '1',
+      type: 'create_account',
+      transaction_hash: 'aa'.repeat(32),
+      source_account: FUNDER,
+      account: ADDRESS,
+      starting_balance: '5.0000000'
+    })
+    await engine.processTransaction({
+      ...operation,
+      id: '2',
+      paging_token: '2',
+      type: 'create_account',
+      transaction_hash: 'bb'.repeat(32),
+      source_account: ADDRESS,
+      account: RECIPIENT,
+      starting_balance: '2.5000000'
+    })
+    // Token payments stay out of the XLM history:
+    await engine.processTransaction({
+      ...operation,
+      id: '3',
+      paging_token: '3',
+      type: 'payment',
+      transaction_hash: 'cc'.repeat(32),
+      asset_type: 'credit_alphanum4',
+      from: FUNDER,
+      to: ADDRESS,
+      amount: '7.0000000'
+    })
+
+    const txs = await engine.getTransactions({ tokenId: null })
+    txs.sort((a, b) => a.txid.localeCompare(b.txid))
+    assert.deepEqual(
+      txs.map(tx => [tx.txid, tx.nativeAmount, tx.networkFee, tx.blockHeight]),
+      [
+        ['aa'.repeat(32), '50000000', '100', 123],
+        ['bb'.repeat(32), '-25000100', '100', 123]
+      ]
+    )
+    assert.deepEqual(txs[0].memos, [
+      { type: 'text', memoName: 'memo_text', value: 'hi' }
+    ])
   })
 
   it('keeps the saved account sequence when it loads', function () {
