@@ -19,6 +19,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { makeMetaTokens } from '../common/tokenHelpers'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import { makeEdgeFetchAdapter } from './stellarHttp'
 import {
   asSafeStellarWalletInfo,
   asStellarPrivateKeys,
@@ -50,7 +51,9 @@ export class StellarTools implements EdgeCurrencyTools {
     // TransactionBuilder options.
     this.stellarApiServers = []
     for (const server of this.networkInfo.stellarServers) {
-      this.stellarApiServers.push(new Horizon.Server(server))
+      const horizon = new Horizon.Server(server)
+      horizon.httpClient.defaults.adapter = makeEdgeFetchAdapter(this.io.fetch)
+      this.stellarApiServers.push(horizon)
     }
   }
 
