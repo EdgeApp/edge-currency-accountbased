@@ -478,7 +478,7 @@ export class StellarEngine extends CurrencyEngine<
     this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
     await super.clearBlockchainCache()
-    this.otherData.accountSequence = 0
+    this.otherData.accountSequence = '0'
   }
 
   // ****************************************************************************
@@ -691,7 +691,7 @@ export class StellarEngine extends CurrencyEngine<
       edgeTransaction.txid = result.hash
       edgeTransaction.date = Date.now() / 1000
       this.activatedAccountsCache[otherParams.toAddress] = true
-      this.otherData.accountSequence++
+      this.otherData.accountSequence = add(this.otherData.accountSequence, '1')
       this.walletLocalDataDirty = true
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     } catch (e: any) {

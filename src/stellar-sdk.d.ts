@@ -2,7 +2,7 @@
 
 declare module 'stellar-sdk' {
   export class Account {
-    constructor(publicKey: string, accountSequence: number)
+    constructor(publicKey: string, accountSequence: string)
   }
 
   export class Asset {
