@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.104.0 (2026-11-05)
+
 - changed: (Base) Look back 600 blocks for new transactions and read 1024 blocks of fee history, sized for the 200ms blocks of the Denim upgrade on 2026-11-05
 - changed: (Base) Replace the dead Ankr, BaseScan V1 and Blockchair fallback servers with publicnode and Infura
 - changed: (Zcash) Replace react-native-zcash with zcash-native
