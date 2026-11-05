@@ -113,6 +113,7 @@ export const checkSuiBalances = (
  */
 export interface SuiHistoryTx {
   digest: string
+  sender?: string | null
   checkpoint?: string | null
   timestampMs?: string | null
   rawTransaction?: string

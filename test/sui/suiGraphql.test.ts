@@ -2,7 +2,14 @@ import { assert } from 'chai'
 import { describe, it } from 'mocha'
 
 import {
+  asMoveSignature,
   cleanGraphqlBalanceChanges,
+  cleanGraphqlBalances,
+  cleanGraphqlExecution,
+  cleanGraphqlMoveFunction,
+  cleanGraphqlObjects,
+  cleanGraphqlSimulation,
+  cleanGraphqlTransactionPage,
   cleanGraphqlTransactions,
   toRpcBalanceChanges,
   toSuiHistoryTx
@@ -57,6 +64,7 @@ const graphqlTransaction = {
 
 const jsonRpcTransaction: SuiHistoryTx = {
   digest: DIGEST,
+  sender: null,
   checkpoint: '331457430',
   timestampMs: '1791410543883',
   rawTransaction:
@@ -91,6 +99,15 @@ describe('toSuiHistoryTx', function () {
       toSuiHistoryTx(tx, tx.effects.balanceChanges.nodes),
       jsonRpcTransaction
     )
+  })
+
+  it('reads the sender', function () {
+    const [tx] = cleanGraphqlTransactions(
+      makeResponse([{ ...graphqlTransaction, sender: { address: OWNER } }]),
+      [DIGEST]
+    )
+    const out = toSuiHistoryTx(tx, tx.effects.balanceChanges.nodes)
+    assert.equal(out.sender, OWNER)
   })
 
   it('uses the balance changes it is handed', function () {
@@ -192,6 +209,254 @@ describe('cleanGraphqlBalanceChanges', function () {
     assert.throws(
       () => cleanGraphqlBalanceChanges({ data: { transaction: null } }, DIGEST),
       /no transaction/
+    )
+  })
+})
+
+const SUI_REPR =
+  '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI'
+
+describe('cleanGraphqlTransactionPage', function () {
+  const makePage = (nodes: unknown[]): unknown => ({
+    data: {
+      transactions: {
+        pageInfo: { hasNextPage: true, endCursor: 'next' },
+        nodes
+      }
+    }
+  })
+
+  it('returns the transactions and where the next page starts', function () {
+    const page = cleanGraphqlTransactionPage(makePage([graphqlTransaction]))
+    assert.deepEqual(
+      page.transactions.map(tx => tx.digest),
+      [DIGEST]
+    )
+    assert.equal(page.hasNextPage, true)
+    assert.equal(page.endCursor, 'next')
+  })
+
+  it('throws when a transaction is incomplete', function () {
+    assert.throws(
+      () =>
+        cleanGraphqlTransactionPage(
+          makePage([{ ...graphqlTransaction, effects: null }])
+        ),
+      new RegExp(`${DIGEST} is incomplete`)
+    )
+  })
+
+  it('throws on a GraphQL error, even with data', function () {
+    assert.throws(
+      () =>
+        cleanGraphqlTransactionPage({
+          ...(makePage([]) as object),
+          errors: [{ message: 'Invalid cursor' }]
+        }),
+      /Invalid cursor/
+    )
+  })
+})
+
+describe('cleanGraphqlBalances', function () {
+  it('spells SUI the way JSON-RPC does', function () {
+    const page = cleanGraphqlBalances({
+      data: {
+        address: {
+          balances: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [{ coinType: { repr: SUI_REPR }, totalBalance: '42' }]
+          }
+        }
+      }
+    })
+    assert.deepEqual(page, {
+      balances: [{ coinType: '0x2::sui::SUI', totalBalance: '42' }],
+      hasNextPage: false,
+      endCursor: null
+    })
+  })
+})
+
+describe('cleanGraphqlObjects', function () {
+  const object = (owner: unknown): unknown => ({
+    address: '0x5',
+    version: 7,
+    digest: DIGEST,
+    owner
+  })
+  const address = { address: { address: OWNER } }
+
+  it('converts each kind of owner', function () {
+    const owners = [
+      { __typename: 'AddressOwner', ...address },
+      { __typename: 'ObjectOwner', ...address },
+      { __typename: 'Shared', initialSharedVersion: 1 },
+      { __typename: 'ConsensusAddressOwner', startVersion: 3, ...address },
+      { __typename: 'Immutable' }
+    ]
+    const objects = cleanGraphqlObjects(
+      { data: { multiGetObjects: owners.map(object) } },
+      owners.map(() => '0x5')
+    )
+    assert.deepEqual(
+      objects.map(object => object?.owner),
+      [
+        { AddressOwner: OWNER },
+        { ObjectOwner: OWNER },
+        { Shared: { initial_shared_version: '1' } },
+        { ConsensusAddressOwner: { owner: OWNER, start_version: '3' } },
+        'Immutable'
+      ]
+    )
+    assert.equal(objects[0]?.version, '7')
+  })
+
+  it('returns null for an object the service does not hold', function () {
+    const objects = cleanGraphqlObjects({ data: { multiGetObjects: [null] } }, [
+      '0x6'
+    ])
+    assert.deepEqual(objects, [null])
+  })
+
+  it('throws when the answer does not match the ids', function () {
+    assert.throws(
+      () => cleanGraphqlObjects({ data: { multiGetObjects: [] } }, ['0x5']),
+      /0 objects for 1 ids/
+    )
+  })
+})
+
+describe('asMoveSignature', function () {
+  // GraphQL spells framework packages at full length, where the SDK's
+  // resolver compares against the short `0x2` JSON-RPC sent:
+  const datatype = (type: string, typeParameters: unknown[] = []): unknown => ({
+    datatype: {
+      package:
+        '0x0000000000000000000000000000000000000000000000000000000000000002',
+      module: 'm',
+      type,
+      typeParameters
+    }
+  })
+
+  it('converts references and primitives', function () {
+    assert.deepEqual(asMoveSignature({ ref: '&', body: 'u64' }), {
+      Reference: 'U64'
+    })
+    assert.deepEqual(asMoveSignature({ ref: '&mut', body: 'address' }), {
+      MutableReference: 'Address'
+    })
+    assert.equal(asMoveSignature({ ref: null, body: 'bool' }), 'Bool')
+  })
+
+  it('converts vectors, type parameters, and structs', function () {
+    assert.deepEqual(asMoveSignature({ body: { vector: 'u8' } }), {
+      Vector: 'U8'
+    })
+    assert.deepEqual(asMoveSignature({ body: { typeParameter: 0 } }), {
+      TypeParameter: 0
+    })
+    assert.deepEqual(
+      asMoveSignature({ body: datatype('Coin', [datatype('SUI')]) }),
+      {
+        Struct: {
+          address: '0x2',
+          module: 'm',
+          name: 'Coin',
+          typeArguments: [
+            {
+              Struct: {
+                address: '0x2',
+                module: 'm',
+                name: 'SUI',
+                typeArguments: []
+              }
+            }
+          ]
+        }
+      }
+    )
+  })
+
+  it('throws on an unknown type', function () {
+    assert.throws(() => asMoveSignature({ body: 'u512' }), /u512/)
+  })
+})
+
+describe('cleanGraphqlMoveFunction', function () {
+  it('throws when the function does not exist', function () {
+    assert.throws(
+      () =>
+        cleanGraphqlMoveFunction(
+          { data: { package: { module: null } } },
+          '0x2::m::f'
+        ),
+      /no Move function 0x2::m::f/
+    )
+  })
+})
+
+describe('cleanGraphqlSimulation', function () {
+  const simulation = (status: string, executionError: unknown): unknown => ({
+    data: {
+      simulateTransaction: {
+        effects: {
+          status,
+          executionError,
+          gasEffects: {
+            gasSummary: {
+              computationCost: 1000,
+              storageCost: 2000,
+              storageRebate: 500,
+              nonRefundableStorageFee: 5
+            }
+          }
+        }
+      }
+    }
+  })
+
+  it('reads a success with the gas used', function () {
+    assert.deepEqual(cleanGraphqlSimulation(simulation('SUCCESS', null)), {
+      status: 'success',
+      error: undefined,
+      gasUsed: {
+        computationCost: '1000',
+        storageCost: '2000',
+        storageRebate: '500',
+        nonRefundableStorageFee: '5'
+      }
+    })
+  })
+
+  it('reads a failure with its message', function () {
+    const out = cleanGraphqlSimulation(
+      simulation('FAILURE', { message: 'InsufficientCoinBalance' })
+    )
+    assert.equal(out.status, 'failure')
+    assert.equal(out.error, 'InsufficientCoinBalance')
+  })
+})
+
+describe('cleanGraphqlExecution', function () {
+  it('returns the digest', function () {
+    assert.equal(
+      cleanGraphqlExecution({
+        data: { executeTransaction: { effects: { digest: DIGEST } } }
+      }),
+      DIGEST
+    )
+  })
+
+  it('throws on a rejected transaction', function () {
+    assert.throws(
+      () =>
+        cleanGraphqlExecution({
+          data: null,
+          errors: [{ message: 'Invalid user signature' }]
+        }),
+      /Invalid user signature/
     )
   })
 })

@@ -34,10 +34,14 @@ import {
   snooze
 } from '../common/utils'
 import {
+  ADDRESS_TRANSACTIONS_QUERY,
   BALANCE_CHANGES_QUERY,
   cleanGraphqlBalanceChanges,
+  cleanGraphqlTransactionPage,
   cleanGraphqlTransactions,
   GRAPHQL_TRANSACTIONS_PER_REQUEST,
+  GraphqlCaller,
+  SuiGraphqlTransaction,
   toSuiHistoryTx,
   TRANSACTIONS_QUERY
 } from './suiGraphql'
@@ -58,6 +62,46 @@ const RPC_TIMEOUT_MS = 10000
 
 /** Gap before the race brings the next node in alongside the current one. */
 const STAGGER_INTERVAL_MS = 1000
+
+export interface SuiHistoryTxPage {
+  txs: SuiHistoryTx[]
+  hasNextPage: boolean
+  /** Where the next page starts. Stays valid across sessions. */
+  endCursor: string | null
+}
+
+/**
+ * Converts a GraphQL transaction for history sync, first loading any balance
+ * changes past the first page from the same node.
+ */
+const completeTransaction = async (
+  call: GraphqlCaller,
+  tx: SuiGraphqlTransaction
+): Promise<SuiHistoryTx> => {
+  const { nodes, pageInfo } = tx.effects.balanceChanges
+  const balanceChanges = [...nodes]
+  let { hasNextPage, endCursor: after } = pageInfo
+  while (hasNextPage) {
+    if (after == null) {
+      throw new Error(
+        `Sui GraphQL gave no cursor for the balance changes of ${tx.digest}`
+      )
+    }
+    const page = cleanGraphqlBalanceChanges(
+      await call(BALANCE_CHANGES_QUERY, { digest: tx.digest, after }),
+      tx.digest
+    )
+    balanceChanges.push(...page.nodes)
+    hasNextPage = page.pageInfo.hasNextPage
+    if (hasNextPage && page.pageInfo.endCursor === after) {
+      throw new Error(
+        `Sui GraphQL repeated the balance change cursor ${after} of ${tx.digest}`
+      )
+    }
+    after = page.pageInfo.endCursor
+  }
+  return toSuiHistoryTx(tx, balanceChanges)
+}
 
 export class SuiTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -260,6 +304,69 @@ export class SuiTools implements EdgeCurrencyTools {
   }
 
   /**
+   * Run `fn` against one GraphQL node at a time, in shuffled order, until one
+   * succeeds. Every query `fn` sends goes to the same node, so cursors from
+   * one page stay valid for the next.
+   */
+  async withGraphqlNode<T>(
+    fn: (call: GraphqlCaller) => Promise<T>
+  ): Promise<T> {
+    const urls = shuffleArray([...this.graphqlNodes])
+    this.assertNodes(urls)
+    let lastError: unknown
+    for (const url of urls) {
+      try {
+        return await fn(
+          async (query, variables) =>
+            await this.callGraphql(url, query, variables)
+        )
+      } catch (error: unknown) {
+        lastError = error
+      }
+    }
+    throw lastError
+  }
+
+  /**
+   * Run `fn` against every GraphQL node at once, resolving on the first
+   * success. For idempotent writes, where submitting more than once is
+   * harmless and redundancy matters more than choosing a single node.
+   */
+  async blastGraphql<T>(fn: (call: GraphqlCaller) => Promise<T>): Promise<T> {
+    const urls = this.graphqlNodes
+    this.assertNodes(urls)
+    return await promiseAny(
+      urls.map(
+        async url =>
+          await fn(
+            async (query, variables) =>
+              await this.callGraphql(url, query, variables)
+          )
+      )
+    )
+  }
+
+  /**
+   * Loads one page of the transactions that touch `owner`, oldest first,
+   * starting after `cursor` (or from the first transaction when it is null).
+   */
+  async fetchAddressTransactions(
+    owner: string,
+    cursor: string | null
+  ): Promise<SuiHistoryTxPage> {
+    return await this.withGraphqlNode(async call => {
+      const page = cleanGraphqlTransactionPage(
+        await call(ADDRESS_TRANSACTIONS_QUERY, { owner, after: cursor })
+      )
+      const txs: SuiHistoryTx[] = []
+      for (const tx of page.transactions) {
+        txs.push(await completeTransaction(call, tx))
+      }
+      return { txs, hasNextPage: page.hasNextPage, endCursor: page.endCursor }
+    })
+  }
+
+  /**
    * An empty list is a misconfiguration rather than a failure to retry, and
    * it has to be caught before `promiseAny`, which never settles when handed
    * zero promises.
@@ -267,7 +374,7 @@ export class SuiTools implements EdgeCurrencyTools {
   private assertNodes(urls: string[]): void {
     if (urls.length === 0) {
       throw new Error(
-        `No Sui RPC nodes configured for ${this.currencyInfo.pluginId}`
+        `No Sui nodes configured for ${this.currencyInfo.pluginId}`
       )
     }
   }
