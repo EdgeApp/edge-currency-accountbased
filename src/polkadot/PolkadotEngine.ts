@@ -23,7 +23,7 @@ import {
 } from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
 
-import { CurrencyEngine } from '../common/CurrencyEngine'
+import { CurrencyEngine, MAX_TRANSACTIONS } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
@@ -516,7 +516,8 @@ export class PolkadotEngine extends CurrencyEngine<
     subscanBaseUrl: string,
     isActiveChain: boolean
   ): Promise<void> {
-    // Skip pages we don't need
+    // Pages run oldest first, so new transfers land at the end and a pass
+    // resumes at the page holding the first transfer it has not seen:
     let page = Math.floor(
       this.otherData.subscanUrlMap[subscanBaseUrl].txCount /
         this.networkInfo.subscanQueryLimit
@@ -527,7 +528,8 @@ export class PolkadotEngine extends CurrencyEngine<
       const payload = {
         row: this.networkInfo.subscanQueryLimit,
         page,
-        address: this.walletInfo.keys.publicKey
+        address: this.walletInfo.keys.publicKey,
+        order: 'asc'
       }
 
       let count = 0
@@ -550,19 +552,36 @@ export class PolkadotEngine extends CurrencyEngine<
       }
       retries = 0
 
-      // count is the total number of transactions ever for an account
-      // If we've already seen all the transfers we don't need to bother processing or page through older ones
+      // count is the total number of transactions ever for an account.
+      // If we've already seen all of them, there is nothing new to process:
       if (count === this.otherData.subscanUrlMap[subscanBaseUrl].txCount) break
+      if (transfers.length === 0) break
 
-      // Process txs (newest first)
+      // The engine keeps only MAX_TRANSACTIONS, so reading every unseen
+      // transfer oldest first would fill it with the oldest and drop the
+      // newest. Skip to the first whole page of the newest ones instead:
+      const unseen =
+        count - this.otherData.subscanUrlMap[subscanBaseUrl].txCount
+      if (unseen > MAX_TRANSACTIONS) {
+        page = Math.ceil(
+          (count - MAX_TRANSACTIONS) / this.networkInfo.subscanQueryLimit
+        )
+        this.otherData.subscanUrlMap[subscanBaseUrl].txCount =
+          page * this.networkInfo.subscanQueryLimit
+        this.walletLocalDataDirty = true
+        continue
+      }
+
+      // Process txs (oldest first)
       transfers.forEach(tx => {
         if (tx == null) return
         this.processPolkadotTransaction(tx, isActiveChain)
       })
 
-      // If we haven't reached the end, Update local txCount and progress and then query the next page
+      // Save our place, so an interrupted pass resumes after this page:
       this.otherData.subscanUrlMap[subscanBaseUrl].txCount =
         page * this.networkInfo.subscanQueryLimit + transfers.length
+      this.walletLocalDataDirty = true
 
       // Only update txCount and progress for the current chain
       if (isActiveChain) {
@@ -577,6 +596,7 @@ export class PolkadotEngine extends CurrencyEngine<
         )
       }
 
+      if (this.otherData.subscanUrlMap[subscanBaseUrl].txCount >= count) break
       page++
     }
   }

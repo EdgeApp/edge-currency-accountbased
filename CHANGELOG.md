@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- fixed: (Polkadot) Transaction history not loading
+- fixed: (Polkadot) Resync failing with "undefined is not an object (evaluating 'this.polkadotApi.disconnect')"
+- fixed: (Polkadot) New transactions missing from wallets with 100 or more transfers
+
 ## 4.104.0 (2026-11-05)
 
 - changed: (Base) Look back 600 blocks for new transactions and read 1024 blocks of fee history, sized for the 200ms blocks of the Denim upgrade on 2026-11-05
