@@ -66,6 +66,7 @@ interface SubscanReply {
 
 interface FakePolkadot {
   engine: PolkadotEngine
+  tools: PolkadotTools
 
   /** Every Subscan URL the engine asked, in order. */
   requests: string[]
@@ -172,7 +173,7 @@ async function makeFakePolkadot(
     engineOptions
   )
   await engine.loadEngine()
-  return { engine, requests, syncStatuses }
+  return { engine, tools, requests, syncStatuses }
 }
 
 const transfersUrl = (baseUrl: string): string => `${baseUrl}/v2/scan/transfers`
@@ -303,5 +304,36 @@ describe('PolkadotEngine light mode', function () {
       transfersUrl(ASSET_HUB_URL)
     ])
     await engine.killEngine()
+  })
+})
+
+describe('PolkadotTools shared connection', function () {
+  it('lets a wallet that never connected resync', async function () {
+    // The engine's connect is still in flight when the user taps Resync:
+    const { engine } = await makeFakePolkadot(() => EMPTY)
+
+    await engine.resyncBlockchain()
+    await engine.killEngine()
+  })
+
+  it('closes the connection once, after the last wallet leaves', async function () {
+    const { tools } = await makeFakePolkadot(() => EMPTY)
+    let disconnects = 0
+    tools.polkadotApi = {
+      disconnect: async () => {
+        ++disconnects
+      }
+    } as unknown as ApiPromise
+    tools.polkadotApiSubscribers.add('wallet-1')
+    tools.polkadotApiSubscribers.add('wallet-2')
+
+    await tools.disconnectApi('wallet-1')
+    assert.equal(disconnects, 0)
+    await tools.disconnectApi('wallet-2')
+    assert.equal(disconnects, 1)
+
+    // A second kill of the same engine finds nothing left to close:
+    await tools.disconnectApi('wallet-2')
+    assert.equal(disconnects, 1)
   })
 })
