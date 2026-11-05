@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- added: (Stellar) Send to muxed (M) addresses, which some exchanges use instead of a memo ID
+- changed: (Stellar) Upgrade from the deprecated stellar-sdk 13.3.0 to @stellar/stellar-sdk 17.4.0, the SDK line for Protocol 30 (Bell)
+- changed: (Stellar) Send Horizon requests through the core's fetch, like the other engines
+- changed: (Stellar) Read transaction history 200 operations per request, instead of 2 per request plus one per transaction
+- changed: (Stellar) Bid fees from the ledger's base fee and how full it is, instead of fee percentiles that include smart contract fees
+- fixed: (Stellar) A second send within about 20 seconds of another failing with "sequence must be of type string"
+- fixed: (Stellar) Account activations missing from transaction history, including a new wallet's first deposit
+- fixed: (Stellar) Path payments missing from transaction history
+- fixed: (Stellar) Sends to an address failing until restart after one lookup of its account failed or found it unactivated
+
 ## 4.104.0 (2026-11-05)
 
 - changed: (Base) Look back 600 blocks for new transactions and read 1024 blocks of fee history, sized for the 200ms blocks of the Denim upgrade on 2026-11-05
