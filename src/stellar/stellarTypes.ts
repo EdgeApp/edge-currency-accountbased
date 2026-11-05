@@ -1,3 +1,4 @@
+import type { Horizon } from '@stellar/stellar-sdk'
 import { asArray, asMaybe, asObject, asOptional, asString } from 'cleaners'
 
 import { asSafeCommonWalletInfo } from '../common/types'
@@ -7,19 +8,6 @@ export interface StellarNetworkInfo {
   stellarServers: string[]
 }
 
-export interface StellarBalance {
-  balance: string
-  buying_liabilities: string
-  selling_liabilities: string
-  asset_type: string
-}
-
-export interface StellarAccount {
-  id: string
-  sequence: string
-  balances: StellarBalance[]
-}
-
 export interface StellarCustomToken {
   currencyCode: string
   currencyName: string
@@ -27,38 +15,15 @@ export interface StellarCustomToken {
   contractAddress: string
 }
 
-export interface StellarPayment {
-  id: string
-  paging_token: string
-  type: 'payment'
-  created_at: string
-  transaction_hash: string
-  asset_type: string
-  from: string
-  to: string
-  amount: string
-  transaction: Function
-}
+/** The records Horizon's payments endpoint returns. */
+export type StellarPaymentRecord =
+  | Horizon.ServerApi.CreateAccountOperationRecord
+  | Horizon.ServerApi.PaymentOperationRecord
+  | Horizon.ServerApi.PathPaymentOperationRecord
+  | Horizon.ServerApi.PathPaymentStrictSendOperationRecord
+  | Horizon.ServerApi.AccountMergeOperationRecord
+  | Horizon.ServerApi.InvokeHostFunctionOperationRecord
 
-export interface StellarCreateAccount {
-  id: string
-  paging_token: string
-  type: 'create_account'
-  created_at: string
-  transaction_hash: string
-  source_account: string
-  account: string
-  starting_balance: string
-  transaction: Function
-}
-
-export type StellarOperation = StellarPayment | StellarCreateAccount
-
-export interface StellarTransaction {
-  fee_paid: number
-  memo_type: string
-  ledger_attr: number
-}
 export const asStellarWalletOtherData = asObject({
   lastPagingToken: asMaybe(asString, '0'),
   accountSequence: asMaybe(asString, '0')

@@ -9,7 +9,10 @@ import { describe, it } from 'mocha'
 
 import { StellarEngine } from '../../src/stellar/StellarEngine'
 import { stellar } from '../../src/stellar/stellarInfo'
-import { asStellarWalletOtherData } from '../../src/stellar/stellarTypes'
+import {
+  asStellarWalletOtherData,
+  StellarPaymentRecord
+} from '../../src/stellar/stellarTypes'
 import { fakeLog } from '../fake/fakeLog'
 
 // A fixed test key (the raw seed is 32 bytes of 0x07), plus an address to pay:
@@ -22,6 +25,10 @@ const FUNDER = 'GD6ROJBYLKQMOW3E7N4M2YBPUHMZD7PL65VRHRMO24BOVSBV5H3BQRSL'
 const SEQUENCE = '280502140848308224'
 
 type HorizonStub = (func: string, ...params: any[]) => Promise<any>
+
+/** A payments record with just the fields the engine reads. */
+const record = (fields: object): StellarPaymentRecord =>
+  fields as StellarPaymentRecord
 
 const horizon: HorizonStub = async func => {
   switch (func) {
@@ -124,38 +131,44 @@ describe('StellarEngine', function () {
     }
 
     // Horizon's create_account records have no asset_type:
-    await engine.processTransaction({
-      ...operation,
-      id: '1',
-      paging_token: '1',
-      type: 'create_account',
-      transaction_hash: 'aa'.repeat(32),
-      source_account: FUNDER,
-      account: ADDRESS,
-      starting_balance: '5.0000000'
-    })
-    await engine.processTransaction({
-      ...operation,
-      id: '2',
-      paging_token: '2',
-      type: 'create_account',
-      transaction_hash: 'bb'.repeat(32),
-      source_account: ADDRESS,
-      account: RECIPIENT,
-      starting_balance: '2.5000000'
-    })
+    await engine.processTransaction(
+      record({
+        ...operation,
+        id: '1',
+        paging_token: '1',
+        type: 'create_account',
+        transaction_hash: 'aa'.repeat(32),
+        source_account: FUNDER,
+        account: ADDRESS,
+        starting_balance: '5.0000000'
+      })
+    )
+    await engine.processTransaction(
+      record({
+        ...operation,
+        id: '2',
+        paging_token: '2',
+        type: 'create_account',
+        transaction_hash: 'bb'.repeat(32),
+        source_account: ADDRESS,
+        account: RECIPIENT,
+        starting_balance: '2.5000000'
+      })
+    )
     // Token payments stay out of the XLM history:
-    await engine.processTransaction({
-      ...operation,
-      id: '3',
-      paging_token: '3',
-      type: 'payment',
-      transaction_hash: 'cc'.repeat(32),
-      asset_type: 'credit_alphanum4',
-      from: FUNDER,
-      to: ADDRESS,
-      amount: '7.0000000'
-    })
+    await engine.processTransaction(
+      record({
+        ...operation,
+        id: '3',
+        paging_token: '3',
+        type: 'payment',
+        transaction_hash: 'cc'.repeat(32),
+        asset_type: 'credit_alphanum4',
+        from: FUNDER,
+        to: ADDRESS,
+        amount: '7.0000000'
+      })
+    )
 
     const txs = await engine.getTransactions({ tokenId: null })
     txs.sort((a, b) => a.txid.localeCompare(b.txid))

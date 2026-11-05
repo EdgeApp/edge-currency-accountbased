@@ -1,6 +1,8 @@
 import {
   Account,
   Asset,
+  AssetType,
+  Horizon,
   Keypair,
   Memo,
   Networks,
@@ -41,12 +43,12 @@ import {
   asStellarPrivateKeys,
   asStellarWalletOtherData,
   SafeStellarWalletInfo,
-  StellarAccount,
   StellarNetworkInfo,
-  StellarOperation,
-  StellarTransaction,
+  StellarPaymentRecord,
   StellarWalletOtherData
 } from './stellarTypes'
+
+const { OperationResponseType } = Horizon.HorizonApi
 
 const TX_QUERY_PAGING_LIMIT = 2
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
@@ -97,12 +99,12 @@ export class StellarEngine extends CurrencyEngine<
 
   getRecipientBalance = async (recipient: string): Promise<string> => {
     try {
-      const account: StellarAccount = await this.multicastServers(
+      const account: Horizon.AccountResponse = await this.multicastServers(
         'loadAccount',
         recipient
       )
       const balanceObj = account.balances.find(
-        bal => bal.asset_type === 'native'
+        bal => bal.asset_type === AssetType.native
       )
       if (balanceObj == null) return '0'
 
@@ -196,45 +198,42 @@ export class StellarEngine extends CurrencyEngine<
     return out.result
   }
 
-  async processTransaction(tx: StellarOperation): Promise<string> {
-    // Skip token payments. Account creations are always XLM,
-    // so Horizon gives them no asset_type:
-    if (tx.type !== 'create_account' && tx.asset_type !== 'native') {
-      return tx.paging_token
-    }
-
+  async processTransaction(tx: StellarPaymentRecord): Promise<string> {
     const ourReceiveAddresses: string[] = []
 
-    let exchangeAmount = ''
-    let fromAddress = ''
-    let toAddress, networkFee
-    if (tx.type === 'create_account') {
-      fromAddress = tx.source_account
-      toAddress = tx.account
-      exchangeAmount = tx.starting_balance
-    } else if (tx.type === 'payment') {
-      fromAddress = tx.from
-      toAddress = tx.to
-      exchangeAmount = tx.amount
+    let exchangeAmount: string
+    let fromAddress: string
+    let toAddress: string
+    switch (tx.type) {
+      // Account creations are always XLM, so Horizon gives them no asset_type:
+      case OperationResponseType.createAccount:
+        fromAddress = tx.source_account
+        toAddress = tx.account
+        exchangeAmount = tx.starting_balance
+        break
+      case OperationResponseType.payment:
+        // Skip token payments:
+        if (tx.asset_type !== AssetType.native) return tx.paging_token
+        fromAddress = tx.from
+        toAddress = tx.to
+        exchangeAmount = tx.amount
+        break
+      default:
+        return tx.paging_token
     }
 
     const date: number = Date.parse(tx.created_at) / 1000
     const denom = this.getDenomination(null)
     let nativeAmount = mul(exchangeAmount, denom.multiplier)
 
-    let rawTx: StellarTransaction & {
-      memo_type?: string
-      memo?: string
-      memo_bytes?: string
-    }
+    let rawTx: Horizon.ServerApi.TransactionRecord
     try {
       rawTx = await tx.transaction()
-      // @ts-expect-error
-      networkFee = rawTx.fee_charged.toString()
     } catch (e: any) {
       this.error(`processTransaction rawTx Error `, e)
       throw e
     }
+    const networkFee = rawTx.fee_charged.toString()
 
     // Parse memos from the raw transaction if available
     const edgeMemos: EdgeMemo[] = []
@@ -413,7 +412,7 @@ export class StellarEngine extends CurrencyEngine<
   async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
     try {
-      const account: StellarAccount = await this.multicastServers(
+      const account: Horizon.AccountResponse = await this.multicastServers(
         'loadAccount',
         address
       )
@@ -421,7 +420,7 @@ export class StellarEngine extends CurrencyEngine<
         this.otherData.accountSequence = account.sequence
       }
       for (const bal of account.balances) {
-        if (bal.asset_type === 'native') {
+        if (bal.asset_type === AssetType.native) {
           this.log('--Got balances--')
         } else {
           // No token support yet
