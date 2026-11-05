@@ -2,11 +2,13 @@ import {
   Account,
   Asset,
   AssetType,
+  extractBaseAddress,
   Horizon,
   Keypair,
   Memo,
   Networks,
   Operation,
+  StrKey,
   TimeoutInfinite,
   TransactionBuilder
 } from '@stellar/stellar-sdk'
@@ -98,7 +100,7 @@ export class StellarEngine extends CurrencyEngine<
     try {
       const account: Horizon.AccountResponse = await this.multicastServers(
         'loadAccount',
-        recipient
+        getAccountId(recipient)
       )
       const balanceObj = account.balances.find(
         bal => bal.asset_type === AssetType.native
@@ -536,18 +538,26 @@ export class StellarEngine extends CurrencyEngine<
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     // Check if destination address is activated
+    const accountId = getAccountId(publicAddress)
     let mustCreateAccount = false
-    const activated = this.activatedAccountsCache[publicAddress]
+    const activated = this.activatedAccountsCache[accountId]
     if (activated === undefined) {
       try {
-        await this.multicastServers('loadAccount', publicAddress)
-        this.activatedAccountsCache[publicAddress] = true
+        await this.multicastServers('loadAccount', accountId)
+        this.activatedAccountsCache[accountId] = true
       } catch (e: any) {
-        this.activatedAccountsCache[publicAddress] = false
+        this.activatedAccountsCache[accountId] = false
         mustCreateAccount = true
       }
     } else if (!activated) {
       mustCreateAccount = true
+    }
+
+    // Creating an account takes its G address, so a muxed address can't:
+    if (mustCreateAccount && accountId !== publicAddress) {
+      throw new Error(
+        'Recipient address not activated. A muxed (M) address can only receive funds after its account is activated'
+      )
     }
 
     if (eq(nativeAmount, '0')) {
@@ -697,7 +707,7 @@ export class StellarEngine extends CurrencyEngine<
       )
       edgeTransaction.txid = result.hash
       edgeTransaction.date = Date.now() / 1000
-      this.activatedAccountsCache[otherParams.toAddress] = true
+      this.activatedAccountsCache[getAccountId(otherParams.toAddress)] = true
       this.otherData.accountSequence = add(this.otherData.accountSequence, '1')
       this.walletLocalDataDirty = true
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
@@ -724,4 +734,15 @@ export async function makeCurrencyEngine(
   await engine.loadEngine()
 
   return engine
+}
+
+/**
+ * Returns the account a payment to this address lands in:
+ * the G account behind a muxed (M) address, or else the address itself.
+ * Horizon only looks accounts up by their G address.
+ */
+function getAccountId(address: string): string {
+  return StrKey.isValidMed25519PublicKey(address)
+    ? extractBaseAddress(address)
+    : address
 }
