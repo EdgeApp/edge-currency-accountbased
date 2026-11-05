@@ -199,9 +199,12 @@ export class StellarEngine extends CurrencyEngine<
   }
 
   async processTransaction(tx: StellarPaymentRecord): Promise<string> {
+    const ourAddress = this.walletLocalData.publicKey
     const ourReceiveAddresses: string[] = []
 
-    let exchangeAmount: string
+    // The XLM this wallet gets and pays, before fees:
+    let received = '0'
+    let sent = '0'
     let fromAddress: string
     let toAddress: string
     switch (tx.type) {
@@ -209,14 +212,33 @@ export class StellarEngine extends CurrencyEngine<
       case OperationResponseType.createAccount:
         fromAddress = tx.source_account
         toAddress = tx.account
-        exchangeAmount = tx.starting_balance
+        if (toAddress === ourAddress) received = tx.starting_balance
+        if (fromAddress === ourAddress) sent = tx.starting_balance
         break
       case OperationResponseType.payment:
         // Skip token payments:
         if (tx.asset_type !== AssetType.native) return tx.paging_token
         fromAddress = tx.from
         toAddress = tx.to
-        exchangeAmount = tx.amount
+        if (toAddress === ourAddress) received = tx.amount
+        if (fromAddress === ourAddress) sent = tx.amount
+        break
+      // Path payments can deliver a different asset than they spend:
+      case OperationResponseType.pathPayment:
+      case OperationResponseType.pathPaymentStrictSend:
+        fromAddress = tx.from
+        toAddress = tx.to
+        if (toAddress === ourAddress && tx.asset_type === AssetType.native) {
+          received = tx.amount
+        }
+        if (
+          fromAddress === ourAddress &&
+          tx.source_asset_type === AssetType.native
+        ) {
+          sent = tx.source_amount
+        }
+        // Skip path payments that only move tokens:
+        if (received === '0' && sent === '0') return tx.paging_token
         break
       default:
         return tx.paging_token
@@ -224,7 +246,6 @@ export class StellarEngine extends CurrencyEngine<
 
     const date: number = Date.parse(tx.created_at) / 1000
     const denom = this.getDenomination(null)
-    let nativeAmount = mul(exchangeAmount, denom.multiplier)
 
     let rawTx: Horizon.ServerApi.TransactionRecord
     try {
@@ -292,18 +313,15 @@ export class StellarEngine extends CurrencyEngine<
       this.log.warn('XLM: processTransaction memo parsing error', e)
     }
 
-    if (toAddress === this.walletLocalData.publicKey) {
-      ourReceiveAddresses.push(fromAddress)
-      if (fromAddress === this.walletLocalData.publicKey) {
-        // This is a spend to self. Make fee the only amount
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-        nativeAmount = '-' + networkFee
-      }
-    } else {
-      // This is a spend. Include fee in amount and make amount negative
-      nativeAmount = add(nativeAmount, networkFee)
-      nativeAmount = '-' + nativeAmount
-    }
+    if (toAddress === ourAddress) ourReceiveAddresses.push(fromAddress)
+
+    // The sender pays the fee:
+    let nativeAmount = sub(
+      mul(received, denom.multiplier),
+      mul(sent, denom.multiplier)
+    )
+    if (fromAddress === ourAddress) nativeAmount = sub(nativeAmount, networkFee)
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0, // API shows no ledger number ??
       currencyCode: this.currencyInfo.currencyCode,
