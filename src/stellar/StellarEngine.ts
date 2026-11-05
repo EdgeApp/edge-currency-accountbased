@@ -8,7 +8,6 @@ import {
   Networks,
   Operation,
   TimeoutInfinite,
-  Transaction,
   TransactionBuilder
 } from '@stellar/stellar-sdk'
 import { abs, add, div, eq, gt, mul, sub } from 'biggystring'
@@ -57,6 +56,7 @@ const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const BASE_FEE = 100 // Stroops
+const NETWORK_PASSPHRASE = Networks.PUBLIC
 
 type StellarServerFunction =
   | 'feeStats'
@@ -73,8 +73,6 @@ export class StellarEngine extends CurrencyEngine<
   networkInfo: StellarNetworkInfo
   engineFetch: EdgeFetchFunction
   activatedAccountsCache: { [publicAddress: string]: boolean }
-  pendingTransactionsIndex: number
-  pendingTransactionsMap: { [index: number]: Transaction }
   fees: { low: number; standard: number; high: number }
   otherData!: StellarWalletOtherData
 
@@ -88,8 +86,6 @@ export class StellarEngine extends CurrencyEngine<
     this.networkInfo = env.networkInfo
     this.engineFetch = makeEngineFetch(env.io)
     this.activatedAccountsCache = {}
-    this.pendingTransactionsIndex = 0
-    this.pendingTransactionsMap = {}
     this.fees = { low: BASE_FEE, standard: BASE_FEE, high: BASE_FEE }
     this.minimumAddressBalance = this.networkInfo.baseReserve
   }
@@ -492,8 +488,6 @@ export class StellarEngine extends CurrencyEngine<
 
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
-    this.pendingTransactionsIndex = 0
-    this.pendingTransactionsMap = {}
     await super.clearBlockchainCache()
     this.otherData.accountSequence = '0'
   }
@@ -569,7 +563,7 @@ export class StellarEngine extends CurrencyEngine<
     // declare timebounds (TimeoutInfinite preserves the old no-bounds behavior).
     let txBuilder = new TransactionBuilder(account, {
       fee: String(feeSetting),
-      networkPassphrase: Networks.PUBLIC
+      networkPassphrase: NETWORK_PASSPHRASE
     }).setTimeout(TimeoutInfinite)
 
     if (mustCreateAccount) {
@@ -611,7 +605,6 @@ export class StellarEngine extends CurrencyEngine<
     }
 
     nativeAmount = `-${nativeAmount}`
-    const idInternal = this.pendingTransactionsIndex
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0, // blockHeight
       currencyCode, // currencyCode
@@ -622,9 +615,9 @@ export class StellarEngine extends CurrencyEngine<
       networkFee, // networkFee
       networkFees: [],
       otherParams: {
-        idInternal,
         fromAddress: this.walletLocalData.publicKey,
-        toAddress: publicAddress
+        toAddress: publicAddress,
+        unsignedTx: transaction.toXdr()
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
@@ -632,18 +625,8 @@ export class StellarEngine extends CurrencyEngine<
       txid: '', // txid
       walletId: this.walletId
     }
-    this.pendingTransactionsMap[idInternal] = transaction
-    this.pendingTransactionsIndex++
-
-    // Clean up old pendingTransactions
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]
-    }
 
     this.warn('Stellar transaction prepared')
-    this.warn(`idInternal: ${idInternal}`)
     this.warn(
       `${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )
@@ -668,15 +651,13 @@ export class StellarEngine extends CurrencyEngine<
 
     // Do signing
     try {
-      const { idInternal } = otherParams
-      const transaction = this.pendingTransactionsMap[idInternal]
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!transaction) {
-        throw new Error('ErrorInvalidTransaction')
-      }
+      const transaction = TransactionBuilder.fromXdr(
+        otherParams.unsignedTx,
+        NETWORK_PASSPHRASE
+      )
       this.warn('Signing...')
-      const keypair = Keypair.fromSecret(stellarPrivateKeys.stellarKey)
-      await transaction.sign(keypair)
+      transaction.sign(Keypair.fromSecret(stellarPrivateKeys.stellarKey))
+      edgeTransaction.signedTx = transaction.toXdr()
     } catch (e: any) {
       this.error(
         `FAILURE signTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} `,
@@ -694,12 +675,13 @@ export class StellarEngine extends CurrencyEngine<
     const otherParams = getOtherParams(edgeTransaction)
 
     try {
-      const { idInternal } = otherParams
-      const transaction = this.pendingTransactionsMap[idInternal]
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!transaction) {
+      if (edgeTransaction.signedTx === '') {
         throw new Error('ErrorInvalidTransaction')
       }
+      const transaction = TransactionBuilder.fromXdr(
+        edgeTransaction.signedTx,
+        NETWORK_PASSPHRASE
+      )
       this.warn(`Broadcasting...\n${cleanTxLogs(edgeTransaction)}`)
       const result = await this.multicastServers(
         'submitTransaction',
