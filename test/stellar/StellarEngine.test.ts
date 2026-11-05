@@ -3,6 +3,7 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
+  EdgeFetchFunction,
   makeFakeIo
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
@@ -51,8 +52,16 @@ const horizon: HorizonStub = async func => {
   throw new Error(`Unexpected Horizon call ${func}`)
 }
 
-async function makeEngine(stub: HorizonStub): Promise<StellarEngine> {
-  const io = makeFakeIo()
+/**
+ * Makes an engine whose Horizon calls go to the stub,
+ * or else through the plugin's Horizon client to the fake fetch.
+ */
+async function makeEngine(
+  stub?: HorizonStub,
+  fetch?: EdgeFetchFunction
+): Promise<StellarEngine> {
+  const fakeIo = makeFakeIo()
+  const io = fetch == null ? fakeIo : { ...fakeIo, fetch }
   const pluginOptions: EdgeCorePluginOptions = {
     infoPayload: {},
     initOptions: {},
@@ -97,7 +106,7 @@ async function makeEngine(stub: HorizonStub): Promise<StellarEngine> {
     },
     engineOptions
   )) as unknown as StellarEngine
-  engine.multicastServers = stub
+  if (stub != null) engine.multicastServers = stub
   return engine
 }
 
@@ -262,6 +271,80 @@ describe('StellarEngine', function () {
         ['aa'.repeat(32), '30000000', false],
         ['bb'.repeat(32), '-20000100', true],
         ['cc'.repeat(32), '39999900', false]
+      ]
+    )
+  })
+
+  it('reads history a full page at a time, with transactions', async function () {
+    const payment = (id: string, hash: string): object => ({
+      id,
+      paging_token: id,
+      type: 'payment',
+      created_at: '2026-11-04T00:00:00Z',
+      transaction_hash: hash,
+      asset_type: 'native',
+      from: FUNDER,
+      to: ADDRESS,
+      amount: '1.0000000',
+      // Horizon embeds this for join=transactions:
+      transaction: {
+        hash,
+        fee_charged: '100',
+        ledger_attr: 123,
+        memo_type: 'id',
+        memo: '42'
+      },
+      _links: {
+        transaction: {
+          href: `https://horizon.stellar.org/transactions/${hash}`
+        }
+      }
+    })
+
+    const requests: Array<[string, string]> = []
+    const fetch: EdgeFetchFunction = async uri => {
+      const { pathname, searchParams } = new URL(uri)
+      searchParams.sort()
+      requests.push([pathname, searchParams.toString()])
+      const records =
+        searchParams.get('cursor') === '0'
+          ? [payment('1', 'aa'.repeat(32)), payment('2', 'bb'.repeat(32))]
+          : []
+      const text = JSON.stringify({
+        _embedded: { records },
+        _links: {
+          next: {
+            href: `https://horizon.stellar.org${pathname}?cursor=2&join=transactions&limit=200`
+          }
+        }
+      })
+      return {
+        headers: { forEach() {}, get: () => null, has: () => false },
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new TextEncoder().encode(text).buffer,
+        json: async () => JSON.parse(text),
+        text: async () => text
+      }
+    }
+
+    const engine = await makeEngine(undefined, fetch)
+    await engine.checkTransactionsInnerLoop()
+
+    // One request per page, and none per transaction:
+    const path = `/accounts/${ADDRESS}/payments`
+    assert.deepEqual(requests, [
+      [path, 'cursor=0&join=transactions&limit=200'],
+      [path, 'cursor=2&join=transactions&limit=200']
+    ])
+    assert.strictEqual(engine.otherData.lastPagingToken, '2')
+
+    const txs = await engine.getTransactions({ tokenId: null })
+    assert.deepEqual(
+      txs.map(tx => [tx.nativeAmount, tx.networkFee, tx.memos[0].value]),
+      [
+        ['10000000', '100', '42'],
+        ['10000000', '100', '42']
       ]
     )
   })

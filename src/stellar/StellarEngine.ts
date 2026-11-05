@@ -50,7 +50,8 @@ import {
 
 const { OperationResponseType } = Horizon.HorizonApi
 
-const TX_QUERY_PAGING_LIMIT = 2
+// Horizon's largest page:
+const TX_QUERY_PAGING_LIMIT = 200
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
@@ -171,6 +172,9 @@ export class StellarEngine extends CurrencyEngine<
         funcs = this.tools.stellarApiServers.map(serverApi => async () => {
           const result = await serverApi
             .payments()
+            // Embed each operation's transaction, so reading its fee and
+            // memo doesn't need a request per operation:
+            .join('transactions')
             .limit(TX_QUERY_PAGING_LIMIT)
             .cursor(this.otherData.lastPagingToken)
             .forAccount(params[0])
