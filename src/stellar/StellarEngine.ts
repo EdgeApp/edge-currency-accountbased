@@ -475,11 +475,20 @@ export class StellarEngine extends CurrencyEngine<
     try {
       const response: ReturnType<typeof asFeeStats> =
         await this.multicastServers('feeStats')
-      const { p50, p70, p95 } = response.fee_charged
+
+      // Payments pay the ledger's base fee, which only rises above the
+      // minimum during surge pricing. Horizon's fee percentiles mix in
+      // smart contract fees, so bid from the base fee instead:
+      const lastBaseFee = parseInt(response.last_ledger_base_fee)
+      const baseFee = lastBaseFee > BASE_FEE ? lastBaseFee : BASE_FEE
+
+      // Bid higher when the last ledger was nearly full,
+      // since surge pricing may be starting:
+      const congested = parseFloat(response.ledger_capacity_usage) >= 0.9
       this.fees = {
-        low: parseInt(p50),
-        standard: parseInt(p70),
-        high: parseInt(p95)
+        low: baseFee,
+        standard: congested ? baseFee * 2 : baseFee,
+        high: congested ? baseFee * 10 : baseFee * 2
       }
     } catch (e: any) {
       this.error(`queryFee Error `, e)

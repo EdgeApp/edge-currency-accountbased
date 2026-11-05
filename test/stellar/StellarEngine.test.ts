@@ -361,6 +361,40 @@ describe('StellarEngine', function () {
     )
   })
 
+  it('bids from the base fee, and higher when ledgers fill up', async function () {
+    const feesFor = async (
+      lastBaseFee: string,
+      capacityUsage: string
+    ): Promise<StellarEngine['fees']> => {
+      const engine = await makeEngine(async () => ({
+        // Smart contract fees skew these, so the engine ignores them:
+        fee_charged: { p50: '100', p70: '2959', p95: '7449' },
+        last_ledger_base_fee: lastBaseFee,
+        ledger_capacity_usage: capacityUsage
+      }))
+      await engine.queryFee()
+      return engine.fees
+    }
+
+    assert.deepEqual(await feesFor('100', '0.61'), {
+      low: 100,
+      standard: 100,
+      high: 200
+    })
+    // Surge pricing:
+    assert.deepEqual(await feesFor('250', '1.00'), {
+      low: 250,
+      standard: 500,
+      high: 2500
+    })
+    // Never below the network minimum:
+    assert.deepEqual(await feesFor('', ''), {
+      low: 100,
+      standard: 100,
+      high: 200
+    })
+  })
+
   it('keeps the saved account sequence when it loads', function () {
     const otherData = asStellarWalletOtherData({
       lastPagingToken: '0',
