@@ -196,12 +196,15 @@ export class PolkadotTools implements EdgeCurrencyTools {
   }
 
   async disconnectApi(walletId: string): Promise<void> {
-    this.polkadotApiSubscribers.delete(walletId)
-    if (this.polkadotApiSubscribers.size === 0) {
-      await this.polkadotApi.disconnect()
-      // @ts-expect-error
-      this.polkadotApi = undefined
-    }
+    // A wallet that never finished connecting, or already disconnected,
+    // holds no share of the connection:
+    if (!this.polkadotApiSubscribers.delete(walletId)) return
+    if (this.polkadotApiSubscribers.size > 0) return
+
+    const api = this.polkadotApi
+    // @ts-expect-error
+    this.polkadotApi = undefined
+    await api.disconnect()
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {

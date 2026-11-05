@@ -14,7 +14,10 @@ import { snooze } from '../../src/common/utils'
 import { polkadot } from '../../src/polkadot/info/polkadotInfo'
 import { PolkadotEngine } from '../../src/polkadot/PolkadotEngine'
 import { PolkadotTools } from '../../src/polkadot/PolkadotTools'
-import type { PolkadotNetworkInfo } from '../../src/polkadot/polkadotTypes'
+import type {
+  PolkadotNetworkInfo,
+  SubscanTx
+} from '../../src/polkadot/polkadotTypes'
 import { fakeLog } from '../fake/fakeLog'
 
 const RELAY_URL = 'https://relay.subscan.test/api'
@@ -64,11 +67,22 @@ interface SubscanReply {
   body: unknown
 }
 
+/** The paging fields the engine sends with each transfers query. */
+interface SubscanRequest {
+  row: number
+  page: number
+  order?: string
+}
+
 interface FakePolkadot {
   engine: PolkadotEngine
+  tools: PolkadotTools
 
   /** Every Subscan URL the engine asked, in order. */
   requests: string[]
+
+  /** Every txid the engine reported to the core, in order. */
+  txids: string[]
 
   /** Every sync status the engine reported, in order. */
   syncStatuses: EdgeSyncStatus[]
@@ -79,16 +93,23 @@ interface FakePolkadot {
  * so the history pass runs through the real Subscan client.
  */
 async function makeFakePolkadot(
-  reply: (uri: string) => SubscanReply | Promise<SubscanReply>,
+  reply: (
+    uri: string,
+    request: SubscanRequest
+  ) => SubscanReply | Promise<SubscanReply>,
   opts: { lightMode?: boolean } = {}
 ): Promise<FakePolkadot> {
   const { lightMode } = opts
   const requests: string[] = []
+  const txids: string[] = []
   const syncStatuses: EdgeSyncStatus[] = []
 
-  const fetch = async (uri: string): Promise<unknown> => {
+  const fetch = async (
+    uri: string,
+    opts: { body: string }
+  ): Promise<unknown> => {
     requests.push(uri)
-    const { status, body } = await reply(uri)
+    const { status, body } = await reply(uri, JSON.parse(opts.body))
     return {
       ok: status >= 200 && status < 300,
       status,
@@ -111,7 +132,7 @@ async function makeFakePolkadot(
     rpcNodes: ['wss://rpc.test'],
     ss58Format: 0,
     subscanBaseUrls: [RELAY_URL, ASSET_HUB_URL],
-    subscanQueryLimit: 100,
+    subscanQueryLimit: 25,
     partialFeeOffsetMultiplier: '1',
     lengthFeePerByte: '1000000',
     liberlandScanUrl: undefined
@@ -139,7 +160,9 @@ async function makeFakePolkadot(
       syncStatuses.push(status)
     },
     onTokenBalanceChanged() {},
-    onTransactions() {},
+    onTransactions(events) {
+      for (const { transaction } of events) txids.push(transaction.txid)
+    },
     onTransactionsChanged() {},
     onTxidsChanged() {},
     onUnactivatedTokenIdsChanged() {},
@@ -172,10 +195,47 @@ async function makeFakePolkadot(
     engineOptions
   )
   await engine.loadEngine()
-  return { engine, requests, syncStatuses }
+  return { engine, tools, requests, txids, syncStatuses }
 }
 
 const transfersUrl = (baseUrl: string): string => `${baseUrl}/v2/scan/transfers`
+
+/** A transfer into the test wallet, at block `n`. */
+const makeTransfer = (n: number): SubscanTx => ({
+  from: '1zugcag7cJVBtVRnFxv5Qftn7xKAnR6YJ9x4x3XLgGgmNnS',
+  to: ADDRESS,
+  success: true,
+  hash: `0x${n}`,
+  block_num: n,
+  block_timestamp: 1700000000 + n,
+  module: 'balances',
+  amount: '1',
+  fee: '0'
+})
+
+/**
+ * Answers transfer queries the way Subscan does, paging the given
+ * Asset Hub transfers (oldest first) and leaving the relay chain empty.
+ */
+const subscanAccount =
+  (transfers: SubscanTx[]) =>
+  (uri: string, request: SubscanRequest): SubscanReply => {
+    if (uri !== transfersUrl(ASSET_HUB_URL)) return EMPTY
+    const ordered =
+      request.order === 'asc' ? transfers : [...transfers].reverse()
+    const start = request.page * request.row
+    return {
+      status: 200,
+      body: {
+        code: 0,
+        message: 'Success',
+        data: {
+          count: transfers.length,
+          transfers: ordered.slice(start, start + request.row)
+        }
+      }
+    }
+  }
 
 const rejection = async (promise: Promise<unknown>): Promise<string> => {
   try {
@@ -269,6 +329,110 @@ describe('PolkadotEngine history sync', function () {
   })
 })
 
+describe('PolkadotEngine history paging', function () {
+  // A lasting throttle costs three one-second retries:
+  this.timeout(10000)
+
+  it('reads every transfer, one Subscan-sized page at a time', async function () {
+    const transfers = Array.from({ length: 60 }, (_, i) => makeTransfer(i + 1))
+    const pages: SubscanRequest[] = []
+    const account = subscanAccount(transfers)
+    const { engine, txids } = await makeFakePolkadot((uri, request) => {
+      if (uri === transfersUrl(ASSET_HUB_URL)) pages.push(request)
+      return account(uri, request)
+    })
+
+    await engine.queryTransactions()
+
+    assert.deepEqual(
+      pages.map(({ row, page, order }) => ({ row, page, order })),
+      [0, 1, 2].map(page => ({ row: 25, page, order: 'asc' }))
+    )
+    assert.deepEqual(
+      txids,
+      transfers.map(tx => tx.hash)
+    )
+  })
+
+  it('picks up a transfer made since the last pass', async function () {
+    const transfers = Array.from({ length: 60 }, (_, i) => makeTransfer(i + 1))
+    const pages: number[] = []
+    const account = subscanAccount(transfers)
+    const { engine, txids } = await makeFakePolkadot((uri, request) => {
+      if (uri === transfersUrl(ASSET_HUB_URL)) pages.push(request.page)
+      return account(uri, request)
+    })
+    await engine.queryTransactions()
+
+    transfers.push(makeTransfer(61))
+    pages.length = 0
+    txids.length = 0
+    await engine.queryTransactions()
+
+    // Only the last page, which now holds the new transfer:
+    assert.deepEqual(pages, [2])
+    assert.include(txids, '0x61')
+  })
+
+  it('keeps the newest transfers when there are more than the engine holds', async function () {
+    // 2510 more than the engine's 2500, and not a whole number of pages:
+    const transfers = Array.from({ length: 2610 }, (_, i) =>
+      makeTransfer(i + 1)
+    )
+    const pages: number[] = []
+    const account = subscanAccount(transfers)
+    const { engine, txids } = await makeFakePolkadot((uri, request) => {
+      if (uri === transfersUrl(ASSET_HUB_URL)) pages.push(request.page)
+      return account(uri, request)
+    })
+
+    await engine.queryTransactions()
+
+    // The first page tells the count, then the pass skips to the first
+    // whole page of the newest 2500:
+    assert.deepEqual(pages.slice(0, 3), [0, 5, 6])
+    assert.equal(pages[pages.length - 1], 104)
+    assert.deepEqual(
+      txids,
+      transfers.slice(125).map(tx => tx.hash)
+    )
+
+    // The skipped transfers count as seen, so the next pass is one page:
+    transfers.push(makeTransfer(2611))
+    pages.length = 0
+    txids.length = 0
+    await engine.queryTransactions()
+    assert.deepEqual(pages, [104])
+  })
+
+  it('resumes after the last page a failed pass finished', async function () {
+    const transfers = Array.from({ length: 60 }, (_, i) => makeTransfer(i + 1))
+    const pages: number[] = []
+    const account = subscanAccount(transfers)
+    let throttled = true
+    const { engine, txids } = await makeFakePolkadot((uri, request) => {
+      if (uri === transfersUrl(ASSET_HUB_URL)) pages.push(request.page)
+      if (throttled && request.page === 1) return THROTTLED
+      return account(uri, request)
+    })
+
+    assert.include(
+      await rejection(engine.queryTransactions()),
+      'failed with 429'
+    )
+
+    throttled = false
+    pages.length = 0
+    await engine.queryTransactions()
+
+    assert.deepEqual(pages, [1, 2])
+    assert.deepEqual(
+      txids,
+      transfers.map(tx => tx.hash)
+    )
+  })
+})
+
 describe('PolkadotEngine light mode', function () {
   /** Resolves once the engine reports a full sync, or fails after a second. */
   const fullSync = async (syncStatuses: EdgeSyncStatus[]): Promise<void> => {
@@ -303,5 +467,36 @@ describe('PolkadotEngine light mode', function () {
       transfersUrl(ASSET_HUB_URL)
     ])
     await engine.killEngine()
+  })
+})
+
+describe('PolkadotTools shared connection', function () {
+  it('lets a wallet that never connected resync', async function () {
+    // The engine's connect is still in flight when the user taps Resync:
+    const { engine } = await makeFakePolkadot(() => EMPTY)
+
+    await engine.resyncBlockchain()
+    await engine.killEngine()
+  })
+
+  it('closes the connection once, after the last wallet leaves', async function () {
+    const { tools } = await makeFakePolkadot(() => EMPTY)
+    let disconnects = 0
+    tools.polkadotApi = {
+      disconnect: async () => {
+        ++disconnects
+      }
+    } as unknown as ApiPromise
+    tools.polkadotApiSubscribers.add('wallet-1')
+    tools.polkadotApiSubscribers.add('wallet-2')
+
+    await tools.disconnectApi('wallet-1')
+    assert.equal(disconnects, 0)
+    await tools.disconnectApi('wallet-2')
+    assert.equal(disconnects, 1)
+
+    // A second kill of the same engine finds nothing left to close:
+    await tools.disconnectApi('wallet-2')
+    assert.equal(disconnects, 1)
   })
 })

@@ -52,7 +52,8 @@ import {
 import { validateMemos } from './validateMemos'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
-const MAX_TRANSACTIONS = 2500
+/** The most transactions an engine keeps per token. */
+export const MAX_TRANSACTIONS = 2500
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
 interface TxidList {
