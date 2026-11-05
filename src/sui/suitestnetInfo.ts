@@ -22,18 +22,6 @@ const networkInfo: SuiNetworkInfo = {
   pluginMnemonicKeyName: 'suitestnetMnemonic',
   totalSupply: '10000000000000000000',
 
-  // Testnet lost JSON-RPC alongside mainnet. Retention depth is not verified
-  // here the way it is on mainnet, but testnet is periodically wiped, so there
-  // is little history for a pruned node to be missing.
-  rpcNodes: [
-    'https://sui-testnet-rpc.publicnode.com',
-    'https://rpc-testnet.suiscan.xyz',
-    'https://sui-testnet-endpoint.blockvision.org'
-  ],
-  rpcNodesArchival: [
-    'https://sui-testnet-rpc.publicnode.com',
-    'https://rpc-testnet.suiscan.xyz'
-  ],
   graphqlNodes: ['https://graphql.testnet.sui.io/graphql'],
   maxRequestsPerSecond: 10
 }

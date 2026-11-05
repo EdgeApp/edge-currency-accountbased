@@ -33,24 +33,9 @@ export interface SuiNetworkInfo {
   totalSupply: string
 
   /**
-   * Nodes for balances, fees, and broadcasts. These may be pruned, since none
-   * of those operations reach back into history.
-   */
-  rpcNodes: string[]
-
-  /**
-   * Nodes that index every transaction digest of an address back to its first.
-   * Transaction queries must begin here: the engine walks history from the
-   * oldest transaction, and a node without the full index rejects both that
-   * walk and any cursor older than its retention window. These nodes may still
-   * have pruned the transactions themselves, which `graphqlNodes` covers.
-   */
-  rpcNodesArchival: string[]
-
-  /**
-   * GraphQL RPC services holding every transaction in full. History sync
-   * loads transactions here by digest when a node in `rpcNodesArchival` lists
-   * them but has pruned their contents.
+   * Mysten GraphQL services, used for balances, history, coin selection,
+   * transaction builds, and broadcasts. Each must hold every transaction in
+   * full, since history sync walks an address from its first transaction.
    */
   graphqlNodes: string[]
 
@@ -66,9 +51,9 @@ export interface SuiNetworkInfo {
 // Info Payload
 //
 
+// An info server still sending the retired JSON-RPC node lists is fine: the
+// cleaner drops keys it does not name.
 export const asSuiInfoPayload = asObject({
-  rpcNodes: asOptional(asArray(asString)),
-  rpcNodesArchival: asOptional(asArray(asString)),
   graphqlNodes: asOptional(asArray(asString)),
   maxRequestsPerSecond: asOptional(asNumber)
 })

@@ -1,5 +1,4 @@
 import { fromHex } from '@mysten/bcs'
-import { SuiClient, SuiHTTPTransport } from '@mysten/sui/client'
 import {
   decodeSuiPrivateKey,
   encodeSuiPrivateKey
@@ -23,7 +22,7 @@ import {
 import { base16, base64 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asyncStaggeredRace, promiseAny, timeout } from '../common/promiseUtils'
+import { promiseAny, timeout } from '../common/promiseUtils'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -53,15 +52,12 @@ import {
 } from './suiTypes'
 
 /**
- * Ceiling on a single node's response. `asyncStaggeredRace` has no timeout of
- * its own: a node that accepts the connection but never answers is neither
- * resolved nor failed, so without this the race can never settle, and the
- * engine's polling loop would stop rescheduling for the rest of the session.
+ * Ceiling on a single node's response. A node that accepts the connection but
+ * never answers is neither resolved nor failed, so without this a sync pass
+ * could never settle, and the engine's polling loop would stop rescheduling
+ * for the rest of the session.
  */
-const RPC_TIMEOUT_MS = 10000
-
-/** Gap before the race brings the next node in alongside the current one. */
-const STAGGER_INTERVAL_MS = 1000
+const GRAPHQL_TIMEOUT_MS = 10000
 
 export interface SuiHistoryTxPage {
   txs: SuiHistoryTx[]
@@ -110,7 +106,6 @@ export class SuiTools implements EdgeCurrencyTools {
   initOptions: JsonObject
 
   private readonly env: PluginEnvironment<SuiNetworkInfo>
-  private readonly clients = new Map<string, SuiClient>()
 
   /** Earliest time each node may be called again, keyed by URL. */
   private readonly nextSlot = new Map<string, number>()
@@ -133,30 +128,8 @@ export class SuiTools implements EdgeCurrencyTools {
     return this.env.networkInfo
   }
 
-  get rpcNodes(): string[] {
-    return this.networkInfo.rpcNodes
-  }
-
-  get rpcNodesArchival(): string[] {
-    return this.networkInfo.rpcNodesArchival
-  }
-
   get graphqlNodes(): string[] {
     return this.networkInfo.graphqlNodes
-  }
-
-  getClient(url: string): SuiClient {
-    let client = this.clients.get(url)
-    if (client == null) {
-      client = new SuiClient({
-        transport: new SuiHTTPTransport({
-          url,
-          fetch: this.io.fetch as typeof fetch
-        })
-      })
-      this.clients.set(url, client)
-    }
-    return client
   }
 
   /**
@@ -171,49 +144,6 @@ export class SuiTools implements EdgeCurrencyTools {
     const slot = Math.max(now, this.nextSlot.get(url) ?? 0)
     this.nextSlot.set(url, slot + gapMs)
     if (slot > now) await snooze(slot - now)
-  }
-
-  /** Run `fn` against one node, throttled and time-boxed. */
-  async callRpc<T>(
-    url: string,
-    fn: (client: SuiClient) => Promise<T>
-  ): Promise<T> {
-    await this.throttle(url)
-    return await timeout(
-      fn(this.getClient(url)),
-      RPC_TIMEOUT_MS,
-      new Error(`Sui RPC timed out: ${url}`)
-    )
-  }
-
-  /**
-   * Race `fn` across nodes, staggered. Shuffled because the race only reaches
-   * past the first node when that one is slow or failing, so a fixed order
-   * would send every healthy request to one provider and leave the rest as
-   * untested spares.
-   */
-  async raceRpc<T>(
-    urls: string[],
-    fn: (client: SuiClient) => Promise<T>
-  ): Promise<T> {
-    this.assertNodes(urls)
-    const funcs = shuffleArray([...urls]).map(
-      url => async () => await this.callRpc(url, fn)
-    )
-    return await asyncStaggeredRace(funcs, STAGGER_INTERVAL_MS)
-  }
-
-  /**
-   * Run `fn` against every node at once, resolving on the first success. For
-   * idempotent writes, where submitting more than once is harmless and
-   * redundancy matters more than choosing a single node.
-   */
-  async blastRpc<T>(
-    urls: string[],
-    fn: (client: SuiClient) => Promise<T>
-  ): Promise<T> {
-    this.assertNodes(urls)
-    return await promiseAny(urls.map(async url => await this.callRpc(url, fn)))
   }
 
   /** Send one GraphQL query to one node, throttled and time-boxed. */
@@ -236,7 +166,7 @@ export class SuiTools implements EdgeCurrencyTools {
     }
     return await timeout(
       request(),
-      RPC_TIMEOUT_MS,
+      GRAPHQL_TIMEOUT_MS,
       new Error(`Sui GraphQL timed out: ${url}`)
     )
   }
