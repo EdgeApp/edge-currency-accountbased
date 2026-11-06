@@ -1,5 +1,12 @@
 import type { Horizon } from '@stellar/stellar-sdk'
-import { asArray, asMaybe, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asMaybe,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -10,6 +17,11 @@ export interface StellarNetworkInfo {
   entryReserve: string
   /** Signs transactions for one network, such as the public network. */
   networkPassphrase: string
+  /**
+   * Lets a sponsor account pay a new trustline's reserve (CAP-33).
+   * The sponsor co-signs the activation outside the engine.
+   */
+  sponsoredTrustlines: boolean
   stellarServers: string[]
 }
 
@@ -18,9 +30,15 @@ export const asStellarNetworkLocation = asObject({
   code: asString,
   issuer: asString
 })
-/** Asks makeSpend to add the trustline a token needs. */
+/**
+ * Asks makeSpend to add the trustline a token needs.
+ * With sponsored trustlines on, a sponsor can pay its reserve.
+ */
 export const asMaybeActivateTokenParams = asMaybe(
-  asObject({ activateTokenId: asString })
+  asObject({
+    activateTokenId: asString,
+    sponsorAddress: asOptional(asString)
+  })
 )
 
 /** Asks makeSpend to remove a token's trustline. */
@@ -62,6 +80,7 @@ export const asStellarPrivateKeys = asObject({
 //
 
 export const asStellarInfoPayload = asObject({
+  sponsoredTrustlines: asOptional(asBoolean),
   stellarServers: asOptional(asArray(asString))
 })
 export type StellarInfoPayload = ReturnType<typeof asStellarInfoPayload>
