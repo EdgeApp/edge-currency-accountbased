@@ -140,12 +140,13 @@ async function makeEngine(
   opts: {
     callbacks?: Partial<EdgeCurrencyEngineCallbacks>
     enabledTokenIds?: string[]
+    infoPayload?: object
   } = {}
 ): Promise<StellarEngine> {
   const fakeIo = makeFakeIo()
   const io = fetch == null ? fakeIo : { ...fakeIo, fetch }
   const pluginOptions: EdgeCorePluginOptions = {
-    infoPayload: {},
+    infoPayload: { ...opts.infoPayload },
     initOptions: {},
     io,
     log: fakeLog,
@@ -1032,6 +1033,68 @@ describe('StellarEngine', function () {
     const { line } = operations[0] as Operation.ChangeTrust
     assert.strictEqual((line as Asset).getCode(), 'USDC')
     assert.strictEqual((line as Asset).getIssuer(), USDC_ISSUER)
+  })
+
+  it('lets a sponsor pay the trustline reserve when enabled', async function () {
+    const submitted: Transaction[] = []
+    const stub: HorizonStub = async (func, ...params) => {
+      if (func === 'submitTransaction') submitted.push(params[0])
+      const result = await horizon(func, ...params)
+      if (func !== 'loadAccount') return result
+      // Enough for the fees, but not for another entry's reserve:
+      return {
+        ...result,
+        balances: [{ ...result.balances[0], balance: '1.0000300' }]
+      }
+    }
+    const activate = async (
+      engine: StellarEngine,
+      sponsorAddress?: string
+    ): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [],
+        otherParams: { activateTokenId: USDC, sponsorAddress }
+      })
+
+    // The flag is off by default:
+    const plain = await makeEngine(stub)
+    await plain.checkAccountInnerLoop()
+    await expectRejection(
+      activate(plain, FUNDER),
+      'Error: Sponsored trustlines are off'
+    )
+    await expectRejection(
+      activate(plain),
+      'InsufficientFundsError: Insufficient funds'
+    )
+
+    const engine = await makeEngine(stub, undefined, {
+      infoPayload: { sponsoredTrustlines: true }
+    })
+    await engine.checkAccountInnerLoop()
+    await expectRejection(
+      activate(engine, 'nope'),
+      'Error: Invalid sponsor address nope'
+    )
+    const tx = await activate(engine, FUNDER)
+    assert.strictEqual(tx.nativeAmount, '-300')
+    assert.strictEqual(tx.networkFee, '300')
+
+    // The sponsor wraps our changeTrust, and still has to sign:
+    const signed = await engine.signTx(tx, { stellarKey: SECRET })
+    await engine.broadcastTx(signed)
+    const { operations, signatures } = submitted[0]
+    assert.deepEqual(
+      operations.map(op => [op.type, op.source]),
+      [
+        ['beginSponsoringFutureReserves', FUNDER],
+        ['changeTrust', undefined],
+        ['endSponsoringFutureReserves', undefined]
+      ]
+    )
+    assert.deepInclude(operations[0], { sponsoredId: ADDRESS })
+    assert.lengthOf(signatures, 1)
   })
 
   it('removes a trustline only once the token is empty', async function () {
