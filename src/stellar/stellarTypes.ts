@@ -8,12 +8,12 @@ export interface StellarNetworkInfo {
   stellarServers: string[]
 }
 
-export interface StellarCustomToken {
-  currencyCode: string
-  currencyName: string
-  multiplier: string
-  contractAddress: string
-}
+/** Where a token lives: its asset code and issuing account. */
+export const asStellarNetworkLocation = asObject({
+  code: asString,
+  issuer: asString
+})
+export type StellarNetworkLocation = ReturnType<typeof asStellarNetworkLocation>
 
 /** The records Horizon's payments endpoint returns. */
 export type StellarPaymentRecord =

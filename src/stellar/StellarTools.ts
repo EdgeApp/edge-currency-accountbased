@@ -9,6 +9,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeToken,
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
@@ -16,17 +17,19 @@ import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { makeMetaTokens } from '../common/tokenHelpers'
+import { makeMetaTokens, validateToken } from '../common/tokenHelpers'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import { makeEdgeFetchAdapter } from './stellarHttp'
 import {
   asSafeStellarWalletInfo,
+  asStellarNetworkLocation,
   asStellarPrivateKeys,
   StellarInfoPayload,
   StellarNetworkInfo,
   StellarPrivateKeys
 } from './stellarTypes'
+import { makeTokenId } from './stellarUtils'
 
 const URI_PREFIX = 'web+stellar'
 
@@ -233,6 +236,14 @@ export class StellarTools implements EdgeCurrencyTools {
       const url = serialize(serializeObj)
       return url
     }
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
+    if (token.networkLocation == null) {
+      throw new Error('ErrorInvalidNetworkLocation')
+    }
+    return makeTokenId(asStellarNetworkLocation(token.networkLocation))
   }
 }
 

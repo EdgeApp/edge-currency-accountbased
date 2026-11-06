@@ -1,4 +1,4 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { StellarTools } from './StellarTools'
@@ -7,6 +7,30 @@ import {
   StellarInfoPayload,
   StellarNetworkInfo
 } from './stellarTypes'
+
+// Issuers checked against each issuer's own stellar.toml:
+// https://circle.com/.well-known/stellar.toml
+// https://usdt0.to/.well-known/stellar.toml
+export const builtinTokens: EdgeTokenMap = {
+  'USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN': {
+    currencyCode: 'USDC',
+    displayName: 'USD Coin',
+    denominations: [{ name: 'USDC', multiplier: '10000000' }],
+    networkLocation: {
+      code: 'USDC',
+      issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
+    }
+  },
+  'USDT0-GATISXX6BZ6NC7IKQBY37CJD4SOZL3CYZJWXEDG6JVIY4WBS6KXJHN6Q': {
+    currencyCode: 'USDT0',
+    displayName: 'USDT0',
+    denominations: [{ name: 'USDT0', multiplier: '10000000' }],
+    networkLocation: {
+      code: 'USDT0',
+      issuer: 'GATISXX6BZ6NC7IKQBY37CJD4SOZL3CYZJWXEDG6JVIY4WBS6KXJHN6Q'
+    }
+  }
+}
 
 const networkInfo: StellarNetworkInfo = {
   baseReserve: '10000000',
@@ -56,6 +80,7 @@ export const stellar = makeOuterPlugin<
   StellarTools,
   StellarInfoPayload
 >({
+  builtinTokens,
   currencyInfo,
   asInfoPayload: asStellarInfoPayload,
   networkInfo,
