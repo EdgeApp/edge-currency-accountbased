@@ -27,7 +27,7 @@ import { StellarEngine } from '../../src/stellar/StellarEngine'
 import { stellar } from '../../src/stellar/stellarInfo'
 import {
   asStellarWalletOtherData,
-  StellarPaymentRecord
+  StellarOperationRecord
 } from '../../src/stellar/stellarTypes'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
@@ -62,9 +62,25 @@ const SEQUENCE = '280502140848308224'
 
 type HorizonStub = (func: string, ...params: any[]) => Promise<any>
 
-/** A payments record with just the fields the engine reads. */
-const record = (fields: object): StellarPaymentRecord =>
-  fields as StellarPaymentRecord
+/** An operations record with just the fields the engine reads. */
+const record = (fields: object): StellarOperationRecord =>
+  fields as StellarOperationRecord
+
+/**
+ * An operation of a transaction whose source account pays its fee,
+ * as Horizon lists it.
+ */
+const operation = (source: string, fields: object): StellarOperationRecord =>
+  record({
+    created_at: '2026-11-04T00:00:00Z',
+    transaction: async () => ({
+      fee_charged: '100',
+      ledger_attr: 123,
+      memo_type: 'none',
+      source_account: source
+    }),
+    ...fields
+  })
 
 const horizon: HorizonStub = async func => {
   switch (func) {
@@ -308,20 +324,21 @@ describe('StellarEngine', function () {
 
   it('records account creations in history', async function () {
     const engine = await makeEngine(horizon)
-    const operation = {
+    const memo = { memo_type: 'text', memo: 'hi' }
+    const created = (source: string): object => ({
       created_at: '2026-11-04T00:00:00Z',
       transaction: async () => ({
         fee_charged: '100',
         ledger_attr: 123,
-        memo_type: 'text',
-        memo: 'hi'
+        source_account: source,
+        ...memo
       })
-    }
+    })
 
     // Horizon's create_account records have no asset_type:
     await engine.processTransaction(
       record({
-        ...operation,
+        ...created(FUNDER),
         id: '1',
         paging_token: '1',
         type: 'create_account',
@@ -333,7 +350,7 @@ describe('StellarEngine', function () {
     )
     await engine.processTransaction(
       record({
-        ...operation,
+        ...created(ADDRESS),
         id: '2',
         paging_token: '2',
         type: 'create_account',
@@ -343,15 +360,16 @@ describe('StellarEngine', function () {
         starting_balance: '2.5000000'
       })
     )
-    // Token payments stay out of the XLM history:
+    // Payments in tokens this wallet doesn't know stay out of history:
     await engine.processTransaction(
-      record({
-        ...operation,
+      operation(FUNDER, {
         id: '3',
         paging_token: '3',
         type: 'payment',
         transaction_hash: 'cc'.repeat(32),
         asset_type: 'credit_alphanum4',
+        asset_code: 'USDC',
+        asset_issuer: FUNDER,
         from: FUNDER,
         to: ADDRESS,
         amount: '7.0000000'
@@ -363,7 +381,7 @@ describe('StellarEngine', function () {
     assert.deepEqual(
       txs.map(tx => [tx.txid, tx.nativeAmount, tx.networkFee, tx.blockHeight]),
       [
-        ['aa'.repeat(32), '50000000', '100', 123],
+        ['aa'.repeat(32), '50000000', '0', 123],
         ['bb'.repeat(32), '-25000100', '100', 123]
       ]
     )
@@ -374,16 +392,10 @@ describe('StellarEngine', function () {
 
   it('records path payments by the XLM they move', async function () {
     const engine = await makeEngine(horizon)
-    const pathPayment = (fields: object): StellarPaymentRecord =>
-      record({
-        created_at: '2026-11-04T00:00:00Z',
-        transaction: async () => ({
-          fee_charged: '100',
-          ledger_attr: 123,
-          memo_type: 'none'
-        }),
-        ...fields
-      })
+    // The paying account submits each path payment:
+    const pathPayment = (
+      fields: { from: string } & Record<string, string>
+    ): StellarOperationRecord => operation(fields.from, fields)
 
     // Someone pays us XLM, spending a token:
     await engine.processTransaction(
@@ -454,6 +466,301 @@ describe('StellarEngine', function () {
     )
   })
 
+  it('records token payments in the token history', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC]
+    })
+    const usdc = {
+      asset_type: 'credit_alphanum4',
+      asset_code: 'USDC',
+      asset_issuer: USDC_ISSUER
+    }
+
+    // Someone pays us USDC:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '1',
+        type: 'payment',
+        transaction_hash: 'aa'.repeat(32),
+        ...usdc,
+        from: FUNDER,
+        to: ADDRESS,
+        amount: '7.5000000'
+      })
+    )
+    // We pay USDC, and the fee in XLM:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '2',
+        type: 'payment',
+        transaction_hash: 'bb'.repeat(32),
+        ...usdc,
+        from: ADDRESS,
+        to: RECIPIENT,
+        amount: '2.0000000'
+      })
+    )
+
+    const tokenTxs = await engine.getTransactions({ tokenId: USDC })
+    tokenTxs.sort((a, b) => a.txid.localeCompare(b.txid))
+    assert.deepEqual(
+      tokenTxs.map(tx => [
+        tx.txid,
+        tx.currencyCode,
+        tx.nativeAmount,
+        tx.isSend,
+        tx.networkFee,
+        tx.parentNetworkFee
+      ]),
+      [
+        ['aa'.repeat(32), 'USDC', '75000000', false, '0', '0'],
+        ['bb'.repeat(32), 'USDC', '-20000000', true, '0', '100']
+      ]
+    )
+
+    // Only the fee shows in the XLM history:
+    const txs = await engine.getTransactions({ tokenId: null })
+    assert.deepEqual(
+      txs.map(tx => [tx.txid, tx.nativeAmount, tx.networkFee]),
+      [['bb'.repeat(32), '-100', '100']]
+    )
+  })
+
+  it('records swaps between XLM and tokens', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC, USDT0]
+    })
+    const usdc = {
+      asset_code: 'USDC',
+      asset_issuer: USDC_ISSUER
+    }
+
+    // We swap USDC for XLM by paying ourselves:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '1',
+        type: 'path_payment_strict_send',
+        transaction_hash: 'aa'.repeat(32),
+        from: ADDRESS,
+        to: ADDRESS,
+        asset_type: 'native',
+        amount: '4.0000000',
+        source_asset_type: 'credit_alphanum4',
+        source_asset_code: usdc.asset_code,
+        source_asset_issuer: usdc.asset_issuer,
+        source_amount: '12.0000000'
+      })
+    )
+    // We swap XLM for USDT0:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '2',
+        type: 'path_payment_strict_receive',
+        transaction_hash: 'bb'.repeat(32),
+        from: ADDRESS,
+        to: ADDRESS,
+        asset_type: 'credit_alphanum12',
+        asset_code: 'USDT0',
+        asset_issuer: USDT0.split('-')[1],
+        amount: '5.0000000',
+        source_asset_type: 'native',
+        source_amount: '2.0000000'
+      })
+    )
+    // Someone pays us USDC, spending XLM, which is no swap of ours:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '3',
+        type: 'path_payment_strict_send',
+        transaction_hash: 'cc'.repeat(32),
+        from: FUNDER,
+        to: ADDRESS,
+        asset_type: 'credit_alphanum4',
+        ...usdc,
+        amount: '1.0000000',
+        source_asset_type: 'native',
+        source_amount: '0.5000000'
+      })
+    )
+
+    // Someone swaps XLM for USDC in a transaction that pays us dust,
+    // which is no swap of ours either:
+    const theirSwap = 'dd'.repeat(32)
+    const theirOperations = [
+      { type: 'payment', from: FUNDER, to: ADDRESS, amount: '0.0100000' },
+      {
+        type: 'path_payment_strict_send',
+        from: FUNDER,
+        to: FUNDER,
+        amount: '30.0000000',
+        source_asset_type: 'native',
+        source_amount: '100.0000000'
+      }
+    ].map(fields =>
+      record({
+        paging_token: '4',
+        created_at: '2026-11-04T00:00:00Z',
+        transaction_hash: theirSwap,
+        transaction: async () => ({
+          fee_charged: '200',
+          ledger_attr: 123,
+          memo_type: 'none',
+          source_account: FUNDER,
+          operation_count: 2,
+          operations: async () => ({ records: theirOperations })
+        }),
+        asset_type: 'credit_alphanum4',
+        ...usdc,
+        ...fields
+      })
+    )
+    await engine.processTransaction(theirOperations[0])
+
+    const rows = async (tokenId: string | null): Promise<unknown[]> => {
+      const txs = await engine.getTransactions({ tokenId })
+      txs.sort((a, b) => a.txid.localeCompare(b.txid))
+      return txs.map(tx => [
+        tx.txid,
+        tx.nativeAmount,
+        tx.assetAction?.assetActionType
+      ])
+    }
+    const usdcTxs = await engine.getTransactions({ tokenId: USDC })
+    const usdcSwap = usdcTxs.find(tx => tx.txid === 'aa'.repeat(32))
+    assert.deepInclude(usdcSwap?.savedAction, {
+      actionType: 'swap',
+      fromAsset: {
+        pluginId: 'stellar',
+        tokenId: USDC,
+        nativeAmount: '120000000'
+      },
+      toAsset: { pluginId: 'stellar', tokenId: null, nativeAmount: '40000000' },
+      payoutAddress: ADDRESS
+    })
+    assert.deepEqual(await rows(null), [
+      ['aa'.repeat(32), '39999900', 'swap'],
+      ['bb'.repeat(32), '-20000100', 'swap']
+    ])
+    assert.deepEqual(await rows(USDC), [
+      ['aa'.repeat(32), '-120000000', 'swap'],
+      ['cc'.repeat(32), '10000000', undefined],
+      [theirSwap, '100000', undefined]
+    ])
+    assert.deepEqual(await rows(USDT0), [['bb'.repeat(32), '50000000', 'swap']])
+    for (const txid of ['cc'.repeat(32), theirSwap]) {
+      const incoming = usdcTxs.find(tx => tx.txid === txid)
+      assert.isUndefined(incoming?.savedAction)
+    }
+  })
+
+  it('records a transaction with several operations as one', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC]
+    })
+    const hash = 'aa'.repeat(32)
+    let operationReads = 0
+    const transaction = async (): Promise<object> => ({
+      fee_charged: '300',
+      ledger_attr: 123,
+      memo_type: 'none',
+      source_account: ADDRESS,
+      operation_count: 3,
+      operations: async () => {
+        // The first read fails:
+        if (++operationReads === 1) throw new Error('Horizon timed out')
+        return { records: payments }
+      }
+    })
+    const payment = (id: string, asset: object, amount: string): object => ({
+      id,
+      paging_token: id,
+      type: 'payment',
+      created_at: '2026-11-04T00:00:00Z',
+      transaction_hash: hash,
+      transaction,
+      from: ADDRESS,
+      to: RECIPIENT,
+      amount,
+      ...asset
+    })
+    const usdc = {
+      asset_type: 'credit_alphanum4',
+      asset_code: 'USDC',
+      asset_issuer: USDC_ISSUER
+    }
+    // One transaction pays 1 XLM, 2 XLM and 3 USDC:
+    const payments = [
+      payment('1', { asset_type: 'native' }, '1.0000000'),
+      payment('2', { asset_type: 'native' }, '2.0000000'),
+      payment('3', usdc, '3.0000000')
+    ]
+
+    // A failed read leaves the transaction for the next poll:
+    await expectRejection(
+      engine.processTransaction(record(payments[0])),
+      'Error: Horizon timed out'
+    )
+
+    // Horizon lists each operation, and history shows their total:
+    for (const op of payments) await engine.processTransaction(record(op))
+    assert.strictEqual(operationReads, 2)
+    const xlmTxs = await engine.getTransactions({ tokenId: null })
+    assert.deepEqual(
+      xlmTxs.map(tx => [tx.txid, tx.nativeAmount, tx.networkFee]),
+      [[hash, '-30000300', '300']]
+    )
+    const usdcTxs = await engine.getTransactions({ tokenId: USDC })
+    assert.deepEqual(
+      usdcTxs.map(tx => [tx.txid, tx.nativeAmount, tx.parentNetworkFee]),
+      [[hash, '-30000000', '300']]
+    )
+
+    // A resync reads the transaction again:
+    await engine.clearBlockchainCache()
+    await engine.processTransaction(record(payments[0]))
+    assert.strictEqual(operationReads, 3)
+  })
+
+  it('records trustline changes as XLM fees', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC]
+    })
+    const changeTrust = (id: string, limit: string): StellarOperationRecord =>
+      operation(ADDRESS, {
+        paging_token: id,
+        type: 'change_trust',
+        transaction_hash: id.repeat(64),
+        source_account: ADDRESS,
+        trustor: ADDRESS,
+        asset_type: 'credit_alphanum4',
+        asset_code: 'USDC',
+        asset_issuer: USDC_ISSUER,
+        limit
+      })
+
+    // Adding the trustline, then removing it:
+    await engine.processTransaction(changeTrust('a', '922337203685.4775807'))
+    await engine.processTransaction(changeTrust('b', '0.0000000'))
+
+    const txs = await engine.getTransactions({ tokenId: null })
+    txs.sort((a, b) => a.txid.localeCompare(b.txid))
+    assert.deepEqual(
+      txs.map(tx => [
+        tx.txid,
+        tx.nativeAmount,
+        tx.networkFee,
+        tx.parentNetworkFee,
+        tx.isSend
+      ]),
+      [
+        // A parentNetworkFee would overwrite the core's XLM fee:
+        ['a'.repeat(64), '-100', '100', undefined, true],
+        ['b'.repeat(64), '-100', '100', undefined, true]
+      ]
+    )
+    assert.lengthOf(await engine.getTransactions({ tokenId: USDC }), 0)
+  })
+
   it('reads history a full page at a time, with transactions', async function () {
     const payment = (id: string, hash: string): object => ({
       id,
@@ -511,19 +818,20 @@ describe('StellarEngine', function () {
     await engine.checkTransactionsInnerLoop()
 
     // One request per page, and none per transaction:
-    const path = `/accounts/${ADDRESS}/payments`
+    const path = `/accounts/${ADDRESS}/operations`
     assert.deepEqual(requests, [
       [path, 'cursor=0&join=transactions&limit=200'],
       [path, 'cursor=2&join=transactions&limit=200']
     ])
-    assert.strictEqual(engine.otherData.lastPagingToken, '2')
+    assert.strictEqual(engine.otherData.lastOperationPagingToken, '2')
 
+    // The sender paid the fee, not us:
     const txs = await engine.getTransactions({ tokenId: null })
     assert.deepEqual(
       txs.map(tx => [tx.nativeAmount, tx.networkFee, tx.memos[0].value]),
       [
-        ['10000000', '100', '42'],
-        ['10000000', '100', '42']
+        ['10000000', '0', '42'],
+        ['10000000', '0', '42']
       ]
     )
   })
@@ -1057,9 +1365,19 @@ describe('StellarEngine', function () {
 
   it('keeps the saved account sequence when it loads', function () {
     const otherData = asStellarWalletOtherData({
-      lastPagingToken: '0',
+      lastOperationPagingToken: '0',
       accountSequence: SEQUENCE
     })
     assert.strictEqual(otherData.accountSequence, SEQUENCE)
+  })
+
+  it('restarts history for wallets saved with the payments cursor', function () {
+    // Wallets synced before token support carry a payments cursor that
+    // already skipped their token payments and trustline changes:
+    const otherData = asStellarWalletOtherData({
+      lastPagingToken: '123456789',
+      accountSequence: SEQUENCE
+    })
+    assert.strictEqual(otherData.lastOperationPagingToken, '0')
   })
 })

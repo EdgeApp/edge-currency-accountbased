@@ -30,17 +30,14 @@ export const asMaybeDeactivateTokenParams = asMaybe(
 
 export type StellarNetworkLocation = ReturnType<typeof asStellarNetworkLocation>
 
-/** The records Horizon's payments endpoint returns. */
-export type StellarPaymentRecord =
-  | Horizon.ServerApi.CreateAccountOperationRecord
-  | Horizon.ServerApi.PaymentOperationRecord
-  | Horizon.ServerApi.PathPaymentOperationRecord
-  | Horizon.ServerApi.PathPaymentStrictSendOperationRecord
-  | Horizon.ServerApi.AccountMergeOperationRecord
-  | Horizon.ServerApi.InvokeHostFunctionOperationRecord
+/** The records Horizon's operations endpoint returns. */
+export type StellarOperationRecord = Horizon.ServerApi.OperationRecord
 
 export const asStellarWalletOtherData = asObject({
-  lastPagingToken: asMaybe(asString, '0'),
+  // Renamed from lastPagingToken, the old payments cursor, which skipped
+  // token payments and trustline changes. A new key restarts history at
+  // the start for wallets that synced before token support:
+  lastOperationPagingToken: asMaybe(asString, '0'),
   accountSequence: asMaybe(asString, '0')
 })
 

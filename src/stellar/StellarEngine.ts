@@ -24,7 +24,9 @@ import {
   EdgeGetActivationAssetsResults,
   EdgeMemo,
   EdgeSpendInfo,
+  EdgeTokenId,
   EdgeTransaction,
+  EdgeTxActionSwap,
   EdgeWalletInfo,
   InsufficientFundsError,
   JsonObject,
@@ -58,7 +60,7 @@ import {
   asStellarWalletOtherData,
   SafeStellarWalletInfo,
   StellarNetworkInfo,
-  StellarPaymentRecord,
+  StellarOperationRecord,
   StellarWalletOtherData
 } from './stellarTypes'
 import { getAccountReserve, getTokenAsset, makeTokenId } from './stellarUtils'
@@ -72,10 +74,20 @@ const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const BASE_FEE = 100 // Stroops
+// The most operations a Stellar transaction can hold:
+const MAX_TX_OPERATIONS = 100
+
+/** What one operation of a transaction says about the transaction. */
+interface StellarOperationSummary {
+  fromAddress: string
+  toAddress?: string
+  isSwap: boolean
+  savedAction?: EdgeTxActionSwap
+}
 
 type StellarServerFunction =
   | 'feeStats'
-  | 'payments'
+  | 'operations'
   | 'loadAccount'
   | 'ledgers'
   | 'submitTransaction'
@@ -94,6 +106,8 @@ export class StellarEngine extends CurrencyEngine<
   lockedTokenAmounts: { [tokenId: string]: string } = {}
   fees: { low: number; standard: number; high: number }
   otherData!: StellarWalletOtherData
+  /** The multi-operation transaction processTransaction last read. */
+  private lastMultiOpTxid: string | undefined
 
   constructor(
     env: PluginEnvironment<StellarNetworkInfo>,
@@ -184,15 +198,16 @@ export class StellarEngine extends CurrencyEngine<
         out = await asyncWaterfall(funcs)
         break
 
-      case 'payments':
+      // Operations, unlike payments, include trustline changes:
+      case 'operations':
         funcs = this.tools.stellarApiServers.map(serverApi => async () => {
           const result = await serverApi
-            .payments()
+            .operations()
             // Embed each operation's transaction, so reading its fee and
             // memo doesn't need a request per operation:
             .join('transactions')
             .limit(TX_QUERY_PAGING_LIMIT)
-            .cursor(this.otherData.lastPagingToken)
+            .cursor(this.otherData.lastOperationPagingToken)
             .forAccount(params[0])
             .call()
           return { server: serverApi.serverURL.toString(), result }
@@ -218,54 +233,8 @@ export class StellarEngine extends CurrencyEngine<
     return out.result
   }
 
-  async processTransaction(tx: StellarPaymentRecord): Promise<string> {
+  async processTransaction(tx: StellarOperationRecord): Promise<string> {
     const ourAddress = this.walletLocalData.publicKey
-    const ourReceiveAddresses: string[] = []
-
-    // The XLM this wallet gets and pays, before fees:
-    let received = '0'
-    let sent = '0'
-    let fromAddress: string
-    let toAddress: string
-    switch (tx.type) {
-      // Account creations are always XLM, so Horizon gives them no asset_type:
-      case OperationResponseType.createAccount:
-        fromAddress = tx.source_account
-        toAddress = tx.account
-        if (toAddress === ourAddress) received = tx.starting_balance
-        if (fromAddress === ourAddress) sent = tx.starting_balance
-        break
-      case OperationResponseType.payment:
-        // Skip token payments:
-        if (tx.asset_type !== AssetType.native) return tx.paging_token
-        fromAddress = tx.from
-        toAddress = tx.to
-        if (toAddress === ourAddress) received = tx.amount
-        if (fromAddress === ourAddress) sent = tx.amount
-        break
-      // Path payments can deliver a different asset than they spend:
-      case OperationResponseType.pathPayment:
-      case OperationResponseType.pathPaymentStrictSend:
-        fromAddress = tx.from
-        toAddress = tx.to
-        if (toAddress === ourAddress && tx.asset_type === AssetType.native) {
-          received = tx.amount
-        }
-        if (
-          fromAddress === ourAddress &&
-          tx.source_asset_type === AssetType.native
-        ) {
-          sent = tx.source_amount
-        }
-        // Skip path payments that only move tokens:
-        if (received === '0' && sent === '0') return tx.paging_token
-        break
-      default:
-        return tx.paging_token
-    }
-
-    const date: number = Date.parse(tx.created_at) / 1000
-    const denom = this.getDenomination(null)
 
     let rawTx: Horizon.ServerApi.TransactionRecord
     try {
@@ -274,7 +243,52 @@ export class StellarEngine extends CurrencyEngine<
       this.error(`processTransaction rawTx Error `, e)
       throw e
     }
+
+    // Horizon lists each operation that involves us, but the history
+    // shows one row per transaction, so read every operation of a
+    // multi-operation transaction once, at the first one listed:
+    let operations = [tx]
+    if (rawTx.operation_count > 1) {
+      if (tx.transaction_hash === this.lastMultiOpTxid) return tx.paging_token
+      const page = await rawTx.operations({ limit: MAX_TX_OPERATIONS })
+      operations = page.records
+      // Only once the operations load, so a failed read tries again:
+      this.lastMultiOpTxid = tx.transaction_hash
+    }
+
+    // What the transaction adds to each of our assets, before fees:
+    const amounts = new Map<EdgeTokenId, string>()
+    const summaries: StellarOperationSummary[] = []
+    for (const operation of operations) {
+      const summary = this.readOperation(operation, amounts)
+      if (summary != null) summaries.push(summary)
+    }
+    if (summaries.length === 0) return tx.paging_token
+
+    // Skip transactions that neither move our assets nor cost us a fee:
+    for (const [tokenId, amount] of amounts) {
+      if (eq(amount, '0')) amounts.delete(tokenId)
+    }
+    const fromUs = summaries.some(summary => summary.fromAddress === ourAddress)
+    if (amounts.size === 0 && !fromUs) return tx.paging_token
+
+    // The addresses come from the first operation that involves us:
+    const { fromAddress, toAddress } =
+      summaries.find(
+        summary =>
+          summary.fromAddress === ourAddress || summary.toAddress === ourAddress
+      ) ?? summaries[0]
+    const isSwap = summaries.some(summary => summary.isSwap)
+    const savedAction = summaries.find(
+      summary => summary.savedAction != null
+    )?.savedAction
+
+    const date: number = Date.parse(tx.created_at) / 1000
+
     const networkFee = rawTx.fee_charged.toString()
+    // A fee bump's outer account pays instead of the source account:
+    const feePayer = rawTx.fee_account ?? rawTx.source_account
+    const wePaidFee = feePayer === ourAddress
 
     // Parse memos from the raw transaction if available
     const edgeMemos: EdgeMemo[] = []
@@ -333,41 +347,181 @@ export class StellarEngine extends CurrencyEngine<
       this.log.warn('XLM: processTransaction memo parsing error', e)
     }
 
-    if (toAddress === ourAddress) ourReceiveAddresses.push(fromAddress)
-
-    // The sender pays the fee:
-    let nativeAmount = sub(
-      mul(received, denom.multiplier),
-      mul(sent, denom.multiplier)
-    )
-    if (fromAddress === ourAddress) nativeAmount = sub(nativeAmount, networkFee)
-
-    const edgeTransaction: EdgeTransaction = {
-      blockHeight: rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0, // API shows no ledger number ??
-      currencyCode: this.currencyInfo.currencyCode,
+    const blockHeight = rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0
+    if (blockHeight > this.tools.highestTxHeight) {
+      this.tools.highestTxHeight = blockHeight
+    }
+    const common = {
+      assetAction: isSwap ? { assetActionType: 'swap' as const } : undefined,
+      blockHeight,
       date,
-      isSend: nativeAmount.startsWith('-'),
       memos: edgeMemos,
-      nativeAmount,
-      networkFee,
       networkFees: [],
-      otherParams: {
-        fromAddress,
-        toAddress
-      },
-      ourReceiveAddresses,
-      parentNetworkFee: '0',
+      otherParams: { fromAddress, toAddress },
+      ourReceiveAddresses: toAddress === ourAddress ? [fromAddress] : [],
+      savedAction,
       signedTx: '',
-      tokenId: null,
       txid: tx.transaction_hash,
       walletId: this.walletId
     }
 
-    if (edgeTransaction.blockHeight > this.tools.highestTxHeight) {
-      this.tools.highestTxHeight = edgeTransaction.blockHeight
+    // The fee comes out of XLM, so token sends and trustline changes
+    // show in the XLM history too. The XLM row leaves parentNetworkFee
+    // unset, since the core files any parentNetworkFee as the XLM fee,
+    // and '0' there would erase the real one:
+    let nativeAmount = amounts.get(null) ?? '0'
+    if (wePaidFee) nativeAmount = sub(nativeAmount, networkFee)
+    if (!eq(nativeAmount, '0')) {
+      this.addTransaction(null, {
+        ...common,
+        currencyCode: this.currencyInfo.currencyCode,
+        isSend: nativeAmount.startsWith('-'),
+        nativeAmount,
+        networkFee: wePaidFee ? networkFee : '0',
+        tokenId: null
+      })
     }
-    this.addTransaction(null, edgeTransaction)
+
+    for (const [tokenId, amount] of amounts) {
+      const currencyCode = this.getCurrencyCode(tokenId)
+      if (tokenId == null || currencyCode == null) continue
+      this.addTransaction(tokenId, {
+        ...common,
+        currencyCode,
+        isSend: amount.startsWith('-'),
+        nativeAmount: amount,
+        networkFee: '0',
+        parentNetworkFee: wePaidFee ? networkFee : '0',
+        tokenId
+      })
+    }
     return tx.paging_token
+  }
+
+  /** Converts a Horizon amount to the asset's native units. */
+  private toNativeAmount(
+    tokenId: EdgeTokenId | undefined,
+    amount: string
+  ): string | undefined {
+    if (tokenId === undefined) return
+    const denom = this.getDenomination(tokenId)
+    if (denom == null) return
+    return mul(amount, denom.multiplier)
+  }
+
+  /**
+   * Adds what an operation moves in or out of our assets to `amounts`,
+   * and describes the operation, or returns undefined for a kind of
+   * operation the history doesn't show.
+   */
+  private readOperation(
+    op: StellarOperationRecord,
+    amounts: Map<EdgeTokenId, string>
+  ): StellarOperationSummary | undefined {
+    const ourAddress = this.walletLocalData.publicKey
+    const adjust = (
+      tokenId: EdgeTokenId | undefined,
+      amount: string,
+      receive: boolean
+    ): void => {
+      const nativeAmount = this.toNativeAmount(tokenId, amount)
+      if (tokenId === undefined || nativeAmount == null) return
+      const total = amounts.get(tokenId) ?? '0'
+      amounts.set(
+        tokenId,
+        receive ? add(total, nativeAmount) : sub(total, nativeAmount)
+      )
+    }
+
+    switch (op.type) {
+      // Account creations are always XLM, so Horizon gives them no asset_type:
+      case OperationResponseType.createAccount: {
+        const fromAddress = op.source_account
+        const toAddress = op.account
+        if (toAddress === ourAddress) adjust(null, op.starting_balance, true)
+        if (fromAddress === ourAddress) adjust(null, op.starting_balance, false)
+        return { fromAddress, toAddress, isSwap: false }
+      }
+      case OperationResponseType.payment: {
+        const { from: fromAddress, to: toAddress } = op
+        const tokenId = this.findTokenId(op)
+        if (toAddress === ourAddress) adjust(tokenId, op.amount, true)
+        if (fromAddress === ourAddress) adjust(tokenId, op.amount, false)
+        return { fromAddress, toAddress, isSwap: false }
+      }
+      // Path payments can deliver a different asset than they spend:
+      case OperationResponseType.pathPayment:
+      case OperationResponseType.pathPaymentStrictSend: {
+        const { from: fromAddress, to: toAddress } = op
+        const sourceTokenId = this.findTokenId({
+          asset_type: op.source_asset_type,
+          asset_code: op.source_asset_code,
+          asset_issuer: op.source_asset_issuer
+        })
+        const tokenId = this.findTokenId(op)
+        if (toAddress === ourAddress) adjust(tokenId, op.amount, true)
+        if (fromAddress === ourAddress) {
+          adjust(sourceTokenId, op.source_amount, false)
+        }
+        // Paying ourselves one asset with another is a swap. Another
+        // account's self-payment in the same transaction isn't ours:
+        const isSwap =
+          fromAddress === ourAddress &&
+          toAddress === ourAddress &&
+          sourceTokenId !== tokenId
+        const fromAmount = this.toNativeAmount(sourceTokenId, op.source_amount)
+        const toAmount = this.toNativeAmount(tokenId, op.amount)
+        if (
+          !isSwap ||
+          sourceTokenId === undefined ||
+          tokenId === undefined ||
+          fromAmount == null ||
+          toAmount == null
+        ) {
+          return { fromAddress, toAddress, isSwap }
+        }
+        const { pluginId } = this.currencyInfo
+        const savedAction: EdgeTxActionSwap = {
+          actionType: 'swap',
+          swapInfo: {
+            pluginId,
+            displayName: 'Stellar DEX',
+            isDex: true,
+            supportEmail: 'support@edge.app'
+          },
+          isEstimate: false,
+          fromAsset: {
+            pluginId,
+            tokenId: sourceTokenId,
+            nativeAmount: fromAmount
+          },
+          toAsset: { pluginId, tokenId, nativeAmount: toAmount },
+          payoutAddress: ourAddress,
+          payoutWalletId: this.walletId
+        }
+        return { fromAddress, toAddress, isSwap, savedAction }
+      }
+      // Adding or removing a trustline only costs its fee:
+      case OperationResponseType.changeTrust:
+        return { fromAddress: op.trustor, isSwap: false }
+    }
+  }
+
+  /**
+   * Finds the wallet's tokenId for an asset Horizon names,
+   * null for XLM, or undefined for a token this wallet doesn't know.
+   */
+  private findTokenId(asset: {
+    asset_type: string
+    asset_code?: string
+    asset_issuer?: string
+  }): EdgeTokenId | undefined {
+    const { asset_type: type, asset_code: code, asset_issuer: issuer } = asset
+    if (type === AssetType.native) return null
+    if (code == null || issuer == null) return
+    const tokenId = makeTokenId({ code, issuer })
+    if (this.allTokensMap[tokenId] == null) return
+    return tokenId
   }
 
   // Streaming version. Doesn't work in RN
@@ -388,7 +542,7 @@ export class StellarEngine extends CurrencyEngine<
   //   close = this.stellarServer.payments()
   //     .forAccount(address)
   //     .limit(TX_QUERY_PAGING_LIMIT)
-  //     .cursor(this.otherData.lastPagingToken)
+  //     .cursor(this.otherData.lastOperationPagingToken)
   //     .stream({
   //       onmessage: txHandler,
   //       onerror: errorHandler
@@ -408,7 +562,7 @@ export class StellarEngine extends CurrencyEngine<
       try {
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!page) {
-          page = await this.multicastServers('payments', address)
+          page = await this.multicastServers('operations', address)
         } else {
           page = await page.next()
         }
@@ -423,6 +577,7 @@ export class StellarEngine extends CurrencyEngine<
         if (e.response && e.response.title === 'Resource Missing') {
           this.log('Account not found. Probably not activated w/minimum XLM')
           this.syncTracker.updateHistoryRatio(null, 1)
+          this.syncTracker.setHistoryRatios(this.enabledTokenIds, 1)
         } else {
           this.error(
             'checkTransactionsInnerLoop Error fetching transaction info: ',
@@ -435,11 +590,12 @@ export class StellarEngine extends CurrencyEngine<
     this.sendTransactionEvents()
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (pagingToken) {
-      this.otherData.lastPagingToken = pagingToken
+      this.otherData.lastOperationPagingToken = pagingToken
       this.walletLocalDataDirty = true
     }
     this.walletLocalData.lastAddressQueryHeight = blockHeight
     this.syncTracker.updateHistoryRatio(null, 1)
+    this.syncTracker.setHistoryRatios(this.enabledTokenIds, 1)
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -584,6 +740,7 @@ export class StellarEngine extends CurrencyEngine<
 
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
+    this.lastMultiOpTxid = undefined
     await super.clearBlockchainCache()
     this.otherData.accountSequence = '0'
   }
