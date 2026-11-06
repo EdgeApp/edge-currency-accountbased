@@ -523,6 +523,119 @@ describe('StellarEngine', function () {
     )
   })
 
+  it('records what contract calls move in and out', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC]
+    })
+    const usdc = {
+      asset_type: 'credit_alphanum4',
+      asset_code: 'USDC',
+      asset_issuer: USDC_ISSUER
+    }
+
+    // The asset contract mints USDC to us, and an anchor pays us USDC
+    // through it alongside a transfer between two other accounts,
+    // after another account sends us a little XLM:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '1',
+        type: 'invoke_host_function',
+        transaction_hash: 'aa'.repeat(32),
+        asset_balance_changes: [
+          {
+            asset_type: 'native',
+            type: 'transfer',
+            from: RECIPIENT,
+            to: ADDRESS,
+            amount: '0.0000001'
+          },
+          { ...usdc, type: 'mint', to: ADDRESS, amount: '1.0000000' },
+          {
+            ...usdc,
+            type: 'transfer',
+            from: FUNDER,
+            to: RECIPIENT,
+            amount: '3.0000000'
+          },
+          {
+            ...usdc,
+            type: 'transfer',
+            from: FUNDER,
+            to: ADDRESS,
+            amount: '4.5000000'
+          }
+        ]
+      })
+    )
+    // We pay XLM into a contract:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '2',
+        type: 'invoke_host_function',
+        transaction_hash: 'bb'.repeat(32),
+        asset_balance_changes: [
+          {
+            asset_type: 'native',
+            type: 'transfer',
+            from: ADDRESS,
+            to: RECIPIENT,
+            amount: '2.0000000'
+          }
+        ]
+      })
+    )
+    // A contract call that moves none of our assets stays out of history:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '3',
+        type: 'invoke_host_function',
+        transaction_hash: 'cc'.repeat(32)
+      })
+    )
+    // A bare mint comes from the account that called the contract:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '4',
+        type: 'invoke_host_function',
+        transaction_hash: 'dd'.repeat(32),
+        source_account: RECIPIENT,
+        asset_balance_changes: [
+          { ...usdc, type: 'mint', to: ADDRESS, amount: '2.0000000' }
+        ]
+      })
+    )
+
+    // The sender is the transfer's, never the mint's missing one:
+    const tokenTxs = await engine.getTransactions({ tokenId: USDC })
+    assert.deepEqual(
+      tokenTxs.map(tx => [
+        tx.txid,
+        tx.nativeAmount,
+        tx.isSend,
+        tx.otherParams?.fromAddress
+      ]),
+      [
+        ['aa'.repeat(32), '55000000', false, FUNDER],
+        ['dd'.repeat(32), '20000000', false, RECIPIENT]
+      ]
+    )
+    // Each asset names its own sender:
+    const txs = await engine.getTransactions({ tokenId: null })
+    txs.sort((a, b) => a.txid.localeCompare(b.txid))
+    assert.deepEqual(
+      txs.map(tx => [
+        tx.txid,
+        tx.nativeAmount,
+        tx.isSend,
+        tx.otherParams?.fromAddress
+      ]),
+      [
+        ['aa'.repeat(32), '1', false, RECIPIENT],
+        ['bb'.repeat(32), '-20000100', true, ADDRESS]
+      ]
+    )
+  })
+
   it('records swaps between XLM and tokens', async function () {
     const engine = await makeEngine(horizon, undefined, {
       enabledTokenIds: [USDC, USDT0]

@@ -13,6 +13,7 @@
 - fixed: (Stellar) A second send within about 20 seconds of another failing with "sequence must be of type string"
 - fixed: (Stellar) Account activations missing from transaction history, including a new wallet's first deposit
 - fixed: (Stellar) Path payments missing from transaction history
+- fixed: (Stellar) Token payments made through smart contracts, such as an anchor payout, missing from transaction history
 - fixed: (Stellar) Zero network fee on sent XLM transactions
 - fixed: (Stellar) Sender's fee shown as the network fee on received payments
 - fixed: (Stellar) Sends to an address failing until restart after one lookup of its account failed or found it unactivated

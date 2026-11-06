@@ -85,6 +85,8 @@ interface StellarParties {
 interface StellarOperationSummary extends StellarParties {
   isSwap: boolean
   savedAction?: EdgeTxActionSwap
+  // A contract call can move each asset between different parties:
+  tokenParties?: Map<EdgeTokenId, StellarParties>
 }
 
 type StellarServerFunction =
@@ -282,7 +284,9 @@ export class StellarEngine extends CurrencyEngine<
       for (const [tokenId, amount] of moved) {
         amounts.set(tokenId, add(amounts.get(tokenId) ?? '0', amount))
         if (summary.isSwap) swapped.add(tokenId)
-        if (!movers.has(tokenId)) movers.set(tokenId, summary)
+        if (!movers.has(tokenId)) {
+          movers.set(tokenId, summary.tokenParties?.get(tokenId) ?? summary)
+        }
       }
     }
     if (summaries.length === 0) return
@@ -540,6 +544,51 @@ export class StellarEngine extends CurrencyEngine<
           payoutWalletId: this.walletId
         }
         return { fromAddress, toAddress, isSwap, savedAction }
+      }
+      // Contract calls, such as an anchor paying through an asset
+      // contract, list what they move in asset_balance_changes.
+      // A mint has no sender and a burn has no recipient, even though
+      // the SDK types both as strings:
+      case OperationResponseType.invokeHostFunction: {
+        let summary: StellarOperationSummary | undefined
+        let mintSummary: StellarOperationSummary | undefined
+        const tokenParties = new Map<EdgeTokenId, StellarParties>()
+        for (const change of op.asset_balance_changes ?? []) {
+          const fromAddress: string | undefined = change.from
+          const toAddress: string | undefined = change.to
+          if (fromAddress !== ourAddress && toAddress !== ourAddress) continue
+          const tokenId = this.findTokenId(change)
+          if (toAddress === ourAddress) adjust(tokenId, change.amount, true)
+          if (fromAddress === ourAddress) adjust(tokenId, change.amount, false)
+          // Prefer a change with a sender, and credit a mint to the
+          // account that called the contract:
+          if (fromAddress != null) {
+            summary ??= { fromAddress, toAddress, isSwap: false, tokenParties }
+            // A sender replaces the caller credited for a mint:
+            const parties =
+              tokenId === undefined ? undefined : tokenParties.get(tokenId)
+            if (
+              tokenId !== undefined &&
+              (parties == null || parties.fromAddress === op.source_account)
+            ) {
+              tokenParties.set(tokenId, { fromAddress, toAddress })
+            }
+          } else {
+            mintSummary ??= {
+              fromAddress: op.source_account,
+              toAddress,
+              isSwap: false,
+              tokenParties
+            }
+            if (tokenId !== undefined && !tokenParties.has(tokenId)) {
+              tokenParties.set(tokenId, {
+                fromAddress: op.source_account,
+                toAddress
+              })
+            }
+          }
+        }
+        return summary ?? mintSummary
       }
       // Adding or removing a trustline only costs its fee:
       case OperationResponseType.changeTrust:
