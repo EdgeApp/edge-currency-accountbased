@@ -523,6 +523,45 @@ describe('StellarEngine', function () {
     )
   })
 
+  it('lists our own address as the receive address', async function () {
+    const engine = await makeEngine(horizon)
+
+    // Someone pays us XLM:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '1',
+        type: 'payment',
+        transaction_hash: 'aa'.repeat(32),
+        asset_type: 'native',
+        from: FUNDER,
+        to: ADDRESS,
+        amount: '5.0000000'
+      })
+    )
+    // We pay XLM:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '2',
+        type: 'payment',
+        transaction_hash: 'bb'.repeat(32),
+        asset_type: 'native',
+        from: ADDRESS,
+        to: RECIPIENT,
+        amount: '1.0000000'
+      })
+    )
+
+    const txs = await engine.getTransactions({ tokenId: null })
+    txs.sort((a, b) => a.txid.localeCompare(b.txid))
+    assert.deepEqual(
+      txs.map(tx => [tx.txid, tx.ourReceiveAddresses]),
+      [
+        ['aa'.repeat(32), [ADDRESS]],
+        ['bb'.repeat(32), []]
+      ]
+    )
+  })
+
   it('records what contract calls move in and out', async function () {
     const engine = await makeEngine(horizon, undefined, {
       enabledTokenIds: [USDC]

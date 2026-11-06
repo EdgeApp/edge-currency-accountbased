@@ -424,7 +424,7 @@ export class StellarEngine extends CurrencyEngine<
           ? { assetActionType: 'swap' }
           : undefined,
         otherParams: { fromAddress, toAddress },
-        ourReceiveAddresses: toAddress === ourAddress ? [fromAddress] : [],
+        ourReceiveAddresses: toAddress === ourAddress ? [ourAddress] : [],
         savedAction: isSwapped ? savedAction : undefined
       }
     }
