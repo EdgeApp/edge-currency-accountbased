@@ -18,6 +18,16 @@ export const asStellarNetworkLocation = asObject({
   code: asString,
   issuer: asString
 })
+/** Asks makeSpend to add the trustline a token needs. */
+export const asMaybeActivateTokenParams = asMaybe(
+  asObject({ activateTokenId: asString })
+)
+
+/** Asks makeSpend to remove a token's trustline. */
+export const asMaybeDeactivateTokenParams = asMaybe(
+  asObject({ deactivateTokenId: asString })
+)
+
 export type StellarNetworkLocation = ReturnType<typeof asStellarNetworkLocation>
 
 /** The records Horizon's payments endpoint returns. */

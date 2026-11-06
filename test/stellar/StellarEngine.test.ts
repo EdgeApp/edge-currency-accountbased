@@ -1,10 +1,20 @@
-import { Networks, StrKey, Transaction } from '@stellar/stellar-sdk'
+import {
+  Asset,
+  Networks,
+  Operation,
+  StrKey,
+  Transaction
+} from '@stellar/stellar-sdk'
 import { assert } from 'chai'
 import {
+  EdgeActivationQuote,
   EdgeCorePluginOptions,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyWallet,
   EdgeFetchFunction,
+  EdgeSpendInfo,
+  EdgeTransaction,
   makeFakeIo
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
@@ -667,6 +677,207 @@ describe('StellarEngine', function () {
     await engine.checkAccountInnerLoop()
     assert.deepEqual(unactivated, [[USDC]])
     assert.strictEqual(engine.getBalance({ tokenId: USDC }), '0')
+  })
+
+  it('adds a trustline when the reserve covers it', async function () {
+    const submitted: Transaction[] = []
+    let xlm = '1.5000000'
+    const engine = await makeEngine(async (func, ...params) => {
+      if (func === 'submitTransaction') submitted.push(params[0])
+      const result = await horizon(func, ...params)
+      if (func !== 'loadAccount') return result
+      return { ...result, balances: [{ ...result.balances[0], balance: xlm }] }
+    })
+    await engine.checkAccountInnerLoop()
+    const activate = async (): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [],
+        otherParams: { activateTokenId: USDC }
+      })
+
+    // 1 XLM is the base reserve, the trustline needs 0.5 more, plus the fee:
+    await expectRejection(
+      activate(),
+      'InsufficientFundsError: Insufficient funds'
+    )
+    xlm = '1.5000100'
+    await engine.checkAccountInnerLoop()
+    const tx = await activate()
+    assert.strictEqual(tx.nativeAmount, '-100')
+    assert.strictEqual(tx.networkFee, '100')
+    assert.isNull(tx.tokenId)
+
+    // Signing looks up no recipient, and broadcasting sends a changeTrust:
+    const signed = await engine.signTx(tx, { stellarKey: SECRET })
+    await engine.broadcastTx(signed)
+    const { operations } = submitted[0]
+    assert.lengthOf(operations, 1)
+    assert.deepInclude(operations[0], {
+      type: 'changeTrust',
+      limit: '922337203685.4775807'
+    })
+    const { line } = operations[0] as Operation.ChangeTrust
+    assert.strictEqual((line as Asset).getCode(), 'USDC')
+    assert.strictEqual((line as Asset).getIssuer(), USDC_ISSUER)
+  })
+
+  it('removes a trustline only once the token is empty', async function () {
+    const submitted: Transaction[] = []
+    let usdc = '0.0000001'
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        if (func === 'submitTransaction') submitted.push(params[0])
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        return {
+          ...result,
+          subentry_count: 1,
+          balances: [trustline('USDC', USDC_ISSUER, usdc), ...result.balances]
+        }
+      },
+      undefined,
+      { enabledTokenIds: [USDC] }
+    )
+    await engine.checkAccountInnerLoop()
+    const deactivate = async (): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [],
+        otherParams: { deactivateTokenId: USDC }
+      })
+    await expectRejection(
+      deactivate(),
+      'Error: Send or swap all USDC before removing it, since Stellar only removes empty trustlines'
+    )
+
+    usdc = '0.0000000'
+    await engine.checkAccountInnerLoop()
+    const signed = await engine.signTx(await deactivate(), {
+      stellarKey: SECRET
+    })
+    await engine.broadcastTx(signed)
+    assert.deepInclude(submitted[0].operations[0], {
+      type: 'changeTrust',
+      limit: '0.0000000'
+    })
+  })
+
+  it('counts every trustline reserve when activating several tokens', async function () {
+    const calls: string[] = []
+    let xlm = '2.0000100'
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        calls.push(func)
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        // Each changeTrust we submitted added a trustline:
+        const trustlines = calls.filter(call => call === 'submitTransaction')
+        return {
+          ...result,
+          subentry_count: trustlines.length,
+          balances: [{ ...result.balances[0], balance: xlm }]
+        }
+      },
+      undefined,
+      { enabledTokenIds: [USDC, USDT0] }
+    )
+    await engine.checkAccountInnerLoop()
+    const wallet = {
+      id: engine.walletId,
+      makeSpend: async (spendInfo: EdgeSpendInfo) =>
+        await engine.makeSpend(spendInfo),
+      signTx: async (tx: EdgeTransaction) =>
+        await engine.signTx(tx, { stellarKey: SECRET }),
+      broadcastTx: async (tx: EdgeTransaction) => await engine.broadcastTx(tx)
+    } as unknown as EdgeCurrencyWallet
+    const activateBoth = async (): Promise<EdgeActivationQuote> =>
+      await engine.engineActivateWallet({
+        activateTokenIds: [USDC, USDT0],
+        paymentInfo: { wallet, tokenId: null }
+      })
+
+    // 1 XLM is the base reserve, each trustline needs 0.5 more,
+    // and each activation pays a fee:
+    await expectRejection(
+      activateBoth(),
+      'InsufficientFundsError: Insufficient funds'
+    )
+    xlm = '2.0000200'
+    await engine.checkAccountInnerLoop()
+    calls.length = 0
+    const { transactions } = await (await activateBoth()).approve()
+    assert.lengthOf(transactions, 2)
+
+    // The account reloads after each activation, so the next one
+    // counts the reserve the last one locked:
+    assert.deepEqual(calls, [
+      'submitTransaction',
+      'loadAccount',
+      'submitTransaction',
+      'loadAccount'
+    ])
+  })
+
+  it('activates tokens through the activation API', async function () {
+    const unactivated: string[][] = []
+    let trusted = false
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        if (func === 'submitTransaction') trusted = true
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount' || !trusted) return result
+        return {
+          ...result,
+          subentry_count: 1,
+          balances: [
+            trustline('USDC', USDC_ISSUER, '0.0000000'),
+            ...result.balances
+          ]
+        }
+      },
+      undefined,
+      {
+        callbacks: {
+          onUnactivatedTokenIdsChanged: tokenIds => unactivated.push(tokenIds)
+        },
+        enabledTokenIds: [USDC]
+      }
+    )
+    await engine.checkAccountInnerLoop()
+    assert.deepEqual(unactivated, [[USDC]])
+
+    // A stand-in for the core wallet, which signs with the wallet's keys:
+    const wallet = {
+      id: engine.walletId,
+      makeSpend: async (spendInfo: EdgeSpendInfo) =>
+        await engine.makeSpend(spendInfo),
+      signTx: async (tx: EdgeTransaction) =>
+        await engine.signTx(tx, { stellarKey: SECRET }),
+      broadcastTx: async (tx: EdgeTransaction) => await engine.broadcastTx(tx)
+    } as unknown as EdgeCurrencyWallet
+
+    const { assetOptions } = await engine.engineGetActivationAssets({
+      activateTokenIds: [USDC],
+      currencyWallets: {}
+    })
+    assert.deepEqual(assetOptions, [
+      {
+        paymentWalletId: engine.walletId,
+        tokenId: null,
+        currencyPluginId: 'stellar'
+      }
+    ])
+    const quote = await engine.engineActivateWallet({
+      activateTokenIds: [USDC],
+      paymentInfo: { wallet, tokenId: null }
+    })
+    assert.strictEqual(quote.networkFee.nativeAmount, '100')
+    const { transactions } = await quote.approve()
+    assert.lengthOf(transactions, 1)
+
+    // The trustline shows right after the approval:
+    assert.deepEqual(unactivated, [[USDC], []])
   })
 
   it('keeps the saved account sequence when it loads', function () {

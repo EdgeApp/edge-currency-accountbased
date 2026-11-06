@@ -13,9 +13,15 @@ import {
 } from '@stellar/stellar-sdk'
 import { abs, add, div, eq, gt, mul, sub } from 'biggystring'
 import {
+  EdgeActivationApproveOptions,
+  EdgeActivationQuote,
+  EdgeActivationResult,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeEngineActivationOptions,
+  EdgeEngineGetActivationAssetsOptions,
   EdgeFetchFunction,
+  EdgeGetActivationAssetsResults,
   EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -44,6 +50,8 @@ import {
 import { StellarTools } from './StellarTools'
 import {
   asFeeStats,
+  asMaybeActivateTokenParams,
+  asMaybeDeactivateTokenParams,
   asSafeStellarWalletInfo,
   asStellarPrivateKeys,
   asStellarWalletOtherData,
@@ -52,7 +60,7 @@ import {
   StellarPaymentRecord,
   StellarWalletOtherData
 } from './stellarTypes'
-import { getAccountReserve, makeTokenId } from './stellarUtils'
+import { getAccountReserve, getTokenAsset, makeTokenId } from './stellarUtils'
 
 const { OperationResponseType } = Horizon.HorizonApi
 
@@ -595,6 +603,25 @@ export class StellarEngine extends CurrencyEngine<
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 
+    const activate = asMaybeActivateTokenParams(edgeSpendInfo.otherParams)
+    if (activate != null) {
+      return this.makeChangeTrust(
+        edgeSpendInfo,
+        nativeBalance,
+        activate.activateTokenId,
+        true
+      )
+    }
+    const deactivate = asMaybeDeactivateTokenParams(edgeSpendInfo.otherParams)
+    if (deactivate != null) {
+      return this.makeChangeTrust(
+        edgeSpendInfo,
+        nativeBalance,
+        deactivate.deactivateTokenId,
+        false
+      )
+    }
+
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
@@ -709,6 +736,64 @@ export class StellarEngine extends CurrencyEngine<
     }).setTimeout(TimeoutInfinite)
   }
 
+  /**
+   * Adds or removes the trustline this account needs to hold a token.
+   * Either way only the fee is spent: a trustline locks one entry's
+   * reserve, which comes back when the trustline goes.
+   */
+  private makeChangeTrust(
+    edgeSpendInfo: EdgeSpendInfo,
+    nativeBalance: string,
+    tokenId: string,
+    activate: boolean
+  ): EdgeTransaction {
+    const token = this.allTokensMap[tokenId]
+    if (token == null) throw new Error(`Unknown token ${tokenId}`)
+    if (!activate && !eq(this.getBalance({ tokenId }), '0')) {
+      throw new Error(
+        `Send or swap all ${token.currencyCode} before removing it, since Stellar only removes empty trustlines`
+      )
+    }
+
+    const transaction = this.makeTxBuilder(edgeSpendInfo)
+      .addOperation(
+        Operation.changeTrust({
+          asset: getTokenAsset(token),
+          // A zero limit removes the trustline:
+          limit: activate ? undefined : '0'
+        })
+      )
+      .build()
+
+    const networkFee = transaction.fee.toString()
+    const lockedAfter = activate
+      ? add(this.lockedNativeAmount, this.networkInfo.entryReserve)
+      : this.lockedNativeAmount
+    if (gt(add(networkFee, lockedAfter), nativeBalance)) {
+      throw new InsufficientFundsError({ tokenId: null, networkFee })
+    }
+
+    return {
+      blockHeight: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: 0,
+      isSend: true,
+      memos: [],
+      nativeAmount: `-${networkFee}`,
+      networkFee,
+      networkFees: [],
+      otherParams: {
+        fromAddress: this.walletLocalData.publicKey,
+        unsignedTx: transaction.toXdr()
+      },
+      ourReceiveAddresses: [],
+      signedTx: '',
+      tokenId: null,
+      txid: '',
+      walletId: this.walletId
+    }
+  }
+
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
@@ -716,14 +801,17 @@ export class StellarEngine extends CurrencyEngine<
     const stellarPrivateKeys = asStellarPrivateKeys(privateKeys)
     const otherParams = getOtherParams(edgeTransaction)
 
-    const sendAmount = abs(
-      add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
-    )
-    await this.checkRecipientMinimumBalance(
-      this.getRecipientBalance,
-      sendAmount,
-      otherParams.toAddress
-    )
+    // Trustline changes have no recipient:
+    if (otherParams.toAddress != null) {
+      const sendAmount = abs(
+        add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
+      )
+      await this.checkRecipientMinimumBalance(
+        this.getRecipientBalance,
+        sendAmount,
+        otherParams.toAddress
+      )
+    }
 
     // Do signing
     try {
@@ -765,7 +853,9 @@ export class StellarEngine extends CurrencyEngine<
       )
       edgeTransaction.txid = result.hash
       edgeTransaction.date = Date.now() / 1000
-      this.activatedAccountsCache[getAccountId(otherParams.toAddress)] = true
+      if (otherParams.toAddress != null) {
+        this.activatedAccountsCache[getAccountId(otherParams.toAddress)] = true
+      }
       this.otherData.accountSequence = add(this.otherData.accountSequence, '1')
       this.walletLocalDataDirty = true
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
@@ -777,6 +867,99 @@ export class StellarEngine extends CurrencyEngine<
       throw e
     }
     return edgeTransaction
+  }
+
+  engineGetActivationAssets = async (
+    options: EdgeEngineGetActivationAssetsOptions
+  ): Promise<EdgeGetActivationAssetsResults> => {
+    // Trustlines are paid for in XLM from this same wallet:
+    return {
+      assetOptions: [
+        {
+          paymentWalletId: this.walletId,
+          tokenId: null,
+          currencyPluginId: this.currencyInfo.pluginId
+        }
+      ]
+    }
+  }
+
+  engineActivateWallet = async ({
+    activateTokenIds,
+    paymentInfo
+  }: EdgeEngineActivationOptions): Promise<EdgeActivationQuote> => {
+    if (activateTokenIds == null) {
+      throw new Error(
+        `Must specify activateTokenIds for ${this.currencyInfo.currencyCode}`
+      )
+    }
+    const { wallet, tokenId } = paymentInfo ?? { tokenId: null }
+    if (tokenId !== null) {
+      throw new Error(`Must activate with ${this.currencyInfo.currencyCode}`)
+    }
+    if (wallet?.id !== this.walletId) {
+      throw new Error('Must pay with same wallet you are activating token with')
+    }
+    for (const activateTokenId of activateTokenIds) {
+      if (
+        activateTokenId == null ||
+        this.allTokensMap[activateTokenId] == null
+      ) {
+        throw new Error(`Invalid tokenId to activate ${activateTokenId}`)
+      }
+    }
+
+    // Each trustline locks its own reserve, so check that all of them
+    // fit before broadcasting any:
+    const count = String(activateTokenIds.length)
+    const networkFee = mul(String(this.fees.standard), count)
+    const lockedAfter = add(
+      this.lockedNativeAmount,
+      mul(this.networkInfo.entryReserve, count)
+    )
+    if (gt(add(networkFee, lockedAfter), this.getBalance({ tokenId: null }))) {
+      throw new InsufficientFundsError({ tokenId: null, networkFee })
+    }
+
+    return {
+      paymentWalletId: this.walletId,
+      paymentTokenId: null,
+      // The trustline reserve stays in the wallet, so only fees are spent:
+      fromNativeAmount: '0',
+      networkFee: {
+        nativeAmount: networkFee,
+        tokenId: null,
+        currencyPluginId: this.currencyInfo.pluginId
+      },
+      approve: async (
+        options: EdgeActivationApproveOptions = {}
+      ): Promise<EdgeActivationResult> => {
+        const { metadata } = options
+        const transactions: EdgeTransaction[] = []
+        for (const activateTokenId of activateTokenIds) {
+          const activationTx = await wallet.makeSpend({
+            spendTargets: [],
+            metadata,
+            tokenId: null,
+            otherParams: { activateTokenId }
+          })
+          const signedTx = await wallet.signTx(activationTx)
+          const edgeTransaction = await wallet.broadcastTx(signedTx)
+          this.warn(
+            `SUCCESS activateWallet.approve()\n${cleanTxLogs(edgeTransaction)}`
+          )
+          transactions.push(edgeTransaction)
+          await this.saveTx(edgeTransaction)
+
+          // Horizon answers once the ledger closes, so the trustline
+          // exists. Reloading the account counts its reserve before
+          // the next activation checks what XLM is left:
+          await this.checkAccountInnerLoop()
+        }
+        return { transactions }
+      },
+      close: async (): Promise<void> => {}
+    }
   }
 }
 
