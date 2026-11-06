@@ -815,7 +815,8 @@ export class StellarEngine extends CurrencyEngine<
         edgeSpendInfo,
         nativeBalance,
         activate.activateTokenId,
-        true
+        true,
+        activate.sponsorAddress
       )
     }
     const deactivate = asMaybeDeactivateTokenParams(edgeSpendInfo.otherParams)
@@ -1055,12 +1056,16 @@ export class StellarEngine extends CurrencyEngine<
    * Adds or removes the trustline this account needs to hold a token.
    * Either way only the fee is spent: a trustline locks one entry's
    * reserve, which comes back when the trustline goes.
+   *
+   * With sponsored trustlines on, a sponsor can lock that reserve instead.
+   * The transaction then needs the sponsor's signature as well as ours.
    */
   private makeChangeTrust(
     edgeSpendInfo: EdgeSpendInfo,
     nativeBalance: string,
     tokenId: string,
-    activate: boolean
+    activate: boolean,
+    sponsorAddress?: string
   ): EdgeTransaction {
     const token = this.allTokensMap[tokenId]
     if (token == null) throw new Error(`Unknown token ${tokenId}`)
@@ -1069,21 +1074,42 @@ export class StellarEngine extends CurrencyEngine<
         `Send or swap all ${token.currencyCode} before removing it, since Stellar only removes empty trustlines`
       )
     }
+    if (sponsorAddress != null && !this.networkInfo.sponsoredTrustlines) {
+      throw new Error('Sponsored trustlines are off')
+    }
+    if (
+      sponsorAddress != null &&
+      !StrKey.isValidEd25519PublicKey(sponsorAddress)
+    ) {
+      throw new Error(`Invalid sponsor address ${sponsorAddress}`)
+    }
 
-    const transaction = this.makeTxBuilder(edgeSpendInfo)
-      .addOperation(
-        Operation.changeTrust({
-          asset: getTokenAsset(token),
-          // A zero limit removes the trustline:
-          limit: activate ? undefined : '0'
-        })
-      )
-      .build()
+    const changeTrust = Operation.changeTrust({
+      asset: getTokenAsset(token),
+      // A zero limit removes the trustline:
+      limit: activate ? undefined : '0'
+    })
+    const builder = this.makeTxBuilder(edgeSpendInfo)
+    if (sponsorAddress == null) {
+      builder.addOperation(changeTrust)
+    } else {
+      builder
+        .addOperation(
+          Operation.beginSponsoringFutureReserves({
+            sponsoredId: this.walletLocalData.publicKey,
+            source: sponsorAddress
+          })
+        )
+        .addOperation(changeTrust)
+        .addOperation(Operation.endSponsoringFutureReserves({}))
+    }
+    const transaction = builder.build()
 
     const networkFee = transaction.fee.toString()
-    const lockedAfter = activate
-      ? add(this.lockedNativeAmount, this.networkInfo.entryReserve)
-      : this.lockedNativeAmount
+    const lockedAfter =
+      activate && sponsorAddress == null
+        ? add(this.lockedNativeAmount, this.networkInfo.entryReserve)
+        : this.lockedNativeAmount
     if (gt(add(networkFee, lockedAfter), nativeBalance)) {
       throw new InsufficientFundsError({ tokenId: null, networkFee })
     }

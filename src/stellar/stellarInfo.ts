@@ -36,6 +36,7 @@ const networkInfo: StellarNetworkInfo = {
   baseReserve: '10000000',
   entryReserve: '5000000',
   networkPassphrase: 'Public Global Stellar Network ; September 2015',
+  sponsoredTrustlines: false,
   stellarServers: ['https://horizon.stellar.org']
 }
 
