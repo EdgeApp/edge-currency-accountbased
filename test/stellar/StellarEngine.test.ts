@@ -523,6 +523,80 @@ describe('StellarEngine', function () {
     )
   })
 
+  it('records what contract calls move in and out', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC]
+    })
+    const usdc = {
+      asset_type: 'credit_alphanum4',
+      asset_code: 'USDC',
+      asset_issuer: USDC_ISSUER
+    }
+
+    // The asset contract mints USDC to us, and an anchor pays us USDC
+    // through it alongside a transfer between two other accounts:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '1',
+        type: 'invoke_host_function',
+        transaction_hash: 'aa'.repeat(32),
+        asset_balance_changes: [
+          { ...usdc, type: 'mint', to: ADDRESS, amount: '1.0000000' },
+          {
+            ...usdc,
+            type: 'transfer',
+            from: FUNDER,
+            to: RECIPIENT,
+            amount: '3.0000000'
+          },
+          {
+            ...usdc,
+            type: 'transfer',
+            from: FUNDER,
+            to: ADDRESS,
+            amount: '4.5000000'
+          }
+        ]
+      })
+    )
+    // We pay XLM into a contract:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '2',
+        type: 'invoke_host_function',
+        transaction_hash: 'bb'.repeat(32),
+        asset_balance_changes: [
+          {
+            asset_type: 'native',
+            type: 'transfer',
+            from: ADDRESS,
+            to: RECIPIENT,
+            amount: '2.0000000'
+          }
+        ]
+      })
+    )
+    // A contract call that moves none of our assets stays out of history:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '3',
+        type: 'invoke_host_function',
+        transaction_hash: 'cc'.repeat(32)
+      })
+    )
+
+    const tokenTxs = await engine.getTransactions({ tokenId: USDC })
+    assert.deepEqual(
+      tokenTxs.map(tx => [tx.txid, tx.nativeAmount, tx.isSend]),
+      [['aa'.repeat(32), '55000000', false]]
+    )
+    const txs = await engine.getTransactions({ tokenId: null })
+    assert.deepEqual(
+      txs.map(tx => [tx.txid, tx.nativeAmount, tx.isSend]),
+      [['bb'.repeat(32), '-20000100', true]]
+    )
+  })
+
   it('records swaps between XLM and tokens', async function () {
     const engine = await makeEngine(horizon, undefined, {
       enabledTokenIds: [USDC, USDT0]
