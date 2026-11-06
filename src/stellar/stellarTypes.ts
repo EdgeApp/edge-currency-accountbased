@@ -5,6 +5,8 @@ import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface StellarNetworkInfo {
   baseReserve: string
+  /** Signs transactions for one network, such as the public network. */
+  networkPassphrase: string
   stellarServers: string[]
 }
 

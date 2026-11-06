@@ -34,6 +34,7 @@ export const builtinTokens: EdgeTokenMap = {
 
 const networkInfo: StellarNetworkInfo = {
   baseReserve: '10000000',
+  networkPassphrase: 'Public Global Stellar Network ; September 2015',
   stellarServers: ['https://horizon.stellar.org']
 }
 

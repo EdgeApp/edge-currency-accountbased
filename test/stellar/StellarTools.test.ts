@@ -1,8 +1,10 @@
+import { Networks } from '@stellar/stellar-sdk'
 import { assert } from 'chai'
 import { EdgeCurrencyTools, makeFakeIo } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
 import { builtinTokens, stellar } from '../../src/stellar/stellarInfo'
+import type { StellarTools } from '../../src/stellar/StellarTools'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
 
@@ -74,5 +76,10 @@ describe('StellarTools', function () {
       }) ?? Promise.resolve(),
       'Error: InvalidTokenIssuerError'
     )
+  })
+
+  it('signs for the public network', async function () {
+    const tools = (await makeTools()) as StellarTools
+    assert.strictEqual(tools.networkInfo.networkPassphrase, Networks.PUBLIC)
   })
 })

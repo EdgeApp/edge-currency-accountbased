@@ -6,7 +6,6 @@ import {
   Horizon,
   Keypair,
   Memo,
-  Networks,
   Operation,
   StrKey,
   TimeoutInfinite,
@@ -58,7 +57,6 @@ const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const BASE_FEE = 100 // Stroops
-const NETWORK_PASSPHRASE = Networks.PUBLIC
 
 type StellarServerFunction =
   | 'feeStats'
@@ -581,7 +579,7 @@ export class StellarEngine extends CurrencyEngine<
     // declare timebounds (TimeoutInfinite preserves the old no-bounds behavior).
     let txBuilder = new TransactionBuilder(account, {
       fee: String(feeSetting),
-      networkPassphrase: NETWORK_PASSPHRASE
+      networkPassphrase: this.networkInfo.networkPassphrase
     }).setTimeout(TimeoutInfinite)
 
     if (mustCreateAccount) {
@@ -671,7 +669,7 @@ export class StellarEngine extends CurrencyEngine<
     try {
       const transaction = TransactionBuilder.fromXdr(
         otherParams.unsignedTx,
-        NETWORK_PASSPHRASE
+        this.networkInfo.networkPassphrase
       )
       this.warn('Signing...')
       transaction.sign(Keypair.fromSecret(stellarPrivateKeys.stellarKey))
@@ -698,7 +696,7 @@ export class StellarEngine extends CurrencyEngine<
       }
       const transaction = TransactionBuilder.fromXdr(
         edgeTransaction.signedTx,
-        NETWORK_PASSPHRASE
+        this.networkInfo.networkPassphrase
       )
       this.warn(`Broadcasting...\n${cleanTxLogs(edgeTransaction)}`)
       const result = await this.multicastServers(
