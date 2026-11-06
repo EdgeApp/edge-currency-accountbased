@@ -47,6 +47,7 @@ import {
   StellarPaymentRecord,
   StellarWalletOtherData
 } from './stellarTypes'
+import { getAccountReserve } from './stellarUtils'
 
 const { OperationResponseType } = Horizon.HorizonApi
 
@@ -73,6 +74,8 @@ export class StellarEngine extends CurrencyEngine<
   networkInfo: StellarNetworkInfo
   engineFetch: EdgeFetchFunction
   activatedAccountsCache: { [publicAddress: string]: boolean }
+  /** XLM this account can't spend: its reserve plus XLM held in offers. */
+  lockedNativeAmount: string
   fees: { low: number; standard: number; high: number }
   otherData!: StellarWalletOtherData
 
@@ -88,6 +91,7 @@ export class StellarEngine extends CurrencyEngine<
     this.activatedAccountsCache = {}
     this.fees = { low: BASE_FEE, standard: BASE_FEE, high: BASE_FEE }
     this.minimumAddressBalance = this.networkInfo.baseReserve
+    this.lockedNativeAmount = this.networkInfo.baseReserve
   }
 
   setOtherData(raw: any): void {
@@ -437,6 +441,7 @@ export class StellarEngine extends CurrencyEngine<
       if (account.sequence !== this.otherData.accountSequence) {
         this.otherData.accountSequence = account.sequence
       }
+      const reserve = getAccountReserve(account, this.networkInfo.entryReserve)
       for (const bal of account.balances) {
         if (bal.asset_type === AssetType.native) {
           this.log('--Got balances--')
@@ -446,6 +451,10 @@ export class StellarEngine extends CurrencyEngine<
         }
         const denom = this.getDenomination(null)
         const nativeAmount = mul(bal.balance, denom.multiplier)
+        this.lockedNativeAmount = add(
+          reserve,
+          mul(bal.selling_liabilities, denom.multiplier)
+        )
         this.updateBalance(null, nativeAmount)
       }
     } catch (e: any) {
@@ -615,8 +624,7 @@ export class StellarEngine extends CurrencyEngine<
 
     const networkFee = transaction.fee.toString()
     nativeAmount = add(networkFee, nativeAmount) // Add fee to total
-    const nativeBalance2 = sub(nativeBalance, this.networkInfo.baseReserve) // Subtract the 1 min XLM
-    if (gt(nativeAmount, nativeBalance2)) {
+    if (gt(nativeAmount, sub(nativeBalance, this.lockedNativeAmount))) {
       throw new InsufficientFundsError({ tokenId })
     }
 

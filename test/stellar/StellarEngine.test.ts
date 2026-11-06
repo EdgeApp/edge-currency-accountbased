@@ -42,6 +42,9 @@ const horizon: HorizonStub = async func => {
       return {
         id: ADDRESS,
         sequence: SEQUENCE,
+        subentry_count: 0,
+        num_sponsoring: 0,
+        num_sponsored: 0,
         balances: [
           {
             asset_type: 'native',
@@ -522,6 +525,37 @@ describe('StellarEngine', function () {
       standard: 100,
       high: 200
     })
+  })
+
+  it('keeps the reserve and XLM in offers from being spent', async function () {
+    const engine = await makeEngine(async (func, ...params) => {
+      const result = await horizon(func, ...params)
+      if (func !== 'loadAccount') return result
+      // 4 entries of 0.5 XLM: 2 base entries and 3 subentries, less 2
+      // that others sponsor, plus 1 the account sponsors for someone else.
+      // 1 XLM more is in offers:
+      return {
+        ...result,
+        subentry_count: 3,
+        num_sponsoring: 1,
+        num_sponsored: 2,
+        balances: [{ ...result.balances[0], selling_liabilities: '1.0000000' }]
+      }
+    })
+    await engine.checkAccountInnerLoop()
+    assert.strictEqual(engine.lockedNativeAmount, '30000000')
+
+    // 100 XLM, less 3 locked, less the 100 stroop fee:
+    const send = async (nativeAmount: string): Promise<unknown> =>
+      await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [{ publicAddress: RECIPIENT, nativeAmount }]
+      })
+    await send('969999900')
+    await expectRejection(
+      send('969999901'),
+      'InsufficientFundsError: Insufficient funds'
+    )
   })
 
   it('keeps the saved account sequence when it loads', function () {

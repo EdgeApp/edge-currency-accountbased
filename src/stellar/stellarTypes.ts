@@ -4,7 +4,10 @@ import { asArray, asMaybe, asObject, asOptional, asString } from 'cleaners'
 import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface StellarNetworkInfo {
+  /** The least XLM a new account can start with: two base entries. */
   baseReserve: string
+  /** The XLM each ledger entry an account owns, like a trustline, locks. */
+  entryReserve: string
   /** Signs transactions for one network, such as the public network. */
   networkPassphrase: string
   stellarServers: string[]
