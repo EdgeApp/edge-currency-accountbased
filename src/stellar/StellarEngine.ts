@@ -35,7 +35,12 @@ import {
   promiseAny
 } from '../common/promiseUtils'
 import { makeTokenSyncTracker, TokenSyncTracker } from '../common/SyncTracker'
-import { cleanTxLogs, getOtherParams, makeEngineFetch } from '../common/utils'
+import {
+  cleanTxLogs,
+  getOtherParams,
+  makeEngineFetch,
+  matchJson
+} from '../common/utils'
 import { StellarTools } from './StellarTools'
 import {
   asFeeStats,
@@ -47,7 +52,7 @@ import {
   StellarPaymentRecord,
   StellarWalletOtherData
 } from './stellarTypes'
-import { getAccountReserve } from './stellarUtils'
+import { getAccountReserve, makeTokenId } from './stellarUtils'
 
 const { OperationResponseType } = Horizon.HorizonApi
 
@@ -429,10 +434,18 @@ export class StellarEngine extends CurrencyEngine<
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkUnconfirmedTransactionsFetch() {}
 
+  async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
+    await super.changeEnabledTokenIds(tokenIds)
+
+    // Look for trustlines right away, so a newly enabled token shows
+    // whether it needs activating without waiting for the next poll:
+    await this.checkAccountInnerLoop()
+  }
+
   // Check all account balance and other relevant info
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const address = this.walletLocalData.publicKey
+    const unactivatedTokenIds: string[] = []
     try {
       const account: Horizon.AccountResponse = await this.multicastServers(
         'loadAccount',
@@ -442,29 +455,77 @@ export class StellarEngine extends CurrencyEngine<
         this.otherData.accountSequence = account.sequence
       }
       const reserve = getAccountReserve(account, this.networkInfo.entryReserve)
+
+      // Tokens this account has a trustline for:
+      const trustedTokenIds = new Set<string>()
+      const detectedTokenIds: string[] = []
       for (const bal of account.balances) {
         if (bal.asset_type === AssetType.native) {
-          this.log('--Got balances--')
-        } else {
-          // No token support yet
+          const denom = this.getDenomination(null)
+          this.lockedNativeAmount = add(
+            reserve,
+            mul(bal.selling_liabilities, denom.multiplier)
+          )
+          this.updateBalance(null, mul(bal.balance, denom.multiplier))
           continue
         }
-        const denom = this.getDenomination(null)
+        if (
+          bal.asset_type !== AssetType.credit4 &&
+          bal.asset_type !== AssetType.credit12
+        ) {
+          continue
+        }
+
+        const tokenId = makeTokenId({
+          code: bal.asset_code,
+          issuer: bal.asset_issuer
+        })
+        const token = this.allTokensMap[tokenId]
+        if (token == null) continue
+        trustedTokenIds.add(tokenId)
+
+        const denom = token.denominations[0]
         const nativeAmount = mul(bal.balance, denom.multiplier)
-        this.lockedNativeAmount = add(
-          reserve,
-          mul(bal.selling_liabilities, denom.multiplier)
-        )
-        this.updateBalance(null, nativeAmount)
+        this.updateBalance(tokenId, nativeAmount)
+        if (gt(nativeAmount, '0') && !this.enabledTokenIds.includes(tokenId)) {
+          detectedTokenIds.push(tokenId)
+        }
       }
+
+      for (const tokenId of this.enabledTokenIds) {
+        if (trustedTokenIds.has(tokenId)) continue
+        unactivatedTokenIds.push(tokenId)
+        this.updateBalance(tokenId, '0')
+      }
+      if (detectedTokenIds.length > 0) {
+        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+      }
+      this.syncTracker.setBalanceRatios(this.enabledTokenIds, 1)
     } catch (e: any) {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (e.response && e.response.title === 'Resource Missing') {
         this.log('Account not found. Probably not activated w/minimum XLM')
+        // An account that doesn't exist can't hold trustlines:
+        for (const tokenId of this.enabledTokenIds) {
+          unactivatedTokenIds.push(tokenId)
+          this.updateBalance(tokenId, '0')
+        }
         this.syncTracker.updateBalanceRatio(null, 1)
+        this.syncTracker.setBalanceRatios(this.enabledTokenIds, 1)
       } else {
         this.error(`checkAccountInnerLoop Error fetching address info: `, e)
+        return
       }
+    }
+
+    if (
+      !matchJson(unactivatedTokenIds, this.walletLocalData.unactivatedTokenIds)
+    ) {
+      this.walletLocalData.unactivatedTokenIds = unactivatedTokenIds
+      this.walletLocalDataDirty = true
+      this.currencyEngineCallbacks.onUnactivatedTokenIdsChanged(
+        unactivatedTokenIds
+      )
     }
   }
 

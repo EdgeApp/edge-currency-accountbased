@@ -27,6 +27,22 @@ const MUXED_RECIPIENT =
   'MAJZR5RMNUNEK7CRXJVEWXZ5XUXWT7FJGILCDDOITF7EC26RPWJ4UAAAAAAAAAAE2IYHE'
 const FUNDER = 'GD6ROJBYLKQMOW3E7N4M2YBPUHMZD7PL65VRHRMO24BOVSBV5H3BQRSL'
 
+const USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
+const USDC = `USDC-${USDC_ISSUER}`
+const USDT0 = 'USDT0-GATISXX6BZ6NC7IKQBY37CJD4SOZL3CYZJWXEDG6JVIY4WBS6KXJHN6Q'
+
+/** A trustline balance, as Horizon lists it. */
+const trustline = (code: string, issuer: string, balance: string): object => ({
+  asset_type: code.length > 4 ? 'credit_alphanum12' : 'credit_alphanum4',
+  asset_code: code,
+  asset_issuer: issuer,
+  balance,
+  limit: '922337203685.4775807',
+  buying_liabilities: '0.0000000',
+  selling_liabilities: '0.0000000',
+  is_authorized: true
+})
+
 // Sequence numbers are int64 values, well past Number.MAX_SAFE_INTEGER:
 const SEQUENCE = '280502140848308224'
 
@@ -90,7 +106,11 @@ const lookUpAccounts =
  */
 async function makeEngine(
   stub?: HorizonStub,
-  fetch?: EdgeFetchFunction
+  fetch?: EdgeFetchFunction,
+  opts: {
+    callbacks?: Partial<EdgeCurrencyEngineCallbacks>
+    enabledTokenIds?: string[]
+  } = {}
 ): Promise<StellarEngine> {
   const fakeIo = makeFakeIo()
   const io = fetch == null ? fakeIo : { ...fakeIo, fetch }
@@ -117,12 +137,13 @@ async function makeEngine(
     onTransactionsChanged() {},
     onTxidsChanged() {},
     onUnactivatedTokenIdsChanged() {},
-    onWcNewContractCall() {}
+    onWcNewContractCall() {},
+    ...opts.callbacks
   }
   const engineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
     customTokens: {},
-    enabledTokenIds: [],
+    enabledTokenIds: opts.enabledTokenIds ?? [],
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
@@ -556,6 +577,96 @@ describe('StellarEngine', function () {
       send('969999901'),
       'InsufficientFundsError: Insufficient funds'
     )
+  })
+
+  it('reads token balances from trustlines', async function () {
+    const unactivated: string[][] = []
+    const detected: string[][] = []
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        return {
+          ...result,
+          subentry_count: 3,
+          balances: [
+            trustline('USDC', USDC_ISSUER, '12.5000000'),
+            trustline('USDT0', USDT0.split('-')[1], '3.0000000'),
+            // A token the wallet doesn't know about:
+            trustline('ABC', FUNDER, '1.0000000'),
+            ...result.balances
+          ]
+        }
+      },
+      undefined,
+      {
+        callbacks: {
+          onNewTokens: tokenIds => detected.push(tokenIds),
+          onUnactivatedTokenIdsChanged: tokenIds => unactivated.push(tokenIds)
+        },
+        enabledTokenIds: [USDC]
+      }
+    )
+    await engine.checkAccountInnerLoop()
+
+    assert.strictEqual(engine.getBalance({ tokenId: null }), '1000000000')
+    assert.strictEqual(engine.getBalance({ tokenId: USDC }), '125000000')
+    // USDT0 has a balance but isn't enabled, so it gets suggested:
+    assert.deepEqual(detected, [[USDT0]])
+    // Every enabled token has a trustline, so nothing changes:
+    assert.deepEqual(unactivated, [])
+    // 2 base entries and 3 trustlines:
+    assert.strictEqual(engine.lockedNativeAmount, '25000000')
+  })
+
+  it('lists enabled tokens with no trustline as unactivated', async function () {
+    const unactivated: string[][] = []
+    let trustsUsdc = false
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount' || !trustsUsdc) return result
+        return {
+          ...result,
+          balances: [
+            trustline('USDC', USDC_ISSUER, '0.0000000'),
+            ...result.balances
+          ]
+        }
+      },
+      undefined,
+      {
+        callbacks: {
+          onUnactivatedTokenIdsChanged: tokenIds => unactivated.push(tokenIds)
+        }
+      }
+    )
+
+    // Enabling tokens checks for trustlines right away:
+    await engine.changeEnabledTokenIds([USDC, USDT0])
+    assert.deepEqual(unactivated, [[USDC, USDT0]])
+    assert.strictEqual(engine.getBalance({ tokenId: USDC }), '0')
+
+    // Polling again reports only changes:
+    await engine.checkAccountInnerLoop()
+    assert.lengthOf(unactivated, 1)
+
+    trustsUsdc = true
+    await engine.checkAccountInnerLoop()
+    assert.deepEqual(unactivated, [[USDC, USDT0], [USDT0]])
+  })
+
+  it('lists every enabled token as unactivated with no account', async function () {
+    const unactivated: string[][] = []
+    const engine = await makeEngine(lookUpAccounts([]), undefined, {
+      callbacks: {
+        onUnactivatedTokenIdsChanged: tokenIds => unactivated.push(tokenIds)
+      },
+      enabledTokenIds: [USDC]
+    })
+    await engine.checkAccountInnerLoop()
+    assert.deepEqual(unactivated, [[USDC]])
+    assert.strictEqual(engine.getBalance({ tokenId: USDC }), '0')
   })
 
   it('keeps the saved account sequence when it loads', function () {
