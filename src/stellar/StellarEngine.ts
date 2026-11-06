@@ -633,24 +633,7 @@ export class StellarEngine extends CurrencyEngine<
 
     const exchangeAmount = div(nativeAmount, denom.multiplier, 7)
 
-    const account = new Account(
-      this.walletLocalData.publicKey,
-      this.otherData.accountSequence
-    )
-
-    const feeSetting =
-      edgeSpendInfo.networkFeeOption !== undefined &&
-      edgeSpendInfo.networkFeeOption !== 'custom'
-        ? this.fees[edgeSpendInfo.networkFeeOption]
-        : this.fees.standard
-
-    // stellar-sdk v13: the network passphrase moved from the removed global
-    // Network singleton into per-transaction options, and transactions must
-    // declare timebounds (TimeoutInfinite preserves the old no-bounds behavior).
-    let txBuilder = new TransactionBuilder(account, {
-      fee: String(feeSetting),
-      networkPassphrase: this.networkInfo.networkPassphrase
-    }).setTimeout(TimeoutInfinite)
+    let txBuilder = this.makeTxBuilder(edgeSpendInfo)
 
     if (mustCreateAccount) {
       txBuilder = txBuilder.addOperation(
@@ -668,19 +651,7 @@ export class StellarEngine extends CurrencyEngine<
         })
       )
     }
-    for (const memo of memos) {
-      switch (memo.type) {
-        case 'hex':
-          txBuilder = txBuilder.addMemo(Memo.hash(memo.value))
-          break
-        case 'number':
-          txBuilder = txBuilder.addMemo(Memo.id(memo.value))
-          break
-        case 'text':
-          txBuilder = txBuilder.addMemo(Memo.text(memo.value))
-          break
-      }
-    }
+    for (const memo of memos) txBuilder = txBuilder.addMemo(makeMemo(memo))
     const transaction = txBuilder.build()
 
     const networkFee = transaction.fee.toString()
@@ -716,6 +687,26 @@ export class StellarEngine extends CurrencyEngine<
       `${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )
     return edgeTransaction
+  }
+
+  /** Starts a transaction from this account at the chosen fee. */
+  private makeTxBuilder(edgeSpendInfo: EdgeSpendInfo): TransactionBuilder {
+    const account = new Account(
+      this.walletLocalData.publicKey,
+      this.otherData.accountSequence
+    )
+    const feeSetting =
+      edgeSpendInfo.networkFeeOption !== undefined &&
+      edgeSpendInfo.networkFeeOption !== 'custom'
+        ? this.fees[edgeSpendInfo.networkFeeOption]
+        : this.fees.standard
+
+    // Transactions must declare timebounds;
+    // TimeoutInfinite leaves them unbounded:
+    return new TransactionBuilder(account, {
+      fee: String(feeSetting),
+      networkPassphrase: this.networkInfo.networkPassphrase
+    }).setTimeout(TimeoutInfinite)
   }
 
   async signTx(
@@ -801,6 +792,18 @@ export async function makeCurrencyEngine(
   await engine.loadEngine()
 
   return engine
+}
+
+/** Converts an Edge memo to a Stellar one. */
+function makeMemo(memo: EdgeMemo): Memo {
+  switch (memo.type) {
+    case 'hex':
+      return Memo.hash(memo.value)
+    case 'number':
+      return Memo.id(memo.value)
+    case 'text':
+      return Memo.text(memo.value)
+  }
 }
 
 /**
