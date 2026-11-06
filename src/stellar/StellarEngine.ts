@@ -45,7 +45,8 @@ import {
   cleanTxLogs,
   getOtherParams,
   makeEngineFetch,
-  matchJson
+  matchJson,
+  RecipientNotReadyError
 } from '../common/utils'
 import { StellarTools } from './StellarTools'
 import {
@@ -89,6 +90,8 @@ export class StellarEngine extends CurrencyEngine<
   activatedAccountsCache: { [publicAddress: string]: boolean }
   /** XLM this account can't spend: its reserve plus XLM held in offers. */
   lockedNativeAmount: string
+  /** Each token's amount held in offers, which sends can't spend. */
+  lockedTokenAmounts: { [tokenId: string]: string } = {}
   fees: { low: number; standard: number; high: number }
   otherData!: StellarWalletOtherData
 
@@ -467,6 +470,7 @@ export class StellarEngine extends CurrencyEngine<
       // Tokens this account has a trustline for:
       const trustedTokenIds = new Set<string>()
       const detectedTokenIds: string[] = []
+      const lockedTokenAmounts: { [tokenId: string]: string } = {}
       for (const bal of account.balances) {
         if (bal.asset_type === AssetType.native) {
           const denom = this.getDenomination(null)
@@ -494,6 +498,10 @@ export class StellarEngine extends CurrencyEngine<
 
         const denom = token.denominations[0]
         const nativeAmount = mul(bal.balance, denom.multiplier)
+        lockedTokenAmounts[tokenId] = mul(
+          bal.selling_liabilities,
+          denom.multiplier
+        )
         this.updateBalance(tokenId, nativeAmount)
         if (gt(nativeAmount, '0') && !this.enabledTokenIds.includes(tokenId)) {
           detectedTokenIds.push(tokenId)
@@ -505,6 +513,7 @@ export class StellarEngine extends CurrencyEngine<
         unactivatedTokenIds.push(tokenId)
         this.updateBalance(tokenId, '0')
       }
+      this.lockedTokenAmounts = lockedTokenAmounts
       if (detectedTokenIds.length > 0) {
         this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
       }
@@ -632,6 +641,16 @@ export class StellarEngine extends CurrencyEngine<
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
+    if (tokenId != null) {
+      return await this.makeTokenSpend(
+        edgeSpendInfo,
+        tokenId,
+        publicAddress,
+        nativeAmount,
+        nativeBalance
+      )
+    }
+
     // Check if destination address is activated
     const accountId = getAccountId(publicAddress)
     let mustCreateAccount = false
@@ -714,6 +733,111 @@ export class StellarEngine extends CurrencyEngine<
       `${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )
     return edgeTransaction
+  }
+
+  /**
+   * Pays a token. The recipient needs an authorized trustline for it,
+   * and the fee comes out of this account's spendable XLM.
+   */
+  private async makeTokenSpend(
+    edgeSpendInfo: EdgeSpendInfo,
+    tokenId: string,
+    publicAddress: string,
+    nativeAmount: string,
+    tokenBalance: string
+  ): Promise<EdgeTransaction> {
+    const { memos = [] } = edgeSpendInfo
+    const token = this.allTokensMap[tokenId]
+    if (token == null) throw new Error(`Unknown token ${tokenId}`)
+    if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
+    // Tokens held in offers can't be sent:
+    const lockedAmount = this.lockedTokenAmounts[tokenId] ?? '0'
+    if (gt(nativeAmount, sub(tokenBalance, lockedAmount))) {
+      throw new InsufficientFundsError({ tokenId })
+    }
+
+    const asset = getTokenAsset(token)
+    const accountId = getAccountId(publicAddress)
+    // The issuer takes back its own asset without a trustline:
+    if (accountId !== asset.getIssuer()) {
+      let recipient: Horizon.AccountResponse
+      try {
+        recipient = await this.multicastServers('loadAccount', accountId)
+      } catch (e: any) {
+        if (e?.response?.title !== 'Resource Missing') throw e
+        throw new RecipientNotReadyError(
+          'accountNotActivated',
+          token.currencyCode,
+          `The recipient's Stellar account isn't activated, so it can't receive ${token.currencyCode} yet`
+        )
+      }
+      const line = recipient.balances.find(
+        bal =>
+          (bal.asset_type === AssetType.credit4 ||
+            bal.asset_type === AssetType.credit12) &&
+          bal.asset_code === asset.getCode() &&
+          bal.asset_issuer === asset.getIssuer()
+      )
+      if (line == null) {
+        throw new RecipientNotReadyError(
+          'tokenNotAdded',
+          token.currencyCode,
+          `The recipient hasn't added ${token.currencyCode} to their Stellar wallet, so it can't receive ${token.currencyCode} yet`
+        )
+      }
+      if ('is_authorized' in line && !line.is_authorized) {
+        throw new RecipientNotReadyError(
+          'notAuthorized',
+          token.currencyCode,
+          `The ${token.currencyCode} issuer hasn't authorized the recipient to receive ${token.currencyCode}`
+        )
+      }
+    }
+
+    let txBuilder = this.makeTxBuilder(edgeSpendInfo).addOperation(
+      Operation.payment({
+        destination: publicAddress,
+        asset,
+        amount: div(nativeAmount, token.denominations[0].multiplier, 7)
+      })
+    )
+    for (const memo of memos) txBuilder = txBuilder.addMemo(makeMemo(memo))
+    const transaction = txBuilder.build()
+
+    // The fee is paid in XLM:
+    const parentNetworkFee = transaction.fee.toString()
+    const spendableXlm = sub(
+      this.getBalance({ tokenId: null }),
+      this.lockedNativeAmount
+    )
+    if (gt(parentNetworkFee, spendableXlm)) {
+      throw new InsufficientFundsError({
+        tokenId: null,
+        networkFee: parentNetworkFee
+      })
+    }
+
+    return {
+      blockHeight: 0,
+      currencyCode: token.currencyCode,
+      date: 0,
+      isSend: true,
+      memos,
+      nativeAmount: `-${nativeAmount}`,
+      networkFee: '0',
+      networkFees: [],
+      otherParams: {
+        fromAddress: this.walletLocalData.publicKey,
+        toAddress: publicAddress,
+        unsignedTx: transaction.toXdr()
+      },
+      ourReceiveAddresses: [],
+      parentNetworkFee,
+      signedTx: '',
+      tokenId,
+      txid: '',
+      walletId: this.walletId
+    }
   }
 
   /** Starts a transaction from this account at the chosen fee. */
@@ -801,8 +925,9 @@ export class StellarEngine extends CurrencyEngine<
     const stellarPrivateKeys = asStellarPrivateKeys(privateKeys)
     const otherParams = getOtherParams(edgeTransaction)
 
+    // Only XLM sends can create the recipient's account.
     // Trustline changes have no recipient:
-    if (otherParams.toAddress != null) {
+    if (edgeTransaction.tokenId == null && otherParams.toAddress != null) {
       const sendAmount = abs(
         add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
       )

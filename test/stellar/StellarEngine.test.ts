@@ -19,6 +19,10 @@ import {
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
+import {
+  RecipientNotReadyError,
+  RecipientNotReadyReason
+} from '../../src/common/utils'
 import { StellarEngine } from '../../src/stellar/StellarEngine'
 import { stellar } from '../../src/stellar/stellarInfo'
 import {
@@ -878,6 +882,177 @@ describe('StellarEngine', function () {
 
     // The trustline shows right after the approval:
     assert.deepEqual(unactivated, [[USDC], []])
+  })
+
+  it('sends tokens to a recipient that trusts them', async function () {
+    const lookups: string[] = []
+    const submitted: Transaction[] = []
+    // Our account holds 10 USDC, 2 of them in an offer,
+    // and the recipient has a USDC trustline:
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        if (func === 'submitTransaction') submitted.push(params[0])
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        lookups.push(params[0])
+        const line =
+          params[0] === ADDRESS
+            ? {
+                ...trustline('USDC', USDC_ISSUER, '10.0000000'),
+                selling_liabilities: '2.0000000'
+              }
+            : trustline('USDC', USDC_ISSUER, '0.0000000')
+        return {
+          ...result,
+          id: params[0],
+          subentry_count: 2,
+          balances: [line, ...result.balances]
+        }
+      },
+      undefined,
+      { enabledTokenIds: [USDC] }
+    )
+    await engine.checkAccountInnerLoop()
+
+    const send = async (nativeAmount: string): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: USDC,
+        spendTargets: [{ publicAddress: RECIPIENT, nativeAmount }],
+        memos: [{ type: 'text', value: 'invoice 7' }]
+      })
+    await expectRejection(
+      send('80000001'),
+      `InsufficientFundsError: Insufficient ${USDC}`
+    )
+    const tx = await send('80000000')
+    assert.include(tx, {
+      currencyCode: 'USDC',
+      nativeAmount: '-80000000',
+      networkFee: '0',
+      parentNetworkFee: '100',
+      tokenId: USDC
+    })
+
+    // Signing a token send checks no XLM minimum on the recipient:
+    const signed = await engine.signTx(tx, { stellarKey: SECRET })
+    await engine.broadcastTx(signed)
+    assert.deepEqual(lookups, [ADDRESS, RECIPIENT])
+    const { memo, operations } = submitted[0]
+    assert.strictEqual(memo.type, 'text')
+    assert.strictEqual(
+      Buffer.from(memo.value as Uint8Array).toString(),
+      'invoice 7'
+    )
+    assert.lengthOf(operations, 1)
+    assert.deepInclude(operations[0], {
+      type: 'payment',
+      destination: RECIPIENT,
+      amount: '8.0000000'
+    })
+    const { asset } = operations[0] as Operation.Payment
+    assert.isTrue(asset.equals(new Asset('USDC', USDC_ISSUER)))
+  })
+
+  it('explains why a recipient cannot take tokens', async function () {
+    // The recipient's trustline for USDC, or undefined for no account:
+    let recipientLines: object[] | undefined
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        if (params[0] === ADDRESS) {
+          return {
+            ...result,
+            subentry_count: 1,
+            balances: [
+              trustline('USDC', USDC_ISSUER, '10.0000000'),
+              ...result.balances
+            ]
+          }
+        }
+        if (recipientLines == null) throw horizonError(404, 'Resource Missing')
+        return { ...result, balances: [...recipientLines, ...result.balances] }
+      },
+      undefined,
+      { enabledTokenIds: [USDC] }
+    )
+    await engine.checkAccountInnerLoop()
+    const send = async (publicAddress: string): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: USDC,
+        spendTargets: [{ publicAddress, nativeAmount: '10000000' }]
+      })
+
+    // The GUI matches the error by name and shows text for its reason:
+    const expectNotReady = async (
+      reason: RecipientNotReadyReason,
+      message: string
+    ): Promise<void> => {
+      const error = await send(RECIPIENT).then(
+        () => assert.fail('Expected a rejection'),
+        (error: unknown) => error
+      )
+      assert.instanceOf(error, RecipientNotReadyError)
+      assert.include(error, {
+        name: 'RecipientNotReadyError',
+        reason,
+        currencyCode: 'USDC',
+        message
+      })
+    }
+
+    await expectNotReady(
+      'accountNotActivated',
+      "The recipient's Stellar account isn't activated, so it can't receive USDC yet"
+    )
+    // A trustline for a different USDC doesn't count:
+    recipientLines = [trustline('USDC', FUNDER, '0.0000000')]
+    await expectNotReady(
+      'tokenNotAdded',
+      "The recipient hasn't added USDC to their Stellar wallet, so it can't receive USDC yet"
+    )
+    recipientLines = [
+      { ...trustline('USDC', USDC_ISSUER, '0.0000000'), is_authorized: false }
+    ]
+    await expectNotReady(
+      'notAuthorized',
+      "The USDC issuer hasn't authorized the recipient to receive USDC"
+    )
+
+    // The issuer needs no trustline for its own asset:
+    recipientLines = undefined
+    await send(USDC_ISSUER)
+  })
+
+  it('pays the token fee from spendable XLM', async function () {
+    // 1.5 XLM is locked by the base reserve and the trustline:
+    let xlm = '1.5000099'
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        return {
+          ...result,
+          subentry_count: 1,
+          balances: [
+            trustline('USDC', USDC_ISSUER, '10.0000000'),
+            { ...result.balances[0], balance: xlm }
+          ]
+        }
+      },
+      undefined,
+      { enabledTokenIds: [USDC] }
+    )
+    await engine.checkAccountInnerLoop()
+    const send = async (): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: USDC,
+        spendTargets: [{ publicAddress: USDC_ISSUER, nativeAmount: '10000000' }]
+      })
+    await expectRejection(send(), 'InsufficientFundsError: Insufficient funds')
+    xlm = '1.5000100'
+    await engine.checkAccountInnerLoop()
+    await send()
   })
 
   it('keeps the saved account sequence when it loads', function () {
