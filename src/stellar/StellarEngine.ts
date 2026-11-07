@@ -49,6 +49,7 @@ import {
   makeEngineFetch,
   matchJson
 } from '../common/utils'
+import { asSep10ChallengeOptions, signSep10Challenge } from './stellarSep10'
 import { StellarTools } from './StellarTools'
 import {
   asFeeStats,
@@ -112,6 +113,7 @@ export class StellarEngine extends CurrencyEngine<
   otherData!: StellarWalletOtherData
   /** The multi-operation transaction processTransaction last read. */
   private lastMultiOpTxid: string | undefined
+  otherMethodsWithKeys: Object
 
   constructor(
     env: PluginEnvironment<StellarNetworkInfo>,
@@ -126,6 +128,25 @@ export class StellarEngine extends CurrencyEngine<
     this.fees = { low: BASE_FEE, standard: BASE_FEE, high: BASE_FEE }
     this.minimumAddressBalance = this.networkInfo.baseReserve
     this.lockedNativeAmount = this.networkInfo.baseReserve
+
+    this.otherMethodsWithKeys = {
+      signSep10Challenge: async (
+        privateKeys: JsonObject,
+        challengeXdr: unknown,
+        opts: unknown
+      ): Promise<string> => {
+        const { stellarKey } = asStellarPrivateKeys(privateKeys)
+        if (typeof challengeXdr !== 'string') {
+          throw new TypeError('signSep10Challenge needs a challenge string')
+        }
+        return signSep10Challenge(
+          challengeXdr,
+          asSep10ChallengeOptions(opts),
+          this.networkInfo.networkPassphrase,
+          stellarKey
+        )
+      }
+    }
   }
 
   setOtherData(raw: any): void {
@@ -403,7 +424,7 @@ export class StellarEngine extends CurrencyEngine<
           ? { assetActionType: 'swap' }
           : undefined,
         otherParams: { fromAddress, toAddress },
-        ourReceiveAddresses: toAddress === ourAddress ? [fromAddress] : [],
+        ourReceiveAddresses: toAddress === ourAddress ? [ourAddress] : [],
         savedAction: isSwapped ? savedAction : undefined
       }
     }

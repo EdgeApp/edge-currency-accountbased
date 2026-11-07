@@ -31,7 +31,8 @@ const pluginIds = Object.keys(plugins) as Array<keyof typeof plugins>
 const pluginsWithoutMetatokens: Record<string, boolean> = {
   algorand: true,
   ripple: true,
-  stellar: true
+  stellar: true,
+  stellartestnet: true
 }
 
 describe('builtinTokens', function () {
