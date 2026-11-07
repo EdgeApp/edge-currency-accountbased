@@ -500,6 +500,21 @@ export class StellarEngine extends CurrencyEngine<
         }
         return { fromAddress, toAddress, isSwap, savedAction }
       }
+      // Contract calls, such as an anchor paying through an asset
+      // contract, list what they move in asset_balance_changes.
+      // A mint has no sender and a burn has no recipient:
+      case OperationResponseType.invokeHostFunction: {
+        let summary: StellarOperationSummary | undefined
+        for (const change of op.asset_balance_changes ?? []) {
+          const { from: fromAddress, to: toAddress } = change
+          if (fromAddress !== ourAddress && toAddress !== ourAddress) continue
+          const tokenId = this.findTokenId(change)
+          if (toAddress === ourAddress) adjust(tokenId, change.amount, true)
+          if (fromAddress === ourAddress) adjust(tokenId, change.amount, false)
+          summary ??= { fromAddress, toAddress, isSwap: false }
+        }
+        return summary
+      }
       // Adding or removing a trustline only costs its fee:
       case OperationResponseType.changeTrust:
         return { fromAddress: op.trustor, isSwap: false }
