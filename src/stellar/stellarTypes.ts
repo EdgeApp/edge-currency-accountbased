@@ -1,31 +1,61 @@
 import type { Horizon } from '@stellar/stellar-sdk'
-import { asArray, asMaybe, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asMaybe,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface StellarNetworkInfo {
+  /** The least XLM a new account can start with: two base entries. */
   baseReserve: string
+  /** The XLM each ledger entry an account owns, like a trustline, locks. */
+  entryReserve: string
+  /** Signs transactions for one network, such as the public network. */
+  networkPassphrase: string
+  /**
+   * Lets a sponsor account pay a new trustline's reserve (CAP-33).
+   * The sponsor co-signs the activation outside the engine.
+   */
+  sponsoredTrustlines: boolean
   stellarServers: string[]
 }
 
-export interface StellarCustomToken {
-  currencyCode: string
-  currencyName: string
-  multiplier: string
-  contractAddress: string
-}
+/** Where a token lives: its asset code and issuing account. */
+export const asStellarNetworkLocation = asObject({
+  code: asString,
+  issuer: asString
+})
+/**
+ * Asks makeSpend to add the trustline a token needs.
+ * With sponsored trustlines on, a sponsor can pay its reserve.
+ */
+export const asMaybeActivateTokenParams = asMaybe(
+  asObject({
+    activateTokenId: asString,
+    sponsorAddress: asOptional(asString)
+  })
+)
 
-/** The records Horizon's payments endpoint returns. */
-export type StellarPaymentRecord =
-  | Horizon.ServerApi.CreateAccountOperationRecord
-  | Horizon.ServerApi.PaymentOperationRecord
-  | Horizon.ServerApi.PathPaymentOperationRecord
-  | Horizon.ServerApi.PathPaymentStrictSendOperationRecord
-  | Horizon.ServerApi.AccountMergeOperationRecord
-  | Horizon.ServerApi.InvokeHostFunctionOperationRecord
+/** Asks makeSpend to remove a token's trustline. */
+export const asMaybeDeactivateTokenParams = asMaybe(
+  asObject({ deactivateTokenId: asString })
+)
+
+export type StellarNetworkLocation = ReturnType<typeof asStellarNetworkLocation>
+
+/** The records Horizon's operations endpoint returns. */
+export type StellarOperationRecord = Horizon.ServerApi.OperationRecord
 
 export const asStellarWalletOtherData = asObject({
-  lastPagingToken: asMaybe(asString, '0'),
+  // Renamed from lastPagingToken, the old payments cursor, which skipped
+  // token payments and trustline changes. A new key restarts history at
+  // the start for wallets that synced before token support:
+  lastOperationPagingToken: asMaybe(asString, '0'),
   accountSequence: asMaybe(asString, '0')
 })
 
@@ -50,6 +80,7 @@ export const asStellarPrivateKeys = asObject({
 //
 
 export const asStellarInfoPayload = asObject({
+  sponsoredTrustlines: asOptional(asBoolean),
   stellarServers: asOptional(asArray(asString))
 })
 export type StellarInfoPayload = ReturnType<typeof asStellarInfoPayload>

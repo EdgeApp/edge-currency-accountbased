@@ -439,3 +439,32 @@ export const safeParseInt = (value: string): number => {
   }
   return num
 }
+
+/**
+ * Why a token send's recipient can't receive the token yet.
+ */
+export type RecipientNotReadyReason =
+  | 'accountNotActivated'
+  | 'tokenNotAdded'
+  | 'notAuthorized'
+
+/**
+ * Refuses a spend whose recipient can't receive the asset yet, before
+ * anything is signed. The GUI matches the name and shows localized text for
+ * the reason, so the user sees what to fix instead of a generic failure.
+ */
+export class RecipientNotReadyError extends Error {
+  readonly reason: RecipientNotReadyReason
+  readonly currencyCode: string
+
+  constructor(
+    reason: RecipientNotReadyReason,
+    currencyCode: string,
+    message: string
+  ) {
+    super(message)
+    this.name = 'RecipientNotReadyError'
+    this.reason = reason
+    this.currencyCode = currencyCode
+  }
+}

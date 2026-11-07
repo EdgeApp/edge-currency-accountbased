@@ -58,6 +58,10 @@ module.exports = {
   optimization: {
     minimizer: [
       new ESBuildMinifyPlugin({
+        // Each chunk is a classic script, so the helpers ESBuild hoists to
+        // the top of a chunk would otherwise be shared globals, and a later
+        // chunk reusing the same minified name overwrites them:
+        format: 'iife',
         target: 'chrome67'
       })
     ]

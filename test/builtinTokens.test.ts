@@ -30,7 +30,8 @@ const fakePluginOptions: EdgeCorePluginOptions = {
 const pluginIds = Object.keys(plugins) as Array<keyof typeof plugins>
 const pluginsWithoutMetatokens: Record<string, boolean> = {
   algorand: true,
-  ripple: true
+  ripple: true,
+  stellar: true
 }
 
 describe('builtinTokens', function () {

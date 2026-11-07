@@ -1,19 +1,33 @@
-import { Networks, StrKey, Transaction } from '@stellar/stellar-sdk'
+import {
+  Asset,
+  Networks,
+  Operation,
+  StrKey,
+  Transaction
+} from '@stellar/stellar-sdk'
 import { assert } from 'chai'
 import {
+  EdgeActivationQuote,
   EdgeCorePluginOptions,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyWallet,
   EdgeFetchFunction,
+  EdgeSpendInfo,
+  EdgeTransaction,
   makeFakeIo
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
+import {
+  RecipientNotReadyError,
+  RecipientNotReadyReason
+} from '../../src/common/utils'
 import { StellarEngine } from '../../src/stellar/StellarEngine'
 import { stellar } from '../../src/stellar/stellarInfo'
 import {
   asStellarWalletOtherData,
-  StellarPaymentRecord
+  StellarOperationRecord
 } from '../../src/stellar/stellarTypes'
 import { expectRejection } from '../expectRejection'
 import { fakeLog } from '../fake/fakeLog'
@@ -27,14 +41,46 @@ const MUXED_RECIPIENT =
   'MAJZR5RMNUNEK7CRXJVEWXZ5XUXWT7FJGILCDDOITF7EC26RPWJ4UAAAAAAAAAAE2IYHE'
 const FUNDER = 'GD6ROJBYLKQMOW3E7N4M2YBPUHMZD7PL65VRHRMO24BOVSBV5H3BQRSL'
 
+const USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
+const USDC = `USDC-${USDC_ISSUER}`
+const USDT0 = 'USDT0-GATISXX6BZ6NC7IKQBY37CJD4SOZL3CYZJWXEDG6JVIY4WBS6KXJHN6Q'
+
+/** A trustline balance, as Horizon lists it. */
+const trustline = (code: string, issuer: string, balance: string): object => ({
+  asset_type: code.length > 4 ? 'credit_alphanum12' : 'credit_alphanum4',
+  asset_code: code,
+  asset_issuer: issuer,
+  balance,
+  limit: '922337203685.4775807',
+  buying_liabilities: '0.0000000',
+  selling_liabilities: '0.0000000',
+  is_authorized: true
+})
+
 // Sequence numbers are int64 values, well past Number.MAX_SAFE_INTEGER:
 const SEQUENCE = '280502140848308224'
 
 type HorizonStub = (func: string, ...params: any[]) => Promise<any>
 
-/** A payments record with just the fields the engine reads. */
-const record = (fields: object): StellarPaymentRecord =>
-  fields as StellarPaymentRecord
+/** An operations record with just the fields the engine reads. */
+const record = (fields: object): StellarOperationRecord =>
+  fields as StellarOperationRecord
+
+/**
+ * An operation of a transaction whose source account pays its fee,
+ * as Horizon lists it.
+ */
+const operation = (source: string, fields: object): StellarOperationRecord =>
+  record({
+    created_at: '2026-11-04T00:00:00Z',
+    transaction: async () => ({
+      fee_charged: '100',
+      ledger_attr: 123,
+      memo_type: 'none',
+      source_account: source
+    }),
+    ...fields
+  })
 
 const horizon: HorizonStub = async func => {
   switch (func) {
@@ -42,6 +88,9 @@ const horizon: HorizonStub = async func => {
       return {
         id: ADDRESS,
         sequence: SEQUENCE,
+        subentry_count: 0,
+        num_sponsoring: 0,
+        num_sponsored: 0,
         balances: [
           {
             asset_type: 'native',
@@ -87,12 +136,17 @@ const lookUpAccounts =
  */
 async function makeEngine(
   stub?: HorizonStub,
-  fetch?: EdgeFetchFunction
+  fetch?: EdgeFetchFunction,
+  opts: {
+    callbacks?: Partial<EdgeCurrencyEngineCallbacks>
+    enabledTokenIds?: string[]
+    infoPayload?: object
+  } = {}
 ): Promise<StellarEngine> {
   const fakeIo = makeFakeIo()
   const io = fetch == null ? fakeIo : { ...fakeIo, fetch }
   const pluginOptions: EdgeCorePluginOptions = {
-    infoPayload: {},
+    infoPayload: { ...opts.infoPayload },
     initOptions: {},
     io,
     log: fakeLog,
@@ -114,12 +168,13 @@ async function makeEngine(
     onTransactionsChanged() {},
     onTxidsChanged() {},
     onUnactivatedTokenIdsChanged() {},
-    onWcNewContractCall() {}
+    onWcNewContractCall() {},
+    ...opts.callbacks
   }
   const engineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
     customTokens: {},
-    enabledTokenIds: [],
+    enabledTokenIds: opts.enabledTokenIds ?? [],
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
@@ -270,20 +325,21 @@ describe('StellarEngine', function () {
 
   it('records account creations in history', async function () {
     const engine = await makeEngine(horizon)
-    const operation = {
+    const memo = { memo_type: 'text', memo: 'hi' }
+    const created = (source: string): object => ({
       created_at: '2026-11-04T00:00:00Z',
       transaction: async () => ({
         fee_charged: '100',
         ledger_attr: 123,
-        memo_type: 'text',
-        memo: 'hi'
+        source_account: source,
+        ...memo
       })
-    }
+    })
 
     // Horizon's create_account records have no asset_type:
     await engine.processTransaction(
       record({
-        ...operation,
+        ...created(FUNDER),
         id: '1',
         paging_token: '1',
         type: 'create_account',
@@ -295,7 +351,7 @@ describe('StellarEngine', function () {
     )
     await engine.processTransaction(
       record({
-        ...operation,
+        ...created(ADDRESS),
         id: '2',
         paging_token: '2',
         type: 'create_account',
@@ -305,15 +361,16 @@ describe('StellarEngine', function () {
         starting_balance: '2.5000000'
       })
     )
-    // Token payments stay out of the XLM history:
+    // Payments in tokens this wallet doesn't know stay out of history:
     await engine.processTransaction(
-      record({
-        ...operation,
+      operation(FUNDER, {
         id: '3',
         paging_token: '3',
         type: 'payment',
         transaction_hash: 'cc'.repeat(32),
         asset_type: 'credit_alphanum4',
+        asset_code: 'USDC',
+        asset_issuer: FUNDER,
         from: FUNDER,
         to: ADDRESS,
         amount: '7.0000000'
@@ -325,7 +382,7 @@ describe('StellarEngine', function () {
     assert.deepEqual(
       txs.map(tx => [tx.txid, tx.nativeAmount, tx.networkFee, tx.blockHeight]),
       [
-        ['aa'.repeat(32), '50000000', '100', 123],
+        ['aa'.repeat(32), '50000000', '0', 123],
         ['bb'.repeat(32), '-25000100', '100', 123]
       ]
     )
@@ -336,16 +393,10 @@ describe('StellarEngine', function () {
 
   it('records path payments by the XLM they move', async function () {
     const engine = await makeEngine(horizon)
-    const pathPayment = (fields: object): StellarPaymentRecord =>
-      record({
-        created_at: '2026-11-04T00:00:00Z',
-        transaction: async () => ({
-          fee_charged: '100',
-          ledger_attr: 123,
-          memo_type: 'none'
-        }),
-        ...fields
-      })
+    // The paying account submits each path payment:
+    const pathPayment = (
+      fields: { from: string } & Record<string, string>
+    ): StellarOperationRecord => operation(fields.from, fields)
 
     // Someone pays us XLM, spending a token:
     await engine.processTransaction(
@@ -416,6 +467,301 @@ describe('StellarEngine', function () {
     )
   })
 
+  it('records token payments in the token history', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC]
+    })
+    const usdc = {
+      asset_type: 'credit_alphanum4',
+      asset_code: 'USDC',
+      asset_issuer: USDC_ISSUER
+    }
+
+    // Someone pays us USDC:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '1',
+        type: 'payment',
+        transaction_hash: 'aa'.repeat(32),
+        ...usdc,
+        from: FUNDER,
+        to: ADDRESS,
+        amount: '7.5000000'
+      })
+    )
+    // We pay USDC, and the fee in XLM:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '2',
+        type: 'payment',
+        transaction_hash: 'bb'.repeat(32),
+        ...usdc,
+        from: ADDRESS,
+        to: RECIPIENT,
+        amount: '2.0000000'
+      })
+    )
+
+    const tokenTxs = await engine.getTransactions({ tokenId: USDC })
+    tokenTxs.sort((a, b) => a.txid.localeCompare(b.txid))
+    assert.deepEqual(
+      tokenTxs.map(tx => [
+        tx.txid,
+        tx.currencyCode,
+        tx.nativeAmount,
+        tx.isSend,
+        tx.networkFee,
+        tx.parentNetworkFee
+      ]),
+      [
+        ['aa'.repeat(32), 'USDC', '75000000', false, '0', '0'],
+        ['bb'.repeat(32), 'USDC', '-20000000', true, '0', '100']
+      ]
+    )
+
+    // Only the fee shows in the XLM history:
+    const txs = await engine.getTransactions({ tokenId: null })
+    assert.deepEqual(
+      txs.map(tx => [tx.txid, tx.nativeAmount, tx.networkFee]),
+      [['bb'.repeat(32), '-100', '100']]
+    )
+  })
+
+  it('records swaps between XLM and tokens', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC, USDT0]
+    })
+    const usdc = {
+      asset_code: 'USDC',
+      asset_issuer: USDC_ISSUER
+    }
+
+    // We swap USDC for XLM by paying ourselves:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '1',
+        type: 'path_payment_strict_send',
+        transaction_hash: 'aa'.repeat(32),
+        from: ADDRESS,
+        to: ADDRESS,
+        asset_type: 'native',
+        amount: '4.0000000',
+        source_asset_type: 'credit_alphanum4',
+        source_asset_code: usdc.asset_code,
+        source_asset_issuer: usdc.asset_issuer,
+        source_amount: '12.0000000'
+      })
+    )
+    // We swap XLM for USDT0:
+    await engine.processTransaction(
+      operation(ADDRESS, {
+        paging_token: '2',
+        type: 'path_payment_strict_receive',
+        transaction_hash: 'bb'.repeat(32),
+        from: ADDRESS,
+        to: ADDRESS,
+        asset_type: 'credit_alphanum12',
+        asset_code: 'USDT0',
+        asset_issuer: USDT0.split('-')[1],
+        amount: '5.0000000',
+        source_asset_type: 'native',
+        source_amount: '2.0000000'
+      })
+    )
+    // Someone pays us USDC, spending XLM, which is no swap of ours:
+    await engine.processTransaction(
+      operation(FUNDER, {
+        paging_token: '3',
+        type: 'path_payment_strict_send',
+        transaction_hash: 'cc'.repeat(32),
+        from: FUNDER,
+        to: ADDRESS,
+        asset_type: 'credit_alphanum4',
+        ...usdc,
+        amount: '1.0000000',
+        source_asset_type: 'native',
+        source_amount: '0.5000000'
+      })
+    )
+
+    // Someone swaps XLM for USDC in a transaction that pays us dust,
+    // which is no swap of ours either:
+    const theirSwap = 'dd'.repeat(32)
+    const theirOperations = [
+      { type: 'payment', from: FUNDER, to: ADDRESS, amount: '0.0100000' },
+      {
+        type: 'path_payment_strict_send',
+        from: FUNDER,
+        to: FUNDER,
+        amount: '30.0000000',
+        source_asset_type: 'native',
+        source_amount: '100.0000000'
+      }
+    ].map(fields =>
+      record({
+        paging_token: '4',
+        created_at: '2026-11-04T00:00:00Z',
+        transaction_hash: theirSwap,
+        transaction: async () => ({
+          fee_charged: '200',
+          ledger_attr: 123,
+          memo_type: 'none',
+          source_account: FUNDER,
+          operation_count: 2,
+          operations: async () => ({ records: theirOperations })
+        }),
+        asset_type: 'credit_alphanum4',
+        ...usdc,
+        ...fields
+      })
+    )
+    await engine.processTransaction(theirOperations[0])
+
+    const rows = async (tokenId: string | null): Promise<unknown[]> => {
+      const txs = await engine.getTransactions({ tokenId })
+      txs.sort((a, b) => a.txid.localeCompare(b.txid))
+      return txs.map(tx => [
+        tx.txid,
+        tx.nativeAmount,
+        tx.assetAction?.assetActionType
+      ])
+    }
+    const usdcTxs = await engine.getTransactions({ tokenId: USDC })
+    const usdcSwap = usdcTxs.find(tx => tx.txid === 'aa'.repeat(32))
+    assert.deepInclude(usdcSwap?.savedAction, {
+      actionType: 'swap',
+      fromAsset: {
+        pluginId: 'stellar',
+        tokenId: USDC,
+        nativeAmount: '120000000'
+      },
+      toAsset: { pluginId: 'stellar', tokenId: null, nativeAmount: '40000000' },
+      payoutAddress: ADDRESS
+    })
+    assert.deepEqual(await rows(null), [
+      ['aa'.repeat(32), '39999900', 'swap'],
+      ['bb'.repeat(32), '-20000100', 'swap']
+    ])
+    assert.deepEqual(await rows(USDC), [
+      ['aa'.repeat(32), '-120000000', 'swap'],
+      ['cc'.repeat(32), '10000000', undefined],
+      [theirSwap, '100000', undefined]
+    ])
+    assert.deepEqual(await rows(USDT0), [['bb'.repeat(32), '50000000', 'swap']])
+    for (const txid of ['cc'.repeat(32), theirSwap]) {
+      const incoming = usdcTxs.find(tx => tx.txid === txid)
+      assert.isUndefined(incoming?.savedAction)
+    }
+  })
+
+  it('records a transaction with several operations as one', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC]
+    })
+    const hash = 'aa'.repeat(32)
+    let operationReads = 0
+    const transaction = async (): Promise<object> => ({
+      fee_charged: '300',
+      ledger_attr: 123,
+      memo_type: 'none',
+      source_account: ADDRESS,
+      operation_count: 3,
+      operations: async () => {
+        // The first read fails:
+        if (++operationReads === 1) throw new Error('Horizon timed out')
+        return { records: payments }
+      }
+    })
+    const payment = (id: string, asset: object, amount: string): object => ({
+      id,
+      paging_token: id,
+      type: 'payment',
+      created_at: '2026-11-04T00:00:00Z',
+      transaction_hash: hash,
+      transaction,
+      from: ADDRESS,
+      to: RECIPIENT,
+      amount,
+      ...asset
+    })
+    const usdc = {
+      asset_type: 'credit_alphanum4',
+      asset_code: 'USDC',
+      asset_issuer: USDC_ISSUER
+    }
+    // One transaction pays 1 XLM, 2 XLM and 3 USDC:
+    const payments = [
+      payment('1', { asset_type: 'native' }, '1.0000000'),
+      payment('2', { asset_type: 'native' }, '2.0000000'),
+      payment('3', usdc, '3.0000000')
+    ]
+
+    // A failed read leaves the transaction for the next poll:
+    await expectRejection(
+      engine.processTransaction(record(payments[0])),
+      'Error: Horizon timed out'
+    )
+
+    // Horizon lists each operation, and history shows their total:
+    for (const op of payments) await engine.processTransaction(record(op))
+    assert.strictEqual(operationReads, 2)
+    const xlmTxs = await engine.getTransactions({ tokenId: null })
+    assert.deepEqual(
+      xlmTxs.map(tx => [tx.txid, tx.nativeAmount, tx.networkFee]),
+      [[hash, '-30000300', '300']]
+    )
+    const usdcTxs = await engine.getTransactions({ tokenId: USDC })
+    assert.deepEqual(
+      usdcTxs.map(tx => [tx.txid, tx.nativeAmount, tx.parentNetworkFee]),
+      [[hash, '-30000000', '300']]
+    )
+
+    // A resync reads the transaction again:
+    await engine.clearBlockchainCache()
+    await engine.processTransaction(record(payments[0]))
+    assert.strictEqual(operationReads, 3)
+  })
+
+  it('records trustline changes as XLM fees', async function () {
+    const engine = await makeEngine(horizon, undefined, {
+      enabledTokenIds: [USDC]
+    })
+    const changeTrust = (id: string, limit: string): StellarOperationRecord =>
+      operation(ADDRESS, {
+        paging_token: id,
+        type: 'change_trust',
+        transaction_hash: id.repeat(64),
+        source_account: ADDRESS,
+        trustor: ADDRESS,
+        asset_type: 'credit_alphanum4',
+        asset_code: 'USDC',
+        asset_issuer: USDC_ISSUER,
+        limit
+      })
+
+    // Adding the trustline, then removing it:
+    await engine.processTransaction(changeTrust('a', '922337203685.4775807'))
+    await engine.processTransaction(changeTrust('b', '0.0000000'))
+
+    const txs = await engine.getTransactions({ tokenId: null })
+    txs.sort((a, b) => a.txid.localeCompare(b.txid))
+    assert.deepEqual(
+      txs.map(tx => [
+        tx.txid,
+        tx.nativeAmount,
+        tx.networkFee,
+        tx.parentNetworkFee,
+        tx.isSend
+      ]),
+      [
+        // A parentNetworkFee would overwrite the core's XLM fee:
+        ['a'.repeat(64), '-100', '100', undefined, true],
+        ['b'.repeat(64), '-100', '100', undefined, true]
+      ]
+    )
+    assert.lengthOf(await engine.getTransactions({ tokenId: USDC }), 0)
+  })
+
   it('reads history a full page at a time, with transactions', async function () {
     const payment = (id: string, hash: string): object => ({
       id,
@@ -473,19 +819,20 @@ describe('StellarEngine', function () {
     await engine.checkTransactionsInnerLoop()
 
     // One request per page, and none per transaction:
-    const path = `/accounts/${ADDRESS}/payments`
+    const path = `/accounts/${ADDRESS}/operations`
     assert.deepEqual(requests, [
       [path, 'cursor=0&join=transactions&limit=200'],
       [path, 'cursor=2&join=transactions&limit=200']
     ])
-    assert.strictEqual(engine.otherData.lastPagingToken, '2')
+    assert.strictEqual(engine.otherData.lastOperationPagingToken, '2')
 
+    // The sender paid the fee, not us:
     const txs = await engine.getTransactions({ tokenId: null })
     assert.deepEqual(
       txs.map(tx => [tx.nativeAmount, tx.networkFee, tx.memos[0].value]),
       [
-        ['10000000', '100', '42'],
-        ['10000000', '100', '42']
+        ['10000000', '0', '42'],
+        ['10000000', '0', '42']
       ]
     )
   })
@@ -524,11 +871,576 @@ describe('StellarEngine', function () {
     })
   })
 
+  it('keeps the reserve and XLM in offers from being spent', async function () {
+    const engine = await makeEngine(async (func, ...params) => {
+      const result = await horizon(func, ...params)
+      if (func !== 'loadAccount') return result
+      // 4 entries of 0.5 XLM: 2 base entries and 3 subentries, less 2
+      // that others sponsor, plus 1 the account sponsors for someone else.
+      // 1 XLM more is in offers:
+      return {
+        ...result,
+        subentry_count: 3,
+        num_sponsoring: 1,
+        num_sponsored: 2,
+        balances: [{ ...result.balances[0], selling_liabilities: '1.0000000' }]
+      }
+    })
+    await engine.checkAccountInnerLoop()
+    assert.strictEqual(engine.lockedNativeAmount, '30000000')
+
+    // 100 XLM, less 3 locked, less the 100 stroop fee:
+    const send = async (nativeAmount: string): Promise<unknown> =>
+      await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [{ publicAddress: RECIPIENT, nativeAmount }]
+      })
+    await send('969999900')
+    await expectRejection(
+      send('969999901'),
+      'InsufficientFundsError: Insufficient funds'
+    )
+  })
+
+  it('reads token balances from trustlines', async function () {
+    const unactivated: string[][] = []
+    const detected: string[][] = []
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        return {
+          ...result,
+          subentry_count: 3,
+          balances: [
+            trustline('USDC', USDC_ISSUER, '12.5000000'),
+            trustline('USDT0', USDT0.split('-')[1], '3.0000000'),
+            // A token the wallet doesn't know about:
+            trustline('ABC', FUNDER, '1.0000000'),
+            ...result.balances
+          ]
+        }
+      },
+      undefined,
+      {
+        callbacks: {
+          onNewTokens: tokenIds => detected.push(tokenIds),
+          onUnactivatedTokenIdsChanged: tokenIds => unactivated.push(tokenIds)
+        },
+        enabledTokenIds: [USDC]
+      }
+    )
+    await engine.checkAccountInnerLoop()
+
+    assert.strictEqual(engine.getBalance({ tokenId: null }), '1000000000')
+    assert.strictEqual(engine.getBalance({ tokenId: USDC }), '125000000')
+    // USDT0 has a balance but isn't enabled, so it gets suggested:
+    assert.deepEqual(detected, [[USDT0]])
+    // Every enabled token has a trustline, so nothing changes:
+    assert.deepEqual(unactivated, [])
+    // 2 base entries and 3 trustlines:
+    assert.strictEqual(engine.lockedNativeAmount, '25000000')
+  })
+
+  it('lists enabled tokens with no trustline as unactivated', async function () {
+    const unactivated: string[][] = []
+    let trustsUsdc = false
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount' || !trustsUsdc) return result
+        return {
+          ...result,
+          balances: [
+            trustline('USDC', USDC_ISSUER, '0.0000000'),
+            ...result.balances
+          ]
+        }
+      },
+      undefined,
+      {
+        callbacks: {
+          onUnactivatedTokenIdsChanged: tokenIds => unactivated.push(tokenIds)
+        }
+      }
+    )
+
+    // Enabling tokens checks for trustlines right away:
+    await engine.changeEnabledTokenIds([USDC, USDT0])
+    assert.deepEqual(unactivated, [[USDC, USDT0]])
+    assert.strictEqual(engine.getBalance({ tokenId: USDC }), '0')
+
+    // Polling again reports only changes:
+    await engine.checkAccountInnerLoop()
+    assert.lengthOf(unactivated, 1)
+
+    trustsUsdc = true
+    await engine.checkAccountInnerLoop()
+    assert.deepEqual(unactivated, [[USDC, USDT0], [USDT0]])
+  })
+
+  it('lists every enabled token as unactivated with no account', async function () {
+    const unactivated: string[][] = []
+    const engine = await makeEngine(lookUpAccounts([]), undefined, {
+      callbacks: {
+        onUnactivatedTokenIdsChanged: tokenIds => unactivated.push(tokenIds)
+      },
+      enabledTokenIds: [USDC]
+    })
+    await engine.checkAccountInnerLoop()
+    assert.deepEqual(unactivated, [[USDC]])
+    assert.strictEqual(engine.getBalance({ tokenId: USDC }), '0')
+  })
+
+  it('adds a trustline when the reserve covers it', async function () {
+    const submitted: Transaction[] = []
+    let xlm = '1.5000000'
+    const engine = await makeEngine(async (func, ...params) => {
+      if (func === 'submitTransaction') submitted.push(params[0])
+      const result = await horizon(func, ...params)
+      if (func !== 'loadAccount') return result
+      return { ...result, balances: [{ ...result.balances[0], balance: xlm }] }
+    })
+    await engine.checkAccountInnerLoop()
+    const activate = async (): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [],
+        otherParams: { activateTokenId: USDC }
+      })
+
+    // 1 XLM is the base reserve, the trustline needs 0.5 more, plus the fee:
+    await expectRejection(
+      activate(),
+      'InsufficientFundsError: Insufficient funds'
+    )
+    xlm = '1.5000100'
+    await engine.checkAccountInnerLoop()
+    const tx = await activate()
+    assert.strictEqual(tx.nativeAmount, '-100')
+    assert.strictEqual(tx.networkFee, '100')
+    assert.isNull(tx.tokenId)
+
+    // Signing looks up no recipient, and broadcasting sends a changeTrust:
+    const signed = await engine.signTx(tx, { stellarKey: SECRET })
+    await engine.broadcastTx(signed)
+    const { operations } = submitted[0]
+    assert.lengthOf(operations, 1)
+    assert.deepInclude(operations[0], {
+      type: 'changeTrust',
+      limit: '922337203685.4775807'
+    })
+    const { line } = operations[0] as Operation.ChangeTrust
+    assert.strictEqual((line as Asset).getCode(), 'USDC')
+    assert.strictEqual((line as Asset).getIssuer(), USDC_ISSUER)
+  })
+
+  it('lets a sponsor pay the trustline reserve when enabled', async function () {
+    const submitted: Transaction[] = []
+    const stub: HorizonStub = async (func, ...params) => {
+      if (func === 'submitTransaction') submitted.push(params[0])
+      const result = await horizon(func, ...params)
+      if (func !== 'loadAccount') return result
+      // Enough for the fees, but not for another entry's reserve:
+      return {
+        ...result,
+        balances: [{ ...result.balances[0], balance: '1.0000300' }]
+      }
+    }
+    const activate = async (
+      engine: StellarEngine,
+      sponsorAddress?: string
+    ): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [],
+        otherParams: { activateTokenId: USDC, sponsorAddress }
+      })
+
+    // The flag is off by default:
+    const plain = await makeEngine(stub)
+    await plain.checkAccountInnerLoop()
+    await expectRejection(
+      activate(plain, FUNDER),
+      'Error: Sponsored trustlines are off'
+    )
+    await expectRejection(
+      activate(plain),
+      'InsufficientFundsError: Insufficient funds'
+    )
+
+    const engine = await makeEngine(stub, undefined, {
+      infoPayload: { sponsoredTrustlines: true }
+    })
+    await engine.checkAccountInnerLoop()
+    await expectRejection(
+      activate(engine, 'nope'),
+      'Error: Invalid sponsor address nope'
+    )
+    const tx = await activate(engine, FUNDER)
+    assert.strictEqual(tx.nativeAmount, '-300')
+    assert.strictEqual(tx.networkFee, '300')
+
+    // The sponsor wraps our changeTrust, and still has to sign:
+    const signed = await engine.signTx(tx, { stellarKey: SECRET })
+    await engine.broadcastTx(signed)
+    const { operations, signatures } = submitted[0]
+    assert.deepEqual(
+      operations.map(op => [op.type, op.source]),
+      [
+        ['beginSponsoringFutureReserves', FUNDER],
+        ['changeTrust', undefined],
+        ['endSponsoringFutureReserves', undefined]
+      ]
+    )
+    assert.deepInclude(operations[0], { sponsoredId: ADDRESS })
+    assert.lengthOf(signatures, 1)
+  })
+
+  it('removes a trustline only once the token is empty', async function () {
+    const submitted: Transaction[] = []
+    let usdc = '0.0000001'
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        if (func === 'submitTransaction') submitted.push(params[0])
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        return {
+          ...result,
+          subentry_count: 1,
+          balances: [trustline('USDC', USDC_ISSUER, usdc), ...result.balances]
+        }
+      },
+      undefined,
+      { enabledTokenIds: [USDC] }
+    )
+    await engine.checkAccountInnerLoop()
+    const deactivate = async (): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: null,
+        spendTargets: [],
+        otherParams: { deactivateTokenId: USDC }
+      })
+    await expectRejection(
+      deactivate(),
+      'Error: Send or swap all USDC before removing it, since Stellar only removes empty trustlines'
+    )
+
+    usdc = '0.0000000'
+    await engine.checkAccountInnerLoop()
+    const signed = await engine.signTx(await deactivate(), {
+      stellarKey: SECRET
+    })
+    await engine.broadcastTx(signed)
+    assert.deepInclude(submitted[0].operations[0], {
+      type: 'changeTrust',
+      limit: '0.0000000'
+    })
+  })
+
+  it('counts every trustline reserve when activating several tokens', async function () {
+    const calls: string[] = []
+    let xlm = '2.0000100'
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        calls.push(func)
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        // Each changeTrust we submitted added a trustline:
+        const trustlines = calls.filter(call => call === 'submitTransaction')
+        return {
+          ...result,
+          subentry_count: trustlines.length,
+          balances: [{ ...result.balances[0], balance: xlm }]
+        }
+      },
+      undefined,
+      { enabledTokenIds: [USDC, USDT0] }
+    )
+    await engine.checkAccountInnerLoop()
+    const wallet = {
+      id: engine.walletId,
+      makeSpend: async (spendInfo: EdgeSpendInfo) =>
+        await engine.makeSpend(spendInfo),
+      signTx: async (tx: EdgeTransaction) =>
+        await engine.signTx(tx, { stellarKey: SECRET }),
+      broadcastTx: async (tx: EdgeTransaction) => await engine.broadcastTx(tx)
+    } as unknown as EdgeCurrencyWallet
+    const activateBoth = async (): Promise<EdgeActivationQuote> =>
+      await engine.engineActivateWallet({
+        activateTokenIds: [USDC, USDT0],
+        paymentInfo: { wallet, tokenId: null }
+      })
+
+    // 1 XLM is the base reserve, each trustline needs 0.5 more,
+    // and each activation pays a fee:
+    await expectRejection(
+      activateBoth(),
+      'InsufficientFundsError: Insufficient funds'
+    )
+    xlm = '2.0000200'
+    await engine.checkAccountInnerLoop()
+    calls.length = 0
+    const { transactions } = await (await activateBoth()).approve()
+    assert.lengthOf(transactions, 2)
+
+    // The account reloads after each activation, so the next one
+    // counts the reserve the last one locked:
+    assert.deepEqual(calls, [
+      'submitTransaction',
+      'loadAccount',
+      'submitTransaction',
+      'loadAccount'
+    ])
+  })
+
+  it('activates tokens through the activation API', async function () {
+    const unactivated: string[][] = []
+    let trusted = false
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        if (func === 'submitTransaction') trusted = true
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount' || !trusted) return result
+        return {
+          ...result,
+          subentry_count: 1,
+          balances: [
+            trustline('USDC', USDC_ISSUER, '0.0000000'),
+            ...result.balances
+          ]
+        }
+      },
+      undefined,
+      {
+        callbacks: {
+          onUnactivatedTokenIdsChanged: tokenIds => unactivated.push(tokenIds)
+        },
+        enabledTokenIds: [USDC]
+      }
+    )
+    await engine.checkAccountInnerLoop()
+    assert.deepEqual(unactivated, [[USDC]])
+
+    // A stand-in for the core wallet, which signs with the wallet's keys:
+    const wallet = {
+      id: engine.walletId,
+      makeSpend: async (spendInfo: EdgeSpendInfo) =>
+        await engine.makeSpend(spendInfo),
+      signTx: async (tx: EdgeTransaction) =>
+        await engine.signTx(tx, { stellarKey: SECRET }),
+      broadcastTx: async (tx: EdgeTransaction) => await engine.broadcastTx(tx)
+    } as unknown as EdgeCurrencyWallet
+
+    const { assetOptions } = await engine.engineGetActivationAssets({
+      activateTokenIds: [USDC],
+      currencyWallets: {}
+    })
+    assert.deepEqual(assetOptions, [
+      {
+        paymentWalletId: engine.walletId,
+        tokenId: null,
+        currencyPluginId: 'stellar'
+      }
+    ])
+    const quote = await engine.engineActivateWallet({
+      activateTokenIds: [USDC],
+      paymentInfo: { wallet, tokenId: null }
+    })
+    assert.strictEqual(quote.networkFee.nativeAmount, '100')
+    const { transactions } = await quote.approve()
+    assert.lengthOf(transactions, 1)
+
+    // The trustline shows right after the approval:
+    assert.deepEqual(unactivated, [[USDC], []])
+  })
+
+  it('sends tokens to a recipient that trusts them', async function () {
+    const lookups: string[] = []
+    const submitted: Transaction[] = []
+    // Our account holds 10 USDC, 2 of them in an offer,
+    // and the recipient has a USDC trustline:
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        if (func === 'submitTransaction') submitted.push(params[0])
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        lookups.push(params[0])
+        const line =
+          params[0] === ADDRESS
+            ? {
+                ...trustline('USDC', USDC_ISSUER, '10.0000000'),
+                selling_liabilities: '2.0000000'
+              }
+            : trustline('USDC', USDC_ISSUER, '0.0000000')
+        return {
+          ...result,
+          id: params[0],
+          subentry_count: 2,
+          balances: [line, ...result.balances]
+        }
+      },
+      undefined,
+      { enabledTokenIds: [USDC] }
+    )
+    await engine.checkAccountInnerLoop()
+
+    const send = async (nativeAmount: string): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: USDC,
+        spendTargets: [{ publicAddress: RECIPIENT, nativeAmount }],
+        memos: [{ type: 'text', value: 'invoice 7' }]
+      })
+    await expectRejection(
+      send('80000001'),
+      `InsufficientFundsError: Insufficient ${USDC}`
+    )
+    const tx = await send('80000000')
+    assert.include(tx, {
+      currencyCode: 'USDC',
+      nativeAmount: '-80000000',
+      networkFee: '0',
+      parentNetworkFee: '100',
+      tokenId: USDC
+    })
+
+    // Signing a token send checks no XLM minimum on the recipient:
+    const signed = await engine.signTx(tx, { stellarKey: SECRET })
+    await engine.broadcastTx(signed)
+    assert.deepEqual(lookups, [ADDRESS, RECIPIENT])
+    const { memo, operations } = submitted[0]
+    assert.strictEqual(memo.type, 'text')
+    assert.strictEqual(
+      Buffer.from(memo.value as Uint8Array).toString(),
+      'invoice 7'
+    )
+    assert.lengthOf(operations, 1)
+    assert.deepInclude(operations[0], {
+      type: 'payment',
+      destination: RECIPIENT,
+      amount: '8.0000000'
+    })
+    const { asset } = operations[0] as Operation.Payment
+    assert.isTrue(asset.equals(new Asset('USDC', USDC_ISSUER)))
+  })
+
+  it('explains why a recipient cannot take tokens', async function () {
+    // The recipient's trustline for USDC, or undefined for no account:
+    let recipientLines: object[] | undefined
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        if (params[0] === ADDRESS) {
+          return {
+            ...result,
+            subentry_count: 1,
+            balances: [
+              trustline('USDC', USDC_ISSUER, '10.0000000'),
+              ...result.balances
+            ]
+          }
+        }
+        if (recipientLines == null) throw horizonError(404, 'Resource Missing')
+        return { ...result, balances: [...recipientLines, ...result.balances] }
+      },
+      undefined,
+      { enabledTokenIds: [USDC] }
+    )
+    await engine.checkAccountInnerLoop()
+    const send = async (publicAddress: string): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: USDC,
+        spendTargets: [{ publicAddress, nativeAmount: '10000000' }]
+      })
+
+    // The GUI matches the error by name and shows text for its reason:
+    const expectNotReady = async (
+      reason: RecipientNotReadyReason,
+      message: string
+    ): Promise<void> => {
+      const error = await send(RECIPIENT).then(
+        () => assert.fail('Expected a rejection'),
+        (error: unknown) => error
+      )
+      assert.instanceOf(error, RecipientNotReadyError)
+      assert.include(error, {
+        name: 'RecipientNotReadyError',
+        reason,
+        currencyCode: 'USDC',
+        message
+      })
+    }
+
+    await expectNotReady(
+      'accountNotActivated',
+      "The recipient's Stellar account isn't activated, so it can't receive USDC yet"
+    )
+    // A trustline for a different USDC doesn't count:
+    recipientLines = [trustline('USDC', FUNDER, '0.0000000')]
+    await expectNotReady(
+      'tokenNotAdded',
+      "The recipient hasn't added USDC to their Stellar wallet, so it can't receive USDC yet"
+    )
+    recipientLines = [
+      { ...trustline('USDC', USDC_ISSUER, '0.0000000'), is_authorized: false }
+    ]
+    await expectNotReady(
+      'notAuthorized',
+      "The USDC issuer hasn't authorized the recipient to receive USDC"
+    )
+
+    // The issuer needs no trustline for its own asset:
+    recipientLines = undefined
+    await send(USDC_ISSUER)
+  })
+
+  it('pays the token fee from spendable XLM', async function () {
+    // 1.5 XLM is locked by the base reserve and the trustline:
+    let xlm = '1.5000099'
+    const engine = await makeEngine(
+      async (func, ...params) => {
+        const result = await horizon(func, ...params)
+        if (func !== 'loadAccount') return result
+        return {
+          ...result,
+          subentry_count: 1,
+          balances: [
+            trustline('USDC', USDC_ISSUER, '10.0000000'),
+            { ...result.balances[0], balance: xlm }
+          ]
+        }
+      },
+      undefined,
+      { enabledTokenIds: [USDC] }
+    )
+    await engine.checkAccountInnerLoop()
+    const send = async (): Promise<EdgeTransaction> =>
+      await engine.makeSpend({
+        tokenId: USDC,
+        spendTargets: [{ publicAddress: USDC_ISSUER, nativeAmount: '10000000' }]
+      })
+    await expectRejection(send(), 'InsufficientFundsError: Insufficient funds')
+    xlm = '1.5000100'
+    await engine.checkAccountInnerLoop()
+    await send()
+  })
+
   it('keeps the saved account sequence when it loads', function () {
     const otherData = asStellarWalletOtherData({
-      lastPagingToken: '0',
+      lastOperationPagingToken: '0',
       accountSequence: SEQUENCE
     })
     assert.strictEqual(otherData.accountSequence, SEQUENCE)
+  })
+
+  it('restarts history for wallets saved with the payments cursor', function () {
+    // Wallets synced before token support carry a payments cursor that
+    // already skipped their token payments and trustline changes:
+    const otherData = asStellarWalletOtherData({
+      lastPagingToken: '123456789',
+      accountSequence: SEQUENCE
+    })
+    assert.strictEqual(otherData.lastOperationPagingToken, '0')
   })
 })
