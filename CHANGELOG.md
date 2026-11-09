@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.105.0 (2026-11-09)
+
 - changed: (Solana) Use the finalized commitment, which Alpenglow makes as fast as confirmed
 - changed: (Solana) Confirm sends by polling their status as well as over websockets
 - fixed: (Solana) Info server RPC node overrides not applying to sends and transaction history
