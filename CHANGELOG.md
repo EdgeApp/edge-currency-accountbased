@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Balances not loading when the batch balance query fails
+
 ## 4.105.0 (2026-11-09)
 
 - changed: (Solana) Use the finalized commitment, which Alpenglow makes as fast as confirmed
