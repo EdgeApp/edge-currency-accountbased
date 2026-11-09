@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- changed: (Solana) Use the finalized commitment, which Alpenglow makes as fast as confirmed
+- changed: (Solana) Confirm sends by polling their status as well as over websockets
+- fixed: (Solana) Info server RPC node overrides not applying to sends and transaction history
+
 ## 4.104.0 (2026-11-05)
 
 - changed: (Base) Look back 600 blocks for new transactions and read 1024 blocks of fee history, sized for the 200ms blocks of the Denim upgrade on 2026-11-05
