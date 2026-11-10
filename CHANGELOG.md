@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.105.2 (2026-11-10)
+
 - fixed: (Rootstock) Wallets stuck partway through sync
 
 ## 4.105.1 (2026-11-09)
