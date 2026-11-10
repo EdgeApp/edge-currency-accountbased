@@ -1,3 +1,17 @@
+import {
+  Account,
+  Asset,
+  AssetType,
+  extractBaseAddress,
+  Horizon,
+  Keypair,
+  Memo,
+  Networks,
+  Operation,
+  StrKey,
+  TimeoutInfinite,
+  TransactionBuilder
+} from '@stellar/stellar-sdk'
 import { abs, add, div, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
@@ -12,17 +26,6 @@ import {
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
-import {
-  Account,
-  Asset,
-  Keypair,
-  Memo,
-  Networks,
-  Operation,
-  TimeoutInfinite,
-  Transaction,
-  TransactionBuilder
-} from 'stellar-sdk'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -41,19 +44,21 @@ import {
   asStellarPrivateKeys,
   asStellarWalletOtherData,
   SafeStellarWalletInfo,
-  StellarAccount,
   StellarNetworkInfo,
-  StellarOperation,
-  StellarTransaction,
+  StellarPaymentRecord,
   StellarWalletOtherData
 } from './stellarTypes'
 
-const TX_QUERY_PAGING_LIMIT = 2
+const { OperationResponseType } = Horizon.HorizonApi
+
+// Horizon's largest page:
+const TX_QUERY_PAGING_LIMIT = 200
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const BASE_FEE = 100 // Stroops
+const NETWORK_PASSPHRASE = Networks.PUBLIC
 
 type StellarServerFunction =
   | 'feeStats'
@@ -70,8 +75,6 @@ export class StellarEngine extends CurrencyEngine<
   networkInfo: StellarNetworkInfo
   engineFetch: EdgeFetchFunction
   activatedAccountsCache: { [publicAddress: string]: boolean }
-  pendingTransactionsIndex: number
-  pendingTransactionsMap: { [index: number]: Transaction }
   fees: { low: number; standard: number; high: number }
   otherData!: StellarWalletOtherData
 
@@ -85,8 +88,6 @@ export class StellarEngine extends CurrencyEngine<
     this.networkInfo = env.networkInfo
     this.engineFetch = makeEngineFetch(env.io)
     this.activatedAccountsCache = {}
-    this.pendingTransactionsIndex = 0
-    this.pendingTransactionsMap = {}
     this.fees = { low: BASE_FEE, standard: BASE_FEE, high: BASE_FEE }
     this.minimumAddressBalance = this.networkInfo.baseReserve
   }
@@ -97,12 +98,12 @@ export class StellarEngine extends CurrencyEngine<
 
   getRecipientBalance = async (recipient: string): Promise<string> => {
     try {
-      const account: StellarAccount = await this.multicastServers(
+      const account: Horizon.AccountResponse = await this.multicastServers(
         'loadAccount',
-        recipient
+        getAccountId(recipient)
       )
       const balanceObj = account.balances.find(
-        bal => bal.asset_type === 'native'
+        bal => bal.asset_type === AssetType.native
       )
       if (balanceObj == null) return '0'
 
@@ -124,7 +125,7 @@ export class StellarEngine extends CurrencyEngine<
     func: StellarServerFunction,
     ...params: any
   ): Promise<any> {
-    let out = { result: '', server: '' }
+    let out: { result: any; server: string } = { result: '', server: '' }
     let funcs
     switch (func) {
       // Functions that should waterfall from top to low priority servers
@@ -144,25 +145,20 @@ export class StellarEngine extends CurrencyEngine<
         funcs = this.tools.stellarApiServers.map(api => async () => {
           // @ts-expect-error
           const result = await api[func](...params)
-          return { server: api.serverName, result }
+          return { server: api.serverURL.toString(), result }
         })
         out = await asyncWaterfall(funcs)
         break
 
       case 'ledgers':
         funcs = this.tools.stellarApiServers.map(serverApi => async () => {
-          const result = await serverApi
-            // @ts-expect-error
-            .ledgers()
-            .order('desc')
-            .limit(1)
-            .call()
+          const result = await serverApi.ledgers().order('desc').limit(1).call()
           const blockHeight = result.records[0].sequence
           if (
             this.walletLocalData.blockHeight <= blockHeight &&
             this.tools.highestTxHeight <= blockHeight
           ) {
-            return { server: serverApi.serverName, result }
+            return { server: serverApi.serverURL.toString(), result }
           } else {
             throw new Error('Height out of date')
           }
@@ -173,13 +169,15 @@ export class StellarEngine extends CurrencyEngine<
       case 'payments':
         funcs = this.tools.stellarApiServers.map(serverApi => async () => {
           const result = await serverApi
-            // @ts-expect-error
             .payments()
+            // Embed each operation's transaction, so reading its fee and
+            // memo doesn't need a request per operation:
+            .join('transactions')
             .limit(TX_QUERY_PAGING_LIMIT)
             .cursor(this.otherData.lastPagingToken)
-            .forAccount(...params)
+            .forAccount(params[0])
             .call()
-          return { server: serverApi.serverName, result }
+          return { server: serverApi.serverURL.toString(), result }
         })
         out = await asyncWaterfall(funcs)
         break
@@ -191,7 +189,7 @@ export class StellarEngine extends CurrencyEngine<
             this.tools.stellarApiServers.map(async serverApi => {
               // @ts-expect-error
               const result = await serverApi[func](...params)
-              return { server: serverApi.serverName, result }
+              return { server: serverApi.serverURL.toString(), result }
             })
           ),
           'Broadcast failed:'
@@ -202,43 +200,63 @@ export class StellarEngine extends CurrencyEngine<
     return out.result
   }
 
-  async processTransaction(tx: StellarOperation): Promise<string> {
-    if (tx.asset_type !== 'native') {
-      return tx.paging_token
-    }
-
+  async processTransaction(tx: StellarPaymentRecord): Promise<string> {
+    const ourAddress = this.walletLocalData.publicKey
     const ourReceiveAddresses: string[] = []
 
-    let exchangeAmount = ''
-    let fromAddress = ''
-    let toAddress, networkFee
-    if (tx.type === 'create_account') {
-      fromAddress = tx.source_account
-      toAddress = tx.account
-      exchangeAmount = tx.starting_balance
-    } else if (tx.type === 'payment') {
-      fromAddress = tx.from
-      toAddress = tx.to
-      exchangeAmount = tx.amount
+    // The XLM this wallet gets and pays, before fees:
+    let received = '0'
+    let sent = '0'
+    let fromAddress: string
+    let toAddress: string
+    switch (tx.type) {
+      // Account creations are always XLM, so Horizon gives them no asset_type:
+      case OperationResponseType.createAccount:
+        fromAddress = tx.source_account
+        toAddress = tx.account
+        if (toAddress === ourAddress) received = tx.starting_balance
+        if (fromAddress === ourAddress) sent = tx.starting_balance
+        break
+      case OperationResponseType.payment:
+        // Skip token payments:
+        if (tx.asset_type !== AssetType.native) return tx.paging_token
+        fromAddress = tx.from
+        toAddress = tx.to
+        if (toAddress === ourAddress) received = tx.amount
+        if (fromAddress === ourAddress) sent = tx.amount
+        break
+      // Path payments can deliver a different asset than they spend:
+      case OperationResponseType.pathPayment:
+      case OperationResponseType.pathPaymentStrictSend:
+        fromAddress = tx.from
+        toAddress = tx.to
+        if (toAddress === ourAddress && tx.asset_type === AssetType.native) {
+          received = tx.amount
+        }
+        if (
+          fromAddress === ourAddress &&
+          tx.source_asset_type === AssetType.native
+        ) {
+          sent = tx.source_amount
+        }
+        // Skip path payments that only move tokens:
+        if (received === '0' && sent === '0') return tx.paging_token
+        break
+      default:
+        return tx.paging_token
     }
 
     const date: number = Date.parse(tx.created_at) / 1000
     const denom = this.getDenomination(null)
-    let nativeAmount = mul(exchangeAmount, denom.multiplier)
 
-    let rawTx: StellarTransaction & {
-      memo_type?: string
-      memo?: string
-      memo_bytes?: string
-    }
+    let rawTx: Horizon.ServerApi.TransactionRecord
     try {
       rawTx = await tx.transaction()
-      // @ts-expect-error
-      networkFee = rawTx.fee_charged.toString()
     } catch (e: any) {
       this.error(`processTransaction rawTx Error `, e)
       throw e
     }
+    const networkFee = rawTx.fee_charged.toString()
 
     // Parse memos from the raw transaction if available
     const edgeMemos: EdgeMemo[] = []
@@ -297,18 +315,15 @@ export class StellarEngine extends CurrencyEngine<
       this.log.warn('XLM: processTransaction memo parsing error', e)
     }
 
-    if (toAddress === this.walletLocalData.publicKey) {
-      ourReceiveAddresses.push(fromAddress)
-      if (fromAddress === this.walletLocalData.publicKey) {
-        // This is a spend to self. Make fee the only amount
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-        nativeAmount = '-' + networkFee
-      }
-    } else {
-      // This is a spend. Include fee in amount and make amount negative
-      nativeAmount = add(nativeAmount, networkFee)
-      nativeAmount = '-' + nativeAmount
-    }
+    if (toAddress === ourAddress) ourReceiveAddresses.push(fromAddress)
+
+    // The sender pays the fee:
+    let nativeAmount = sub(
+      mul(received, denom.multiplier),
+      mul(sent, denom.multiplier)
+    )
+    if (fromAddress === ourAddress) nativeAmount = sub(nativeAmount, networkFee)
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0, // API shows no ledger number ??
       currencyCode: this.currencyInfo.currencyCode,
@@ -417,7 +432,7 @@ export class StellarEngine extends CurrencyEngine<
   async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
     try {
-      const account: StellarAccount = await this.multicastServers(
+      const account: Horizon.AccountResponse = await this.multicastServers(
         'loadAccount',
         address
       )
@@ -425,7 +440,7 @@ export class StellarEngine extends CurrencyEngine<
         this.otherData.accountSequence = account.sequence
       }
       for (const bal of account.balances) {
-        if (bal.asset_type === 'native') {
+        if (bal.asset_type === AssetType.native) {
           this.log('--Got balances--')
         } else {
           // No token support yet
@@ -462,11 +477,20 @@ export class StellarEngine extends CurrencyEngine<
     try {
       const response: ReturnType<typeof asFeeStats> =
         await this.multicastServers('feeStats')
-      const { p50, p70, p95 } = response.fee_charged
+
+      // Payments pay the ledger's base fee, which only rises above the
+      // minimum during surge pricing. Horizon's fee percentiles mix in
+      // smart contract fees, so bid from the base fee instead:
+      const lastBaseFee = parseInt(response.last_ledger_base_fee)
+      const baseFee = lastBaseFee > BASE_FEE ? lastBaseFee : BASE_FEE
+
+      // Bid higher when the last ledger was nearly full,
+      // since surge pricing may be starting:
+      const congested = parseFloat(response.ledger_capacity_usage) >= 0.9
       this.fees = {
-        low: parseInt(p50),
-        standard: parseInt(p70),
-        high: parseInt(p95)
+        low: baseFee,
+        standard: congested ? baseFee * 2 : baseFee,
+        high: congested ? baseFee * 10 : baseFee * 2
       }
     } catch (e: any) {
       this.error(`queryFee Error `, e)
@@ -475,10 +499,8 @@ export class StellarEngine extends CurrencyEngine<
 
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
-    this.pendingTransactionsIndex = 0
-    this.pendingTransactionsMap = {}
     await super.clearBlockchainCache()
-    this.otherData.accountSequence = 0
+    this.otherData.accountSequence = '0'
   }
 
   // ****************************************************************************
@@ -516,18 +538,25 @@ export class StellarEngine extends CurrencyEngine<
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     // Check if destination address is activated
+    const accountId = getAccountId(publicAddress)
     let mustCreateAccount = false
-    const activated = this.activatedAccountsCache[publicAddress]
-    if (activated === undefined) {
+    if (!this.activatedAccountsCache[accountId]) {
       try {
-        await this.multicastServers('loadAccount', publicAddress)
-        this.activatedAccountsCache[publicAddress] = true
+        await this.multicastServers('loadAccount', accountId)
+        this.activatedAccountsCache[accountId] = true
       } catch (e: any) {
-        this.activatedAccountsCache[publicAddress] = false
+        // Only a missing account is unactivated, and only for now.
+        // Remember nothing, so the next attempt looks again:
+        if (e?.response?.title !== 'Resource Missing') throw e
         mustCreateAccount = true
       }
-    } else if (!activated) {
-      mustCreateAccount = true
+    }
+
+    // Creating an account takes its G address, so a muxed address can't:
+    if (mustCreateAccount && accountId !== publicAddress) {
+      throw new Error(
+        'Recipient address not activated. A muxed (M) address can only receive funds after its account is activated'
+      )
     }
 
     if (eq(nativeAmount, '0')) {
@@ -547,12 +576,11 @@ export class StellarEngine extends CurrencyEngine<
         ? this.fees[edgeSpendInfo.networkFeeOption]
         : this.fees.standard
 
-    // stellar-sdk v13: the network passphrase moved from the removed global
-    // Network singleton into per-transaction options, and transactions must
-    // declare timebounds (TimeoutInfinite preserves the old no-bounds behavior).
+    // Transactions take the network passphrase and must declare timebounds;
+    // TimeoutInfinite means no bounds:
     let txBuilder = new TransactionBuilder(account, {
       fee: String(feeSetting),
-      networkPassphrase: Networks.PUBLIC
+      networkPassphrase: NETWORK_PASSPHRASE
     }).setTimeout(TimeoutInfinite)
 
     if (mustCreateAccount) {
@@ -594,7 +622,6 @@ export class StellarEngine extends CurrencyEngine<
     }
 
     nativeAmount = `-${nativeAmount}`
-    const idInternal = this.pendingTransactionsIndex
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0, // blockHeight
       currencyCode, // currencyCode
@@ -605,9 +632,9 @@ export class StellarEngine extends CurrencyEngine<
       networkFee, // networkFee
       networkFees: [],
       otherParams: {
-        idInternal,
         fromAddress: this.walletLocalData.publicKey,
-        toAddress: publicAddress
+        toAddress: publicAddress,
+        unsignedTx: transaction.toXdr()
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
@@ -615,18 +642,8 @@ export class StellarEngine extends CurrencyEngine<
       txid: '', // txid
       walletId: this.walletId
     }
-    this.pendingTransactionsMap[idInternal] = transaction
-    this.pendingTransactionsIndex++
-
-    // Clean up old pendingTransactions
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]
-    }
 
     this.warn('Stellar transaction prepared')
-    this.warn(`idInternal: ${idInternal}`)
     this.warn(
       `${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )
@@ -651,15 +668,13 @@ export class StellarEngine extends CurrencyEngine<
 
     // Do signing
     try {
-      const { idInternal } = otherParams
-      const transaction = this.pendingTransactionsMap[idInternal]
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!transaction) {
-        throw new Error('ErrorInvalidTransaction')
-      }
+      const transaction = TransactionBuilder.fromXdr(
+        otherParams.unsignedTx,
+        NETWORK_PASSPHRASE
+      )
       this.warn('Signing...')
-      const keypair = Keypair.fromSecret(stellarPrivateKeys.stellarKey)
-      await transaction.sign(keypair)
+      transaction.sign(Keypair.fromSecret(stellarPrivateKeys.stellarKey))
+      edgeTransaction.signedTx = transaction.toXdr()
     } catch (e: any) {
       this.error(
         `FAILURE signTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} `,
@@ -677,12 +692,13 @@ export class StellarEngine extends CurrencyEngine<
     const otherParams = getOtherParams(edgeTransaction)
 
     try {
-      const { idInternal } = otherParams
-      const transaction = this.pendingTransactionsMap[idInternal]
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!transaction) {
+      if (edgeTransaction.signedTx === '') {
         throw new Error('ErrorInvalidTransaction')
       }
+      const transaction = TransactionBuilder.fromXdr(
+        edgeTransaction.signedTx,
+        NETWORK_PASSPHRASE
+      )
       this.warn(`Broadcasting...\n${cleanTxLogs(edgeTransaction)}`)
       const result = await this.multicastServers(
         'submitTransaction',
@@ -690,8 +706,8 @@ export class StellarEngine extends CurrencyEngine<
       )
       edgeTransaction.txid = result.hash
       edgeTransaction.date = Date.now() / 1000
-      this.activatedAccountsCache[otherParams.toAddress] = true
-      this.otherData.accountSequence++
+      this.activatedAccountsCache[getAccountId(otherParams.toAddress)] = true
+      this.otherData.accountSequence = add(this.otherData.accountSequence, '1')
       this.walletLocalDataDirty = true
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     } catch (e: any) {
@@ -717,4 +733,15 @@ export async function makeCurrencyEngine(
   await engine.loadEngine()
 
   return engine
+}
+
+/**
+ * Returns the account a payment to this address lands in:
+ * the G account behind a muxed (M) address, or else the address itself.
+ * Horizon only looks accounts up by their G address.
+ */
+function getAccountId(address: string): string {
+  return StrKey.isValidMed25519PublicKey(address)
+    ? extractBaseAddress(address)
+    : address
 }

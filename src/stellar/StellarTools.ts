@@ -1,3 +1,4 @@
+import { Horizon, Keypair, StrKey } from '@stellar/stellar-sdk'
 import { add, div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import * as ed25519 from 'ed25519-hd-key'
@@ -11,7 +12,6 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import { Horizon, Keypair } from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
@@ -19,6 +19,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { makeMetaTokens } from '../common/tokenHelpers'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import { makeEdgeFetchAdapter } from './stellarHttp'
 import {
   asSafeStellarWalletInfo,
   asStellarPrivateKeys,
@@ -50,9 +51,9 @@ export class StellarTools implements EdgeCurrencyTools {
     // TransactionBuilder options.
     this.stellarApiServers = []
     for (const server of this.networkInfo.stellarServers) {
-      const stellarServer = new Horizon.Server(server)
-      stellarServer.serverName = server
-      this.stellarApiServers.push(stellarServer)
+      const horizon = new Horizon.Server(server)
+      horizon.httpClient.defaults.adapter = makeEdgeFetchAdapter(this.io.fetch)
+      this.stellarApiServers.push(horizon)
     }
   }
 
@@ -70,14 +71,16 @@ export class StellarTools implements EdgeCurrencyTools {
     return keys.publicKey
   }
 
+  /**
+   * Accepts accounts (G addresses) and muxed accounts (M addresses),
+   * which add a routing ID to an account. Contract addresses (C and W)
+   * can only receive through a token contract call, which we don't build.
+   */
   checkAddress(address: string): boolean {
-    // TODO: check address
-    try {
-      Keypair.fromPublicKey(address)
-      return true
-    } catch (e: any) {
-      return false
-    }
+    return (
+      StrKey.isValidEd25519PublicKey(address) ||
+      StrKey.isValidMed25519PublicKey(address)
+    )
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
@@ -97,9 +100,7 @@ export class StellarTools implements EdgeCurrencyTools {
         "m/44'/148'/0'",
         seed.toString('hex')
       ).key
-      const keypair = Keypair.fromRawEd25519Seed(
-        Uint8Array.from(derivedSeed) as unknown as number[]
-      )
+      const keypair = Keypair.fromRawEd25519Seed(Uint8Array.from(derivedSeed))
 
       return {
         stellarKey: keypair.secret(),
