@@ -35,6 +35,8 @@
 - changed: (Base) Replace the dead Ankr, BaseScan V1 and Blockchair fallback servers with publicnode and Infura
 - changed: (Zcash) Replace react-native-zcash with zcash-native
 - fixed: (EVM) An info-server adapter type this version doesn't know is skipped, instead of making the plugin ignore its whole info-server payload, as Ethereum has since 4.97.0
+- fixed: (EVM) A change-server sync stops once it finds the notified transaction, instead of querying the block explorer for a full lookback window
+- fixed: (EVM) Transaction history no longer pulls the wallet's block height back, sometimes to 0, until the next height poll
 
 ## 4.103.2 (2026-11-04)
 

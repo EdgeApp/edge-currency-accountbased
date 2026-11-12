@@ -269,12 +269,8 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
           edgeTransactions,
           includesInternal
         }
-      const maxBlockHeight = edgeTransactions.reduce((max, tx) => {
-        return Math.max(max, tx.blockHeight)
-      }, 0)
       return {
         tokenTxs: new Map([[tokenId, edgeTransactionsBlockHeightTuple]]),
-        blockHeight: maxBlockHeight,
         server
       }
     }
