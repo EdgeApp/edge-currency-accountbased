@@ -7,10 +7,13 @@
 - changed: (Stellar) Send Horizon requests through the core's fetch, like the other engines
 - changed: (Stellar) Read transaction history 200 operations per request, instead of 2 per request plus one per transaction
 - changed: (Stellar) Bid fees from the ledger's base fee and how full it is, instead of fee percentiles that include smart contract fees
+- changed: (Sui) Sync and send through Mysten's GraphQL service instead of JSON-RPC nodes
 - fixed: (Stellar) A second send within about 20 seconds of another failing with "sequence must be of type string"
 - fixed: (Stellar) Account activations missing from transaction history, including a new wallet's first deposit. Existing wallets need a resync to show earlier ones
 - fixed: (Stellar) Path payments missing from transaction history. Existing wallets need a resync to show earlier ones
 - fixed: (Stellar) Sends to an address failing until restart after one lookup of its account failed or found it unactivated
+- fixed: (Sui) Balances, history and sends failing on every wallet
+- fixed: (Sui) Send amounts counting the network fee twice
 
 ## 4.105.2 (2026-11-10)
 

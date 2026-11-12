@@ -1,5 +1,4 @@
 import { fromHex } from '@mysten/bcs'
-import { SuiClient, SuiHTTPTransport } from '@mysten/sui/client'
 import {
   decodeSuiPrivateKey,
   encodeSuiPrivateKey
@@ -23,7 +22,7 @@ import {
 import { base16, base64 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asyncStaggeredRace, promiseAny, timeout } from '../common/promiseUtils'
+import { promiseAny, timeout } from '../common/promiseUtils'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -34,30 +33,71 @@ import {
   snooze
 } from '../common/utils'
 import {
+  ADDRESS_TRANSACTIONS_QUERY,
   BALANCE_CHANGES_QUERY,
+  BALANCES_QUERY,
   cleanGraphqlBalanceChanges,
-  cleanGraphqlTransactions,
-  GRAPHQL_TRANSACTIONS_PER_REQUEST,
-  toSuiHistoryTx,
-  TRANSACTIONS_QUERY
+  cleanGraphqlBalances,
+  cleanGraphqlTransactionPage,
+  GraphqlCaller,
+  SuiGraphqlTransaction,
+  toSuiHistoryTx
 } from './suiGraphql'
 import {
   asSuiPrivateKeys,
+  checkSuiBalances,
   SuiHistoryTx,
   SuiInfoPayload,
   SuiNetworkInfo
 } from './suiTypes'
 
 /**
- * Ceiling on a single node's response. `asyncStaggeredRace` has no timeout of
- * its own: a node that accepts the connection but never answers is neither
- * resolved nor failed, so without this the race can never settle, and the
- * engine's polling loop would stop rescheduling for the rest of the session.
+ * Ceiling on a single node's response. A node that accepts the connection but
+ * never answers is neither resolved nor failed, so without this a sync pass
+ * could never settle, and the engine's polling loop would stop rescheduling
+ * for the rest of the session.
  */
-const RPC_TIMEOUT_MS = 10000
+const GRAPHQL_TIMEOUT_MS = 10000
 
-/** Gap before the race brings the next node in alongside the current one. */
-const STAGGER_INTERVAL_MS = 1000
+export interface SuiHistoryTxPage {
+  txs: SuiHistoryTx[]
+  hasNextPage: boolean
+  /** Where the next page starts. Stays valid across sessions. */
+  endCursor: string | null
+}
+
+/**
+ * Converts a GraphQL transaction for history sync, first loading any balance
+ * changes past the first page from the same node.
+ */
+const completeTransaction = async (
+  call: GraphqlCaller,
+  tx: SuiGraphqlTransaction
+): Promise<SuiHistoryTx> => {
+  const { nodes, pageInfo } = tx.effects.balanceChanges
+  const balanceChanges = [...nodes]
+  let { hasNextPage, endCursor: after } = pageInfo
+  while (hasNextPage) {
+    if (after == null) {
+      throw new Error(
+        `Sui GraphQL gave no cursor for the balance changes of ${tx.digest}`
+      )
+    }
+    const page = cleanGraphqlBalanceChanges(
+      await call(BALANCE_CHANGES_QUERY, { digest: tx.digest, after }),
+      tx.digest
+    )
+    balanceChanges.push(...page.nodes)
+    hasNextPage = page.pageInfo.hasNextPage
+    if (hasNextPage && page.pageInfo.endCursor === after) {
+      throw new Error(
+        `Sui GraphQL repeated the balance change cursor ${after} of ${tx.digest}`
+      )
+    }
+    after = page.pageInfo.endCursor
+  }
+  return toSuiHistoryTx(tx, balanceChanges)
+}
 
 export class SuiTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -66,7 +106,6 @@ export class SuiTools implements EdgeCurrencyTools {
   initOptions: JsonObject
 
   private readonly env: PluginEnvironment<SuiNetworkInfo>
-  private readonly clients = new Map<string, SuiClient>()
 
   /** Earliest time each node may be called again, keyed by URL. */
   private readonly nextSlot = new Map<string, number>()
@@ -89,30 +128,8 @@ export class SuiTools implements EdgeCurrencyTools {
     return this.env.networkInfo
   }
 
-  get rpcNodes(): string[] {
-    return this.networkInfo.rpcNodes
-  }
-
-  get rpcNodesArchival(): string[] {
-    return this.networkInfo.rpcNodesArchival
-  }
-
   get graphqlNodes(): string[] {
     return this.networkInfo.graphqlNodes
-  }
-
-  getClient(url: string): SuiClient {
-    let client = this.clients.get(url)
-    if (client == null) {
-      client = new SuiClient({
-        transport: new SuiHTTPTransport({
-          url,
-          fetch: this.io.fetch as typeof fetch
-        })
-      })
-      this.clients.set(url, client)
-    }
-    return client
   }
 
   /**
@@ -127,49 +144,6 @@ export class SuiTools implements EdgeCurrencyTools {
     const slot = Math.max(now, this.nextSlot.get(url) ?? 0)
     this.nextSlot.set(url, slot + gapMs)
     if (slot > now) await snooze(slot - now)
-  }
-
-  /** Run `fn` against one node, throttled and time-boxed. */
-  async callRpc<T>(
-    url: string,
-    fn: (client: SuiClient) => Promise<T>
-  ): Promise<T> {
-    await this.throttle(url)
-    return await timeout(
-      fn(this.getClient(url)),
-      RPC_TIMEOUT_MS,
-      new Error(`Sui RPC timed out: ${url}`)
-    )
-  }
-
-  /**
-   * Race `fn` across nodes, staggered. Shuffled because the race only reaches
-   * past the first node when that one is slow or failing, so a fixed order
-   * would send every healthy request to one provider and leave the rest as
-   * untested spares.
-   */
-  async raceRpc<T>(
-    urls: string[],
-    fn: (client: SuiClient) => Promise<T>
-  ): Promise<T> {
-    this.assertNodes(urls)
-    const funcs = shuffleArray([...urls]).map(
-      url => async () => await this.callRpc(url, fn)
-    )
-    return await asyncStaggeredRace(funcs, STAGGER_INTERVAL_MS)
-  }
-
-  /**
-   * Run `fn` against every node at once, resolving on the first success. For
-   * idempotent writes, where submitting more than once is harmless and
-   * redundancy matters more than choosing a single node.
-   */
-  async blastRpc<T>(
-    urls: string[],
-    fn: (client: SuiClient) => Promise<T>
-  ): Promise<T> {
-    this.assertNodes(urls)
-    return await promiseAny(urls.map(async url => await this.callRpc(url, fn)))
   }
 
   /** Send one GraphQL query to one node, throttled and time-boxed. */
@@ -192,71 +166,102 @@ export class SuiTools implements EdgeCurrencyTools {
     }
     return await timeout(
       request(),
-      RPC_TIMEOUT_MS,
+      GRAPHQL_TIMEOUT_MS,
       new Error(`Sui GraphQL timed out: ${url}`)
     )
   }
 
-  private async fetchGraphqlTransactionsFrom(
-    url: string,
-    digests: string[]
-  ): Promise<SuiHistoryTx[]> {
-    const out: SuiHistoryTx[] = []
-    for (let i = 0; i < digests.length; i += GRAPHQL_TRANSACTIONS_PER_REQUEST) {
-      const keys = digests.slice(i, i + GRAPHQL_TRANSACTIONS_PER_REQUEST)
-      const txs = cleanGraphqlTransactions(
-        await this.callGraphql(url, TRANSACTIONS_QUERY, { keys }),
-        keys
-      )
-
-      for (const tx of txs) {
-        const { nodes, pageInfo } = tx.effects.balanceChanges
-        const balanceChanges = [...nodes]
-        let { hasNextPage, endCursor: after } = pageInfo
-        while (hasNextPage) {
-          if (after == null) {
-            throw new Error(
-              `Sui GraphQL gave no cursor for the balance changes of ${tx.digest}`
-            )
-          }
-          const page = cleanGraphqlBalanceChanges(
-            await this.callGraphql(url, BALANCE_CHANGES_QUERY, {
-              digest: tx.digest,
-              after
-            }),
-            tx.digest
-          )
-          balanceChanges.push(...page.nodes)
-          hasNextPage = page.pageInfo.hasNextPage
-          after = page.pageInfo.endCursor
-        }
-        out.push(toSuiHistoryTx(tx, balanceChanges))
+  /**
+   * Run `fn` against one GraphQL node at a time, in shuffled order, until one
+   * succeeds. Every query `fn` sends goes to the same node, so cursors from
+   * one page stay valid for the next.
+   */
+  async withGraphqlNode<T>(
+    fn: (call: GraphqlCaller) => Promise<T>
+  ): Promise<T> {
+    const urls = shuffleArray([...this.graphqlNodes])
+    this.assertNodes(urls)
+    let lastError: unknown
+    for (const url of urls) {
+      try {
+        return await fn(
+          async (query, variables) =>
+            await this.callGraphql(url, query, variables)
+        )
+      } catch (error: unknown) {
+        lastError = error
       }
     }
-    return out
+    throw lastError
   }
 
   /**
-   * Loads transactions in full by digest, in the order given. Either every
-   * digest comes back or this throws: history sync moves its cursor past
-   * whatever it is handed, so a partial answer would lose transactions.
+   * Run `fn` against every GraphQL node at once, resolving on the first
+   * success. For idempotent writes, where submitting more than once is
+   * harmless and redundancy matters more than choosing a single node.
    */
-  async fetchGraphqlTransactions(digests: string[]): Promise<SuiHistoryTx[]> {
-    const urls = shuffleArray([...this.graphqlNodes])
-    let lastError: Error | undefined
-    for (const url of urls) {
-      try {
-        return await this.fetchGraphqlTransactionsFrom(url, digests)
-      } catch (error: unknown) {
-        lastError = error instanceof Error ? error : new Error(String(error))
-      }
-    }
-    throw (
-      lastError ??
-      new Error(
-        `No Sui GraphQL nodes configured for ${this.currencyInfo.pluginId}`
+  async blastGraphql<T>(fn: (call: GraphqlCaller) => Promise<T>): Promise<T> {
+    const urls = this.graphqlNodes
+    this.assertNodes(urls)
+    return await promiseAny(
+      urls.map(
+        async url =>
+          await fn(
+            async (query, variables) =>
+              await this.callGraphql(url, query, variables)
+          )
       )
     )
+  }
+
+  /**
+   * Loads every coin balance of `owner`. A node whose SUI total is
+   * impossible fails over to the next one instead of setting the balance.
+   */
+  async fetchBalances(
+    owner: string
+  ): Promise<Array<{ coinType: string; totalBalance: string }>> {
+    return await this.withGraphqlNode(async call => {
+      const balances: Array<{ coinType: string; totalBalance: string }> = []
+      let after: string | null = null
+      while (true) {
+        const page = cleanGraphqlBalances(
+          await call(BALANCES_QUERY, { owner, after })
+        )
+        checkSuiBalances(page.balances, this.networkInfo.totalSupply)
+        balances.push(...page.balances)
+        if (!page.hasNextPage) return balances
+        if (page.endCursor == null) {
+          throw new Error(
+            `Sui GraphQL gave no cursor for the balances of ${owner}`
+          )
+        }
+        if (page.endCursor === after) {
+          throw new Error(`Sui GraphQL repeated the balances cursor ${after}`)
+        }
+        after = page.endCursor
+      }
+    })
+  }
+
+  /**
+   * Loads one page of the transactions that touch `owner`, oldest first,
+   * starting after `cursor` (or from the first transaction when it is null).
+   */
+  async fetchAddressTransactions(
+    owner: string,
+    cursor: string | null
+  ): Promise<SuiHistoryTxPage> {
+    return await this.withGraphqlNode(async call => {
+      const page = cleanGraphqlTransactionPage(
+        await call(ADDRESS_TRANSACTIONS_QUERY, { owner, after: cursor })
+      )
+      const txs: SuiHistoryTx[] = []
+      for (const tx of page.transactions) {
+        txs.push(await completeTransaction(call, tx))
+      }
+      return { txs, hasNextPage: page.hasNextPage, endCursor: page.endCursor }
+    })
   }
 
   /**
@@ -267,7 +272,7 @@ export class SuiTools implements EdgeCurrencyTools {
   private assertNodes(urls: string[]): void {
     if (urls.length === 0) {
       throw new Error(
-        `No Sui RPC nodes configured for ${this.currencyInfo.pluginId}`
+        `No Sui nodes configured for ${this.currencyInfo.pluginId}`
       )
     }
   }

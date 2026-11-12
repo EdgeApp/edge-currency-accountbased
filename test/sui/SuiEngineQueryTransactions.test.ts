@@ -1,64 +1,64 @@
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
+import { Transaction } from '@mysten/sui/transactions'
 import { assert } from 'chai'
 import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeIo,
+  EdgeTokenMap,
+  EdgeTransaction,
   makeFakeIo
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
+import { base64 } from 'rfc4648'
 
 import { PluginEnvironment } from '../../src/common/innerPlugin'
 import { SuiEngine } from '../../src/sui/SuiEngine'
+import {
+  BALANCES_QUERY,
+  COINS_QUERY,
+  OBJECTS_QUERY,
+  REFERENCE_GAS_PRICE_QUERY,
+  SIMULATE_QUERY
+} from '../../src/sui/suiGraphql'
 import { currencyInfo } from '../../src/sui/suiInfo'
 import { SuiTools } from '../../src/sui/SuiTools'
-import type { SuiHistoryTx, SuiNetworkInfo } from '../../src/sui/suiTypes'
+import type { SuiNetworkInfo } from '../../src/sui/suiTypes'
 import { fakeLog } from '../fake/fakeLog'
 
-const RPC_URL = 'https://rpc.test'
 const GRAPHQL_URL = 'https://graphql.test'
 const GRAPHQL_URL_2 = 'https://graphql2.test'
 
 const PUBLIC_KEY = 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE='
 const ADDRESS = new Ed25519PublicKey(PUBLIC_KEY).toSuiAddress()
-
-/** What a node answers once it has pruned a transaction on the page. */
-const PRUNED_ERROR = {
-  code: -32000,
-  message:
-    'ErrorObject { code: InvalidParams, message: "unable to derive balance/object changes because effect is empty", data: None }'
-}
-
-interface RpcBody {
-  id: number
-  method: string
-  params: [{ options?: object }, string | null]
-}
+const OTHER =
+  '0x7ba661f0e68dcfa31c8c20f21d42bc0b973920ee79904bd5683c9259a9925fdf'
 
 interface GraphqlBody {
   query: string
-  variables: { keys?: string[]; digest?: string; after?: string }
+  variables: {
+    owner?: string
+    digest?: string
+    after?: string | null
+    type?: string
+    keys?: Array<{ address: string }>
+  }
 }
 
-type RpcReply = { result: unknown } | { error: unknown }
+/**
+ * How `graphql.mainnet.sui.io` rejected cursors it could not decode on
+ * 2026-11-10: one that is not base64, one in another encoding, and a
+ * truncated one.
+ */
+const CURSOR_REJECTIONS = [
+  'Failed to parse "String": Invalid Base64',
+  'Failed to parse "String": Invalid encoding: failed to decode Protobuf message: buffer underflow',
+  'Invalid cursor'
+]
 
-/** A transaction as the node returns it while it still holds it. */
-const makeRpcTx = (digest: string): SuiHistoryTx => ({
-  digest,
-  checkpoint: '100',
-  timestampMs: '1700000000000',
-  rawTransaction: 'AQAAAAAAAA==',
-  effects: {
-    gasUsed: {
-      computationCost: '1000',
-      storageCost: '2000',
-      storageRebate: '500',
-      nonRefundableStorageFee: '5'
-    }
-  },
-  balanceChanges: [
-    { owner: { AddressOwner: ADDRESS }, coinType: '0x2::sui::SUI', amount: '5' }
-  ]
+const rejectCursor = (message: string): unknown => ({
+  data: null,
+  errors: [{ message }]
 })
 
 const makeGraphqlBalanceChanges = (
@@ -75,105 +75,116 @@ const makeGraphqlBalanceChanges = (
   }))
 })
 
-/** The same transaction as GraphQL returns it. */
+/** A transaction as GraphQL returns it, sent by `sender`. */
 const makeGraphqlTx = (
   digest: string,
-  balanceChanges = makeGraphqlBalanceChanges(['5'], false)
+  opts: { sender?: string; balanceChanges?: unknown; gasSummary?: unknown } = {}
+): unknown => {
+  const {
+    sender = OTHER,
+    balanceChanges = makeGraphqlBalanceChanges(['5'], false),
+    gasSummary = {
+      computationCost: 1000,
+      storageCost: 2000,
+      storageRebate: 500,
+      nonRefundableStorageFee: 5
+    }
+  } = opts
+  return {
+    digest,
+    sender: { address: sender },
+    transactionBcs: 'AAAA',
+    signatures: [{ signatureBytes: 'AA==' }],
+    effects: {
+      timestamp: '2023-11-14T22:13:20.000Z',
+      checkpoint: { sequenceNumber: 100 },
+      gasEffects: { gasSummary },
+      balanceChanges
+    }
+  }
+}
+
+/** One page of the address history query. */
+const makePage = (
+  txs: unknown[],
+  hasNextPage: boolean,
+  endCursor: string | null
 ): unknown => ({
-  digest,
-  transactionBcs: 'AAAA',
-  signatures: [{ signatureBytes: 'AA==' }],
-  effects: {
-    timestamp: '2023-11-14T22:13:20.000Z',
-    checkpoint: { sequenceNumber: 100 },
-    gasEffects: {
-      gasSummary: {
-        computationCost: 1000,
-        storageCost: 2000,
-        storageRebate: 500,
-        nonRefundableStorageFee: 5
-      }
-    },
-    balanceChanges
+  data: {
+    transactions: { pageInfo: { hasNextPage, endCursor }, nodes: txs }
   }
 })
 
-/** A GraphQL service that holds every transaction it is asked for. */
-const graphqlHoldsAll = (body: GraphqlBody): unknown => ({
-  data: {
-    multiGetTransactions: (body.variables.keys ?? []).map(digest =>
-      makeGraphqlTx(digest)
-    )
+/** A history of one transaction per page, with cursors 'c1', 'c2', ... */
+const pagedHistory =
+  (digests: string[]) =>
+  (body: GraphqlBody): unknown => {
+    const after = body.variables.after
+    const index = after == null ? 0 : Number(after.slice(1))
+    if (index > digests.length) return rejectCursor(CURSOR_REJECTIONS[0])
+    const txs = index < digests.length ? [makeGraphqlTx(digests[index])] : []
+    const endCursor = txs.length > 0 ? `c${index + 1}` : null
+    return makePage(txs, index + 1 < digests.length, endCursor)
   }
-})
 
 interface FakeSui {
   engine: SuiEngine
 
   /** Every request the engine sent, in order. */
   requests: string[]
+
+  /** Every ratio the sweep reported for history. */
+  historyRatios: number[]
+
+  /** Every transaction the engine reported, in order. */
+  transactions: EdgeTransaction[]
 }
 
 /**
  * Builds a loaded `SuiEngine` and real `SuiTools` over a fake `fetch`, so the
- * sweep runs through the same client, throttle and cleaners as in the app.
+ * sweep runs through the same failover and cleaners as in the app.
  */
 async function makeFakeSui(opts: {
-  /** Answers a history query. `full` is false when only digests are asked. */
-  rpc: (cursor: string | null, full: boolean) => RpcReply
-
   /** Answers GraphQL queries, by node. A throw is a network failure. */
-  graphql?: { [url: string]: (body: GraphqlBody) => unknown }
-}): Promise<FakeSui> {
-  const { rpc, graphql = { [GRAPHQL_URL]: graphqlHoldsAll } } = opts
-  const requests: string[] = []
-
-  const answer = (uri: string, text: string): unknown => {
-    if (uri === RPC_URL) {
-      const body = JSON.parse(text) as RpcBody
-      if (body.method !== 'suix_queryTransactionBlocks') {
-        throw new Error(`Unexpected method ${body.method}`)
-      }
-      const [{ options }, cursor] = body.params
-      const full = options != null && Object.keys(options).length > 0
-      requests.push(`rpc ${full ? 'full' : 'digests'} ${String(cursor)}`)
-      return { jsonrpc: '2.0', id: body.id, ...rpc(cursor, full) }
-    }
-
-    const handler = graphql[uri]
-    if (handler == null) throw new Error(`Unexpected request to ${uri}`)
-    const body = JSON.parse(text) as GraphqlBody
-    const { after, digest, keys } = body.variables
-    requests.push(
-      keys != null
-        ? `graphql ${keys.join(',')}`
-        : `graphql balanceChanges ${String(digest)} ${String(after)}`
-    )
-    return handler(body)
+  graphql: {
+    [url: string]: (body: GraphqlBody) => unknown | Promise<unknown>
   }
+
+  /** Tokens the plugin knows, all of them enabled. */
+  tokens?: EdgeTokenMap
+
+  /** Storage carried over from an earlier engine, as on a warm launch. */
+  disklet?: EdgeIo['disklet']
+}): Promise<FakeSui> {
+  const { graphql, tokens = {} } = opts
+  const requests: string[] = []
+  const transactions: EdgeTransaction[] = []
 
   const fetch = async (
     uri: string,
     init?: { body?: unknown }
   ): Promise<unknown> => {
-    const json = answer(uri, String(init?.body))
+    const handler = graphql[uri]
+    if (handler == null) throw new Error(`Unexpected request to ${uri}`)
+    const body = JSON.parse(String(init?.body)) as GraphqlBody
+    requests.push(describeRequest(body))
+    const json = await handler(body)
     return { ok: true, status: 200, json: async () => json }
   }
 
   const io: EdgeIo = { ...makeFakeIo(), fetch: fetch as EdgeIo['fetch'] }
+  if (opts.disklet != null) Object.assign(io, { disklet: opts.disklet })
 
-  const networkInfo: SuiNetworkInfo = {
+  const networkInfo = {
     network: 'mainnet',
     pluginMnemonicKeyName: 'suiMnemonic',
     totalSupply: '10000000000000000000',
-    rpcNodes: [RPC_URL],
-    rpcNodesArchival: [RPC_URL],
     graphqlNodes: Object.keys(graphql),
     maxRequestsPerSecond: 1000
-  }
+  } as unknown as SuiNetworkInfo
 
   const env = {
-    builtinTokens: {},
+    builtinTokens: tokens,
     currencyInfo,
     initOptions: {},
     io,
@@ -192,7 +203,9 @@ async function makeFakeSui(opts: {
     onSubscribeAddresses() {},
     onSyncStatusChanged() {},
     onTokenBalanceChanged() {},
-    onTransactions() {},
+    onTransactions(events) {
+      transactions.push(...events.map(event => event.transaction))
+    },
     onTransactionsChanged() {},
     onTxidsChanged() {},
     onUnactivatedTokenIdsChanged() {},
@@ -202,7 +215,7 @@ async function makeFakeSui(opts: {
   const engineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
     customTokens: {},
-    enabledTokenIds: [],
+    enabledTokenIds: Object.keys(tokens),
     log: fakeLog,
     seenTxCheckpoint: '0',
     userSettings: {},
@@ -218,205 +231,575 @@ async function makeFakeSui(opts: {
     engineOptions
   )
   await engine.loadEngine()
-  return { engine, requests }
-}
+  // The polling loop stays off; each test runs passes by hand:
+  engine.engineOn = true
 
-/** The transactions a sweep added, as `[txid, nativeAmount]`. */
-const added = (engine: SuiEngine): string[][] =>
-  engine.transactionEvents.map(({ transaction }) => [
-    transaction.txid,
-    transaction.nativeAmount
-  ])
-
-const rejection = async (promise: Promise<unknown>): Promise<string> => {
-  try {
-    await promise
-  } catch (error: unknown) {
-    return String(error)
+  const historyRatios: number[] = []
+  const { syncTracker } = engine
+  const setHistoryRatios = syncTracker.setHistoryRatios.bind(syncTracker)
+  syncTracker.setHistoryRatios = (tokenIds, ratio) => {
+    historyRatios.push(ratio)
+    setHistoryRatios(tokenIds, ratio)
   }
-  throw new Error('Expected a rejection')
+
+  return { engine, requests, historyRatios, transactions }
 }
+
+/** Names a request by its query, with the cursor it asked for. */
+const describeRequest = (body: GraphqlBody): string => {
+  const { after, digest, type } = body.variables
+  switch (body.query) {
+    case BALANCES_QUERY:
+      return `balances ${String(after)}`
+    case COINS_QUERY:
+      return `coins ${String(
+        type?.includes('::sui::SUI') === true ? 'SUI' : 'USDC'
+      )} ${String(after)}`
+    case OBJECTS_QUERY:
+      return 'objects'
+    case REFERENCE_GAS_PRICE_QUERY:
+      return 'gasPrice'
+    case SIMULATE_QUERY:
+      return 'simulate'
+  }
+  return digest != null
+    ? `balanceChanges ${digest} ${String(after)}`
+    : `history ${String(after)}`
+}
+
+/** The transactions a sweep reported, as `[txid, nativeAmount]`. */
+const added = (transactions: EdgeTransaction[]): string[][] =>
+  transactions.map(tx => [tx.txid, tx.nativeAmount])
+
+describe('SuiEngine balances and sends', function () {
+  const SUI =
+    '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI'
+  const USDC =
+    '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC'
+  const USDC_ID =
+    '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7usdcUSDC'
+  const TOKENS: EdgeTokenMap = {
+    [USDC_ID]: {
+      currencyCode: 'USDC',
+      denominations: [{ multiplier: '1000000', name: 'USDC' }],
+      displayName: 'USD Coin',
+      networkLocation: { contractAddress: USDC }
+    }
+  }
+  const DIGEST = '2WbsXjQJuKV2xc3du8GXwhCzch9gppCe89rb65c3nqZm'
+  const GAS_COIN =
+    '0x1111111111111111111111111111111111111111111111111111111111111111'
+
+  /** The id of the `n`th USDC coin, from 1. */
+  const usdcCoin = (n: number): string =>
+    `0x${n.toString(16).padStart(2, '0').repeat(32)}`
+
+  const GAS_SUMMARY = {
+    computationCost: 750000,
+    storageCost: 1976000,
+    storageRebate: 978120,
+    nonRefundableStorageFee: 9880
+  }
+
+  /** One page of the balances query. */
+  const balancePage = (
+    balances: Array<[coinType: string, total: string]>,
+    endCursor: string | null
+  ): unknown => ({
+    data: {
+      address: {
+        balances: {
+          pageInfo: { hasNextPage: endCursor != null, endCursor },
+          nodes: balances.map(([repr, totalBalance]) => ({
+            coinType: { repr },
+            totalBalance
+          }))
+        }
+      }
+    }
+  })
+
+  /** One page of the coins query. */
+  const coinPage = (
+    coins: Array<[id: string, balance: string]>,
+    endCursor: string | null
+  ): unknown => ({
+    data: {
+      address: {
+        objects: {
+          pageInfo: { hasNextPage: endCursor != null, endCursor },
+          nodes: coins.map(([address, balance]) => ({
+            address,
+            version: 12,
+            digest: DIGEST,
+            contents: { json: { balance } }
+          }))
+        }
+      }
+    }
+  })
+
+  /**
+   * A node holding 9 SUI in one coin and 2 USDC, with the USDC coins spread
+   * over `usdcPages` (one balance per coin, cursors 'k1', 'k2', ...). Each
+   * simulation answers with `simulate`.
+   */
+  const sendNode =
+    (
+      opts: {
+        usdcPages?: string[][]
+        simulate?: () => unknown
+      } = {}
+    ) =>
+    (body: GraphqlBody): unknown => {
+      const { usdcPages = [['2000000']], simulate } = opts
+      const { after, keys = [], type = '' } = body.variables
+      switch (body.query) {
+        case BALANCES_QUERY:
+          return balancePage(
+            [
+              [SUI, '9000000000'],
+              [USDC, '2000000']
+            ],
+            null
+          )
+        case REFERENCE_GAS_PRICE_QUERY:
+          return { data: { epoch: { referenceGasPrice: '750' } } }
+        case COINS_QUERY: {
+          if (type.includes('::sui::SUI')) {
+            return coinPage([[GAS_COIN, '9000000000']], null)
+          }
+          const index = after == null ? 0 : Number(after.slice(1))
+          let n = 1
+          for (let i = 0; i < index; ++i) n += usdcPages[i].length
+          return coinPage(
+            usdcPages[index].map((balance, i) => [usdcCoin(n + i), balance]),
+            index + 1 < usdcPages.length ? `k${index + 1}` : null
+          )
+        }
+        case OBJECTS_QUERY:
+          return {
+            data: {
+              multiGetObjects: keys.map(({ address }) => ({
+                address,
+                version: 12,
+                digest: DIGEST,
+                owner: {
+                  __typename: 'AddressOwner',
+                  address: { address: ADDRESS }
+                }
+              }))
+            }
+          }
+        case SIMULATE_QUERY:
+          return (
+            simulate?.() ?? {
+              data: {
+                simulateTransaction: {
+                  effects: {
+                    status: 'SUCCESS',
+                    executionError: null,
+                    gasEffects: { gasSummary: GAS_SUMMARY }
+                  }
+                }
+              }
+            }
+          )
+      }
+      throw new Error(`Unexpected query: ${body.query}`)
+    }
+
+  /** A wallet holding USDC, with its balances loaded. */
+  const makeSendSui = async (
+    handler: (body: GraphqlBody) => unknown
+  ): Promise<FakeSui> => {
+    const fake = await makeFakeSui({
+      graphql: { [GRAPHQL_URL]: handler },
+      tokens: TOKENS
+    })
+    await fake.engine.queryBalance()
+    fake.requests.length = 0
+    return fake
+  }
+
+  /** The coin objects a built transaction spends, other than gas. */
+  const spentCoins = (tx: EdgeTransaction): string[] => {
+    const { unsignedBase64 } = tx.otherParams as { unsignedBase64: string }
+    return Transaction.from(base64.parse(unsignedBase64))
+      .getData()
+      .inputs.map(input => input.Object?.ImmOrOwnedObject?.objectId)
+      .filter((id): id is string => id != null)
+      .sort((a, b) => a.localeCompare(b))
+  }
+
+  /** Settles `promise` to the error it rejects with, if any. */
+  const rejectionOf = async (promise: Promise<unknown>): Promise<unknown> =>
+    await promise.then(
+      () => undefined,
+      (error: unknown) => error
+    )
+
+  it('reads every page of balances', async function () {
+    const { engine, requests } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: body =>
+          body.variables.after == null
+            ? balancePage([[SUI, '9000000000']], 'b1')
+            : balancePage([[USDC, '2000000']], null)
+      },
+      tokens: TOKENS
+    })
+
+    await engine.queryBalance()
+
+    assert.deepEqual(requests, ['balances null', 'balances b1'])
+    assert.equal(engine.getBalance({ tokenId: null }), '9000000000')
+    assert.equal(engine.getBalance({ tokenId: USDC_ID }), '2000000')
+  })
+
+  it('stops reading balances when the cursor does not move', async function () {
+    const { engine, requests } = await makeFakeSui({
+      graphql: { [GRAPHQL_URL]: () => balancePage([[SUI, '9000000000']], 'b1') }
+    })
+
+    await engine.queryBalance()
+
+    assert.deepEqual(requests, ['balances null', 'balances b1'])
+  })
+
+  it('takes balances from another node when one reports more SUI than exists', async function () {
+    const { engine } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: () => balancePage([[SUI, '10000000000000000001']], null),
+        [GRAPHQL_URL_2]: () => balancePage([[SUI, '9000000000']], null)
+      }
+    })
+
+    await engine.queryBalance()
+
+    assert.equal(engine.getBalance({ tokenId: null }), '9000000000')
+  })
+
+  it('gathers token coins from more than one page', async function () {
+    const { engine, requests } = await makeSendSui(
+      sendNode({ usdcPages: [['600000'], ['600000']] })
+    )
+
+    const tx = await engine.makeSpend({
+      tokenId: USDC_ID,
+      spendTargets: [{ nativeAmount: '1000000', publicAddress: OTHER }]
+    })
+
+    assert.includeOrderedMembers(requests, ['coins USDC null', 'coins USDC k1'])
+    assert.deepEqual(spentCoins(tx), [usdcCoin(1), usdcCoin(2)])
+    assert.equal(tx.nativeAmount, '-1000000')
+    assert.equal(tx.networkFee, '0')
+    assert.equal(tx.parentNetworkFee, String(750000 + 1976000 - 978120))
+  })
+
+  it('refuses a token send when the coins run out', async function () {
+    const { engine, requests } = await makeSendSui(
+      // The balance says 2 USDC, but the node only finds 0.6:
+      sendNode({ usdcPages: [['300000'], ['300000']] })
+    )
+
+    const error = await rejectionOf(
+      engine.makeSpend({
+        tokenId: USDC_ID,
+        spendTargets: [{ nativeAmount: '1000000', publicAddress: OTHER }]
+      })
+    )
+
+    assert.equal((error as Error | undefined)?.name, 'InsufficientFundsError')
+    assert.equal((error as { tokenId?: string }).tokenId, USDC_ID)
+    assert.deepEqual(requests, ['coins USDC null', 'coins USDC k1'])
+  })
+
+  it('stops gathering token coins when the cursor does not move', async function () {
+    const node = sendNode()
+    const { engine, requests } = await makeSendSui(body =>
+      body.query === COINS_QUERY &&
+      !String(body.variables.type).includes('::sui::SUI')
+        ? coinPage([[usdcCoin(1), '300000']], 'k1')
+        : node(body)
+    )
+
+    const error = await rejectionOf(
+      engine.makeSpend({
+        tokenId: USDC_ID,
+        spendTargets: [{ nativeAmount: '1000000', publicAddress: OTHER }]
+      })
+    )
+
+    assert.match(String(error), /repeated the coin cursor k1/)
+    assert.deepEqual(requests, ['coins USDC null', 'coins USDC k1'])
+  })
+
+  it('refuses a send the simulation says would fail', async function () {
+    const { engine, requests } = await makeSendSui(
+      sendNode({
+        usdcPages: [['1000000']],
+        simulate: () => ({
+          data: {
+            simulateTransaction: {
+              effects: {
+                status: 'FAILURE',
+                executionError: { message: 'InsufficientCoinBalance' },
+                gasEffects: { gasSummary: GAS_SUMMARY }
+              }
+            }
+          }
+        })
+      })
+    )
+
+    const error = await rejectionOf(
+      engine.makeSpend({
+        tokenId: USDC_ID,
+        spendTargets: [{ nativeAmount: '1000000', publicAddress: OTHER }]
+      })
+    )
+
+    assert.match(
+      String(error),
+      /Sui transaction would fail: InsufficientCoinBalance/
+    )
+    assert.include(requests, 'simulate')
+  })
+
+  it('builds a send whose storage rebate beats its gas', async function () {
+    const gasSummary = {
+      computationCost: 1000,
+      storageCost: 0,
+      storageRebate: 48000,
+      nonRefundableStorageFee: 480
+    }
+    const { engine } = await makeSendSui(
+      sendNode({
+        simulate: () => ({
+          data: {
+            simulateTransaction: {
+              effects: {
+                status: 'SUCCESS',
+                executionError: null,
+                gasEffects: { gasSummary }
+              }
+            }
+          }
+        })
+      })
+    )
+
+    const tx = await engine.makeSpend({
+      tokenId: null,
+      spendTargets: [{ nativeAmount: '1000', publicAddress: OTHER }]
+    })
+
+    // The wallet ends up 47000 - 1000 richer, so the amount is positive:
+    assert.equal(tx.networkFee, '-47000')
+    assert.equal(tx.nativeAmount, '46000')
+  })
+})
 
 describe('SuiEngine history sweep', function () {
-  it('asks the node once when it holds every transaction', async function () {
-    const { engine, requests } = await makeFakeSui({
-      rpc: () => ({
-        result: {
-          data: [makeRpcTx('a'), makeRpcTx('b')],
-          hasNextPage: false,
-          nextCursor: 'b'
-        }
-      })
-    })
-
-    await engine.queryTransactionsInner('to')
-
-    assert.deepEqual(requests, ['rpc full null'])
-    assert.deepEqual(added(engine), [
-      ['a', '5'],
-      ['b', '5']
-    ])
-    assert.equal(engine.otherData.latestTxidTo, 'b')
-  })
-
-  it('loads a page from GraphQL once the node has pruned it', async function () {
-    const { engine, requests } = await makeFakeSui({
-      rpc: (cursor, full) =>
-        full
-          ? { error: PRUNED_ERROR }
-          : {
-              result: {
-                data: [{ digest: 'a' }, { digest: 'b' }],
-                hasNextPage: false,
-                nextCursor: 'b'
-              }
-            }
-    })
-
-    await engine.queryTransactionsInner('to')
-
-    assert.deepEqual(requests, [
-      'rpc full null',
-      'rpc digests null',
-      'graphql a,b'
-    ])
-    assert.deepEqual(added(engine), [
-      ['a', '5'],
-      ['b', '5']
-    ])
-    assert.equal(engine.otherData.latestTxidTo, 'b')
-  })
-
-  it('stores the same transaction from either source', async function () {
-    const fromNode = await makeFakeSui({
-      rpc: () => ({
-        result: { data: [makeRpcTx('a')], hasNextPage: false, nextCursor: 'a' }
-      })
-    })
-    const fromGraphql = await makeFakeSui({
-      rpc: (cursor, full) =>
-        full
-          ? { error: PRUNED_ERROR }
-          : {
-              result: {
-                data: [{ digest: 'a' }],
-                hasNextPage: false,
-                nextCursor: 'a'
-              }
-            }
-    })
-
-    await fromNode.engine.queryTransactionsInner('from')
-    await fromGraphql.engine.queryTransactionsInner('from')
-
-    const [expected] = fromNode.engine.transactionEvents
-    const [actual] = fromGraphql.engine.transactionEvents
-    assert.deepEqual(actual.transaction, {
-      ...expected.transaction,
-      // The fake node's raw bytes are a placeholder, so only this differs:
-      signedTx: actual.transaction.signedTx
-    })
-    assert.equal(actual.transaction.networkFee, '2500')
-  })
-
-  it('asks the node for full transactions again on the next page', async function () {
-    const { engine, requests } = await makeFakeSui({
-      rpc: (cursor, full) => {
-        if (cursor === 'a') {
-          return {
-            result: {
-              data: [makeRpcTx('b')],
-              hasNextPage: false,
-              nextCursor: 'b'
-            }
-          }
-        }
-        if (full) return { error: PRUNED_ERROR }
-        return {
-          result: {
-            data: [{ digest: 'a' }],
-            hasNextPage: true,
-            nextCursor: 'a'
-          }
-        }
+  it('walks every page and saves the cursor after each', async function () {
+    const { engine, requests, historyRatios, transactions } = await makeFakeSui(
+      {
+        graphql: { [GRAPHQL_URL]: pagedHistory(['a', 'b']) }
       }
-    })
-
-    await engine.queryTransactionsInner('to')
-
-    assert.deepEqual(requests, [
-      'rpc full null',
-      'rpc digests null',
-      'graphql a',
-      'rpc full a'
-    ])
-    assert.deepEqual(
-      added(engine).map(([txid]) => txid),
-      ['a', 'b']
     )
-    assert.equal(engine.otherData.latestTxidTo, 'b')
+
+    await engine.queryTransactions()
+
+    assert.deepEqual(requests, ['history null', 'history c1'])
+    assert.deepEqual(added(transactions), [
+      ['a', '5'],
+      ['b', '5']
+    ])
+    assert.equal(engine.otherData.txCursor, 'c2')
+    assert.deepEqual(historyRatios, [1])
   })
 
-  it('stops at a page GraphQL cannot load in full', async function () {
-    const { engine } = await makeFakeSui({
-      rpc: (cursor, full) => {
-        if (cursor == null) {
-          return {
-            result: {
-              data: [makeRpcTx('a')],
-              hasNextPage: true,
-              nextCursor: 'a'
-            }
-          }
-        }
-        if (full) return { error: PRUNED_ERROR }
-        return {
-          result: {
-            data: [{ digest: 'b' }, { digest: 'c' }],
-            hasNextPage: false,
-            nextCursor: 'c'
-          }
-        }
-      },
+  it('resumes from the saved cursor', async function () {
+    const { engine, requests, transactions } = await makeFakeSui({
+      graphql: { [GRAPHQL_URL]: pagedHistory(['a', 'b', 'c']) }
+    })
+    engine.otherData.txCursor = 'c2'
+
+    await engine.queryTransactions()
+
+    assert.deepEqual(requests, ['history c2'])
+    assert.deepEqual(
+      added(transactions).map(([txid]) => txid),
+      ['c']
+    )
+    assert.equal(engine.otherData.txCursor, 'c3')
+  })
+
+  it('keeps the cursor when a later sweep finds nothing new', async function () {
+    const { engine, transactions } = await makeFakeSui({
+      graphql: { [GRAPHQL_URL]: pagedHistory(['a']) }
+    })
+    engine.otherData.txCursor = 'c1'
+
+    await engine.queryTransactions()
+
+    assert.deepEqual(added(transactions), [])
+    assert.equal(engine.otherData.txCursor, 'c1')
+  })
+
+  it('keeps the pages it read when a later page fails', async function () {
+    const { engine, historyRatios, transactions } = await makeFakeSui({
       graphql: {
-        [GRAPHQL_URL]: () => ({
-          data: { multiGetTransactions: [makeGraphqlTx('b'), null] }
-        })
+        [GRAPHQL_URL]: body => {
+          if (body.variables.after == null) {
+            return makePage([makeGraphqlTx('a')], true, 'c1')
+          }
+          throw new Error('Network request failed')
+        }
       }
     })
 
-    const error = await rejection(engine.queryTransactionsInner('to'))
+    await engine.queryTransactions()
 
-    assert.match(error, /no transaction c/)
     assert.deepEqual(
-      added(engine).map(([txid]) => txid),
+      added(transactions).map(([txid]) => txid),
       ['a']
     )
-    assert.equal(engine.otherData.latestTxidTo, 'a')
+    assert.equal(engine.otherData.txCursor, 'c1')
+    // History is not reported as synced:
+    assert.deepEqual(historyRatios, [])
+  })
+
+  for (const message of CURSOR_REJECTIONS) {
+    it(`reads the whole history again once on "${message}"`, async function () {
+      const { engine, requests, transactions } = await makeFakeSui({
+        graphql: {
+          [GRAPHQL_URL]: body =>
+            body.variables.after === 'c9'
+              ? rejectCursor(message)
+              : pagedHistory(['a'])(body)
+        }
+      })
+      engine.otherData.txCursor = 'c9'
+
+      await engine.queryTransactions()
+
+      assert.deepEqual(requests, ['history c9', 'history null'])
+      assert.deepEqual(
+        added(transactions).map(([txid]) => txid),
+        ['a']
+      )
+      assert.equal(engine.otherData.txCursor, 'c1')
+    })
+  }
+
+  it('keeps a rejection that is not about the cursor', async function () {
+    const { engine, requests, historyRatios } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: () => rejectCursor('Request timed out')
+      }
+    })
+    engine.otherData.txCursor = 'c9'
+
+    await engine.queryTransactions()
+
+    assert.deepEqual(requests, ['history c9'])
+    assert.equal(engine.otherData.txCursor, 'c9')
+    assert.deepEqual(historyRatios, [])
+  })
+
+  it('stops after one restart if the service keeps rejecting cursors', async function () {
+    const { engine, requests, historyRatios } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: body =>
+          body.variables.after == null
+            ? makePage([makeGraphqlTx('a')], true, 'c1')
+            : rejectCursor(CURSOR_REJECTIONS[0])
+      }
+    })
+    engine.otherData.txCursor = 'c9'
+
+    await engine.queryTransactions()
+
+    assert.deepEqual(requests, ['history c9', 'history null', 'history c1'])
+    assert.equal(engine.otherData.txCursor, 'c1')
+    assert.deepEqual(historyRatios, [])
+  })
+
+  it('stops when a page hands back the cursor it was sent', async function () {
+    const { engine, requests, historyRatios } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: () => makePage([makeGraphqlTx('a')], true, 'c1')
+      }
+    })
+
+    await engine.queryTransactions()
+
+    assert.deepEqual(requests, ['history null', 'history c1'])
+    assert.equal(engine.otherData.txCursor, 'c1')
+    assert.deepEqual(historyRatios, [])
+  })
+
+  it('stops at the next page once the engine is killed', async function () {
+    const fake = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: body => {
+          // The engine stops while this page is in flight:
+          fake.engine.engineOn = false
+          return pagedHistory(['a', 'b', 'c'])(body)
+        }
+      }
+    })
+    const { engine, requests, historyRatios, transactions } = fake
+
+    await engine.queryTransactions()
+
+    assert.deepEqual(requests, ['history null'])
+    assert.deepEqual(added(transactions), [['a', '5']])
+    assert.equal(engine.otherData.txCursor, 'c1')
+    assert.deepEqual(historyRatios, [])
+  })
+
+  it('tells sends from receipts by the sender', async function () {
+    const { engine, transactions } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: () =>
+          makePage(
+            [
+              makeGraphqlTx('sent', { sender: ADDRESS }),
+              makeGraphqlTx('received')
+            ],
+            false,
+            'c2'
+          )
+      }
+    })
+
+    await engine.queryTransactions()
+
+    const [sent, received] = transactions
+    assert.equal(sent.isSend, true)
+    assert.deepEqual(sent.ourReceiveAddresses, [])
+    assert.equal(received.isSend, false)
+    assert.deepEqual(received.ourReceiveAddresses, [ADDRESS])
+    assert.equal(received.networkFee, '2500')
   })
 
   it('gathers balance changes past the first page', async function () {
-    const { engine, requests } = await makeFakeSui({
-      rpc: (cursor, full) =>
-        full
-          ? { error: PRUNED_ERROR }
-          : {
-              result: {
-                data: [{ digest: 'a' }],
-                hasNextPage: false,
-                nextCursor: 'a'
-              }
-            },
+    const { engine, requests, transactions } = await makeFakeSui({
       graphql: {
         [GRAPHQL_URL]: body =>
-          body.variables.keys != null
-            ? {
-                data: {
-                  multiGetTransactions: [
-                    makeGraphqlTx('a', makeGraphqlBalanceChanges(['5'], true))
-                  ]
-                }
-              }
+          body.variables.digest == null
+            ? makePage(
+                [
+                  makeGraphqlTx('a', {
+                    balanceChanges: makeGraphqlBalanceChanges(['5'], true)
+                  })
+                ],
+                false,
+                'c1'
+              )
             : {
                 data: {
                   transaction: {
@@ -429,48 +812,202 @@ describe('SuiEngine history sweep', function () {
       }
     })
 
-    await engine.queryTransactionsInner('to')
+    await engine.queryTransactions()
 
-    assert.deepEqual(requests.slice(2), [
-      'graphql a',
-      'graphql balanceChanges a MA=='
-    ])
-    assert.deepEqual(added(engine), [['a', '12']])
+    assert.deepEqual(requests, ['history null', 'balanceChanges a MA=='])
+    assert.deepEqual(added(transactions), [['a', '12']])
+  })
+
+  it('stops reading balance changes when the cursor does not move', async function () {
+    const { engine, requests, transactions } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: body =>
+          body.variables.digest == null
+            ? makePage(
+                [
+                  makeGraphqlTx('a', {
+                    balanceChanges: makeGraphqlBalanceChanges(['5'], true)
+                  })
+                ],
+                false,
+                'c1'
+              )
+            : {
+                data: {
+                  transaction: {
+                    effects: {
+                      balanceChanges: makeGraphqlBalanceChanges(['7'], true)
+                    }
+                  }
+                }
+              }
+      }
+    })
+
+    // The sweep logs the error, so the proof is that the walk stopped:
+    await engine.queryTransactions()
+
+    assert.deepEqual(requests, ['history null', 'balanceChanges a MA=='])
+    assert.deepEqual(added(transactions), [])
   })
 
   it('tries the next GraphQL node when one fails', async function () {
-    const { engine } = await makeFakeSui({
-      rpc: (cursor, full) =>
-        full
-          ? { error: PRUNED_ERROR }
-          : {
-              result: {
-                data: [{ digest: 'a' }],
-                hasNextPage: false,
-                nextCursor: 'a'
-              }
-            },
+    const { engine, transactions } = await makeFakeSui({
       graphql: {
         [GRAPHQL_URL]: () => {
           throw new Error('Network request failed')
         },
-        [GRAPHQL_URL_2]: graphqlHoldsAll
+        [GRAPHQL_URL_2]: pagedHistory(['a'])
       }
     })
 
-    await engine.queryTransactionsInner('to')
+    await engine.queryTransactions()
 
-    assert.deepEqual(added(engine), [['a', '5']])
+    assert.deepEqual(added(transactions), [['a', '5']])
   })
 
-  it('leaves other node errors alone', async function () {
+  it('lets a running pass finish before the engine stops', async function () {
+    let release: () => void = () => {}
+    const held = new Promise<void>(resolve => {
+      release = resolve
+    })
     const { engine, requests } = await makeFakeSui({
-      rpc: () => ({ error: { code: -32602, message: 'Invalid params' } })
+      graphql: {
+        [GRAPHQL_URL]: async body => {
+          await held
+          return pagedHistory(['a'])(body)
+        }
+      }
     })
 
-    const error = await rejection(engine.queryTransactionsInner('to'))
+    const running = engine.queryTransactions()
+    const queued = engine.queryTransactions()
+    let killed = false
+    const killing = engine.killEngine().then(() => {
+      killed = true
+    })
+    await new Promise(resolve => setTimeout(resolve, 10))
+    assert.equal(killed, false)
 
-    assert.match(error, /Invalid params/)
-    assert.deepEqual(requests, ['rpc full null'])
+    release()
+    await Promise.all([running, queued, killing])
+
+    // The running pass saved its cursor; the queued one never ran:
+    assert.deepEqual(requests, ['history null'])
+    assert.equal(engine.otherData.txCursor, 'c1')
+  })
+})
+
+describe('SuiEngine transaction amounts', function () {
+  const USDC =
+    '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC'
+
+  /** Syncs one transaction the wallet sent, and returns what the engine reported. */
+  const sendOne = async (
+    changes: Array<[coinType: string, amount: string]>,
+    gasSummary?: unknown
+  ): Promise<EdgeTransaction[]> => {
+    const balanceChanges = {
+      pageInfo: { hasNextPage: false, endCursor: null },
+      nodes: changes.map(([repr, amount]) => ({
+        amount,
+        coinType: { repr },
+        owner: { address: ADDRESS }
+      }))
+    }
+    const { engine, transactions } = await makeFakeSui({
+      graphql: {
+        [GRAPHQL_URL]: () =>
+          makePage(
+            [
+              makeGraphqlTx('a', {
+                sender: ADDRESS,
+                balanceChanges,
+                gasSummary
+              })
+            ],
+            false,
+            'c1'
+          )
+      }
+    })
+    await engine.queryTransactions()
+    return transactions
+  }
+
+  const SUI =
+    '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI'
+
+  it('takes a send amount as is, since it already includes gas', async function () {
+    // 100000 sent plus 2500 gas:
+    const [tx] = await sendOne([[SUI, '-102500']])
+    assert.equal(tx.nativeAmount, '-102500')
+    assert.equal(tx.networkFee, '2500')
+  })
+
+  it('charges a token send only its gas in SUI', async function () {
+    const [tx] = await sendOne([
+      [SUI, '-2500'],
+      [USDC, '-1000000']
+    ])
+    assert.equal(tx.tokenId, null)
+    assert.equal(tx.nativeAmount, '-2500')
+  })
+
+  it('credits a send whose storage rebate beats its gas', async function () {
+    const [tx] = await sendOne([[SUI, '4000']], {
+      computationCost: 1000,
+      storageCost: 0,
+      storageRebate: 5000,
+      nonRefundableStorageFee: 50
+    })
+    assert.equal(tx.networkFee, '-4000')
+    assert.equal(tx.nativeAmount, '4000')
+  })
+
+  it('keeps the corrected amount when stored rows load after a walk', async function () {
+    const disklet = makeFakeIo().disklet
+    /** A node whose only transaction moved `amount` SUI out of the wallet. */
+    const node = (amount: string) => () =>
+      makePage(
+        [
+          makeGraphqlTx('a', {
+            sender: ADDRESS,
+            balanceChanges: {
+              pageInfo: { hasNextPage: false, endCursor: null },
+              nodes: [
+                { amount, coinType: { repr: SUI }, owner: { address: ADDRESS } }
+              ]
+            }
+          })
+        ],
+        false,
+        'c1'
+      )
+    const save = async (engine: SuiEngine): Promise<void> => {
+      await (
+        engine as unknown as { saveWalletLoop: () => Promise<void> }
+      ).saveWalletLoop()
+    }
+
+    // An earlier build stored the send with its fee counted twice:
+    const first = await makeFakeSui({
+      graphql: { [GRAPHQL_URL]: node('-5000') },
+      disklet
+    })
+    await first.engine.queryTransactions()
+    await save(first.engine)
+
+    // The next launch walks the history again and finds the true amount:
+    const second = await makeFakeSui({
+      graphql: { [GRAPHQL_URL]: node('-2500') },
+      disklet
+    })
+    delete second.engine.otherData.txCursor
+    await second.engine.queryTransactions()
+    await save(second.engine)
+
+    const [tx] = await second.engine.getTransactions({ tokenId: null })
+    assert.equal(tx.nativeAmount, '-2500')
   })
 })
