@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.106.0 (2026-11-12)
+
 - added: (Stellar) Send to muxed (M) addresses, which some exchanges use instead of a memo ID
 - changed: (Stellar) Upgrade from the deprecated stellar-sdk 13.3.0 to @stellar/stellar-sdk 17.4.0, the SDK line for Protocol 30 (Bell)
 - changed: (Stellar) Send Horizon requests through the core's fetch, like the other engines
