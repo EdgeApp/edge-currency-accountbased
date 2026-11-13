@@ -69,6 +69,13 @@ export interface EvmScanAdapterConfig {
 
   /** Whether the API supports gastracker module */
   gastrackerSupport?: boolean
+
+  /**
+   * Serve `fetchInternalTxs`, for a chain whose primary history source cannot
+   * see internal transactions. `fetchTxs` folds them in by itself, so only set
+   * this when another adapter answers `fetchTxs` first.
+   */
+  internalTxsSupport?: boolean
 }
 
 export class EvmScanAdapter<
@@ -76,10 +83,13 @@ export class EvmScanAdapter<
     | EvmScanAdapterConfig
     | BlockscoutAdapterConfig = EvmScanAdapterConfig
 > extends NetworkAdapter<Config> {
-  /** Blockscout serves these separately; see `BlockscoutAdapter` */
+  /** Off unless the config opts in; `BlockscoutAdapter` always serves these */
   fetchInternalTxs:
     | ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>)
-    | null = null
+    | null =
+    this.config.type === 'evmscan' && this.config.internalTxsSupport === true
+      ? async params => await this.getInternalTxsUpdate(params)
+      : null
 
   /** Extra headers on every `/api` request; subclasses set them per provider */
   protected requestHeaders: Record<string, string> | undefined = undefined
@@ -334,6 +344,44 @@ export class EvmScanAdapter<
         server
       }
     }
+
+  /** The wallet's internal transactions alone, as a complete native tuple */
+  protected async getInternalTxsUpdate(
+    params: GetTxsParams
+  ): Promise<EthereumNetworkUpdate> {
+    const { startBlock } = params
+    const { allTransactions, server } = await this.getAllTxsEthscan(
+      startBlock,
+      null,
+      asEvmScanInternalTransaction,
+      { searchRegularTxs: false }
+    )
+    return this.makeTxsUpdate(null, startBlock, allTransactions, server, {
+      includesInternal: true
+    })
+  }
+
+  protected makeTxsUpdate(
+    tokenId: EdgeTokenId,
+    startBlock: number,
+    edgeTransactions: EdgeTransactionsBlockHeightTuple['edgeTransactions'],
+    server: string | undefined,
+    options: { includesInternal: boolean }
+  ): EthereumNetworkUpdate {
+    const tuple: EdgeTransactionsBlockHeightTuple = {
+      blockHeight: startBlock,
+      edgeTransactions,
+      includesInternal: options.includesInternal
+    }
+    const maxBlockHeight = edgeTransactions.reduce((max, tx) => {
+      return Math.max(max, tx.blockHeight)
+    }, 0)
+    return {
+      tokenTxs: new Map([[tokenId, tuple]]),
+      blockHeight: maxBlockHeight,
+      server: server ?? ''
+    }
+  }
 
   // TODO: Clean return type
   protected async fetchGetEtherscan(
@@ -802,6 +850,8 @@ interface EvmScanProxyResponse<T> {
   jsonrpc: '2.0'
   id: number
   result: T
+  /** The node's JSON-RPC rejection, which replaces `result` when present. */
+  error?: unknown
 }
 const asEvmScanProxyResponse =
   <T>(asT: Cleaner<T>): Cleaner<EvmScanProxyResponse<T>> =>
@@ -809,7 +859,8 @@ const asEvmScanProxyResponse =
     return asObject<EvmScanProxyResponse<T>>({
       jsonrpc: asValue('2.0'),
       id: asNumber,
-      result: asT
+      result: asT,
+      error: asOptional(asUnknown)
     })(raw)
   }
 

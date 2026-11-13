@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- added: (Robinhood Chain) Etherscan as a transaction history source
+- changed: (Robinhood Chain) Explorer links open on Etherscan
+- fixed: (Arbitrum, Robinhood Chain) Sends no longer fail with "intrinsic gas too low" after the L1 data fee rises
+- fixed: (EVM) A refused send names the node's reason instead of "[object Object]"
+- fixed: (EVM) A send Etherscan refuses is no longer reported as sent
+
 ## 4.106.0 (2026-11-12)
 
 - added: (Stellar) Send to muxed (M) addresses, which some exchanges use instead of a memo ID

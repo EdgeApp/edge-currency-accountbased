@@ -1,4 +1,11 @@
-import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+import {
+  asArray,
+  asMaybe,
+  asNumber,
+  asObject,
+  asString,
+  asUnknown
+} from 'cleaners'
 import { EdgeTokenId, EdgeTransaction, JsonObject } from 'edge-core-js/types'
 import { FetchResponse } from 'serverlet'
 
@@ -133,23 +140,34 @@ export abstract class NetworkAdapter<
     server: string,
     tx: EdgeTransaction
   ): BroadcastResults['result'] {
+    // `EthereumNetwork.broadcastTx` logs failures, once every route has failed:
     if (typeof res.error !== 'undefined') {
-      this.ethEngine.error(
-        `FAILURE ${server}\n${JSON.stringify(res.error)}\n${cleanTxLogs(tx)}`
+      const response = JSON.stringify(res.error)
+      // Blockbook sends the reason as a bare string:
+      const reason =
+        typeof res.error === 'string'
+          ? res.error
+          : asMaybe(asObject({ message: asString }))(res.error)?.message
+      throw new BroadcastRejection(server, reason ?? response, response)
+    } else if (res.status === '0') {
+      // Etherscan refuses with `NOTOK` and puts its reason in `result`:
+      const response = JSON.stringify(res)
+      throw new BroadcastRejection(
+        server,
+        typeof res.result === 'string' ? res.result : response,
+        response
       )
-      throw res.error
     } else if (typeof res.result === 'string') {
       // Success!!
       this.ethEngine.warn(`SUCCESS ${server}\n${cleanTxLogs(tx)}`)
       // @ts-expect-error
       return res
     } else {
-      this.ethEngine.error(
-        `FAILURE ${server}\nInvalid return value ${JSON.stringify(
-          res
-        )}\n${cleanTxLogs(tx)}`
+      throw new BroadcastRejection(
+        server,
+        'Invalid return value on transaction send',
+        `Invalid return value ${JSON.stringify(res)}`
       )
-      throw new Error('Invalid return value on transaction send')
     }
   }
 
@@ -251,6 +269,39 @@ export class RateLimitError extends Error {
     super(message)
     this.name = 'RateLimitError'
   }
+}
+
+/**
+ * A route's refusal of a transaction. The message is the node's reason, so the
+ * error the user sees names it.
+ */
+export class BroadcastRejection extends Error {
+  /** The route that refused the transaction */
+  readonly server: string
+  /** The route's whole reply, for the logs */
+  readonly response: string
+
+  constructor(server: string, message: string, response: string) {
+    super(message)
+    this.server = server
+    this.response = response
+  }
+}
+
+/**
+ * Collects the route refusals inside a broadcast error. Each adapter races
+ * its own servers, so a failed broadcast is an aggregate of aggregates.
+ */
+export function findBroadcastRejections(error: unknown): BroadcastRejection[] {
+  if (error instanceof BroadcastRejection) return [error]
+  const aggregate = asMaybe(asObject({ errors: asArray(asUnknown) }))(error)
+  if (aggregate == null) return []
+
+  const out: BroadcastRejection[] = []
+  for (const inner of aggregate.errors) {
+    out.push(...findBroadcastRejections(inner))
+  }
+  return out
 }
 
 /**

@@ -1,13 +1,7 @@
-import { EdgeTokenId } from 'edge-core-js/types'
-
 import { EthereumEngine } from '../EthereumEngine'
-import {
-  EdgeTransactionsBlockHeightTuple,
-  EthereumNetworkUpdate
-} from '../EthereumNetwork'
+import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asEtherscanGetBlockHeight } from '../ethereumSchema'
 import {
-  asEvmScanInternalTransaction,
   asEvmScanTokenTransaction,
   asEvmScanTransaction,
   EvmScanAdapter
@@ -181,7 +175,6 @@ export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
   fetchInternalTxs:
     | ((params: GetTxsParams) => Promise<EthereumNetworkUpdate>)
     | null = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
-    const { startBlock } = params
     const cooldownKey = this.config.servers.join(',')
     const cooldownUntil = internalTxsCooldownUntil.get(cooldownKey) ?? 0
     if (Date.now() < cooldownUntil) {
@@ -192,14 +185,8 @@ export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
       )
     }
 
-    let response: Awaited<ReturnType<typeof this.getAllTxsEthscan>>
     try {
-      response = await this.getAllTxsEthscan(
-        startBlock,
-        null,
-        asEvmScanInternalTransaction,
-        { searchRegularTxs: false }
-      )
+      return await this.getInternalTxsUpdate(params)
     } catch (error: unknown) {
       if (error instanceof RateLimitError) {
         internalTxsCooldownUntil.set(
@@ -208,32 +195,6 @@ export class BlockscoutAdapter extends EvmScanAdapter<BlockscoutAdapterConfig> {
         )
       }
       throw error
-    }
-    const { allTransactions, server } = response
-    return this.makeTxsUpdate(null, startBlock, allTransactions, server, {
-      includesInternal: true
-    })
-  }
-
-  private makeTxsUpdate(
-    tokenId: EdgeTokenId,
-    startBlock: number,
-    edgeTransactions: EdgeTransactionsBlockHeightTuple['edgeTransactions'],
-    server: string | undefined,
-    options: { includesInternal: boolean }
-  ): EthereumNetworkUpdate {
-    const tuple: EdgeTransactionsBlockHeightTuple = {
-      blockHeight: startBlock,
-      edgeTransactions,
-      includesInternal: options.includesInternal
-    }
-    const maxBlockHeight = edgeTransactions.reduce((max, tx) => {
-      return Math.max(max, tx.blockHeight)
-    }, 0)
-    return {
-      tokenTxs: new Map([[tokenId, tuple]]),
-      blockHeight: maxBlockHeight,
-      server: server ?? ''
     }
   }
 }

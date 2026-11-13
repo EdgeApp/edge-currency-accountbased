@@ -1,6 +1,14 @@
 import { add, div } from 'biggystring'
-import { asArray, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asMaybe,
+  asObject,
+  asOptional,
+  asString,
+  asUnknown
+} from 'cleaners'
 import { EdgeTokenId, EdgeTransaction } from 'edge-core-js/types'
+import AggregateError from 'es-aggregate-error'
 
 import { getRandomDelayMs } from '../common/network'
 import { makePeriodicTask, PeriodicTask } from '../common/periodicTask'
@@ -9,7 +17,7 @@ import {
   formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
-import { normalizeAddress } from '../common/utils'
+import { cleanTxLogs, normalizeAddress } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
 import { DecoyAddressConfig, EthereumNetworkInfo } from './ethereumTypes'
@@ -25,6 +33,7 @@ import {
 } from './networkAdapters/EvmScanAdapter'
 import { FilfoxAdapter } from './networkAdapters/FilfoxAdapter'
 import {
+  findBroadcastRejections,
   GetTxsParams,
   NetworkAdapter,
   NetworkAdapterConfig,
@@ -224,7 +233,35 @@ export class EthereumNetwork {
     const broadcastResults = await formatAggregateError(
       promiseAny(promises),
       'Broadcast failed:'
-    )
+    ).catch((error: unknown) => {
+      // The routes race, so a losing route often refuses a copy another route
+      // already delivered, as a duplicate or a stale nonce. A refusal matters
+      // only when no route succeeds:
+      const rejections = findBroadcastRejections(error)
+      for (const rejection of rejections) {
+        this.ethEngine.error(
+          `FAILURE ${rejection.server}\n${rejection.response}\n${cleanTxLogs(
+            edgeTransaction
+          )}`
+        )
+      }
+      if (rejections.length === 0) throw error
+
+      // Each adapter nests its servers in an aggregate of its own, so the
+      // node's reason sits several lines into the message. The send scene
+      // shows only the first lines, so lead with the reasons:
+      const reasons = [
+        ...new Set(rejections.map(rejection => rejection.message))
+      ]
+      const details =
+        error instanceof Error ? error.message.split('\n').slice(1) : []
+      const errors = asMaybe(asObject({ errors: asArray(asUnknown) }))(error)
+        ?.errors ?? [error]
+      throw new AggregateError(
+        errors,
+        [`Broadcast failed: ${reasons.join('; ')}`, ...details].join('\n')
+      )
+    })
     this.ethEngine.log(
       `${this.ethEngine.currencyInfo.pluginId} broadcastTx ${broadcastResults.server} won`
     )
