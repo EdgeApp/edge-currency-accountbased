@@ -6,6 +6,7 @@ import { add, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeEngineSyncNetworkOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -48,6 +49,7 @@ import {
 const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const SYNC_NETWORK_INTERVAL = 10000
 
 const makeSpendMutex = makeMutex()
 
@@ -262,10 +264,63 @@ export class TezosEngine extends CurrencyEngine<
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    // When change-server is active, syncNetwork drives all sync work.
+    // Polling loops are only needed as fallback when change-server is off.
+    // Block height is not polled separately because:
+    // - requiredConfirmations defaults to 1, so txs confirm immediately
+    // - block height is updated as a side effect of account/transaction queries
+    if (this.currencyInfo.usesChangeServer !== true) {
+      this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+      this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+      this.addToLoop(
+        'checkTransactionsInnerLoop',
+        TRANSACTION_POLL_MILLISECONDS
+      )
+    }
+
+    if (this.subscribedAddresses.length === 0) {
+      this.subscribedAddresses.push({
+        address: this.walletLocalData.publicKey,
+        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+      })
+    }
+    this.currencyEngineCallbacks.onSubscribeAddresses(this.subscribedAddresses)
+
     await super.startEngine()
+
+    // Legacy engine startup implicitly performed an immediate first block
+    // height check because polling tasks start running right away. Preserve
+    // that startup signal in change-server mode without re-enabling polling.
+    if (this.currencyInfo.usesChangeServer === true) {
+      this.checkBlockchainInnerLoop().catch(error => {
+        this.error('Initial block height check failed:', error)
+      })
+    }
+  }
+
+  async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
+    const { subscribeParam } = opts
+
+    if (subscribeParam == null) {
+      await this.checkBlockchainInnerLoop()
+      await this.checkAccountInnerLoop()
+      await this.checkTransactionsInnerLoop()
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    const { needsSync = true } = subscribeParam
+
+    if (!needsSync) {
+      if (!this.syncComplete) {
+        this.setOneHundoSyncRatio()
+      }
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    await this.checkBlockchainInnerLoop()
+    await this.checkAccountInnerLoop()
+    await this.checkTransactionsInnerLoop()
+    return SYNC_NETWORK_INTERVAL
   }
 
   async resyncBlockchain(): Promise<void> {
