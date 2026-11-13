@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.107.0 (2026-11-13)
+
 - added: (Robinhood Chain) Etherscan as a transaction history source
 - changed: (Robinhood Chain) Explorer links open on Etherscan
 - fixed: (Arbitrum, Robinhood Chain) Sends no longer fail with "intrinsic gas too low" after the L1 data fee rises
