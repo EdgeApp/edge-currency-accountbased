@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Cosmos chains, BNB Beacon Chain, Stellar, XRP) Engines no longer fail with "Cannot access 'q' before initialization"
+
 ## 4.107.0 (2026-11-13)
 
 - added: (Robinhood Chain) Etherscan as a transaction history source
