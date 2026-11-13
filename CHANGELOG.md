@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Stellar, Cosmos chains) Wallets no longer fail to start after the Stellar SDK upgrade
+
 ## 4.107.0 (2026-11-13)
 
 - added: (Robinhood Chain) Etherscan as a transaction history source
