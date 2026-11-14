@@ -378,8 +378,12 @@ export class AlchemyAdapter extends NetworkAdapter<AlchemyAdapterConfig> {
       for (const rawTransfer of page.transfers) {
         transfers.push(asAlchemyAssetTransfer(rawTransfer))
       }
+      if (page.pageKey == null) break
+      // A page that hands back the key it was sent would repeat forever:
+      if (page.pageKey === pageKey) {
+        throw new Error(`Alchemy repeated page key ${pageKey}`)
+      }
       pageKey = page.pageKey
-      if (pageKey == null) break
     }
     return { transfers, includedInternal: withInternal }
   }

@@ -2,11 +2,13 @@ import { assert } from 'chai'
 import { EdgeTransaction } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
+import { EthereumEngine } from '../../../src/ethereum/EthereumEngine'
 import {
   builtinTokens,
   currencyInfo
 } from '../../../src/ethereum/info/robinhoodInfo'
 import {
+  AlchemyAdapter,
   AlchemyAssetTransfer,
   AlchemyTxDetails,
   makeFailedSend,
@@ -437,5 +439,53 @@ describe('AlchemyAdapter transfer processing', function () {
       new Map()
     )
     assert.equal(tx.nativeAmount, '200000000')
+  })
+})
+
+describe('AlchemyAdapter fetchTxs', function () {
+  it('stops when a page repeats the key it was sent', async function () {
+    const pageKeys: Array<string | undefined> = []
+    const engine = {
+      allTokensMap: builtinTokens,
+      currencyInfo,
+      networkInfo: {},
+      walletId,
+      walletLocalData: { publicKey: ourAddress },
+      async engineFetch(url: string, opts: { body: string }) {
+        const [request] = JSON.parse(opts.body)
+        pageKeys.push(request.params[0].pageKey)
+        const reply = [
+          { id: 1, jsonrpc: '2.0', result: { transfers: [], pageKey: 'p2' } }
+        ]
+        return {
+          ok: true,
+          status: 200,
+          json: async () => reply,
+          text: async () => JSON.stringify(reply)
+        }
+      },
+      error() {},
+      log() {},
+      warn() {}
+    }
+    const adapter = new AlchemyAdapter(engine as unknown as EthereumEngine, {
+      type: 'alchemy',
+      servers: ['https://opbnb-mainnet.g.alchemy.com/v2/key']
+    })
+
+    let error: unknown
+    try {
+      await adapter.fetchTxs?.({
+        startBlock: 0,
+        startDate: 0,
+        tokenId: usdcTokenId
+      })
+    } catch (caught: unknown) {
+      error = caught
+    }
+
+    assert.match(String(error), /repeated page key p2/)
+    // Each direction sends its first page and then the repeated key once:
+    assert.deepEqual(pageKeys, [undefined, undefined, 'p2', 'p2'])
   })
 })
