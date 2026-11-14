@@ -58,6 +58,11 @@ module.exports = {
   optimization: {
     minimizer: [
       new ESBuildMinifyPlugin({
+        // Wrap each asset in its own scope. Chunks load as classic scripts,
+        // so the helpers ESBuild adds for lowered syntax (such as class
+        // fields) would otherwise be shared globals, and a later chunk can
+        // overwrite an earlier chunk's helper of the same minified name:
+        format: 'iife',
         target: 'chrome67'
       })
     ]
