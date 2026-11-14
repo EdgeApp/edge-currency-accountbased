@@ -2,11 +2,13 @@ import { assert } from 'chai'
 import { EdgeTransaction } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
+import { EthereumEngine } from '../../../src/ethereum/EthereumEngine'
 import {
   builtinTokens,
   currencyInfo
 } from '../../../src/ethereum/info/robinhoodInfo'
 import {
+  AlchemyAdapter,
   AlchemyAssetTransfer,
   AlchemyTxDetails,
   makeFailedSend,
@@ -263,6 +265,45 @@ describe('AlchemyAdapter transfer processing', function () {
     assert.equal(tx.isSend, true)
   })
 
+  it('ignores transfers from a lookalike token contract', function () {
+    // An address-poisoning token emits Transfer events naming the wallet,
+    // and a server that skips the contract filter returns them:
+    const fakeContract = '0xc6203d86f5efbed7f9512755f3e6132ee50d03d1'
+    const spoofHash =
+      '0xfe95a21d971640e0cd77ec468148c257f57f936de3189b1f25389edfe42fda3d'
+    const realHash =
+      '0x69ac9c55f7af454eb6ab54991b29a0ed8f1349279ba00acea5d649cf3ed6df5e'
+    const txs = processAlchemyTransfers(
+      usdcContext,
+      [
+        makeTransfer({
+          hash: spoofHash,
+          uniqueId: `${spoofHash}:log:12`,
+          from: ourAddress.toLowerCase(),
+          to: otherAddress,
+          rawContract: { value: '0x71afd498d0000', address: fakeContract }
+        }),
+        makeTransfer({
+          hash: realHash,
+          uniqueId: `${realHash}:log:40`,
+          rawContract: { value: '0x5f5e100', address: fakeContract }
+        }),
+        makeTransfer({
+          hash: realHash,
+          uniqueId: `${realHash}:log:41`,
+          rawContract: {
+            value: '0x5f5e100',
+            address: usdcAddress.toLowerCase()
+          }
+        })
+      ],
+      new Map()
+    )
+    assert.equal(txs.length, 1)
+    assert.equal(txs[0].txid, realHash)
+    assert.equal(txs[0].nativeAmount, '100000000')
+  })
+
   it('answers empty for a token the engine does not know', function () {
     const hash =
       '0x3333333333333333333333333333333333333333333333333333333333333333'
@@ -313,6 +354,65 @@ describe('AlchemyAdapter transfer processing', function () {
     assert.equal(failedToken.parentNetworkFee, spendFee)
   })
 
+  it('adds a rollup L1 data fee to the spend fee', function () {
+    const hash =
+      '0x5555555555555555555555555555555555555555555555555555555555555555'
+    const l1Details = { ...spendDetails, l1Fee: '1000' }
+    const [tx] = processAlchemyTransfers(
+      nativeContext,
+      [
+        makeTransfer({
+          hash,
+          from: ourAddress.toLowerCase(),
+          to: otherAddress,
+          rawContract: { value: '0x2386f26fc10000', address: null }
+        })
+      ],
+      new Map([[hash, l1Details]])
+    )
+    assert.equal(tx.networkFee, '210000001000')
+    assert.equal(tx.nativeAmount, '-10000210000001000')
+    const [tokenTx] = processAlchemyTransfers(
+      usdcContext,
+      [
+        makeTransfer({
+          hash,
+          uniqueId: `${hash}:log:2`,
+          from: ourAddress.toLowerCase(),
+          to: otherAddress,
+          rawContract: {
+            value: '0x2faf080',
+            address: usdcAddress.toLowerCase()
+          }
+        })
+      ],
+      new Map([[hash, l1Details]])
+    )
+    assert.equal(tokenTx.parentNetworkFee, '210000001000')
+  })
+
+  it('reports a mined revert as a failed fee-only spend', function () {
+    const hash =
+      '0x6666666666666666666666666666666666666666666666666666666666666666'
+    const [tx] = processAlchemyTransfers(
+      nativeContext,
+      [
+        makeTransfer({
+          hash,
+          from: ourAddress.toLowerCase(),
+          to: otherAddress,
+          rawContract: { value: '0x2386f26fc10000', address: null }
+        })
+      ],
+      new Map([[hash, { ...spendDetails, succeeded: false, nonce: undefined }]])
+    )
+    assert.equal(tx.confirmations, 'failed')
+    assert.equal(tx.nativeAmount, `-${spendFee}`)
+    assert.equal(tx.networkFee, spendFee)
+    assert.equal(tx.isSend, true)
+    assert.isUndefined(tx.otherParams?.nonceUsed)
+  })
+
   it('sums several transfers of one transaction', function () {
     const hash =
       '0x2222222222222222222222222222222222222222222222222222222222222222'
@@ -339,5 +439,53 @@ describe('AlchemyAdapter transfer processing', function () {
       new Map()
     )
     assert.equal(tx.nativeAmount, '200000000')
+  })
+})
+
+describe('AlchemyAdapter fetchTxs', function () {
+  it('stops when a page repeats the key it was sent', async function () {
+    const pageKeys: Array<string | undefined> = []
+    const engine = {
+      allTokensMap: builtinTokens,
+      currencyInfo,
+      networkInfo: {},
+      walletId,
+      walletLocalData: { publicKey: ourAddress },
+      async engineFetch(url: string, opts: { body: string }) {
+        const [request] = JSON.parse(opts.body)
+        pageKeys.push(request.params[0].pageKey)
+        const reply = [
+          { id: 1, jsonrpc: '2.0', result: { transfers: [], pageKey: 'p2' } }
+        ]
+        return {
+          ok: true,
+          status: 200,
+          json: async () => reply,
+          text: async () => JSON.stringify(reply)
+        }
+      },
+      error() {},
+      log() {},
+      warn() {}
+    }
+    const adapter = new AlchemyAdapter(engine as unknown as EthereumEngine, {
+      type: 'alchemy',
+      servers: ['https://opbnb-mainnet.g.alchemy.com/v2/key']
+    })
+
+    let error: unknown
+    try {
+      await adapter.fetchTxs?.({
+        startBlock: 0,
+        startDate: 0,
+        tokenId: usdcTokenId
+      })
+    } catch (caught: unknown) {
+      error = caught
+    }
+
+    assert.match(String(error), /repeated page key p2/)
+    // Each direction sends its first page and then the repeated key once:
+    assert.deepEqual(pageKeys, [undefined, undefined, 'p2', 'p2'])
   })
 })

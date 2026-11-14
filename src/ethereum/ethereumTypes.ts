@@ -149,6 +149,7 @@ const asNetworkAdaptorConfigType = asValue(
   'blockscout',
   'evmscan',
   'filfox',
+  'nodereal',
   'pulsechain-scan',
   'rpc'
 )
