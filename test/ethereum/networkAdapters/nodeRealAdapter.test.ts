@@ -33,8 +33,10 @@ function makeAdapter(
 ): {
   adapter: NodeRealAdapter
   requests: Request[]
+  warnings: string[]
 } {
   const requests: Request[] = []
+  const warnings: string[] = []
   const engine = {
     allTokensMap: builtinTokens,
     currencyInfo,
@@ -53,13 +55,15 @@ function makeAdapter(
     },
     error() {},
     log() {},
-    warn() {}
+    warn(message: string) {
+      warnings.push(message)
+    }
   }
   const adapter = new NodeRealAdapter(engine as unknown as EthereumEngine, {
     type: 'nodereal',
     servers
   })
-  return { adapter, requests }
+  return { adapter, requests, warnings }
 }
 
 const page = (
@@ -139,7 +143,7 @@ describe('NodeRealAdapter fetchTxs', function () {
       assert.deepEqual(request.category, ['external', 'internal'])
       assert.equal(request.excludeZeroValue, request.addressType === 'to')
     }
-    assert.equal(update.blockHeight, 100)
+    assert.isUndefined(update.blockHeight)
     const tuple = update.tokenTxs?.get(null)
     assert.equal(tuple?.includesInternal, true)
     const txs = tuple?.edgeTransactions ?? []
@@ -247,10 +251,42 @@ describe('NodeRealAdapter fetchTxs', function () {
     assert.isUndefined(pulled?.parentNetworkFee)
   })
 
+  it('skips the spend walk when only other contracts sent', async function () {
+    const { adapter, requests } = makeAdapter(request =>
+      request.addressType === 'from'
+        ? page([
+            makeRow({
+              hash: hashA,
+              blockNum: '0x64',
+              category: '20',
+              contractAddress: otherAddress,
+              from: ourAddress,
+              to: otherAddress
+            })
+          ])
+        : page([])
+    )
+
+    const update = await adapter.fetchTxs({
+      startBlock: 0,
+      startDate: 0,
+      tokenId: usdcTokenId
+    })
+
+    assert.notInclude(
+      requests.map(request => request.category[0]),
+      'external'
+    )
+    assert.lengthOf(
+      update.tokenTxs?.get(usdcTokenId)?.edgeTransactions ?? [],
+      0
+    )
+  })
+
   it('retries a rate-limited page without starting over', async function () {
     this.timeout(5000)
     let limited = 0
-    const { adapter, requests } = makeAdapter(request => {
+    const { adapter, requests, warnings } = makeAdapter(request => {
       if (request.addressType === 'to') return page([])
       if (request.pageKey == null) {
         return page([makeRow({ hash: hashA, blockNum: '0x64' })], 'p2')
@@ -274,6 +310,9 @@ describe('NodeRealAdapter fetchTxs', function () {
     })
 
     assert.equal(limited, 1)
+    assert.deepEqual(warnings, [
+      'Rate limit exceeded for opbnb-mainnet.nodereal.io, retrying the page in 1000ms'
+    ])
     const firstPages = requests.filter(
       request => request.addressType === 'from' && request.pageKey == null
     )
@@ -285,6 +324,23 @@ describe('NodeRealAdapter fetchTxs', function () {
         .sort((a, b) => a.localeCompare(b)),
       [hashA, hashB]
     )
+  })
+
+  it('stops when a page repeats the key it was sent', async function () {
+    const { adapter, requests } = makeAdapter(() =>
+      page([makeRow({ hash: hashA, blockNum: '0x64' })], 'p2')
+    )
+
+    let error: unknown
+    try {
+      await adapter.fetchTxs({ startBlock: 0, startDate: 0, tokenId: null })
+    } catch (caught: unknown) {
+      error = caught
+    }
+
+    assert.instanceOf(error, Error)
+    assert.match(String(error), /repeated page key p2/)
+    assert.lengthOf(requests, 2)
   })
 
   it('moves to the next endpoint when one fails', async function () {
@@ -312,5 +368,25 @@ describe('NodeRealAdapter fetchTxs', function () {
       update.tokenTxs?.get(null)?.edgeTransactions.map(tx => tx.txid),
       [hashA]
     )
+  })
+
+  it('warns for each endpoint it drops', async function () {
+    const { adapter, warnings } = makeAdapter(
+      () => ({ error: { code: -32000, message: 'internal error' } }),
+      [SERVER, 'https://opbnb-mainnet.nodereal.io/v1/other']
+    )
+
+    let error: unknown
+    try {
+      await adapter.fetchTxs({ startBlock: 0, startDate: 0, tokenId: null })
+    } catch (caught: unknown) {
+      error = caught
+    }
+
+    assert.match(String(error), /internal error/)
+    assert.lengthOf(warnings, 2)
+    for (const warning of warnings) {
+      assert.match(warning, /^NodeReal server dropped: .*internal error/)
+    }
   })
 })

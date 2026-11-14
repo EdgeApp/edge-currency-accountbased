@@ -103,9 +103,15 @@ export class NodeRealAdapter extends NetworkAdapter<NodeRealAdapterConfig> {
 
         // A token row does not say who signed its transaction (a third party
         // can pull an approved allowance), so a token sync with outgoing rows
-        // also reads the wallet's own external rows, which do.
+        // also reads the wallet's own external rows, which do. Rows from other
+        // contracts (dropped later) do not count, so a poisoning row costs no
+        // extra call:
+        const tokenContract = contractAddress?.toLowerCase()
         const spends =
-          contractAddress == null || sent.length === 0
+          tokenContract == null ||
+          !sent.some(
+            row => row.contractAddress?.toLowerCase() === tokenContract
+          )
             ? sent
             : await this.fetchTransfers(baseUrl, {
                 address,
@@ -151,12 +157,8 @@ export class NodeRealAdapter extends NetworkAdapter<NodeRealAdapterConfig> {
       edgeTransactions,
       includesInternal: contractAddress == null
     }
-    const maxBlockHeight = edgeTransactions.reduce((max, tx) => {
-      return Math.max(max, tx.blockHeight)
-    }, 0)
     return {
       tokenTxs: new Map([[tokenId, edgeTransactionsBlockHeightTuple]]),
-      blockHeight: maxBlockHeight,
       server
     }
   }
@@ -172,6 +174,7 @@ export class NodeRealAdapter extends NetworkAdapter<NodeRealAdapterConfig> {
       try {
         return await fn(server)
       } catch (error: unknown) {
+        this.ethEngine.warn(`NodeReal server dropped: ${String(error)}`)
         lastError = error
       }
     }
@@ -224,8 +227,12 @@ export class NodeRealAdapter extends NetworkAdapter<NodeRealAdapterConfig> {
         }
         transfers.push(row)
       }
+      if (passedStart || page.pageKey == null || page.pageKey === '') break
+      // A page that hands back the key it was sent would repeat forever:
+      if (page.pageKey === pageKey) {
+        throw new Error(`NodeReal repeated page key ${pageKey}`)
+      }
       pageKey = page.pageKey
-      if (passedStart || pageKey == null || pageKey === '') break
     }
     return transfers
   }
@@ -247,6 +254,7 @@ export class NodeRealAdapter extends NetworkAdapter<NodeRealAdapterConfig> {
       } catch (error: unknown) {
         if (!(error instanceof RateLimitError)) throw error
         if (attempt >= PAGE_RATE_LIMIT_RETRIES) throw error
+        this.ethEngine.warn(`${error.message}, retrying the page in ${delay}ms`)
         await snooze(delay)
         delay *= 2
       }
