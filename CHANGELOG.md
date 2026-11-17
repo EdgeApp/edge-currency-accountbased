@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (EVM) Ship the JSON files the Node build imports, such as the two Ethereum ABI files, whose absence failed every EVM wallet under Node with "Cannot find module".
+- changed: Mark `zcash-native`, `react-native-monero`, `react-native-zano`, `react-native-pirate-wallet` and `react-native-file-access` as optional peer dependencies, so a Node consumer no longer downloads them (about 1 GB). A React Native app that declares them still gets them, within the same version ranges.
+
 ## 4.107.1 (2026-11-14)
 
 - fixed: (Cosmos chains, BNB Beacon Chain, Stellar, XRP) Engines no longer fail with "Cannot access 'q' before initialization"
