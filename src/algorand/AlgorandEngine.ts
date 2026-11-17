@@ -208,7 +208,7 @@ export class AlgorandEngine extends CurrencyEngine<
       }
 
       if (detectedTokenIds.length > 0) {
-        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+        this.reportDetectedTokens(detectedTokenIds)
       }
 
       this.updateBlockHeight(round)
