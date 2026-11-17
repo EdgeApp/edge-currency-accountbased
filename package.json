@@ -195,6 +195,9 @@
     "zcash-native": "^0.1.1"
   },
   "peerDependenciesMeta": {
+    "react-native-file-access": {
+      "optional": true
+    },
     "react-native-monero": {
       "optional": true
     },
