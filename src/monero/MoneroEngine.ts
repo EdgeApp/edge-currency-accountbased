@@ -7,6 +7,7 @@ import {
   EdgeFetchFunction,
   EdgeGetTransactionsOptions,
   EdgeMemo,
+  EdgeSignMessageOptions,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -43,6 +44,7 @@ import {
   asLoginResponse,
   asMoneroInitOptions,
   asMoneroPrivateKeys,
+  asMoneroSignMessageParams,
   asMoneroUserSettings,
   asMoneroWalletOtherData,
   asMoneroWalletSettings,
@@ -1439,6 +1441,34 @@ export class MoneroEngine extends CurrencyEngine<
     }
 
     return edgeTransaction
+  }
+
+  /**
+   * Signs bytes with the wallet's spend key. The signature proves
+   * ownership of the wallet's primary address, the only address this
+   * method signs for.
+   */
+  async signBytes(
+    bytes: Uint8Array,
+    privateKeys: JsonObject,
+    opts: EdgeSignMessageOptions
+  ): Promise<string> {
+    const { publicAddress } = asMoneroSignMessageParams(opts.otherParams ?? {})
+    if (
+      publicAddress != null &&
+      publicAddress !== this.walletLocalData.publicKey
+    ) {
+      throw new Error(
+        'Monero can only sign messages for the wallet primary address'
+      )
+    }
+    const moneroPrivateKeys = asMoneroPrivateKeys(this.currencyInfo.pluginId)(
+      privateKeys
+    )
+    return await this.tools.cppBridge.signBytes(
+      moneroPrivateKeys.moneroKey,
+      bytes
+    )
   }
 
   async signTx(
