@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: (Monero) Upgrade `react-native-monero` to 0.6.0, which adds `signBytes`
 ## 4.107.1 (2026-11-14)
 
 - fixed: (Cosmos chains, BNB Beacon Chain, Stellar, XRP) Engines no longer fail with "Cannot access 'q' before initialization"
