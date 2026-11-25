@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.108.0 (2026-11-25)
+
 - added: (Monero) `signBytes`, which signs with the wallet's spend key, so a wallet can prove ownership of its address
 - changed: (Monero) Upgrade `react-native-monero` to 0.6.0, which adds `signBytes`
 
